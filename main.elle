@@ -1,0 +1,5 @@
+require elle:io;
+
+expose op main() {
+    io:print("Hello World from Elle!");
+}
