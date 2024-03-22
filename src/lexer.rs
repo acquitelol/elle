@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Require,
     Expose,
@@ -24,6 +24,8 @@ pub enum Token {
     Semicolon,
     If,
     Else,
+    For,
+    While,
     Match,
     Ret,
     Question,
@@ -180,6 +182,8 @@ impl Lexer {
             "op" => Token::Operation,
             "if" => Token::If,
             "else" => Token::Else,
+            "for" => Token::For,
+            "while" => Token::While,
             "match" => Token::Match,
             "ret" => Token::Ret,
             _ if identifier

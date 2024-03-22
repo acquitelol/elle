@@ -1,4 +1,5 @@
-require elle:io;
+require elle::io;
+require elle:int@{module};
 
 expose op main() {
     io:print("Hello World from Elle!");
