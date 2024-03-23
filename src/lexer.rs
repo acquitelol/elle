@@ -1,15 +1,17 @@
 #[derive(Debug, PartialEq, Clone)]
-pub enum Token {
+pub enum TokenKind {
     Require,
     Expose,
     Operation,
-    Type(String),
-    Identifier(String),
-    IntegerLiteral(i32),
-    CharLiteral(char),
-    StringLiteral(String),
-    InterpolatedLiteral(String),
-    Comment(String),
+    Type,
+    Identifier,
+    IntegerLiteral,
+    CharLiteral,
+    StringLiteral,
+    InterpolatedLiteral,
+    TrueLiteral,
+    FalseLiteral,
+    Comment,
     Colon,
     AtMark,
     LeftParentheis,
@@ -27,7 +29,8 @@ pub enum Token {
     For,
     While,
     Match,
-    Ret,
+    Return,
+    Declare,
     Question,
     Multiply,
     Divide,
@@ -35,16 +38,50 @@ pub enum Token {
     Subtract,
 }
 
+#[derive(Debug, Clone)]
+pub enum ValueKind {
+    String(String),
+    Number(i32),
+    Character(char),
+    Nil,
+}
+
+#[derive(Debug, Clone)]
+pub struct Location {
+    pub file: String,
+    pub row: usize,
+    pub column: usize,
+}
+
+impl Location {
+    pub fn display(&mut self) -> String {
+        return format!("{}:{}:{}", self.file, self.row + 1, self.column + 1);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub location: Location,
+    pub value: ValueKind,
+}
+
 pub struct Lexer {
+    file: String,
     input: Vec<char>,
     position: usize,
+    row: usize,
+    bol: usize,
 }
 
 impl Lexer {
-    pub fn new(input: &str) -> Lexer {
+    pub fn new(file: String, input: &str) -> Lexer {
         Lexer {
+            file,
             input: input.chars().collect(),
             position: 0,
+            row: 0,
+            bol: 0,
         }
     }
 
@@ -58,95 +95,123 @@ impl Lexer {
         let c = self.current_char();
 
         if c.is_alphabetic() {
-            return Some(self.consume_identifier());
+            let (kind, value) = self.consume_identifier();
+
+            return Some(Token {
+                kind,
+                value,
+                location: self.get_location(),
+            });
         }
 
         if c.is_digit(10) {
-            return Some(self.consume_integer_literal());
+            let (kind, value) = self.consume_integer_literal();
+
+            return Some(Token {
+                kind,
+                value,
+                location: self.get_location(),
+            });
         }
 
-        match c {
+        let (kind, value) = match c {
             ':' => {
                 self.advance();
-                Some(Token::Colon)
+                (TokenKind::Colon, ValueKind::Nil)
             }
             '@' => {
                 self.advance();
-                Some(Token::AtMark)
+                (TokenKind::AtMark, ValueKind::Nil)
             }
             '(' => {
                 self.advance();
-                Some(Token::LeftParentheis)
+                (TokenKind::LeftParentheis, ValueKind::Nil)
             }
             ')' => {
                 self.advance();
-                Some(Token::RightParenthesis)
+                (TokenKind::RightParenthesis, ValueKind::Nil)
             }
             '{' => {
                 self.advance();
-                Some(Token::LeftCurlyBrace)
+                (TokenKind::LeftCurlyBrace, ValueKind::Nil)
             }
             '}' => {
                 self.advance();
-                Some(Token::RightCurlyBrace)
+                (TokenKind::RightCurlyBrace, ValueKind::Nil)
             }
             '[' => {
                 self.advance();
-                Some(Token::LeftBlockBrace)
+                (TokenKind::LeftBlockBrace, ValueKind::Nil)
             }
             ']' => {
                 self.advance();
-                Some(Token::RightBlockBrace)
+                (TokenKind::RightBlockBrace, ValueKind::Nil)
             }
             ',' => {
                 self.advance();
-                Some(Token::Comma)
+                (TokenKind::Comma, ValueKind::Nil)
             }
             '=' => {
                 self.advance();
-                Some(Token::Equal)
+                (TokenKind::Equal, ValueKind::Nil)
             }
             '-' => {
                 self.advance();
 
                 if self.current_char() == '>' {
                     self.advance();
-                    Some(Token::Arrow)
+                    (TokenKind::Arrow, ValueKind::Nil)
                 } else {
-                    Some(Token::Subtract)
+                    (TokenKind::Subtract, ValueKind::Nil)
                 }
             }
             ';' => {
                 self.advance();
-                Some(Token::Semicolon)
+                (TokenKind::Semicolon, ValueKind::Nil)
             }
             '?' => {
                 self.advance();
-                Some(Token::Question)
+                (TokenKind::Question, ValueKind::Nil)
             }
             '*' => {
                 self.advance();
-                Some(Token::Multiply)
+                (TokenKind::Multiply, ValueKind::Nil)
             }
             '/' => {
                 self.advance();
 
                 match self.current_char() {
-                    '/' => Some(Token::Comment(self.consume_comment())),
-                    _ => Some(Token::Divide),
+                    '/' => (
+                        TokenKind::Comment,
+                        ValueKind::String(self.consume_comment()),
+                    ),
+                    _ => (TokenKind::Divide, ValueKind::Nil),
                 }
             }
             '+' => {
                 self.advance();
-                Some(Token::Add)
+                (TokenKind::Add, ValueKind::Nil)
             }
-            '`' => Some(Token::InterpolatedLiteral(
-                self.consume_interpolated_literal(),
-            )),
-            '"' => Some(Token::StringLiteral(self.consume_string_literal())),
-            '\'' => Some(Token::CharLiteral(self.consume_char_literal())),
+            '`' => (
+                TokenKind::InterpolatedLiteral,
+                ValueKind::String(self.consume_interpolated_literal()),
+            ),
+            '"' => (
+                TokenKind::StringLiteral,
+                ValueKind::String(self.consume_string_literal()),
+            ),
+            '\'' => (
+                TokenKind::CharLiteral,
+                ValueKind::Character(self.consume_char_literal()),
+            ),
             _ => panic!("Unexpected character: {:?}", c),
-        }
+        };
+
+        return Some(Token {
+            kind,
+            value,
+            location: self.get_location(),
+        });
     }
 
     fn is_eof(&self) -> bool {
@@ -158,7 +223,15 @@ impl Lexer {
     }
 
     fn advance(&mut self) {
-        self.position += 1;
+        if !self.is_eof() {
+            let current = self.current_char();
+            self.position += 1;
+
+            if current == '\n' {
+                self.bol = self.position;
+                self.row += 1;
+            }
+        }
     }
 
     fn skip_whitespace(&mut self) {
@@ -167,7 +240,15 @@ impl Lexer {
         }
     }
 
-    fn consume_identifier(&mut self) -> Token {
+    fn get_location(&mut self) -> Location {
+        Location {
+            file: self.file.clone(),
+            row: self.row,
+            column: self.position - self.bol,
+        }
+    }
+
+    fn consume_identifier(&mut self) -> (TokenKind, ValueKind) {
         let start = self.position;
 
         while !self.is_eof() && self.current_char().is_alphanumeric() {
@@ -176,26 +257,31 @@ impl Lexer {
 
         let identifier: String = self.input[start..self.position].iter().collect();
 
-        match identifier.as_str() {
-            "require" => Token::Require,
-            "expose" => Token::Expose,
-            "op" => Token::Operation,
-            "if" => Token::If,
-            "else" => Token::Else,
-            "for" => Token::For,
-            "while" => Token::While,
-            "match" => Token::Match,
-            "ret" => Token::Ret,
+        let kind = match identifier.as_str() {
+            "require" => TokenKind::Require,
+            "expose" => TokenKind::Expose,
+            "op" => TokenKind::Operation,
+            "if" => TokenKind::If,
+            "else" => TokenKind::Else,
+            "for" => TokenKind::For,
+            "while" => TokenKind::While,
+            "match" => TokenKind::Match,
+            "ret" => TokenKind::Return,
+            "let" => TokenKind::Declare,
+            "true" => TokenKind::TrueLiteral,
+            "false" => TokenKind::FalseLiteral,
             _ if identifier
                 .chars()
                 .next()
                 .map(char::is_uppercase)
                 .unwrap_or(false) =>
             {
-                Token::Type(identifier)
+                TokenKind::Type
             }
-            _ => Token::Identifier(identifier),
-        }
+            _ => TokenKind::Identifier,
+        };
+
+        (kind, ValueKind::String(identifier))
     }
 
     fn consume_comment(&mut self) -> String {
@@ -211,7 +297,7 @@ impl Lexer {
         string
     }
 
-    fn consume_integer_literal(&mut self) -> Token {
+    fn consume_integer_literal(&mut self) -> (TokenKind, ValueKind) {
         let start = self.position;
 
         while !self.is_eof() && self.current_char().is_digit(10) {
@@ -219,7 +305,10 @@ impl Lexer {
         }
 
         let literal: String = self.input[start..self.position].iter().collect();
-        Token::IntegerLiteral(literal.parse().unwrap())
+        (
+            TokenKind::IntegerLiteral,
+            ValueKind::Number(literal.parse().unwrap()),
+        )
     }
 
     fn consume_string_literal(&mut self) -> String {

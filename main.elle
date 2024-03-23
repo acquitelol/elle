@@ -1,6 +1,10 @@
-require elle::io;
-require elle:int@{module};
+require elle:io;
+require elle:int@{toString};
 
-expose op main() {
-    io:print("Hello World from Elle!");
+expose op test(Int arg1, String arg2) -> String {
+    ret arg2 + toString(arg1);
+}
+
+op main() {
+    print("Hello World from Elle!");
 }
