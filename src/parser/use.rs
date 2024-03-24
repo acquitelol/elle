@@ -1,4 +1,4 @@
-use crate::lexer::enums::{Token, TokenKind, ValueKind};
+use crate::lexer::enums::TokenKind;
 
 use super::{enums::Primitive, parser::Parser};
 

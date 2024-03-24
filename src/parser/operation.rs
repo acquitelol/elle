@@ -1,4 +1,4 @@
-use crate::lexer::enums::{Token, TokenKind, ValueKind};
+use crate::lexer::enums::{TokenKind, ValueKind};
 
 use super::{
     enums::{Argument, AstNode, Primitive},
@@ -21,7 +21,7 @@ impl<'a> Operation<'a> {
         let name = self.parser.get_identifier();
 
         self.parser.advance();
-        self.parser.expect_token(TokenKind::LeftParentheis);
+        self.parser.expect_token(TokenKind::LeftParenthesis);
         self.parser.advance();
 
         let mut arguments = vec![];

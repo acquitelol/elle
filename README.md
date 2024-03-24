@@ -13,7 +13,7 @@
 use elle:io@{print};
 use elle:int@{random};
 
-// Use `expose` to export functions so they can be imported by other files
+// Use `pub` to make functions public so they can be imported by other files
 // You *must* expose the main function for it to be runnable
 pub op main() {
     let resWithThree: Int = randomWithMultiplier(3); // Returns a random number between 0 and 10 multiplied by 3 using positional arguments
@@ -32,7 +32,6 @@ pub op main() {
     }
 }
 
-op randomWithMultiplier(Int multiplier) -> Int {
 op randomWithMultiplier(Int multiplier) -> Int {
     // If a function uses keyword arguments they must *all* be keyword arguments
     // Use the ret keyword to return from the operation

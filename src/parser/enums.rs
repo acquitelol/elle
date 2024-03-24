@@ -25,8 +25,8 @@ pub enum AstNode {
     },
     IfStatement {
         condition: Box<AstNode>,
-        trueBody: Box<AstNode>,
-        falseBody: Box<AstNode>,
+        body: Box<AstNode>,
+        else_body: Box<AstNode>,
     },
     ForStatement {
         iterator: Token,

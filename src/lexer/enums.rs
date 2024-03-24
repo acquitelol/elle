@@ -14,7 +14,7 @@ pub enum TokenKind {
     Comment,
     Colon,
     AtMark,
-    LeftParentheis,
+    LeftParenthesis,
     RightParenthesis,
     LeftCurlyBrace,
     RightCurlyBrace,

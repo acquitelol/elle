@@ -59,7 +59,7 @@ impl Lexer {
             }
             '(' => {
                 self.advance();
-                (TokenKind::LeftParentheis, ValueKind::Nil)
+                (TokenKind::LeftParenthesis, ValueKind::Nil)
             }
             ')' => {
                 self.advance();

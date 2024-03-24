@@ -1,9 +1,6 @@
 use crate::lexer::enums::{Token, TokenKind, ValueKind};
 
-use super::{
-    enums::{AstNode, Primitive},
-    parser::Parser,
-};
+use super::enums::AstNode;
 
 pub struct Statement {
     tokens: Vec<Token>,
@@ -28,20 +25,7 @@ impl Statement {
     }
 
     fn is_eof(&mut self) -> bool {
-        self.position >= self.tokens.len() - 1
-    }
-
-    fn match_token(&mut self, expected: TokenKind, advance: bool) -> bool {
-        if self.current_token().kind == expected {
-            match advance {
-                true => self.advance(),
-                _ => {}
-            };
-
-            true
-        } else {
-            false
-        }
+        self.position + 1 >= self.tokens.len()
     }
 
     fn expect_token(&self, expected: TokenKind) {
@@ -101,10 +85,12 @@ impl Statement {
 
         let mut value = vec![];
 
-        while self.current_token().kind != TokenKind::Semicolon {
+        while self.current_token().kind != TokenKind::Semicolon && !self.is_eof() {
             value.push(self.current_token());
             self.advance();
         }
+
+        self.expect_token(TokenKind::Semicolon);
 
         AstNode::DeclareStatement {
             name,
@@ -131,10 +117,12 @@ impl Statement {
 
         let mut value = vec![];
 
-        while self.current_token().kind != TokenKind::Semicolon {
+        while self.current_token().kind != TokenKind::Semicolon && !self.is_eof() {
             value.push(self.current_token());
             self.advance();
         }
+
+        self.expect_token(TokenKind::Semicolon);
 
         AstNode::ReturnStatement {
             value: Box::new(Statement::new(value, 0).parse().0),
@@ -145,7 +133,7 @@ impl Statement {
         let name = self.get_identifier();
 
         self.advance();
-        self.expect_token(TokenKind::LeftParentheis);
+        self.expect_token(TokenKind::LeftParenthesis);
         self.advance();
 
         let mut parameters = vec![];
@@ -202,7 +190,16 @@ impl Statement {
 
         self.advance();
 
-        let right = self.tokens.clone().split_off(self.position);
+        let mut right = vec![];
+
+        while self.current_token().kind != TokenKind::Semicolon && !self.is_eof() {
+            right.push(self.current_token());
+            self.advance();
+        }
+
+        if self.current_token().kind != TokenKind::Semicolon {
+            right.push(self.current_token());
+        }
 
         AstNode::ArithmeticOperation {
             left: Box::new(Statement::new(left, 0).parse().0),
@@ -212,8 +209,6 @@ impl Statement {
     }
 
     pub fn parse(&mut self) -> (AstNode, usize) {
-        dbg!(self.tokens.clone());
-
         let node = match self.current_token().kind {
             TokenKind::Declare => self.parse_declare(),
             TokenKind::Return => self.parse_return(),
@@ -224,7 +219,7 @@ impl Statement {
                     let next = self.tokens[self.position + 1].clone();
 
                     match next.kind {
-                        TokenKind::LeftParentheis => self.parse_function(),
+                        TokenKind::LeftParenthesis => self.parse_function(),
                         TokenKind::ArithmeticOperation => self.parse_arithmetic(),
                         _ => todo!(),
                     }
