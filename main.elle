@@ -1,5 +1,4 @@
-pub op main(Int arg) -> Int {
-    let something: Int = 5 + 6;
-    let somethingElse: String = call(5 + 6 - 7 / 2, a * c);
-    ret something + somethingElse;
+op main() {
+    // test
+    1 + 2 * 3 + 4; // 5
 }

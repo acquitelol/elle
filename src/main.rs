@@ -1,7 +1,7 @@
 mod lexer;
 mod parser;
 
-use lexer::lexer::Lexer;
+use lexer::{enums::TokenKind, lexer::Lexer};
 use parser::parser::Parser;
 use std::fs;
 
@@ -14,7 +14,12 @@ fn main() {
     let mut tokens = vec![];
 
     while let Some(token) = lexer.next_token() {
-        tokens.push(token);
+        // Even though the lexer does provide us with comments, we don't care about them
+        // so we can just ignore them and not pass these tokens to the parser
+        match token.kind {
+            TokenKind::Comment => {}
+            _ => tokens.push(token),
+        }
     }
 
     // dbg!(&tokens);
