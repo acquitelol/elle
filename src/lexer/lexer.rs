@@ -85,9 +85,27 @@ impl Lexer {
                 self.advance();
                 (TokenKind::Comma, ValueKind::Nil)
             }
+            '!' => {
+                self.advance();
+
+                match self.current_char() {
+                    '=' => {
+                        self.advance();
+                        (TokenKind::NotEqualTo, ValueKind::Nil)
+                    }
+                    _ => (TokenKind::Not, ValueKind::Nil),
+                }
+            }
             '=' => {
                 self.advance();
-                (TokenKind::Equal, ValueKind::Nil)
+
+                match self.current_char() {
+                    '=' => {
+                        self.advance();
+                        (TokenKind::EqualTo, ValueKind::Nil)
+                    }
+                    _ => (TokenKind::Equal, ValueKind::Nil),
+                }
             }
             '-' => {
                 self.advance();
@@ -96,7 +114,7 @@ impl Lexer {
                     self.advance();
                     (TokenKind::Arrow, ValueKind::Nil)
                 } else {
-                    (TokenKind::ArithmeticOperation, ValueKind::Character(c))
+                    (TokenKind::Subtract, ValueKind::Nil)
                 }
             }
             ';' => {
@@ -109,7 +127,7 @@ impl Lexer {
             }
             '*' => {
                 self.advance();
-                (TokenKind::ArithmeticOperation, ValueKind::Character(c))
+                (TokenKind::Multiply, ValueKind::Nil)
             }
             '/' => {
                 self.advance();
@@ -119,12 +137,38 @@ impl Lexer {
                         TokenKind::Comment,
                         ValueKind::String(self.consume_comment()),
                     ),
-                    _ => (TokenKind::ArithmeticOperation, ValueKind::Character(c)),
+                    _ => (TokenKind::Divide, ValueKind::Nil),
                 }
             }
             '+' => {
                 self.advance();
-                (TokenKind::ArithmeticOperation, ValueKind::Character(c))
+                (TokenKind::Add, ValueKind::Nil)
+            }
+            '%' => {
+                self.advance();
+                (TokenKind::Modulus, ValueKind::Nil)
+            }
+            '&' => {
+                self.advance();
+
+                match self.current_char() {
+                    '&' => {
+                        self.advance();
+                        (TokenKind::And, ValueKind::Nil)
+                    }
+                    _ => (TokenKind::None, ValueKind::Nil),
+                }
+            }
+            '|' => {
+                self.advance();
+
+                match self.current_char() {
+                    '|' => {
+                        self.advance();
+                        (TokenKind::Or, ValueKind::Nil)
+                    }
+                    _ => (TokenKind::None, ValueKind::Nil),
+                }
             }
             '`' => (
                 TokenKind::InterpolatedLiteral,
@@ -138,8 +182,34 @@ impl Lexer {
                 TokenKind::CharLiteral,
                 ValueKind::Character(self.consume_char_literal()),
             ),
+            '>' => {
+                self.advance();
+
+                match self.current_char() {
+                    '=' => {
+                        self.advance();
+                        (TokenKind::GreaterThanEqual, ValueKind::Nil)
+                    }
+                    _ => (TokenKind::GreaterThan, ValueKind::Nil),
+                }
+            }
+            '<' => {
+                self.advance();
+
+                match self.current_char() {
+                    '=' => {
+                        self.advance();
+                        (TokenKind::LessThanEqual, ValueKind::Nil)
+                    }
+                    _ => (TokenKind::LessThan, ValueKind::Nil),
+                }
+            }
             _ => panic!("Unexpected character: {:?}", c),
         };
+
+        if kind == TokenKind::None {
+            return None;
+        }
 
         return Some(Token {
             kind,

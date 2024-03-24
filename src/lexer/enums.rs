@@ -21,6 +21,7 @@ pub enum TokenKind {
     LeftBlockBrace,
     RightBlockBrace,
     Comma,
+    Not,
     Equal,
     Arrow,
     Semicolon,
@@ -32,7 +33,38 @@ pub enum TokenKind {
     Return,
     Declare,
     Question,
-    ArithmeticOperation,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Modulus,
+    GreaterThan,
+    LessThan,
+    GreaterThanEqual,
+    LessThanEqual,
+    EqualTo,
+    NotEqualTo,
+    And,
+    Or,
+    None,
+}
+
+impl TokenKind {
+    fn precedence(&self) -> i32 {
+        match self {
+            TokenKind::Multiply | TokenKind::Divide | TokenKind::Modulus => 7,
+            TokenKind::Add | TokenKind::Subtract => 6,
+            TokenKind::LessThan
+            | TokenKind::LessThanEqual
+            | TokenKind::GreaterThan
+            | TokenKind::GreaterThanEqual => 5,
+            TokenKind::EqualTo | TokenKind::NotEqualTo => 4,
+            TokenKind::And => 3,
+            TokenKind::Or => 2,
+            TokenKind::Equal => 1,
+            _ => 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

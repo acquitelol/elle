@@ -65,29 +65,6 @@ impl<'a> Operation<'a> {
                     self.parser.advance();
                     break;
                 }
-                TokenKind::ArithmeticOperation => {
-                    let mut cloned_tokens = self.parser.tokens.clone();
-
-                    if self.parser.position == 0 {
-                        panic!("Cannot use arithmetic operations without a left side!");
-                    }
-
-                    cloned_tokens[self.parser.position - 1].kind = TokenKind::IntegerLiteral;
-                    cloned_tokens[self.parser.position - 1].value = ValueKind::Number(444);
-
-                    let (node, position) =
-                        Statement::new(cloned_tokens, self.parser.position.clone() - 1).parse();
-
-                    let parsed_node = match node {
-                        AstNode::ArithmeticOperation { left: _, right, operator } => {
-                            AstNode::ArithmeticOperation { left: Box::new(body.last().unwrap().clone()), right, operator }
-                        }
-                        _ => panic!("Arithmetic operation token did not return an arithmetic operation node.")
-                    };
-
-                    body.push(parsed_node);
-                    self.parser.position = position;
-                }
                 _ => {
                     let (node, position) =
                         Statement::new(self.parser.tokens.clone(), self.parser.position.clone())
