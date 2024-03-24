@@ -10,17 +10,17 @@
 
 ```ts
 // Import statements follow a lib:file@{method1, method2...} format;
-require elle:io;
-require elle:int@{random};
+use elle:io@{print};
+use elle:int@{random};
 
 // Use `expose` to export functions so they can be imported by other files
 // You *must* expose the main function for it to be runnable
-expose op main() {
+pub op main() {
     let resWithThree: Int = randomWithMultiplier(3); // Returns a random number between 0 and 10 multiplied by 3 using positional arguments
     let resWithSixteen: Int = randomWithMultiplier(multiplier: 16); // Returns a random number between 0 and 10 multiplied by 16 using keyword arguments
     printMessage(`First result is %{resWithThree} and second is %{resWithSixteen}`);
 
-    let maybeRes: Int = randomWithPossibleError();
+    let maybeRes: Int? = randomWithPossibleError();
 
     if (maybeRes) {
         // In this scope, maybeRes is just Int32 not Int32?
@@ -32,6 +32,7 @@ expose op main() {
     }
 }
 
+op randomWithMultiplier(Int multiplier) -> Int {
 op randomWithMultiplier(Int multiplier) -> Int {
     // If a function uses keyword arguments they must *all* be keyword arguments
     // Use the ret keyword to return from the operation
@@ -54,7 +55,7 @@ op randomWithPossibleError() -> Int? {
 // No return argument needed if function returns void
 // Note that this is *only* if the function returns void
 op printMessage(String message) {
-    io::print(message);
+    print(`[Elle] %{message}`);
 }
 ```
 

@@ -1,10 +1,3 @@
-require elle:io;
-require elle:int@{toString};
-
-expose op test(Int arg1, String arg2) -> String {
-    ret arg2 + toString(arg1);
-}
-
 op main() {
-    print("Hello World from Elle!");
+    ret toString(a, 4 + 9);
 }

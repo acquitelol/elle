@@ -1,70 +1,4 @@
-#[derive(Debug, PartialEq, Clone)]
-pub enum TokenKind {
-    Require,
-    Expose,
-    Operation,
-    Type,
-    Identifier,
-    IntegerLiteral,
-    CharLiteral,
-    StringLiteral,
-    InterpolatedLiteral,
-    TrueLiteral,
-    FalseLiteral,
-    Comment,
-    Colon,
-    AtMark,
-    LeftParentheis,
-    RightParenthesis,
-    LeftCurlyBrace,
-    RightCurlyBrace,
-    LeftBlockBrace,
-    RightBlockBrace,
-    Comma,
-    Equal,
-    Arrow,
-    Semicolon,
-    If,
-    Else,
-    For,
-    While,
-    Match,
-    Return,
-    Declare,
-    Question,
-    Multiply,
-    Divide,
-    Add,
-    Subtract,
-}
-
-#[derive(Debug, Clone)]
-pub enum ValueKind {
-    String(String),
-    Number(i32),
-    Character(char),
-    Nil,
-}
-
-#[derive(Debug, Clone)]
-pub struct Location {
-    pub file: String,
-    pub row: usize,
-    pub column: usize,
-}
-
-impl Location {
-    pub fn display(&mut self) -> String {
-        return format!("{}:{}:{}", self.file, self.row + 1, self.column + 1);
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Token {
-    pub kind: TokenKind,
-    pub location: Location,
-    pub value: ValueKind,
-}
+use super::enums::{Location, Token, TokenKind, ValueKind};
 
 pub struct Lexer {
     file: String,
@@ -162,7 +96,7 @@ impl Lexer {
                     self.advance();
                     (TokenKind::Arrow, ValueKind::Nil)
                 } else {
-                    (TokenKind::Subtract, ValueKind::Nil)
+                    (TokenKind::ArithmeticOperation, ValueKind::Character(c))
                 }
             }
             ';' => {
@@ -175,7 +109,7 @@ impl Lexer {
             }
             '*' => {
                 self.advance();
-                (TokenKind::Multiply, ValueKind::Nil)
+                (TokenKind::ArithmeticOperation, ValueKind::Character(c))
             }
             '/' => {
                 self.advance();
@@ -185,12 +119,12 @@ impl Lexer {
                         TokenKind::Comment,
                         ValueKind::String(self.consume_comment()),
                     ),
-                    _ => (TokenKind::Divide, ValueKind::Nil),
+                    _ => (TokenKind::ArithmeticOperation, ValueKind::Character(c)),
                 }
             }
             '+' => {
                 self.advance();
-                (TokenKind::Add, ValueKind::Nil)
+                (TokenKind::ArithmeticOperation, ValueKind::Character(c))
             }
             '`' => (
                 TokenKind::InterpolatedLiteral,
@@ -258,8 +192,8 @@ impl Lexer {
         let identifier: String = self.input[start..self.position].iter().collect();
 
         let kind = match identifier.as_str() {
-            "require" => TokenKind::Require,
-            "expose" => TokenKind::Expose,
+            "use" => TokenKind::Use,
+            "pub" => TokenKind::Public,
             "op" => TokenKind::Operation,
             "if" => TokenKind::If,
             "else" => TokenKind::Else,

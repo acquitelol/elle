@@ -1,8 +1,8 @@
 mod lexer;
 mod parser;
 
-use lexer::Lexer;
-use parser::Parser;
+use lexer::lexer::Lexer;
+use parser::parser::Parser;
 use std::fs;
 
 fn main() {
@@ -17,7 +17,7 @@ fn main() {
         tokens.push(token);
     }
 
-    dbg!(&tokens);
+    // dbg!(&tokens);
 
     let mut parser = Parser::new(tokens);
     parser.parse();
