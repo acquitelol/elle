@@ -24,6 +24,13 @@ impl Statement {
         self.tokens[self.position].clone()
     }
 
+    fn next_token(&mut self) -> Option<Token> {
+        match self.is_eof() {
+            true => None,
+            false => Some(self.tokens[self.position + 1].clone()),
+        }
+    }
+
     fn is_eof(&mut self) -> bool {
         self.position + 1 >= self.tokens.len()
     }
@@ -100,7 +107,7 @@ impl Statement {
     }
 
     fn parse_literal(&mut self) -> AstNode {
-        if self.tokens.len() == 1 {
+        if self.tokens.len() - self.position == 1 {
             let current = self.current_token();
 
             AstNode::LiteralStatement {
@@ -108,7 +115,22 @@ impl Statement {
                 value: current.value,
             }
         } else {
-            self.parse_arithmetic()
+            match self.next_token() {
+                Some(token) => match token.kind {
+                    TokenKind::Semicolon => {
+                        let current = self.current_token();
+
+                        self.advance();
+
+                        AstNode::LiteralStatement {
+                            kind: current.kind,
+                            value: current.value,
+                        }
+                    }
+                    _ => self.parse_arithmetic(),
+                },
+                None => self.parse_arithmetic(),
+            }
         }
     }
 

@@ -1,4 +1,4 @@
-use crate::lexer::enums::{TokenKind, ValueKind};
+use crate::lexer::enums::TokenKind;
 
 use super::{
     enums::{Argument, AstNode, Primitive},

@@ -114,7 +114,23 @@ impl Lexer {
                     self.advance();
                     (TokenKind::Arrow, ValueKind::Nil)
                 } else {
-                    (TokenKind::Subtract, ValueKind::Nil)
+                    match self.current_char().is_digit(10) {
+                        true => {
+                            let (kind, value) = self.consume_integer_literal();
+
+                            let integer = match value {
+                                ValueKind::Number(value) => value,
+                                _ => todo!(),
+                            };
+
+                            return Some(Token {
+                                kind,
+                                value: ValueKind::Number(-integer),
+                                location: self.get_location(),
+                            });
+                        }
+                        false => (TokenKind::Subtract, ValueKind::Nil),
+                    }
                 }
             }
             ';' => {
@@ -142,7 +158,19 @@ impl Lexer {
             }
             '+' => {
                 self.advance();
-                (TokenKind::Add, ValueKind::Nil)
+
+                match self.current_char().is_digit(10) {
+                    true => {
+                        let (kind, value) = self.consume_integer_literal();
+
+                        return Some(Token {
+                            kind,
+                            value,
+                            location: self.get_location(),
+                        });
+                    }
+                    false => (TokenKind::Add, ValueKind::Nil),
+                }
             }
             '%' => {
                 self.advance();
