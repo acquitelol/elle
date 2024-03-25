@@ -1,3 +1,4 @@
 op main() {
-    1 + 2 * 3 + 4;
+    let test: Int = getRandom(2 * 5, 10);
+    ret test(1 + 2 * 3 + 4 / 5);
 }

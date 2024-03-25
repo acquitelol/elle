@@ -100,7 +100,7 @@ impl Statement {
     }
 
     fn parse_literal(&mut self) -> AstNode {
-        if self.tokens.len() < 2 {
+        if self.tokens.len() == 1 {
             let current = self.current_token();
 
             AstNode::LiteralStatement {
@@ -138,68 +138,79 @@ impl Statement {
 
         let mut parameters = vec![];
 
-        while self.current_token().kind != TokenKind::RightParenthesis
-            && self.current_token().kind != TokenKind::Semicolon
-            && !self.is_eof()
-        {
+        while self.current_token().kind != TokenKind::RightParenthesis && !self.is_eof() {
             let mut tokens = vec![];
 
-            tokens.push(self.current_token());
-            self.advance();
-
-            while self.current_token().kind != TokenKind::Comma
-                && self.current_token().kind != TokenKind::RightParenthesis
-                && !self.is_eof()
-            {
+            loop {
                 tokens.push(self.current_token());
                 self.advance();
+
+                if self.current_token().kind == TokenKind::Comma {
+                    self.advance();
+                    break;
+                }
+
+                if self.current_token().kind == TokenKind::RightParenthesis || self.is_eof() {
+                    break;
+                }
             }
 
             parameters.push(Statement::new(tokens, 0).parse().0);
-            self.advance();
         }
 
         self.expect_token(TokenKind::RightParenthesis);
+        self.advance();
 
         AstNode::FunctionCall { name, parameters }
     }
 
+    fn find_highest_precedence(&mut self) -> usize {
+        let tokens = self.tokens.clone();
+        let mut precedence = 0;
+        let mut precedence_index = 0;
+        let mut index = self.position.clone();
+
+        loop {
+            index += 1;
+
+            if index >= tokens.len() - 1 {
+                break;
+            }
+
+            let token = tokens[index].clone();
+
+            if token.kind.precedence() > precedence {
+                precedence_index = index;
+                precedence = token.kind.precedence();
+            }
+        }
+
+        precedence_index
+    }
+
     fn parse_arithmetic(&mut self) -> AstNode {
-        let mut left = vec![];
+        let position = self.find_highest_precedence();
+        let operator = self.tokens[position].clone().kind;
 
-        while self.current_token().kind != TokenKind::ArithmeticOperation && !self.is_eof() {
-            left.push(self.current_token());
-            self.advance();
-        }
+        dbg!(position, &operator, &self.tokens);
 
-        self.expect_token(TokenKind::ArithmeticOperation);
+        let tokens = self.tokens.clone();
+        let left = tokens[self.position..=position - 1].to_vec();
+        let mut raw_right = tokens[position..=tokens.len() - 1].to_vec();
 
-        let operator = if let Token {
-            value: ValueKind::Character(operator),
-            ..
-        } = self.current_token()
+        self.position += left.len();
+        self.position += raw_right.len() - 1;
+
+        raw_right.remove(0); // Get rid of the operator
+
+        let right = if let Some(index) = raw_right
+            .iter()
+            .position(|token| token.kind == TokenKind::Semicolon)
         {
-            operator.clone()
+            raw_right[..index].to_vec()
         } else {
-            panic!(
-                "Expected {:?}, got {:?}",
-                TokenKind::ArithmeticOperation,
-                self.current_token()
-            );
+            raw_right
         };
-
-        self.advance();
-
-        let mut right = vec![];
-
-        while self.current_token().kind != TokenKind::Semicolon && !self.is_eof() {
-            right.push(self.current_token());
-            self.advance();
-        }
-
-        if self.current_token().kind != TokenKind::Semicolon {
-            right.push(self.current_token());
-        }
 
         AstNode::ArithmeticOperation {
             left: Box::new(Statement::new(left, 0).parse().0),
@@ -218,10 +229,13 @@ impl Statement {
                 } else {
                     let next = self.tokens[self.position + 1].clone();
 
-                    match next.kind {
-                        TokenKind::LeftParenthesis => self.parse_function(),
-                        TokenKind::ArithmeticOperation => self.parse_arithmetic(),
-                        _ => todo!(),
+                    if next.kind.is_arithmetic() {
+                        self.parse_arithmetic()
+                    } else {
+                        match next.kind {
+                            TokenKind::LeftParenthesis => self.parse_function(),
+                            _ => todo!(),
+                        }
                     }
                 }
             }

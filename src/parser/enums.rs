@@ -21,7 +21,7 @@ pub enum AstNode {
     ArithmeticOperation {
         left: Box<AstNode>,
         right: Box<AstNode>,
-        operator: char,
+        operator: TokenKind,
     },
     IfStatement {
         condition: Box<AstNode>,

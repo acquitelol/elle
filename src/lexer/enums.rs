@@ -50,19 +50,34 @@ pub enum TokenKind {
 }
 
 impl TokenKind {
-    fn precedence(&self) -> i32 {
+    pub fn precedence(&self) -> i32 {
         match self {
-            TokenKind::Multiply | TokenKind::Divide | TokenKind::Modulus => 7,
-            TokenKind::Add | TokenKind::Subtract => 6,
-            TokenKind::LessThan
-            | TokenKind::LessThanEqual
-            | TokenKind::GreaterThan
-            | TokenKind::GreaterThanEqual => 5,
-            TokenKind::EqualTo | TokenKind::NotEqualTo => 4,
-            TokenKind::And => 3,
-            TokenKind::Or => 2,
-            TokenKind::Equal => 1,
+            Self::Multiply | Self::Divide | Self::Modulus => 6,
+            Self::Add | Self::Subtract => 5,
+            Self::LessThan | Self::LessThanEqual | Self::GreaterThan | Self::GreaterThanEqual => 4,
+            Self::EqualTo | Self::NotEqualTo => 3,
+            Self::And => 2,
+            Self::Or => 1,
             _ => 0,
+        }
+    }
+
+    pub fn is_arithmetic(&self) -> bool {
+        match self.to_owned() {
+            Self::Multiply
+            | Self::Divide
+            | Self::Modulus
+            | Self::Add
+            | Self::Subtract
+            | Self::LessThan
+            | Self::LessThanEqual
+            | Self::GreaterThan
+            | Self::GreaterThanEqual
+            | Self::EqualTo
+            | Self::NotEqualTo
+            | Self::And
+            | Self::Or => true,
+            _ => false,
         }
     }
 }
