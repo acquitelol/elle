@@ -186,9 +186,9 @@ impl Statement {
         AstNode::FunctionCall { name, parameters }
     }
 
-    fn find_highest_precedence(&mut self) -> usize {
+    fn find_lowest_precedence(&mut self) -> usize {
         let tokens = self.tokens.clone();
-        let mut precedence = 0;
+        let mut precedence = TokenKind::Multiply.precedence();
         let mut precedence_index = 0;
         let mut index = self.position.clone();
 
@@ -201,7 +201,7 @@ impl Statement {
 
             let token = tokens[index].clone();
 
-            if token.kind.precedence() > precedence {
+            if token.kind.is_arithmetic() && token.kind.precedence() <= precedence {
                 precedence_index = index;
                 precedence = token.kind.precedence();
             }
@@ -211,10 +211,8 @@ impl Statement {
     }
 
     fn parse_arithmetic(&mut self) -> AstNode {
-        let position = self.find_highest_precedence();
+        let position = self.find_lowest_precedence();
         let operator = self.tokens[position].clone().kind;
-
-        dbg!(position, &operator, &self.tokens);
 
         let tokens = self.tokens.clone();
         let left = tokens[self.position..=position - 1].to_vec();
