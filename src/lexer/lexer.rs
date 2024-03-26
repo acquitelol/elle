@@ -298,6 +298,7 @@ impl Lexer {
             "for" => TokenKind::For,
             "while" => TokenKind::While,
             "match" => TokenKind::Match,
+            "const" => TokenKind::Constant,
             "ret" => TokenKind::Return,
             "let" => TokenKind::Declare,
             "true" => TokenKind::TrueLiteral,

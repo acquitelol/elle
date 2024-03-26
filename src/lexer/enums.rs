@@ -47,6 +47,7 @@ pub enum TokenKind {
     And,
     Or,
     None,
+    Constant,
 }
 
 impl TokenKind {
@@ -77,6 +78,18 @@ impl TokenKind {
             | Self::NotEqualTo
             | Self::And
             | Self::Or => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_literal(&self) -> bool {
+        match self.to_owned() {
+            Self::StringLiteral
+            | Self::IntegerLiteral
+            | Self::CharLiteral
+            | Self::InterpolatedLiteral
+            | Self::TrueLiteral
+            | Self::FalseLiteral => true,
             _ => false,
         }
     }

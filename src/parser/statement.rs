@@ -162,8 +162,17 @@ impl Statement {
 
         while self.current_token().kind != TokenKind::RightParenthesis && !self.is_eof() {
             let mut tokens = vec![];
+            let mut nesting = 0;
 
             loop {
+                if self.current_token().kind == TokenKind::Identifier
+                    && self
+                        .next_token()
+                        .is_some_and(|x| x.kind == TokenKind::LeftParenthesis)
+                {
+                    nesting += 1;
+                }
+
                 tokens.push(self.current_token());
                 self.advance();
 
@@ -172,7 +181,18 @@ impl Statement {
                     break;
                 }
 
-                if self.current_token().kind == TokenKind::RightParenthesis || self.is_eof() {
+                if self.current_token().kind == TokenKind::RightParenthesis {
+                    match nesting > 0 {
+                        true => {
+                            nesting -= 1;
+                        }
+                        false => {
+                            break;
+                        }
+                    }
+                }
+
+                if self.is_eof() {
                     break;
                 }
             }
@@ -239,35 +259,64 @@ impl Statement {
         }
     }
 
-    pub fn parse(&mut self) -> (AstNode, usize) {
-        let node = match self.current_token().kind {
-            TokenKind::Declare => self.parse_declare(),
-            TokenKind::Return => self.parse_return(),
+    fn parse_expression(&mut self) -> AstNode {
+        let mut node = self.parse_primary();
+
+        while self.current_token().kind.is_arithmetic() {
+            let operator = self.current_token().kind;
+
+            self.advance();
+
+            let right = self.parse_primary();
+
+            node = AstNode::ArithmeticOperation {
+                left: Box::new(node),
+                right: Box::new(right),
+                operator,
+            };
+        }
+
+        node
+    }
+
+    fn parse_primary(&mut self) -> AstNode {
+        match self.current_token().kind {
+            TokenKind::IntegerLiteral
+            | TokenKind::StringLiteral
+            | TokenKind::CharLiteral
+            | TokenKind::InterpolatedLiteral => self.parse_literal(),
             TokenKind::Identifier => {
                 if self.is_eof() {
                     self.parse_literal()
                 } else {
                     let next = self.tokens[self.position + 1].clone();
 
-                    if next.kind.is_arithmetic() {
+                    if next.kind == TokenKind::LeftParenthesis {
+                        self.parse_function()
+                    } else if next.kind.is_arithmetic() {
                         self.parse_arithmetic()
                     } else {
-                        match next.kind {
-                            TokenKind::LeftParenthesis => self.parse_function(),
-                            _ => todo!(),
-                        }
+                        panic!(
+                            "[{:?}] Expected expression, got {:?}",
+                            self.current_token().location.display(),
+                            self.current_token().kind
+                        );
                     }
                 }
             }
-            TokenKind::IntegerLiteral
-            | TokenKind::StringLiteral
-            | TokenKind::CharLiteral
-            | TokenKind::InterpolatedLiteral => self.parse_literal(),
             _ => panic!(
                 "[{:?}] Expected expression, got {:?}",
                 self.current_token().location.display(),
                 self.current_token().kind
             ),
+        }
+    }
+
+    pub fn parse(&mut self) -> (AstNode, usize) {
+        let node = match self.current_token().kind {
+            TokenKind::Declare => self.parse_declare(),
+            TokenKind::Return => self.parse_return(),
+            _ => self.parse_expression(),
         };
 
         (node, self.position)

@@ -57,6 +57,12 @@ pub enum Primitive {
         r#return: String,
         body: Vec<AstNode>,
     },
+    Constant {
+        name: String,
+        public: bool,
+        r#type: String,
+        value: ValueKind,
+    },
 }
 
 #[derive(Debug, Clone)]
