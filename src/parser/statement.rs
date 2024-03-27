@@ -35,15 +35,20 @@ impl Statement {
         self.position + 1 >= self.tokens.len()
     }
 
-    fn expect_token(&self, expected: TokenKind) {
+    fn expect_token_with_message(&self, expected: TokenKind, message: Option<&str>) {
         if self.current_token().kind != expected {
             panic!(
-                "[{}] Expected {:?}, found {:?}",
+                "[{}] Expected {:?}, found {:?}. {}",
                 self.current_token().location.display(),
                 expected,
-                self.current_token().kind
+                self.current_token().kind,
+                message.unwrap_or("")
             );
         }
+    }
+
+    fn expect_token(&self, expected: TokenKind) {
+        self.expect_token_with_message(expected, None);
     }
 
     fn get(&mut self, expected: TokenKind) -> String {
@@ -165,11 +170,7 @@ impl Statement {
             let mut nesting = 0;
 
             loop {
-                if self.current_token().kind == TokenKind::Identifier
-                    && self
-                        .next_token()
-                        .is_some_and(|x| x.kind == TokenKind::LeftParenthesis)
-                {
+                if self.current_token().kind == TokenKind::LeftParenthesis {
                     nesting += 1;
                 }
 
@@ -177,18 +178,23 @@ impl Statement {
                 self.advance();
 
                 if self.current_token().kind == TokenKind::Comma {
-                    self.advance();
-                    break;
+                    if nesting > 0 {
+                        // Comma in an inner function should just be added to the token list to be parsed
+                        tokens.push(self.current_token());
+                        self.advance();
+                        continue;
+                    } else {
+                        // Continue to the next parameter in the outer function
+                        self.advance();
+                        break;
+                    }
                 }
 
                 if self.current_token().kind == TokenKind::RightParenthesis {
-                    match nesting > 0 {
-                        true => {
-                            nesting -= 1;
-                        }
-                        false => {
-                            break;
-                        }
+                    if nesting > 0 {
+                        nesting -= 1;
+                    } else {
+                        break; // The function call has ended
                     }
                 }
 
@@ -200,7 +206,11 @@ impl Statement {
             parameters.push(Statement::new(tokens, 0).parse().0);
         }
 
-        self.expect_token(TokenKind::RightParenthesis);
+        self.expect_token_with_message(
+            TokenKind::RightParenthesis,
+            Some("Perhaps you forgot to close a nested expression?"),
+        );
+
         self.advance();
 
         AstNode::FunctionCall { name, parameters }
@@ -221,6 +231,9 @@ impl Statement {
 
             let token = tokens[index].clone();
 
+            // Set the precedence to the last lowest precedence found.
+            // If the expression is 1 + 2 * 3 + 4 * 5 for example,
+            // it'll return the position of the second plus token
             if token.kind.is_arithmetic() && token.kind.precedence() <= precedence {
                 precedence_index = index;
                 precedence = token.kind.precedence();
@@ -238,10 +251,11 @@ impl Statement {
         let left = tokens[self.position..=position - 1].to_vec();
         let mut raw_right = tokens[position..=tokens.len() - 1].to_vec();
 
-        self.position += left.len();
-        self.position += raw_right.len() - 1;
-
         raw_right.remove(0); // Get rid of the operator
+
+        // Shift the position across the size of the expression
+        self.position += left.len();
+        self.position += raw_right.len();
 
         let right = if let Some(index) = raw_right
             .iter()
@@ -297,7 +311,7 @@ impl Statement {
                         self.parse_arithmetic()
                     } else {
                         panic!(
-                            "[{:?}] Expected expression, got {:?}",
+                            "[{:?}] Expected left parenthesis or arithmetic, got {:?}",
                             self.current_token().location.display(),
                             self.current_token().kind
                         );

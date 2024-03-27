@@ -13,6 +13,8 @@
 use elle:io@{print};
 use elle:int@{random};
 
+const languageName: String = "Elle";
+
 // Use `pub` to make functions public so they can be imported by other files
 // You *must* expose the main function for it to be runnable
 pub op main() {
@@ -54,23 +56,39 @@ op randomWithPossibleError() -> Int? {
 // No return argument needed if function returns void
 // Note that this is *only* if the function returns void
 op printMessage(String message) {
-    print(`[Elle] %{message}`);
+    print(`[%{languageName}] %{message}`);
 }
 ```
 
-* Semicolons are enforced
-* Comments start with //
+* Semicolons are enforced and are required for parsing
+* Comments start with // and are ignored when parsing
 * Backticks (`) are required for string interpolation
 * Single quotes are strictly for characters
 * Double quotes are strictly for strings
+* Constants must be at the top level of files & start with `const`
+* Variables must be inside of operations & start with `let`
+* Returning from operations is done with the `ret` keyword
 
 > If you have any questions, please [raise an issue](https://github.com/acquitelol/elle/issues/new) :3
 
-### ♡ **How to build**
+### ♡ **How to run**
 
-* Ensure you have [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html) and [rust](https://www.rust-lang.org/).
-* Run `cargo run`
-* **You're done!**
+* Elle has no third-party dependencies, so you can simply do the following:
+  * Ensure you have [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html) and [Rust](https://www.rust-lang.org/).
+
+    ```terminal
+      git clone https://github.com/acquitelol/elle
+    ```
+
+    ```terminal
+      cd elle
+    ```
+
+    ```terminal
+      cargo run
+    ```
+
+  * **You're done!**
 
 ### ♡ **Licensing**
 
