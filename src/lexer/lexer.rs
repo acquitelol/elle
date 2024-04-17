@@ -198,10 +198,6 @@ impl Lexer {
                     _ => (TokenKind::None, ValueKind::Nil),
                 }
             }
-            '`' => (
-                TokenKind::InterpolatedLiteral,
-                ValueKind::String(self.consume_interpolated_literal()),
-            ),
             '"' => (
                 TokenKind::StringLiteral,
                 ValueKind::String(self.consume_string_literal()),
@@ -371,18 +367,5 @@ impl Lexer {
         self.advance(); // Advance once more to leave the char expr
 
         character
-    }
-
-    fn consume_interpolated_literal(&mut self) -> String {
-        let mut string = String::new();
-        self.advance();
-
-        while !self.is_eof() && self.current_char() != '`' {
-            string.push(self.current_char());
-            self.advance();
-        }
-
-        self.advance();
-        string
     }
 }

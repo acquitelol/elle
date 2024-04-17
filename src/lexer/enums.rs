@@ -8,7 +8,6 @@ pub enum TokenKind {
     IntegerLiteral,
     CharLiteral,
     StringLiteral,
-    InterpolatedLiteral,
     TrueLiteral,
     FalseLiteral,
     Comment,
@@ -51,7 +50,7 @@ pub enum TokenKind {
 }
 
 impl TokenKind {
-    pub fn precedence(&self) -> i32 {
+    pub fn precedence(&self) -> i8 {
         match self {
             Self::Multiply | Self::Divide | Self::Modulus => 6,
             Self::Add | Self::Subtract => 5,
@@ -87,7 +86,6 @@ impl TokenKind {
             Self::StringLiteral
             | Self::IntegerLiteral
             | Self::CharLiteral
-            | Self::InterpolatedLiteral
             | Self::TrueLiteral
             | Self::FalseLiteral => true,
             _ => false,
@@ -98,7 +96,7 @@ impl TokenKind {
 #[derive(Debug, Clone)]
 pub enum ValueKind {
     String(String),
-    Number(i32),
+    Number(i64),
     Character(char),
     Nil,
 }

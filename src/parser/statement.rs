@@ -179,7 +179,8 @@ impl Statement {
 
                 if self.current_token().kind == TokenKind::Comma {
                     if nesting > 0 {
-                        // Comma in an inner function should just be added to the token list to be parsed
+                        // Comma in an inner function should just be added to the
+                        // token list to be parsed
                         tokens.push(self.current_token());
                         self.advance();
                         continue;
@@ -295,10 +296,9 @@ impl Statement {
 
     fn parse_primary(&mut self) -> AstNode {
         match self.current_token().kind {
-            TokenKind::IntegerLiteral
-            | TokenKind::StringLiteral
-            | TokenKind::CharLiteral
-            | TokenKind::InterpolatedLiteral => self.parse_literal(),
+            TokenKind::IntegerLiteral | TokenKind::StringLiteral | TokenKind::CharLiteral => {
+                self.parse_literal()
+            }
             TokenKind::Identifier => {
                 if self.is_eof() {
                     self.parse_literal()

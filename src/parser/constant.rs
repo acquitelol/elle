@@ -1,4 +1,4 @@
-use crate::lexer::enums::TokenKind;
+use crate::lexer::enums::{TokenKind, ValueKind};
 
 use super::{enums::Primitive, parser::Parser};
 
@@ -18,14 +18,24 @@ impl<'a> Constant<'a> {
 
         self.parser.advance();
 
-        self.parser.expect_token(TokenKind::Colon);
-        self.parser.advance();
+        let unparsed_type = match self.parser.current_token().kind {
+            TokenKind::Colon => {
+                self.parser.advance();
+                let r#type = self.parser.get_type();
+                self.parser.advance();
 
-        let r#type = self.parser.get_type();
+                self.parser.expect_token(TokenKind::Equal);
+                self.parser.advance();
 
-        self.parser.advance();
-        self.parser.expect_token(TokenKind::Equal);
-        self.parser.advance();
+                Some(r#type)
+            }
+
+            TokenKind::Equal => {
+                self.parser.advance();
+                None
+            }
+            _ => None,
+        };
 
         if !self.parser.current_token().kind.is_literal() {
             panic!("Constants can only be literal expressions.");
@@ -36,6 +46,16 @@ impl<'a> Constant<'a> {
         self.parser.advance();
         self.parser.expect_token(TokenKind::Semicolon);
         self.parser.advance();
+
+        let r#type = match unparsed_type {
+            Some(r#type) => r#type,
+            None => match value {
+                ValueKind::String(_) => "String".to_string(),
+                ValueKind::Number(_) => "Int".to_string(),
+                ValueKind::Character(_) => "Char".to_string(),
+                ValueKind::Nil => "Nil".to_string(),
+            },
+        };
 
         Primitive::Constant {
             name,

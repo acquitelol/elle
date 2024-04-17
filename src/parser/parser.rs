@@ -88,7 +88,7 @@ impl Parser {
         self.get(TokenKind::Type)
     }
 
-    pub fn parse(&mut self) {
+    pub fn parse(&mut self) -> Vec<Primitive> {
         loop {
             match self.current_token().kind {
                 TokenKind::Use => {
@@ -129,6 +129,6 @@ impl Parser {
             }
         }
 
-        dbg!(&self.tree);
+        return self.tree.clone();
     }
 }

@@ -1,0 +1,11 @@
+const real = "I figured out that";
+
+op add(Int num1, Int num2) {
+    ret num1 + num2;
+}
+
+pub op main() {
+    let res: Int = add(1, 1);
+    printf("%s 1 + 1 = %d\n", real, res);
+    ret puts("test");
+}

@@ -43,7 +43,7 @@ pub enum AstNode {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Primitive {
     Use {
         library: String,
@@ -71,7 +71,7 @@ pub struct Case {
     pub body: Box<AstNode>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Argument {
     pub name: String,
     pub r#type: String,

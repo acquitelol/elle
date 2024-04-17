@@ -73,22 +73,28 @@ op printMessage(String message) {
 
 ### ♡ **How to run**
 
-* Elle has no third-party dependencies, so you can simply do the following:
-  * Ensure you have [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html) and [Rust](https://www.rust-lang.org/).
+* Elle has only one third-party dependency, so you can simply do the following:
+  * Ensure you have [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html), [Rust](https://www.rust-lang.org/), and the [QBE](https://c9x.me/compile/) compiler backend.
 
     ```terminal
-      git clone https://github.com/acquitelol/elle
+        $ git clone https://github.com/acquitelol/elle
     ```
 
     ```terminal
-      cd elle
+        $ cd elle/dist
+    ```
+
+    ```console
+        $ cargo run
     ```
 
     ```terminal
-      cargo run
+        $ qbe -o out.s main.ssa && cc out.s && ./a.out
     ```
 
   * **You're done!**
+
+> You can now edit the `main.elle` file in the `dist` directory, and then rebuild to see the output.
 
 ### ♡ **Licensing**
 

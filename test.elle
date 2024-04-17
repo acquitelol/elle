@@ -1,3 +1,0 @@
-expose op main(Int arg1, String arg2) -> Int {
-    test(arg1 + a, true);
-}

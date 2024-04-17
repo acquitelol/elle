@@ -1,6 +1,8 @@
+mod compiler;
 mod lexer;
 mod parser;
 
+use compiler::compiler::Compiler;
 use lexer::{enums::TokenKind, lexer::Lexer};
 use parser::parser::Parser;
 use std::fs;
@@ -25,5 +27,10 @@ fn main() {
     // dbg!(&tokens);
 
     let mut parser = Parser::new(tokens);
-    parser.parse();
+    let tree = parser.parse();
+
+    // dbg!(&tree);
+
+    let mut compiler = Compiler::new(tree);
+    compiler.compile();
 }
