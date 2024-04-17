@@ -6,27 +6,76 @@
 
 ### ✩ *If you like this project, consider giving it a star!* ✩
 
+### ♡ **Hello, World!**
+
+Writing a hello world program in Elle is super easy.
+<br>
+In fact it's very similar to C!
+
+```ts
+pub op main() {
+    puts("Hello world!\n");
+}
+```
+
+Let's dissect the code:
+
+* The `pub` keyword declares the main function as public/exported
+* The `op` keyword declares the identifier as an operation (Elle's version of a function)
+* The word `main` defines the function as the entry point of our program.
+* The function call `puts` is interoperable with C. It takes the 0th argument and writes it to the standard output.
+
+* That's it! ✩
+
+Elle uses the QBE compiler backend. This means that files compile into QBE's intermediate language before being executed.
+
+Let's also take a look at the QBE IL source:
+
+```ts
+data $main.0 = { b "Hello world!\n", b 0 }
+export function w $main() {
+@start
+    call $puts(l $main.0)
+    ret 0
+}
+```
+
+* The `main.0` data segment is used to store the literal string later used in `puts`
+* The function is exported, as denoted with the `export` keyword
+* The function returns a `w` (`word`), is called `main`, and uses the `$` sigil to denote it is global.
+* The `@start` directive describes the beginning of the function
+* We then use the `call` operation and the global `puts` function with the `l` (`long`) data section we stored earlier.
+* The compiler falls back to returning the literal `0` if no specific return value is specified. Therefore, we `ret 0` at the end.
+
+* Simple enough! ♡
+
 ### ♡ **Example Syntax**
+
+Please keep in mind that syntax such as `if statements`, `loops`, `match cases`, `optional types`, and `keyword arguments for function calls` have *not* been parsed or compiled yet, only lexed. In fact, the keyword arguments haven't even been lexed yet. This means that the code below will *not* compile. It is indended as a pure example of how the syntax is designed to look later on.
 
 ```ts
 // Import statements follow a lib:file@{method1, method2...} format;
 use elle:io@{print};
 use elle:int@{random};
 
-const languageName: String = "Elle";
+const languageName = "Elle";
 
 // Use `pub` to make functions public so they can be imported by other files
 // You *must* expose the main function for it to be runnable
 pub op main() {
     let resWithThree: Int = randomWithMultiplier(3); // Returns a random number between 0 and 10 multiplied by 3 using positional arguments
     let resWithSixteen: Int = randomWithMultiplier(multiplier: 16); // Returns a random number between 0 and 10 multiplied by 16 using keyword arguments
-    printMessage(`First result is %{resWithThree} and second is %{resWithSixteen}`);
+    printMessage(
+        "First result is %d and second is %d", 
+        resWithThree, 
+        resWithSixteen
+    );
 
     let maybeRes: Int? = randomWithPossibleError();
 
     if (maybeRes) {
         // In this scope, maybeRes is just Int32 not Int32?
-        printMessage(`Result is %{maybeRes}`);
+        printMessage("Result is %d", maybeRes);
     } else {
         // This is a character because it's a single quote.
         printMessage('a');
@@ -56,7 +105,7 @@ op randomWithPossibleError() -> Int? {
 // No return argument needed if function returns void
 // Note that this is *only* if the function returns void
 op printMessage(String message) {
-    print(`[%{languageName}] %{message}`);
+    printf(`[%s] %s`, languageName, message);
 }
 ```
 
