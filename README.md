@@ -111,7 +111,6 @@ op printMessage(String message) {
 
 * Semicolons are enforced and are required for parsing
 * Comments start with // and are ignored when parsing
-* Backticks (`) are required for string interpolation
 * Single quotes are strictly for characters
 * Double quotes are strictly for strings
 * Constants must be at the top level of files & start with `const`
