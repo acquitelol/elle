@@ -1,12 +1,8 @@
 op test() {
-    ret "abc";
-}
-
-op somethingElse() {
-    ret test();
+    ret 1;
 }
 
 pub op main() {
-    let res: String = somethingElse();
-    printf("The result is %s\n", res);
+    let res: String = test();
+    printf("%d\n", res);
 }

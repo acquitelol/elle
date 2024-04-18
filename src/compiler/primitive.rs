@@ -52,11 +52,18 @@ impl PrimitiveExpr {
                     lines.push("    ret 0".to_string());
                 }
 
-                dbg!(&lines);
                 let return_index = lines
                     .clone()
                     .iter()
-                    .position(|line| line.starts_with("    ret"))
+                    .position(|line| {
+                        let res = line
+                            .split("\n")
+                            .map(|elem| elem.trim())
+                            .find(|elem| elem.starts_with("ret"))
+                            .is_some();
+
+                        res
+                    })
                     .unwrap_or(0);
 
                 let return_string = &lines[return_index];
