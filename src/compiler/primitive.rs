@@ -30,16 +30,6 @@ impl PrimitiveExpr {
 
                 let arguments_string = parsed_arguments.join(", ");
 
-                let declaration = format!(
-                    "{}function w ${}({}) {{",
-                    if public { "export " } else { "" },
-                    name,
-                    arguments_string
-                );
-
-                lines.push(declaration);
-                lines.push("@start".to_string());
-
                 let mut has_return = false;
 
                 for statement in body.clone().iter_mut() {
@@ -61,6 +51,37 @@ impl PrimitiveExpr {
                 if !has_return {
                     lines.push("    ret 0".to_string());
                 }
+
+                dbg!(&lines);
+                let return_index = lines
+                    .clone()
+                    .iter()
+                    .position(|line| line.starts_with("    ret"))
+                    .unwrap_or(0);
+
+                let return_string = &lines[return_index];
+                let return_parts = return_string.splitn(2, "ret ").collect::<Vec<_>>();
+                let return_statement = return_parts[1];
+
+                let mut return_type = "w";
+
+                // Data sections use the long type
+                // Therefore globals, which use the $ sigil,
+                // should use the long type too
+                if return_statement.starts_with("$") {
+                    return_type = "l"
+                }
+
+                let declaration = format!(
+                    "{}function {} ${}({}) {{",
+                    if public { "export " } else { "" },
+                    return_type,
+                    name,
+                    arguments_string
+                );
+
+                lines.insert(0, declaration);
+                lines.insert(1, "@start".to_string());
 
                 lines.push("}".to_string());
                 lines.join("\n")

@@ -19,7 +19,7 @@ impl StatementExpr {
     fn match_value(&mut self, value: ValueKind) -> String {
         match value {
             ValueKind::String(res) => format!("b \"{}\", b 0", res),
-            ValueKind::Character(res) => format!("b \"{}\"", res),
+            ValueKind::Character(res) => format!("b \"{}\", b 0", res),
             ValueKind::Number(res) => format!("{}", res),
             ValueKind::Nil => "0".to_string(),
         }
