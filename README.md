@@ -32,20 +32,20 @@ Elle uses the QBE compiler backend. This means that files compile into QBE's int
 Let's also take a look at the QBE IL source:
 
 ```ts
-data $main.0 = { b "Hello world!\n", b 0 }
 export function w $main() {
 @start
-    call $puts(l $main.0)
-    ret 0
+    %tmp_2 =w call $puts(l $main_1)
+    ret
 }
+data $main_1 = { b "Hello world!\n", b 0 }
 ```
 
-* The `main.0` data segment is used to store the literal string later used in `puts`
+* The `main_1` data segment is used to store the literal string later used in `puts`
 * The function is exported, as denoted with the `export` keyword
 * The function returns a `w` (`word`), is called `main`, and uses the `$` sigil to denote it is global.
 * The `@start` directive describes the beginning of the function
 * We then use the `call` operation and the global `puts` function with the `l` (`long`) data section we stored earlier.
-* The compiler falls back to returning the literal `0` if no specific return value is specified. Therefore, we `ret 0` at the end.
+* The compiler falls back to returning the literal `0` if no specific return value is specified. Therefore, we `ret` at the end.
 
 * Simple enough! ♡
 
@@ -121,7 +121,7 @@ op printMessage(String message) {
 
 ### ♡ **How to run**
 
-* Elle has only one third-party dependency, so you can simply do the following:
+* Elle has no third-party dependencies, so you can simply do the following:
   * Ensure you have [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html), [Rust](https://www.rust-lang.org/), and the [QBE](https://c9x.me/compile/) compiler backend.
 
     ```terminal

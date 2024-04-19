@@ -10,6 +10,7 @@ pub enum TokenKind {
     StringLiteral,
     TrueLiteral,
     FalseLiteral,
+    ExactLiteral,
     Comment,
     Colon,
     AtMark,
@@ -86,6 +87,7 @@ impl TokenKind {
             Self::StringLiteral
             | Self::IntegerLiteral
             | Self::CharLiteral
+            | Self::ExactLiteral
             | Self::TrueLiteral
             | Self::FalseLiteral => true,
             _ => false,

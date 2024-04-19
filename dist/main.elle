@@ -1,8 +1,10 @@
-op test() {
-    ret 1;
+op isEven(Int num) {
+    ret num % 2 == 0;
 }
 
 pub op main() {
-    let res: String = test();
-    printf("%d\n", res);
+    let num: Int = 151;
+    let res: Int = isEven(num);
+
+    printf("Is %d even? %d", $...$, num, res);
 }

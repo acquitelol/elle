@@ -249,7 +249,8 @@ impl Statement {
         let operator = self.tokens[position].clone().kind;
 
         let tokens = self.tokens.clone();
-        let left = tokens[self.position..=position - 1].to_vec();
+        let left =
+            tokens[self.position..=if position > 0 { position - 1 } else { position }].to_vec();
         let mut raw_right = tokens[position..=tokens.len() - 1].to_vec();
 
         raw_right.remove(0); // Get rid of the operator
@@ -296,9 +297,10 @@ impl Statement {
 
     fn parse_primary(&mut self) -> AstNode {
         match self.current_token().kind {
-            TokenKind::IntegerLiteral | TokenKind::StringLiteral | TokenKind::CharLiteral => {
-                self.parse_literal()
-            }
+            TokenKind::IntegerLiteral
+            | TokenKind::StringLiteral
+            | TokenKind::CharLiteral
+            | TokenKind::ExactLiteral => self.parse_literal(),
             TokenKind::Identifier => {
                 if self.is_eof() {
                     self.parse_literal()

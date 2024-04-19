@@ -228,6 +228,10 @@ impl Lexer {
                     _ => (TokenKind::LessThan, ValueKind::Nil),
                 }
             }
+            '$' => {
+                let res = self.consume_exact_literal();
+                (TokenKind::ExactLiteral, ValueKind::String(res))
+            }
             _ => panic!("Unexpected character: {:?}", c),
         };
 
@@ -345,6 +349,19 @@ impl Lexer {
         self.advance();
 
         while !self.is_eof() && self.current_char() != '"' {
+            string.push(self.current_char());
+            self.advance();
+        }
+
+        self.advance();
+        string
+    }
+
+    fn consume_exact_literal(&mut self) -> String {
+        let mut string = String::new();
+        self.advance();
+
+        while !self.is_eof() && self.current_char() != '$' {
             string.push(self.current_char());
             self.advance();
         }

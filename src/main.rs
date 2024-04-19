@@ -29,8 +29,7 @@ fn main() {
     let mut parser = Parser::new(tokens);
     let tree = parser.parse();
 
-    // dbg!(&tree);
+    dbg!(&tree);
 
-    let mut compiler = Compiler::new(tree);
-    compiler.compile();
+    Compiler::compile(tree);
 }
