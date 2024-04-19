@@ -234,7 +234,7 @@ impl Statement {
 
             // Set the precedence to the last lowest precedence found.
             // If the expression is 1 + 2 * 3 + 4 * 5 for example,
-            // it'll return the position of the second plus token
+            // it'll return the position of the second '+' token
             if token.kind.is_arithmetic() && token.kind.precedence() <= precedence {
                 precedence_index = index;
                 precedence = token.kind.precedence();

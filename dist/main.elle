@@ -3,8 +3,8 @@ op isEven(Int num) {
 }
 
 pub op main() {
-    let num: Int = 151;
+    let num: Int = 149;
     let res: Int = isEven(num);
-
-    printf("Is %d even? %d", $...$, num, res);
+    
+    printf("Is %d even? %d\n", $...$, num, res);
 }

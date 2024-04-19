@@ -51,11 +51,10 @@ data $main_1 = { b "Hello world!\n", b 0 }
 
 ### ♡ **Example Syntax**
 
-Please keep in mind that syntax such as `if statements`, `loops`, `match cases`, `optional types`, and `keyword arguments for function calls` have *not* been parsed or compiled yet, only lexed. In fact, the keyword arguments haven't even been lexed yet. This means that the code below will *not* compile. It is indended as a pure example of how the syntax is designed to look later on.
+Please keep in mind that syntax such as `if statements`, `loops`, `optional types`, `arrays`, `pointers`, `references`, etc have *not* been implemented at all yet. This means that the code below will *not* compile. It is indended as a pure example of how the syntax is designed to look later on.
 
-```ts
+```rs
 // Import statements follow a lib:file@{method1, method2...} format;
-use elle:io@{print};
 use elle:int@{random};
 
 const languageName = "Elle";
@@ -63,13 +62,8 @@ const languageName = "Elle";
 // Use `pub` to make functions public so they can be imported by other files
 // You *must* expose the main function for it to be runnable
 pub op main() {
-    let resWithThree: Int = randomWithMultiplier(3); // Returns a random number between 0 and 10 multiplied by 3 using positional arguments
-    let resWithSixteen: Int = randomWithMultiplier(multiplier: 16); // Returns a random number between 0 and 10 multiplied by 16 using keyword arguments
-    printMessage(
-        "First result is %d and second is %d", 
-        resWithThree, 
-        resWithSixteen
-    );
+    let resWithThree: Int = randomWithMultiplier(3); // Returns a random number between 0 and 10 multiplied by 3
+    printMessage("Result is %d", resWithThree);
 
     let maybeRes: Int? = randomWithPossibleError();
 
@@ -84,9 +78,8 @@ pub op main() {
 }
 
 op randomWithMultiplier(Int multiplier) -> Int {
-    // If a function uses keyword arguments they must *all* be keyword arguments
     // Use the ret keyword to return from the operation
-    ret random(between: 0, and: 10, included: true) * multiplier;
+    ret random(0, 10, true) * multiplier;
 }
 
 // Operations can either return a value or void.
@@ -95,17 +88,17 @@ op randomWithMultiplier(Int multiplier) -> Int {
 op randomWithPossibleError() -> Int? {
     let result: Int = random(0, 5, true);
 
-    // Match keyword works very similar to other languages
-    ret match result {
-        3 -> nil,
-        val -> val,
+    ret if (result == 3) {
+        nil,
+    } else {
+        val
     }
 }
 
 // No return argument needed if function returns void
-// Note that this is *only* if the function returns void
+// Note that this means the return type is inferred based on the return value
 op printMessage(String message) {
-    printf(`[%s] %s`, languageName, message);
+    printf("[%s] %s", $...$, languageName, message);
 }
 ```
 

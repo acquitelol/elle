@@ -72,6 +72,20 @@ impl Compiler {
             .ok_or_else(|| format!("Undefined variable '{}'", name))
     }
 
+    fn get_tmp_index(&self, text: String) -> Option<i32> {
+        let parts = text.splitn(2, '_').collect::<Vec<_>>();
+
+        if parts.len() == 2 {
+            match parts[1].parse::<i32>() {
+                Ok(num) => Some(num),
+                Err(_) => None,
+            }
+        } else {
+            // Not in the expected format
+            None
+        }
+    }
+
     fn generate_function(
         &mut self,
         name: String,
@@ -149,7 +163,7 @@ impl Compiler {
                                         Value::Const(_) => func_ref.borrow_mut().return_type = Some(Type::Word),
                                         Value::Global(_) => func_ref.borrow_mut().return_type = Some(Type::Long),
                                         Value::Temporary(val) => {
-                                            let var = self.get_var(val.as_str());
+                                            let var = self.get_var(format!("tmp_{}", self.get_tmp_index(val).unwrap_or(1) - 1).as_str());
     
                                             match var {
                                                 Ok((ty, _)) => {
@@ -362,7 +376,10 @@ impl Compiler {
                             Linkage::private(),
                             name.clone(),
                             None,
-                            vec![(Type::Byte, DataItem::Str(val.to_string()))],
+                            vec![
+                                (Type::Byte, DataItem::Str(val.to_string())),
+                                (Type::Byte, DataItem::Const(0))
+                            ],
                         ));
 
                         Some((Type::Long, Value::Global(name)))
@@ -508,7 +525,7 @@ impl Compiler {
                     Ok(function) => {
                         module_ref.borrow_mut().add_function(function);
                     }
-                    Err(msg) => eprintln!("[ERR] {}", msg),
+                    Err(msg) => eprintln!("{}", msg),
                 },
                 _ => {}
             }
