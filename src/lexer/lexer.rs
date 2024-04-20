@@ -31,15 +31,6 @@ impl Lexer {
         if c.is_alphabetic() {
             let (kind, value) = self.consume_identifier();
 
-            match value.clone() {
-                ValueKind::String(val) => {
-                    if val == "icraze".to_owned() {
-                        panic!("Do not utter thy words")
-                    }
-                }
-                _ => {}
-            }
-
             return Some(Token {
                 kind,
                 value,
