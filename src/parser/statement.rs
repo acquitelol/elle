@@ -80,16 +80,10 @@ impl Statement {
     }
 
     fn parse_declare(&mut self) -> AstNode {
+        let r#type = self.get_type();
         self.advance();
 
         let name = self.get_identifier();
-
-        self.advance();
-
-        self.expect_token(TokenKind::Colon);
-        self.advance();
-
-        let r#type = self.get_type();
 
         self.advance();
         self.expect_token(TokenKind::Equal);
@@ -108,6 +102,84 @@ impl Statement {
             name,
             r#type,
             value: Box::new(Statement::new(value, 0).parse().0),
+        }
+    }
+
+    fn parse_declarative_like(&mut self) -> AstNode {
+        let name = self.get_identifier();
+
+        self.advance();
+        let operation = self.current_token();
+        self.advance();
+
+        let res = match operation.kind {
+            TokenKind::AddOne => Some(AstNode::DeclareStatement {
+                name: name.clone(),
+                r#type: "Nil".to_owned(),
+                value: Box::new(AstNode::ArithmeticOperation {
+                    left: Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::Identifier,
+                        value: ValueKind::String(name.clone()),
+                    }),
+                    right: Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number(1),
+                    }),
+                    operator: TokenKind::Add,
+                }),
+            }),
+            TokenKind::SubtractOne => Some(AstNode::DeclareStatement {
+                name: name.clone(),
+                r#type: "Nil".to_owned(),
+                value: Box::new(AstNode::ArithmeticOperation {
+                    left: Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::Identifier,
+                        value: ValueKind::String(name.clone()),
+                    }),
+                    right: Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number(1),
+                    }),
+                    operator: TokenKind::Subtract,
+                }),
+            }),
+            _ => None,
+        };
+
+        if res.is_some() {
+            self.expect_token(TokenKind::Semicolon);
+            return res.unwrap();
+        }
+
+        let mut value = vec![];
+
+        while self.current_token().kind != TokenKind::Semicolon && !self.is_eof() {
+            value.push(self.current_token());
+            self.advance();
+        }
+
+        self.expect_token(TokenKind::Semicolon);
+
+        let mapping = match operation.kind {
+            TokenKind::AddEqual => TokenKind::Add,
+            TokenKind::SubtractEqual => TokenKind::Subtract,
+            TokenKind::MultiplyEqual => TokenKind::Multiply,
+            TokenKind::DivideEqual => TokenKind::Divide,
+            TokenKind::ModulusEqual => TokenKind::Modulus,
+            other => panic!("Invalid identifier operation {:?}", other),
+        };
+
+        AstNode::DeclareStatement {
+            name: name.clone(),
+            r#type: "Nil".to_owned(),
+            value: Box::new(AstNode::ArithmeticOperation {
+                left: Box::new(AstNode::LiteralStatement {
+                    kind: TokenKind::Identifier,
+                    value: ValueKind::String(name),
+                }),
+                right: Box::new(Statement::new(value, 0).parse().0),
+                operator: mapping,
+            }),
         }
     }
 
@@ -219,7 +291,7 @@ impl Statement {
 
     fn find_lowest_precedence(&mut self) -> usize {
         let tokens = self.tokens.clone();
-        let mut precedence = TokenKind::Multiply.precedence();
+        let mut precedence = TokenKind::highest_precedence();
         let mut precedence_index = 0;
         let mut index = self.position.clone();
 
@@ -309,6 +381,8 @@ impl Statement {
 
                     if next.kind == TokenKind::LeftParenthesis {
                         self.parse_function()
+                    } else if next.kind.is_declarative() {
+                        self.parse_declarative_like()
                     } else if next.kind.is_arithmetic() {
                         self.parse_arithmetic()
                     } else {
@@ -330,7 +404,7 @@ impl Statement {
 
     pub fn parse(&mut self) -> (AstNode, usize) {
         let node = match self.current_token().kind {
-            TokenKind::Declare => self.parse_declare(),
+            TokenKind::Type => self.parse_declare(),
             TokenKind::Return => self.parse_return(),
             _ => self.parse_expression(),
         };

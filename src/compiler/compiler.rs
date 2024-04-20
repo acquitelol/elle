@@ -47,11 +47,22 @@ impl Compiler {
     }
 
     fn new_var(&mut self, ty: &Type, name: &str) -> GeneratorResult<Value> {
-        if self.get_var(name).is_ok() {
-            return Err(format!("Re-declaration of variable '{}'", name));
-        }
+        let existing_var = self.get_var(name);
 
-        let tmp = self.new_temporary();
+        let tmp = match existing_var {
+            Ok((_, val)) => {
+                match val.clone() {
+                    Value::Temporary(name) => {
+                        match self.get_tmp_index(name) {
+                            Some(val) => Value::Temporary(format!("tmp_{}", val)),
+                            None => self.new_temporary()
+                        }
+                    }
+                    _ => self.new_temporary()
+                }
+            }
+            Err(_) => self.new_temporary()
+        };
 
         let scope = self
             .scopes
@@ -206,7 +217,12 @@ impl Compiler {
                 r#type,
                 value,
             } => {
-                let ty = self.get_type(r#type).unwrap();
+                let existing = match self.get_var(name.as_str()) {
+                    Ok((ty, _)) => ty.clone(),
+                    Err(_) => Type::Word
+                };
+
+                let ty = self.get_type(r#type).unwrap_or(existing);
                 let temp = self.new_var(&ty, &name).unwrap();
                 let parsed = self.generate_statement(func, module, *value.clone());
 

@@ -13,7 +13,7 @@ Writing a hello world program in Elle is super easy.
 In fact it's very similar to C!
 
 ```ts
-pub op main() {
+pub fn main() {
     puts("Hello world!\n");
 }
 ```
@@ -21,7 +21,7 @@ pub op main() {
 Let's dissect the code:
 
 * The `pub` keyword declares the main function as public/exported
-* The `op` keyword declares the identifier as an operation (Elle's version of a function)
+* The `fn` keyword declares the identifier as an operation (Elle's version of a function)
 * The word `main` defines the function as the entry point of our program.
 * The function call `puts` is interoperable with C. It takes the 0th argument and writes it to the standard output.
 
@@ -61,11 +61,11 @@ const languageName = "Elle";
 
 // Use `pub` to make functions public so they can be imported by other files
 // You *must* expose the main function for it to be runnable
-pub op main() {
-    let resWithThree: Int = randomWithMultiplier(3); // Returns a random number between 0 and 10 multiplied by 3
+pub fn main() {
+    Int resWithThree = randomWithMultiplier(3); // Returns a random number between 0 and 10 multiplied by 3
     printMessage("Result is %d", resWithThree);
 
-    let maybeRes: Int? = randomWithPossibleError();
+    Int? maybeRes = randomWithPossibleError();
 
     if (maybeRes) {
         // In this scope, maybeRes is just Int32 not Int32?
@@ -77,7 +77,7 @@ pub op main() {
     }
 }
 
-op randomWithMultiplier(Int multiplier) -> Int {
+fn randomWithMultiplier(Int multiplier) -> Int {
     // Use the ret keyword to return from the operation
     ret random(0, 10, true) * multiplier;
 }
@@ -85,7 +85,7 @@ op randomWithMultiplier(Int multiplier) -> Int {
 // Operations can either return a value or void.
 // `nil` is the undefined/null value in Elle.
 // Use the '?' operator at the end of the return type to denote that the function can return nil.
-op randomWithPossibleError() -> Int? {
+fn randomWithPossibleError() -> Int? {
     let result: Int = random(0, 5, true);
 
     ret if (result == 3) {

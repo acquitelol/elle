@@ -31,6 +31,15 @@ impl Lexer {
         if c.is_alphabetic() {
             let (kind, value) = self.consume_identifier();
 
+            match value.clone() {
+                ValueKind::String(val) => {
+                    if val == "icraze".to_owned() {
+                        panic!("Do not utter thy words")
+                    }
+                }
+                _ => {}
+            }
+
             return Some(Token {
                 kind,
                 value,
@@ -113,6 +122,12 @@ impl Lexer {
                 if self.current_char() == '>' {
                     self.advance();
                     (TokenKind::Arrow, ValueKind::Nil)
+                } else if self.current_char() == '=' {
+                    self.advance();
+                    (TokenKind::SubtractEqual, ValueKind::Nil)
+                } else if self.current_char() == '-' {
+                    self.advance();
+                    (TokenKind::SubtractOne, ValueKind::Nil)
                 } else {
                     match self.current_char().is_digit(10) {
                         true => {
@@ -143,7 +158,18 @@ impl Lexer {
             }
             '*' => {
                 self.advance();
-                (TokenKind::Multiply, ValueKind::Nil)
+
+                if self.current_char() == '=' {
+                    self.advance();
+                    (TokenKind::MultiplyEqual, ValueKind::Nil)
+                }
+                /* else if self.current_char() == '*' {
+                    self.advance();
+                    (TokenKind::Exponent, ValueKind::Nil)
+                } */
+                else {
+                    (TokenKind::Multiply, ValueKind::Nil)
+                }
             }
             '/' => {
                 self.advance();
@@ -153,28 +179,46 @@ impl Lexer {
                         TokenKind::Comment,
                         ValueKind::String(self.consume_comment()),
                     ),
+                    '=' => {
+                        self.advance();
+                        (TokenKind::DivideEqual, ValueKind::Nil)
+                    }
                     _ => (TokenKind::Divide, ValueKind::Nil),
                 }
             }
             '+' => {
                 self.advance();
 
-                match self.current_char().is_digit(10) {
-                    true => {
-                        let (kind, value) = self.consume_integer_literal();
+                if self.current_char() == '=' {
+                    self.advance();
+                    (TokenKind::AddEqual, ValueKind::Nil)
+                } else if self.current_char() == '+' {
+                    self.advance();
+                    (TokenKind::AddOne, ValueKind::Nil)
+                } else {
+                    match self.current_char().is_digit(10) {
+                        true => {
+                            let (kind, value) = self.consume_integer_literal();
 
-                        return Some(Token {
-                            kind,
-                            value,
-                            location: self.get_location(),
-                        });
+                            return Some(Token {
+                                kind,
+                                value,
+                                location: self.get_location(),
+                            });
+                        }
+                        false => (TokenKind::Add, ValueKind::Nil),
                     }
-                    false => (TokenKind::Add, ValueKind::Nil),
                 }
             }
             '%' => {
                 self.advance();
-                (TokenKind::Modulus, ValueKind::Nil)
+
+                if self.current_char() == '=' {
+                    self.advance();
+                    (TokenKind::ModulusEqual, ValueKind::Nil)
+                } else {
+                    (TokenKind::Modulus, ValueKind::Nil)
+                }
             }
             '&' => {
                 self.advance();
@@ -292,14 +336,13 @@ impl Lexer {
         let kind = match identifier.as_str() {
             "use" => TokenKind::Use,
             "pub" => TokenKind::Public,
-            "op" => TokenKind::Operation,
+            "fn" => TokenKind::Function,
             "if" => TokenKind::If,
             "else" => TokenKind::Else,
             "for" => TokenKind::For,
             "while" => TokenKind::While,
             "const" => TokenKind::Constant,
             "ret" => TokenKind::Return,
-            "let" => TokenKind::Declare,
             "true" => TokenKind::TrueLiteral,
             "false" => TokenKind::FalseLiteral,
             _ if identifier

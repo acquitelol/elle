@@ -6,13 +6,13 @@ use super::{
     statement::Statement,
 };
 
-pub struct Operation<'a> {
+pub struct Function<'a> {
     parser: &'a mut Parser,
 }
 
-impl<'a> Operation<'a> {
+impl<'a> Function<'a> {
     pub fn new(parser: &'a mut Parser) -> Self {
-        Operation { parser }
+        Function { parser }
     }
 
     pub fn parse(&mut self, public: bool) -> Primitive {

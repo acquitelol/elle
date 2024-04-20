@@ -1,6 +1,6 @@
 use crate::{
     lexer::enums::{Token, TokenKind, ValueKind},
-    parser::{constant::Constant, operation::Operation},
+    parser::{constant::Constant, function::Function},
 };
 
 use super::{enums::Primitive, r#use::Use};
@@ -96,9 +96,9 @@ impl Parser {
                     let statement = r#use.parse();
                     self.tree.push(statement);
                 }
-                TokenKind::Operation => {
-                    let mut operation = Operation::new(self);
-                    let statement = operation.parse(false);
+                TokenKind::Function => {
+                    let mut function = Function::new(self);
+                    let statement = function.parse(false);
                     self.tree.push(statement);
                 }
                 TokenKind::Constant => {
@@ -110,9 +110,9 @@ impl Parser {
                     self.advance();
 
                     match self.current_token().kind {
-                        TokenKind::Operation => {
-                            let mut operation = Operation::new(self);
-                            let statement = operation.parse(true);
+                        TokenKind::Function => {
+                            let mut function = Function::new(self);
+                            let statement = function.parse(true);
                             self.tree.push(statement);
                         }
                         TokenKind::Constant => {

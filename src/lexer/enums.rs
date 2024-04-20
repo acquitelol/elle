@@ -2,7 +2,7 @@
 pub enum TokenKind {
     Use,
     Public,
-    Operation,
+    Function,
     Type,
     Identifier,
     IntegerLiteral,
@@ -23,6 +23,14 @@ pub enum TokenKind {
     Comma,
     Not,
     Equal,
+    AddEqual,
+    SubtractEqual,
+    MultiplyEqual,
+    DivideEqual,
+    ModulusEqual,
+    AddOne,
+    SubtractOne,
+    // Exponent,
     Arrow,
     Semicolon,
     If,
@@ -30,7 +38,6 @@ pub enum TokenKind {
     For,
     While,
     Return,
-    Declare,
     Question,
     Add,
     Subtract,
@@ -50,8 +57,14 @@ pub enum TokenKind {
 }
 
 impl TokenKind {
+    pub fn highest_precedence() -> i8 {
+        // Self::Exponent.precedence()
+        Self::Multiply.precedence()
+    }
+
     pub fn precedence(&self) -> i8 {
         match self {
+            // Self::Exponent => 7,
             Self::Multiply | Self::Divide | Self::Modulus => 6,
             Self::Add | Self::Subtract => 5,
             Self::LessThan | Self::LessThanEqual | Self::GreaterThan | Self::GreaterThanEqual => 4,
@@ -65,6 +78,7 @@ impl TokenKind {
     pub fn is_arithmetic(&self) -> bool {
         match self.to_owned() {
             Self::Multiply
+            // | Self::Exponent
             | Self::Divide
             | Self::Modulus
             | Self::Add
@@ -89,6 +103,19 @@ impl TokenKind {
             | Self::ExactLiteral
             | Self::TrueLiteral
             | Self::FalseLiteral => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_declarative(&self) -> bool {
+        match self.to_owned() {
+            Self::AddEqual
+            | Self::SubtractEqual
+            | Self::MultiplyEqual
+            | Self::DivideEqual
+            | Self::ModulusEqual
+            | Self::AddOne
+            | Self::SubtractOne => true,
             _ => false,
         }
     }
