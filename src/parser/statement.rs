@@ -228,12 +228,21 @@ impl Statement {
         }
     }
 
-    fn parse_function(&mut self) -> AstNode {
+    fn parse_function(&mut self, variadic: bool) -> AstNode {
         let name = self.get_identifier();
 
         self.advance();
-        self.expect_token(TokenKind::LeftParenthesis);
-        self.advance();
+        match self.current_token().kind {
+            TokenKind::LeftParenthesis => {
+                self.advance();
+            }
+            TokenKind::Not => {
+                self.advance();
+                self.expect_token(TokenKind::LeftParenthesis);
+                self.advance();
+            }
+            other => panic!("Expected left parethesis or exclamation mark (for variadic functions) but got {:?}", other)
+        }
 
         let mut parameters = vec![];
 
@@ -285,6 +294,16 @@ impl Statement {
         );
 
         self.advance();
+
+        if variadic {
+            parameters.insert(
+                1,
+                AstNode::LiteralStatement {
+                    kind: TokenKind::ExactLiteral,
+                    value: ValueKind::String("...".to_owned()),
+                },
+            )
+        }
 
         AstNode::FunctionCall { name, parameters }
     }
@@ -380,7 +399,13 @@ impl Statement {
                     let next = self.tokens[self.position + 1].clone();
 
                     if next.kind == TokenKind::LeftParenthesis {
-                        self.parse_function()
+                        self.parse_function(false)
+                    } else if next.kind == TokenKind::Not {
+                        if self.position + 2 > self.tokens.len() - 1 {
+                            panic!("EOF but specified a variadic identifier")
+                        }
+
+                        self.parse_function(true)
                     } else if next.kind.is_declarative() {
                         self.parse_declarative_like()
                     } else if next.kind.is_arithmetic() {

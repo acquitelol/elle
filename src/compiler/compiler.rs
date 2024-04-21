@@ -1,14 +1,12 @@
 use std::{
-    borrow::{Borrow, BorrowMut},
     cell::RefCell,
     collections::HashMap,
     fs::File,
-    io::Write,
-    sync::Mutex,
+    io::Write
 };
 
 use crate::{
-    lexer::enums::{Token, TokenKind, ValueKind},
+    lexer::enums::{TokenKind, ValueKind},
     parser::enums::{Argument, AstNode, Primitive},
 };
 
@@ -52,11 +50,8 @@ impl Compiler {
         let tmp = match existing_var {
             Ok((_, val)) => {
                 match val.clone() {
-                    Value::Temporary(name) => {
-                        match self.get_tmp_index(name) {
-                            Some(val) => Value::Temporary(format!("tmp_{}", val)),
-                            None => self.new_temporary()
-                        }
+                    Value::Temporary(_) => {
+                        val.clone()
                     }
                     _ => self.new_temporary()
                 }

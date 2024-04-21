@@ -21,7 +21,7 @@ pub fn main() {
 Let's dissect the code:
 
 * The `pub` keyword declares the main function as public/exported
-* The `fn` keyword declares the identifier as an operation (Elle's version of a function)
+* The `fn` keyword declares the identifier as a function
 * The word `main` defines the function as the entry point of our program.
 * The function call `puts` is interoperable with C. It takes the 0th argument and writes it to the standard output.
 
@@ -65,15 +65,14 @@ pub fn main() {
     Int resWithThree = randomWithMultiplier(3); // Returns a random number between 0 and 10 multiplied by 3
     printMessage("Result is %d", resWithThree);
 
-    Int? maybeRes = randomWithPossibleError();
+    Int maybeRes = randomWithPossibleError();
 
-    if (maybeRes) {
-        // In this scope, maybeRes is just Int32 not Int32?
-        printMessage("Result is %d", maybeRes);
-    } else {
+    if (maybeRes == -1) {
         // This is a character because it's a single quote.
         printMessage('a');
         printMessage("Oh no! We failed.");
+    } else {
+        printMessage("Result is %d", maybeRes);
     }
 }
 
@@ -85,20 +84,20 @@ fn randomWithMultiplier(Int multiplier) -> Int {
 // Operations can either return a value or void.
 // `nil` is the undefined/null value in Elle.
 // Use the '?' operator at the end of the return type to denote that the function can return nil.
-fn randomWithPossibleError() -> Int? {
-    let result: Int = random(0, 5, true);
+fn randomWithPossibleError() -> Int {
+    Int result = random(0, 5, true);
 
     ret if (result == 3) {
-        nil,
+        -1;
     } else {
-        val
+        val;
     }
 }
 
 // No return argument needed if function returns void
 // Note that this means the return type is inferred based on the return value
 op printMessage(String message) {
-    printf("[%s] %s", $...$, languageName, message);
+    printf!("[%s] %s", languageName, message);
 }
 ```
 
@@ -107,7 +106,6 @@ op printMessage(String message) {
 * Single quotes are strictly for characters
 * Double quotes are strictly for strings
 * Constants must be at the top level of files & start with `const`
-* Variables must be inside of operations & start with `let`
 * Returning from operations is done with the `ret` keyword
 
 > If you have any questions, please [raise an issue](https://github.com/acquitelol/elle/issues/new) :3
