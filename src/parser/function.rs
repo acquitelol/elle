@@ -1,4 +1,6 @@
-use crate::lexer::enums::TokenKind;
+use std::cell::RefCell;
+
+use crate::lexer::enums::{TokenKind, ValueKind};
 
 use super::{
     enums::{Argument, AstNode, Primitive},
@@ -53,7 +55,7 @@ impl<'a> Function<'a> {
 
         self.parser.expect_token(TokenKind::LeftCurlyBrace);
 
-        let mut body: Vec<AstNode> = vec![];
+        let body: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
 
         loop {
             self.parser.advance();
@@ -66,22 +68,59 @@ impl<'a> Function<'a> {
                     break;
                 }
                 _ => {
-                    let (node, position) =
-                        Statement::new(self.parser.tokens.clone(), self.parser.position.clone())
-                            .parse();
+                    let (node, position) = Statement::new(
+                        self.parser.tokens.clone(),
+                        self.parser.position.clone(),
+                        &body,
+                    )
+                    .parse();
 
-                    body.push(node);
+                    let len = body.borrow().len();
+
+                    if len <= 2 {
+                        body.borrow_mut().push(node);
+                    } else {
+                        let possible_len = len - 2;
+                        let mut body_ref = body.borrow_mut();
+                        let res = body_ref.get(possible_len);
+
+                        match res {
+                            Some(val) => match val.clone() {
+                                AstNode::LiteralStatement { kind, value } => {
+                                    if kind.clone() == TokenKind::ExactLiteral {
+                                        match value.clone() {
+                                            ValueKind::String(val) => {
+                                                if val == "__<#insert#>__".to_owned() {
+                                                    body_ref[possible_len] = node;
+                                                } else {
+                                                    body_ref.push(node)
+                                                }
+                                            }
+                                            _ => body_ref.push(node),
+                                        }
+                                    } else {
+                                        body_ref.push(node);
+                                    }
+                                }
+                                _ => body_ref.push(node),
+                            },
+                            _ => body_ref.push(node),
+                        }
+                    }
+
                     self.parser.position = position;
                 }
             };
         }
+
+        let res = body.borrow_mut().to_owned().clone();
 
         Primitive::Operation {
             public,
             name,
             arguments,
             r#return,
-            body,
+            body: res,
         }
     }
 }

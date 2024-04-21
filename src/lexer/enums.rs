@@ -119,6 +119,13 @@ impl TokenKind {
             _ => false,
         }
     }
+
+    pub fn is_one_operator(&self) -> bool {
+        match self.to_owned() {
+            Self::AddOne | Self::SubtractOne => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

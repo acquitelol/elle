@@ -1,8 +1,5 @@
 use std::{
-    cell::RefCell,
-    collections::HashMap,
-    fs::File,
-    io::Write
+    cell::RefCell, collections::HashMap, fmt::Debug, fs::File, io::Write
 };
 
 use crate::{
@@ -39,9 +36,9 @@ impl Compiler {
         }
     }
 
-    fn new_temporary(&mut self) -> Value {
+    fn new_temporary(&mut self, name: Option<&str>) -> Value {
         self.tmp_counter += 1;
-        Value::Temporary(format!("tmp_{}", self.tmp_counter))
+        Value::Temporary(format!("{}_{}", name.unwrap_or("tmp"), self.tmp_counter))
     }
 
     fn new_var(&mut self, ty: &Type, name: &str) -> GeneratorResult<Value> {
@@ -53,10 +50,10 @@ impl Compiler {
                     Value::Temporary(_) => {
                         val.clone()
                     }
-                    _ => self.new_temporary()
+                    _ => self.new_temporary(Some(name))
                 }
             }
-            Err(_) => self.new_temporary()
+            Err(_) => self.new_temporary(Some(name))
         };
 
         let scope = self
@@ -75,7 +72,7 @@ impl Compiler {
             .rev()
             .filter_map(|s| s.get(name))
             .next()
-            .ok_or_else(|| format!("Undefined variable '{}'", name))
+            .ok_or_else(|| format!("\nUndefined variable '{}'\n", name))
     }
 
     fn get_tmp_index(&self, text: String) -> Option<i32> {
@@ -108,7 +105,7 @@ impl Compiler {
         for argument in arguments.clone() {
             let ty = self
                 .get_type(argument.r#type.clone())
-                .expect("Argument cannot have a Nil type.");
+                .expect("Argument cannot have a 'Nil' type.");
             let tmp = self.new_var(&ty, &argument.name)?;
 
             args.push((ty.into_abi(), tmp));
@@ -131,8 +128,12 @@ impl Compiler {
         let func_ref = RefCell::new(func);
 
         for statement in body.clone() {
-            match self.generate_statement(&func_ref, module, statement.clone()) {
-                _ => {}
+            // Ignore plain literals that aren't assigned to anything
+            match statement {
+                AstNode::LiteralStatement { kind: _, value: _ } => {}
+                _ => match self.generate_statement(&func_ref, module, statement.clone()) {
+                    _ => {}
+                }
             }
         }
 
@@ -143,7 +144,7 @@ impl Compiler {
                     .add_instruction(Instruction::Return(None));
             } else {
                 return Err(format!(
-                    "Function does not return on all paths (return type is {:?})",
+                    "\nFunction does not return on all paths.\nReturn type is {:?}\n",
                     &func_ref.borrow_mut().return_type
                 ));
             }
@@ -185,10 +186,10 @@ impl Compiler {
                                     }
                                 }
                             },
-                            _ => panic!("Somehow the underlying instruction under the volatile pointer changed. There may be a race condition.")
+                            _ => panic!("\nSomehow the underlying instruction under the volatile pointer changed.\nThere may be a race condition.\n")
                         };
                     }
-                    _ => panic!("Pointer is not volatile"),
+                    _ => panic!("Pointer is not volatile."),
                 },
                 None => func_ref.borrow_mut().return_type = Some(Type::Word),
             }
@@ -217,15 +218,28 @@ impl Compiler {
                     Err(_) => Type::Word
                 };
 
+                if r#type == "Nil".to_owned() && self.get_var(name.as_str()).is_err() {
+                    panic!("\nVariable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.\n", name);
+                }
+
                 let ty = self.get_type(r#type).unwrap_or(existing);
                 let temp = self.new_var(&ty, &name).unwrap();
                 let parsed = self.generate_statement(func, module, *value.clone());
 
                 if parsed.is_some() {
-                    let (ty, value) = parsed.unwrap();
+                    let (parsed_ty, value) = parsed.unwrap();
+
+                    if parsed_ty != ty {
+                        panic!(
+                            "\nAttempted to re-declare variable named '{}' with a different type\nCurrent type is {:?}, attempted to re-declare with {:?}\n",
+                            name,
+                            ty.clone(),
+                            parsed_ty.clone()
+                        )
+                    }
 
                     func.borrow_mut()
-                        .assign_instruction(temp, ty, Instruction::Copy(value));
+                        .assign_instruction(temp, parsed_ty, Instruction::Copy(value));
                 }
 
                 None
@@ -266,8 +280,8 @@ impl Compiler {
                     .generate_statement(func, module, *right.clone())
                     .unwrap();
 
-                let left_temp = self.new_temporary();
-                let right_temp = self.new_temporary();
+                let left_temp = self.new_temporary(None);
+                let right_temp = self.new_temporary(None);
 
                 func.borrow_mut().assign_instruction(
                     left_temp.clone(),
@@ -325,7 +339,7 @@ impl Compiler {
                     _ => panic!("Invalid operator token"),
                 };
 
-                let op_temp = self.new_temporary();
+                let op_temp = self.new_temporary(None);
 
                 func.borrow_mut()
                     .assign_instruction(op_temp.clone(), Type::Word, res);
@@ -340,8 +354,7 @@ impl Compiler {
                         match var {
                             Ok(res) => Some(res.to_owned()),
                             Err(msg) => {
-                                eprintln!("{}", msg);
-                                None
+                                panic!("{}", msg);
                             }
                         }
                     }
@@ -422,7 +435,7 @@ impl Compiler {
                     params.push(self.generate_statement(func, module, parameter).unwrap());
                 }
 
-                let temp = self.new_temporary();
+                let temp = self.new_temporary(None);
                 let ty = module
                     .borrow_mut()
                     .functions

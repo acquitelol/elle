@@ -1,15 +1,21 @@
-use crate::lexer::enums::{Token, TokenKind, ValueKind};
+use std::cell::RefCell;
 
+use crate::lexer::enums::{Token, TokenKind, ValueKind};
 use super::enums::AstNode;
 
-pub struct Statement {
+pub struct Statement<'a> {
     tokens: Vec<Token>,
     position: usize,
+    body: &'a RefCell<Vec<AstNode>>,
 }
 
-impl Statement {
-    pub fn new(tokens: Vec<Token>, position: usize) -> Self {
-        Statement { tokens, position }
+impl<'a> Statement<'a> {
+    pub fn new(tokens: Vec<Token>, position: usize, body: &'a RefCell<Vec<AstNode>>) -> Self {
+        Statement {
+            tokens,
+            position,
+            body,
+        }
     }
 
     pub fn advance(&mut self) {
@@ -79,9 +85,13 @@ impl Statement {
         self.get(TokenKind::Type)
     }
 
-    fn parse_declare(&mut self) -> AstNode {
-        let r#type = self.get_type();
-        self.advance();
+    fn parse_declare(&mut self, ty: Option<String>) -> AstNode {
+        let r#type = if ty.is_some() { ty.unwrap() } else {
+            let tmp = self.get_type();
+            self.advance();
+
+            tmp
+        };
 
         let name = self.get_identifier();
 
@@ -96,12 +106,32 @@ impl Statement {
             self.advance();
         }
 
-        self.expect_token(TokenKind::Semicolon);
+        if !self.is_eof() {
+            self.expect_token(TokenKind::Semicolon);
+        }
+
+        let res = Statement::new(value, 0, &self.body).parse().0;
+
+        let parsed_res = match res.clone() {
+            AstNode::DeclareStatement {
+                name,
+                r#type: _,
+                value: _,
+            } => {
+                self.body.borrow_mut().push(res);
+
+                AstNode::LiteralStatement {
+                    kind: TokenKind::Identifier,
+                    value: ValueKind::String(name),
+                }
+            }
+            _ => res,
+        };
 
         AstNode::DeclareStatement {
             name,
             r#type,
-            value: Box::new(Statement::new(value, 0).parse().0),
+            value: Box::new(parsed_res),
         }
     }
 
@@ -113,52 +143,56 @@ impl Statement {
         self.advance();
 
         let res = match operation.kind {
-            TokenKind::AddOne => Some(AstNode::DeclareStatement {
-                name: name.clone(),
-                r#type: "Nil".to_owned(),
-                value: Box::new(AstNode::ArithmeticOperation {
-                    left: Box::new(AstNode::LiteralStatement {
-                        kind: TokenKind::Identifier,
-                        value: ValueKind::String(name.clone()),
-                    }),
-                    right: Box::new(AstNode::LiteralStatement {
-                        kind: TokenKind::IntegerLiteral,
-                        value: ValueKind::Number(1),
-                    }),
-                    operator: TokenKind::Add,
-                }),
-            }),
-            TokenKind::SubtractOne => Some(AstNode::DeclareStatement {
-                name: name.clone(),
-                r#type: "Nil".to_owned(),
-                value: Box::new(AstNode::ArithmeticOperation {
-                    left: Box::new(AstNode::LiteralStatement {
-                        kind: TokenKind::Identifier,
-                        value: ValueKind::String(name.clone()),
-                    }),
-                    right: Box::new(AstNode::LiteralStatement {
-                        kind: TokenKind::IntegerLiteral,
-                        value: ValueKind::Number(1),
-                    }),
-                    operator: TokenKind::Subtract,
-                }),
-            }),
+            TokenKind::AddOne => Some(TokenKind::Add),
+            TokenKind::SubtractOne => Some(TokenKind::Subtract),
             _ => None,
         };
 
         if res.is_some() {
-            self.expect_token(TokenKind::Semicolon);
-            return res.unwrap();
+            if !self.is_eof() {
+                self.expect_token(TokenKind::Semicolon);
+            }
+
+            let mapping = res.unwrap();
+
+            self.body.borrow_mut().push(AstNode::LiteralStatement { 
+                kind: TokenKind::ExactLiteral, 
+                value: ValueKind::String("__<#insert#>__".to_owned()) 
+            });
+
+            self.body.borrow_mut().push(AstNode::DeclareStatement {
+                name: name.clone(),
+                r#type: "Nil".to_owned(),
+                value: Box::new(AstNode::ArithmeticOperation {
+                    left: Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::Identifier,
+                        value: ValueKind::String(name.clone()),
+                    }),
+                    right: Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number(1),
+                    }),
+                    operator: mapping,
+                }),
+            });
+    
+
+            return AstNode::LiteralStatement {
+                kind: TokenKind::Identifier,
+                value: ValueKind::String(name.clone()),
+            }
         }
 
         let mut value = vec![];
 
-        while self.current_token().kind != TokenKind::Semicolon && !self.is_eof() {
+        if self.is_eof() {
             value.push(self.current_token());
-            self.advance();
+        } else {
+            while self.current_token().kind != TokenKind::Semicolon && !self.is_eof() {
+                value.push(self.current_token());
+                self.advance();
+            }
         }
-
-        self.expect_token(TokenKind::Semicolon);
 
         let mapping = match operation.kind {
             TokenKind::AddEqual => TokenKind::Add,
@@ -177,7 +211,7 @@ impl Statement {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
                 }),
-                right: Box::new(Statement::new(value, 0).parse().0),
+                right: Box::new(Statement::new(value, 0, &self.body).parse().0),
                 operator: mapping,
             }),
         }
@@ -223,8 +257,26 @@ impl Statement {
 
         self.expect_token(TokenKind::Semicolon);
 
+        let res = Statement::new(value, 0, &self.body).parse().0;
+
+        let parsed_res = match res.clone() {
+            AstNode::DeclareStatement {
+                name,
+                r#type: _,
+                value: _,
+            } => {
+                self.body.borrow_mut().push(res);
+
+                AstNode::LiteralStatement {
+                    kind: TokenKind::Identifier,
+                    value: ValueKind::String(name),
+                }
+            }
+            _ => res,
+        };
+
         AstNode::ReturnStatement {
-            value: Box::new(Statement::new(value, 0).parse().0),
+            value: Box::new(parsed_res),
         }
     }
 
@@ -285,7 +337,7 @@ impl Statement {
                 }
             }
 
-            parameters.push(Statement::new(tokens, 0).parse().0);
+            parameters.push(Statement::new(tokens, 0, &self.body).parse().0);
         }
 
         self.expect_token_with_message(
@@ -360,8 +412,8 @@ impl Statement {
         };
 
         AstNode::ArithmeticOperation {
-            left: Box::new(Statement::new(left, 0).parse().0),
-            right: Box::new(Statement::new(right, 0).parse().0),
+            left: Box::new(Statement::new(left, 0, &self.body).parse().0),
+            right: Box::new(Statement::new(right, 0, &self.body).parse().0),
             operator,
         }
     }
@@ -386,6 +438,44 @@ impl Statement {
         node
     }
 
+    fn parse_prefix_increment(&mut self) -> AstNode {
+        let mapping = match self.current_token().kind {
+            TokenKind::AddOne => TokenKind::Add,
+            TokenKind::SubtractOne => TokenKind::Subtract,
+            other => panic!("Expected increment token (++ or --) but got {:?}", other),
+        };
+
+        self.advance();
+        self.expect_token_with_message(
+            TokenKind::Identifier, 
+            Some(
+                format!(
+                    "Expected identifier, got {:?}. You cannot increment anything other than identifiers", 
+                    self.current_token().kind
+                ).as_str()
+            )
+        );
+
+        let name = self.get_identifier();
+        self.advance();
+
+        AstNode::DeclareStatement {
+            name: name.clone(),
+            r#type: "Nil".to_owned(),
+            value: Box::new(AstNode::ArithmeticOperation {
+                left: Box::new(AstNode::LiteralStatement {
+                    kind: TokenKind::Identifier,
+                    value: ValueKind::String(name.clone()),
+                }),
+                right: Box::new(AstNode::LiteralStatement {
+                    kind: TokenKind::IntegerLiteral,
+                    value: ValueKind::Number(1),
+                }),
+                operator: mapping,
+            }),
+        }
+    }
+
     fn parse_primary(&mut self) -> AstNode {
         match self.current_token().kind {
             TokenKind::IntegerLiteral
@@ -406,6 +496,8 @@ impl Statement {
                         }
 
                         self.parse_function(true)
+                    } else if next.kind == TokenKind::Equal {
+                        self.parse_declare(Some("Nil".to_owned()))
                     } else if next.kind.is_declarative() {
                         self.parse_declarative_like()
                     } else if next.kind.is_arithmetic() {
@@ -419,6 +511,7 @@ impl Statement {
                     }
                 }
             }
+            other if other.is_one_operator() => self.parse_prefix_increment(),
             _ => panic!(
                 "[{:?}] Expected expression, got {:?}",
                 self.current_token().location.display(),
@@ -429,7 +522,7 @@ impl Statement {
 
     pub fn parse(&mut self) -> (AstNode, usize) {
         let node = match self.current_token().kind {
-            TokenKind::Type => self.parse_declare(),
+            TokenKind::Type => self.parse_declare(None),
             TokenKind::Return => self.parse_return(),
             _ => self.parse_expression(),
         };

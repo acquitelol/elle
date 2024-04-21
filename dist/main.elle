@@ -1,13 +1,5 @@
-fn isEven(Int num) -> Int {
-    ret num % 2 == 0;
-}
-
 pub fn main() {
-    Int num = 8;
-    Int res = isEven(num);
-    res += 1;
-    res *= 6;
-    printf!("The result is %d", res);
-    // Expect the above to print:
-    // "The result is 12"
+    Int a = 1;
+    a = 2;
+    printf!("%d\n", a);
 }
