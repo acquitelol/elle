@@ -170,7 +170,9 @@ impl Compiler {
                                         Value::Const(_) => func_ref.borrow_mut().return_type = Some(Type::Word),
                                         Value::Global(_) => func_ref.borrow_mut().return_type = Some(Type::Long),
                                         Value::Temporary(val) => {
-                                            let var = self.get_var(format!("tmp_{}", self.get_tmp_index(val).unwrap_or(1) - 1).as_str());
+                                            let mut val_temp = val.clone();
+                                            let last = val_temp.pop().unwrap().to_string().parse::<i32>().unwrap() - 1;
+                                            let var = self.get_var(format!("r_v{}", last).as_str());
     
                                             match var {
                                                 Ok((ty, _)) => {
@@ -230,8 +232,8 @@ impl Compiler {
                     let (parsed_ty, value) = parsed.unwrap();
 
                     if parsed_ty != ty {
-                        panic!(
-                            "\nAttempted to re-declare variable named '{}' with a different type\nCurrent type is {:?}, attempted to re-declare with {:?}\n",
+                        eprintln!(
+                            "\nAttempted to declare variable named '{}' with a mismatched type\nAnnotated type is {:?}, attempted to declare with {:?}\n",
                             name,
                             ty.clone(),
                             parsed_ty.clone()
@@ -247,7 +249,7 @@ impl Compiler {
             AstNode::ReturnStatement { value } => {
                 match self.generate_statement(func, module, *value.clone()) {
                     Some((ty, value)) => {
-                        let tmp = self.new_var(&ty, format!("tmp_{}", self.tmp_counter).as_str());
+                        let tmp = self.new_var(&ty, format!("r_v{}", self.tmp_counter).as_str());
 
                         match tmp {
                             Ok(val) => {

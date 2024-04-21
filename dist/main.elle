@@ -1,5 +1,12 @@
+fn input(String message) {
+    String out = "";
+    puts(message);
+    scanf!("%s", out);
+
+    ret out;
+}
+
 pub fn main() {
-    Int a = 1;
-    a = 2;
-    printf!("%d\n", a);
+    String test = input("input pls? :pleading:\n");
+    printf!("\ndid you say %s? that's so true bestie\n", test);
 }
