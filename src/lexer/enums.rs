@@ -31,7 +31,8 @@ pub enum TokenKind {
     AddOne,
     SubtractOne,
     // Exponent,
-    Arrow,
+    RightArrow,
+    LeftArrow,
     Semicolon,
     If,
     Else,
@@ -54,6 +55,7 @@ pub enum TokenKind {
     Or,
     None,
     Constant,
+    Store,
 }
 
 impl TokenKind {

@@ -112,7 +112,7 @@ impl Lexer {
 
                 if self.current_char() == '>' {
                     self.advance();
-                    (TokenKind::Arrow, ValueKind::Nil)
+                    (TokenKind::RightArrow, ValueKind::Nil)
                 } else if self.current_char() == '=' {
                     self.advance();
                     (TokenKind::SubtractEqual, ValueKind::Nil)
@@ -260,6 +260,10 @@ impl Lexer {
                         self.advance();
                         (TokenKind::LessThanEqual, ValueKind::Nil)
                     }
+                    '-' => {
+                        self.advance();
+                        (TokenKind::LeftArrow, ValueKind::Nil)
+                    }
                     _ => (TokenKind::LessThan, ValueKind::Nil),
                 }
             }
@@ -336,6 +340,7 @@ impl Lexer {
             "ret" => TokenKind::Return,
             "true" => TokenKind::TrueLiteral,
             "false" => TokenKind::FalseLiteral,
+            "store" => TokenKind::Store,
             _ if identifier
                 .chars()
                 .next()

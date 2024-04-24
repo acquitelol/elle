@@ -1,12 +1,19 @@
 fn input(String message) {
-    String out = "";
-    puts(message);
-    scanf!("%s", out);
+    Long stdin = fdopen(0, "r");
+    Char buf[1024];
 
-    ret out;
+    printf(message);
+    fgets(buf, 1024, stdin);
+
+    Long len = strlen(buf);
+    Long index = len - 1;
+    Long newline = buf + index;
+
+    newline <- Byte 0;
+    ret buf;
 }
 
 pub fn main() {
-    String test = input("input pls? :pleading:\n");
-    printf!("\ndid you say %s? that's so true bestie\n", test);
+    String res = input("Input > ");
+    printf!("Did you say %s? That's so true bestie!!\n", res);
 }

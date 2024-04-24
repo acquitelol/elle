@@ -41,6 +41,16 @@ pub enum AstNode {
         identifier: Box<AstNode>,
         cases: Vec<Case>,
     },
+    BufferStatement {
+        name: String,
+        r#type: String,
+        size: ValueKind,
+    },
+    StoreStatement {
+        name: String,
+        r#type: String,
+        value: Box<AstNode>,
+    },
 }
 
 #[derive(Debug, Clone)]

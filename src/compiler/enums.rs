@@ -34,6 +34,7 @@ pub enum Instruction {
     Alloc16(u128),
     Store(Type, Value, Value),
     Load(Type, Value),
+    Literal(Value),
 }
 
 impl fmt::Display for Instruction {
@@ -47,6 +48,7 @@ impl fmt::Display for Instruction {
             Self::Compare(r#type, comparison, lhs, rhs) => {
                 write!(
                     formatter,
+                    // All comparisons start with c
                     "c{}{} {}, {}",
                     match comparison {
                         Comparison::LessThan => "slt",
@@ -95,6 +97,9 @@ impl fmt::Display for Instruction {
             Self::Load(r#type, src) => {
                 write!(formatter, "load{} {}", r#type, src)
             }
+            Self::Literal(val) => {
+                write!(formatter, "{}", val)
+            }
         }
     }
 }
@@ -107,6 +112,7 @@ pub enum Type {
     Double,
     Byte,
     Halfword,
+    Field,
     Null,
 }
 
@@ -146,6 +152,7 @@ impl fmt::Display for Type {
             Self::Long => write!(formatter, "l"),
             Self::Single => write!(formatter, "s"),
             Self::Double => write!(formatter, "d"),
+            Self::Field => write!(formatter, "z"),
             Self::Null => write!(formatter, ""),
         }
     }
@@ -160,8 +167,8 @@ pub enum Value {
 }
 
 impl fmt::Display for Value {
+    /// Value prefixes based on sigils
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        // Value prefixes based on sigils
         match self {
             Self::Temporary(name) => write!(formatter, "%{}", name),
             Self::Global(name) => write!(formatter, "${}", name),
@@ -216,14 +223,14 @@ impl fmt::Display for Data {
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum DataItem {
-    Str(String),
+    String(String),
     Const(i64),
 }
 
 impl fmt::Display for DataItem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Str(string) => write!(f, "\"{}\"", string),
+            Self::String(string) => write!(f, "\"{}\"", string),
             Self::Const(val) => write!(f, "{}", val),
         }
     }

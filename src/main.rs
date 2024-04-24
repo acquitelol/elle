@@ -17,7 +17,7 @@ fn main() {
 
     while let Some(token) = lexer.next_token() {
         // Even though the lexer does provide us with comments, we don't care about them
-        // so we can just ignore them and not pass these tokens to the parser
+        // so we can just ignore them and not pass them the parser
         match token.kind {
             TokenKind::Comment => {}
             _ => tokens.push(token),

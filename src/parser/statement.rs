@@ -96,6 +96,11 @@ impl<'a> Statement<'a> {
         let name = self.get_identifier();
 
         self.advance();
+
+        if self.current_token().kind == TokenKind::LeftBlockBrace {
+            return self.parse_buffer(Some(name), Some(r#type));
+        }
+
         self.expect_token(TokenKind::Equal);
         self.advance();
 
@@ -450,7 +455,7 @@ impl<'a> Statement<'a> {
             TokenKind::Identifier, 
             Some(
                 format!(
-                    "Expected identifier, got {:?}. You cannot increment anything other than identifiers", 
+                    "Expected identifier, got {:?}. You cannot increment anything that isn't an identifier.", 
                     self.current_token().kind
                 ).as_str()
             )
@@ -476,6 +481,60 @@ impl<'a> Statement<'a> {
         }
     }
 
+    fn parse_buffer(&mut self, name: Option<String>, ty: Option<String>) -> AstNode {
+        let name = if name.is_some() {
+            name.unwrap()
+        } else {
+            let tmp = self.get_identifier();
+            self.advance();
+
+            tmp
+        };
+
+        self.expect_token(TokenKind::LeftBlockBrace);
+        self.advance();
+
+        self.expect_token(TokenKind::IntegerLiteral);
+        let size = self.current_token().value;
+
+        // These should not be assigned to a variable as they are themselves a variable declaration
+        // Therefore we don't need to check is_eof and can just enforce that there's a semicolon
+        self.advance();
+        self.expect_token(TokenKind::RightBlockBrace);
+        self.advance();
+        self.expect_token(TokenKind::Semicolon);
+
+        AstNode::BufferStatement { name, r#type: ty.unwrap_or("Byte".to_string()), size }
+    }
+
+    fn parse_store(&mut self) -> AstNode {
+        let name = self.get_identifier();
+        self.advance();
+
+        self.expect_token(TokenKind::LeftArrow);
+        self.advance();
+
+        let r#type = self.get_type();
+        self.advance();
+
+        let mut value = vec![];
+
+        while self.current_token().kind != TokenKind::Semicolon && !self.is_eof() {
+            value.push(self.current_token());
+            self.advance();
+        }
+
+        if !self.is_eof() {
+            self.expect_token(TokenKind::Semicolon);
+        }
+
+        AstNode::StoreStatement {
+            name,
+            r#type,
+            value: Box::new(Statement::new(value, 0, &self.body).parse().0),
+        }
+    }
+
     fn parse_primary(&mut self) -> AstNode {
         match self.current_token().kind {
             TokenKind::IntegerLiteral
@@ -490,6 +549,8 @@ impl<'a> Statement<'a> {
 
                     if next.kind == TokenKind::LeftParenthesis {
                         self.parse_function(false)
+                    } else if next.kind == TokenKind::LeftBlockBrace {
+                        self.parse_buffer(None, None)
                     } else if next.kind == TokenKind::Not {
                         if self.position + 2 > self.tokens.len() - 1 {
                             panic!("EOF but specified a variadic identifier")
@@ -498,6 +559,8 @@ impl<'a> Statement<'a> {
                         self.parse_function(true)
                     } else if next.kind == TokenKind::Equal {
                         self.parse_declare(Some("Nil".to_owned()))
+                    } else if next.kind == TokenKind::LeftArrow {
+                        self.parse_store()
                     } else if next.kind.is_declarative() {
                         self.parse_declarative_like()
                     } else if next.kind.is_arithmetic() {

@@ -34,7 +34,11 @@ impl<'a> Function<'a> {
 
                 self.parser.advance();
 
-                let name = self.parser.get_identifier();
+                let name = match self.parser.current_token().kind {
+                    TokenKind::Identifier => self.parser.get_identifier(),
+                    TokenKind::ExactLiteral => self.parser.get(TokenKind::ExactLiteral),
+                    other => panic!("Invalid token type {:?}", other),
+                };
 
                 self.parser.advance();
                 self.parser.match_token(TokenKind::Comma, true);
@@ -48,7 +52,7 @@ impl<'a> Function<'a> {
 
         let mut r#return: String = "Nil".to_owned();
 
-        if self.parser.match_token(TokenKind::Arrow, true) {
+        if self.parser.match_token(TokenKind::RightArrow, true) {
             r#return = self.parser.get_type();
             self.parser.advance();
         }
