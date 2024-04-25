@@ -56,6 +56,8 @@ pub enum TokenKind {
     None,
     Constant,
     Store,
+    Break,
+    Continue,
 }
 
 impl TokenKind {
@@ -104,7 +106,9 @@ impl TokenKind {
             | Self::CharLiteral
             | Self::ExactLiteral
             | Self::TrueLiteral
-            | Self::FalseLiteral => true,
+            | Self::FalseLiteral
+            | Self::Break
+            | Self::Continue => true,
             _ => false,
         }
     }

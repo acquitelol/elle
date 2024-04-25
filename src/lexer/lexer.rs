@@ -341,6 +341,8 @@ impl Lexer {
             "true" => TokenKind::TrueLiteral,
             "false" => TokenKind::FalseLiteral,
             "store" => TokenKind::Store,
+            "break" => TokenKind::Break,
+            "continue" => TokenKind::Continue,
             _ if identifier
                 .chars()
                 .next()

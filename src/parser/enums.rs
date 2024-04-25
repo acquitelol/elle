@@ -25,21 +25,17 @@ pub enum AstNode {
     },
     IfStatement {
         condition: Box<AstNode>,
-        body: Box<AstNode>,
-        else_body: Box<AstNode>,
+        body: Vec<AstNode>,
+        else_body: Vec<AstNode>,
     },
-    ForStatement {
+    ForLoop {
         iterator: Token,
         enumerator: Box<AstNode>,
         body: Box<AstNode>,
     },
-    WhileStatement {
+    WhileLoop {
         condition: Box<AstNode>,
-        body: Box<AstNode>,
-    },
-    MatchStatement {
-        identifier: Box<AstNode>,
-        cases: Vec<Case>,
+        body: Vec<AstNode>,
     },
     BufferStatement {
         name: String,

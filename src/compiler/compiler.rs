@@ -17,6 +17,7 @@ pub struct Compiler {
     tmp_counter: u32,
     scopes: Vec<HashMap<String, (Type, Value)>>,
     data_sections: Vec<Data>,
+    loop_labels: Vec<String>,
     tree: Vec<Primitive>,
 }
 
@@ -230,26 +231,6 @@ impl Compiler {
                 if parsed.is_some() {
                     let (_, value) = parsed.unwrap();
 
-                    // dbg!(&ty, &value);
-
-                    // match value.clone() {
-                    //     Value::Temporary(value_name) => {
-                    //         match self.scopes
-                    //         .iter_mut()
-                    //         .last()
-                    //         .unwrap()
-                    //         .iter_mut()
-                    //         .find(|(_, (_, value))| match value {
-                    //             Value::Temporary(name) => name.to_owned() == value_name,
-                    //             _ => false
-                    //         }) {
-                    //             Some(res) => res.1.0 = ty.clone(),
-                    //             _ => {}
-                    //         }; 
-                    //     },
-                    //     _ => {}
-                    // };
-
                     func.borrow_mut()
                         .assign_instruction(temp, ty, Instruction::Copy(value));
                 }
@@ -387,7 +368,25 @@ impl Compiler {
                 TokenKind::ExactLiteral => match value {
                     ValueKind::String(val) => Some((Type::Null, Value::Literal(val))),
                     _ => None,
-                },
+                }
+                TokenKind::Break => {
+                    if let Some(label) = &self.loop_labels.last() {
+                        func.borrow_mut().add_instruction(Instruction::Jump(format!("{}_end", label)));
+                    } else {
+                        panic!("Break can only be used while in a loop.");
+                    }
+                    
+                    None
+                }
+                TokenKind::Continue => {
+                    if let Some(label) = &self.loop_labels.last() {
+                        func.borrow_mut().add_instruction(Instruction::Jump(format!("{}_cond", label)));
+                    } else {
+                        panic!("Continue can only be used while in a loop.");
+                    }
+                    
+                    None
+                }
                 _ => match value {
                     ValueKind::Number(val) => Some((Type::Word, Value::Const(val))),
                     ValueKind::String(val) => {
@@ -531,6 +530,128 @@ impl Compiler {
                 func.borrow_mut().add_instruction(Instruction::Store(ty, existing.1.to_owned(), compiled));
                 None
             }
+            AstNode::IfStatement { condition, body, else_body } => {
+                let (_, value) = self.generate_statement(func, module, *condition.clone(), ty).unwrap();
+
+                self.tmp_counter += 1;
+                let true_label = format!("ift_{}", self.tmp_counter);
+                let false_label = format!("iff_{}", self.tmp_counter);
+                let end_label = format!("end_{}", self.tmp_counter);
+
+                func.borrow_mut().add_instruction(
+                    Instruction::JumpNonZero(
+                        value, 
+                        true_label.clone(), 
+                        if else_body.len() > 0 {
+                            false_label.clone()
+                        } else {
+                            end_label.clone()
+                        }
+                    )
+                );
+
+                func.borrow_mut().add_block(true_label);
+                
+                for statement in body.clone() {
+                    match statement.clone() {
+                        AstNode::LiteralStatement { kind, value: _ } => match kind.clone() {
+                            TokenKind::ExactLiteral => match self.generate_statement(func, module, statement.clone(), None) {
+                                Some((_, value)) => {
+                                    func.borrow_mut().add_instruction(Instruction::Literal(value))
+                                }
+                                _ => {}
+                            },
+                            TokenKind::Break | TokenKind::Continue => {
+                                self.generate_statement(func, module, statement.clone(), None);
+                            },
+                            _ => {}
+                        }
+                        _ => match self.generate_statement(func, module, statement.clone(), None) {
+                            _ => {}
+                        }
+                    }
+                }
+
+                if else_body.len() > 0 {
+                    if !func.borrow_mut().blocks.last().map_or(false, |b| b.jumps()) {
+                        func.borrow_mut().add_instruction(Instruction::Jump(end_label.clone()));
+                    }
+        
+                    func.borrow_mut().add_block(false_label.clone());
+                    
+                    for statement in else_body.clone() {
+                        match statement.clone() {
+                            AstNode::LiteralStatement { kind, value: _ } => match kind.clone() {
+                                TokenKind::ExactLiteral => match self.generate_statement(func, module, statement.clone(), None) {
+                                    Some((_, value)) => {
+                                        func.borrow_mut().add_instruction(Instruction::Literal(value))
+                                    }
+                                    _ => {}
+                                }
+                                TokenKind::Break | TokenKind::Continue => {
+                                    self.generate_statement(func, module, statement.clone(), None);
+                                },
+                                _ => {}
+                            }
+                            _ => match self.generate_statement(func, module, statement.clone(), None) {
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+        
+                func.borrow_mut().add_block(end_label);
+                None
+            },
+            AstNode::WhileLoop { condition, body} => {
+                self.tmp_counter += 1;
+                
+                let cond_label = format!("loop_{}_cond", self.tmp_counter);
+                let body_label = format!("loop_{}_body", self.tmp_counter);
+                let end_label = format!("loop_{}_end", self.tmp_counter);
+
+                self.loop_labels.push(format!("loop_{}", self.tmp_counter));
+
+                func.borrow_mut().add_block(cond_label.clone());
+
+                let (_, value) = self.generate_statement(func, module, *condition.clone(), ty.clone()).unwrap();
+
+                func.borrow_mut().add_instruction(
+                    Instruction::JumpNonZero(
+                        value, 
+                        body_label.clone(), 
+                        end_label.clone()
+                    )
+                );
+
+                func.borrow_mut().add_block(body_label.clone());
+                
+                for statement in body.clone() {
+                    match statement.clone() {
+                        AstNode::LiteralStatement { kind, value: _ } => match kind.clone() {
+                            TokenKind::ExactLiteral => match self.generate_statement(func, module, statement.clone(), None) {
+                                Some((_, value)) => {
+                                    func.borrow_mut().add_instruction(Instruction::Literal(value))
+                                }
+                                _ => {}
+                            }
+                            _ => {}
+                        }
+                        _ => match self.generate_statement(func, module, statement.clone(), None) {
+                            _ => {}
+                        }
+                    }
+                }
+
+                if !func.borrow_mut().blocks.last().map_or(false, |b| b.jumps()) {
+                    func.borrow_mut().add_instruction(Instruction::Jump(cond_label));
+                }
+        
+                func.borrow_mut().add_block(end_label);
+                self.loop_labels.pop();
+
+                None
+            }
             _ => todo!("statement: {:?}", stmt),
         };
 
@@ -542,6 +663,7 @@ impl Compiler {
             tmp_counter: 0,
             scopes: Vec::new(),
             data_sections: Vec::new(),
+            loop_labels: Vec::new(),
             tree,
         };
 

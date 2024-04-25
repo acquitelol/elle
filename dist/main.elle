@@ -13,7 +13,28 @@ fn input(String message) {
     ret buf;
 }
 
+fn isEven(Int number) {
+    ret number % 2 == 0;
+}
+
+fn fib(Int n) -> Int { 
+    if (n <= 1) {
+        ret n;
+    }
+
+    ret fib(n - 1) + fib(n - 2);
+} 
+
 pub fn main() {
-    String res = input("Input > ");
-    printf!("Did you say %s? That's so true bestie!!\n", res);
+    while (true) {
+        String userInput = input("enter a number -> ");
+        Int number = atoi(userInput);
+
+        if (number == 0) {
+            printf!("invalid input :C\n\n");
+            continue;
+        }
+
+        printf!("fibbonaci of %d is %d\n\n", number, fib(number));
+    }
 }

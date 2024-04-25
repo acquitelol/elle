@@ -226,9 +226,25 @@ impl<'a> Statement<'a> {
         if self.tokens.len() - self.position == 1 {
             let current = self.current_token();
 
-            AstNode::LiteralStatement {
-                kind: current.kind,
-                value: current.value,
+            match current.kind {
+                TokenKind::TrueLiteral => {
+                    AstNode::LiteralStatement {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number(1),
+                    }
+                },
+                TokenKind::FalseLiteral => {
+                    AstNode::LiteralStatement {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number(0),
+                    }
+                }
+                _ => {
+                    AstNode::LiteralStatement {
+                        kind: current.kind,
+                        value: current.value,
+                    }
+                }
             }
         } else {
             match self.next_token() {
@@ -238,9 +254,25 @@ impl<'a> Statement<'a> {
 
                         self.advance();
 
-                        AstNode::LiteralStatement {
-                            kind: current.kind,
-                            value: current.value,
+                        match current.kind {
+                            TokenKind::TrueLiteral => {
+                                AstNode::LiteralStatement {
+                                    kind: TokenKind::IntegerLiteral,
+                                    value: ValueKind::Number(1),
+                                }
+                            },
+                            TokenKind::FalseLiteral => {
+                                AstNode::LiteralStatement {
+                                    kind: TokenKind::IntegerLiteral,
+                                    value: ValueKind::Number(0),
+                                }
+                            }
+                            _ => {
+                                AstNode::LiteralStatement {
+                                    kind: current.kind,
+                                    value: current.value,
+                                }
+                            }
                         }
                     }
                     _ => self.parse_arithmetic(),
@@ -260,9 +292,15 @@ impl<'a> Statement<'a> {
             self.advance();
         }
 
-        self.expect_token(TokenKind::Semicolon);
+        if !self.is_eof() {
+            self.expect_token(TokenKind::Semicolon);
+        }
 
-        let res = Statement::new(value, 0, &self.body).parse().0;
+        let res = if value.len() > 0 {
+            Statement::new(value, 0, &self.body).parse().0
+        } else {
+            AstNode::LiteralStatement { kind: TokenKind::IntegerLiteral, value: ValueKind::Number(0) }
+        };
 
         let parsed_res = match res.clone() {
             AstNode::DeclareStatement {
@@ -535,12 +573,174 @@ impl<'a> Statement<'a> {
         }
     }
 
+    fn parse_if_statement(&mut self) -> AstNode {
+        self.advance();
+
+        self.expect_token(TokenKind::LeftParenthesis);
+        self.advance();
+
+        let mut tokens = vec![];
+        let mut nesting = 0;
+
+        loop {
+            if self.current_token().kind == TokenKind::LeftParenthesis {
+                nesting += 1;
+            }
+
+            tokens.push(self.current_token());
+            self.advance();
+
+            if self.current_token().kind == TokenKind::RightParenthesis {
+                if nesting > 0 {
+                    nesting -= 1;
+                } else {
+                    break;
+                }
+            }
+
+            if self.is_eof() {
+                break;
+            }
+        }
+
+        let expression = Statement::new(tokens, 0, &self.body).parse().0;
+
+        self.expect_token(TokenKind::RightParenthesis);
+        self.advance();
+
+        self.expect_token(TokenKind::LeftCurlyBrace);
+        self.advance();
+
+        let body = self.yield_block();
+        let mut else_body: Vec<AstNode> = vec![];
+
+        if self.current_token().kind == TokenKind::Else {
+            self.advance();
+            self.expect_token(TokenKind::LeftCurlyBrace);
+            self.advance();
+
+            else_body = self.yield_block();
+        }
+
+        self.position -= 1;
+
+        AstNode::IfStatement { condition: Box::new(expression), body, else_body }
+    }
+
+    fn parse_while_statement(&mut self) -> AstNode {
+        self.advance();
+
+        self.expect_token(TokenKind::LeftParenthesis);
+        self.advance();
+
+        let mut tokens = vec![];
+        let mut nesting = 0;
+
+        loop {
+            if self.current_token().kind == TokenKind::LeftParenthesis {
+                nesting += 1;
+            }
+
+            tokens.push(self.current_token());
+            self.advance();
+
+            if self.current_token().kind == TokenKind::RightParenthesis {
+                if nesting > 0 {
+                    nesting -= 1;
+                } else {
+                    break;
+                }
+            }
+
+            if self.is_eof() {
+                break;
+            }
+        }
+
+        let expression = Statement::new(tokens, 0, &self.body).parse().0;
+
+        self.expect_token(TokenKind::RightParenthesis);
+        self.advance();
+
+        self.expect_token(TokenKind::LeftCurlyBrace);
+        self.advance();
+
+        let body = self.yield_block();
+
+        self.position -= 1;
+
+        AstNode::WhileLoop { condition: Box::new(expression), body }
+    }
+
+    fn yield_block(&mut self) -> Vec<AstNode> { 
+        let cell: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
+
+        loop {
+            let current = self.current_token();
+
+            match current.kind {
+                TokenKind::RightCurlyBrace => {
+                    self.advance();
+                    break;
+                }
+                _ => {
+                    let (node, position) = Statement::new(
+                        self.tokens.clone(),
+                        self.position.clone(),
+                        &cell,
+                    )
+                    .parse();
+
+                    let mut body_ref = cell.borrow_mut();
+                    let res = body_ref.iter().position(|item| match item.clone() {
+                        AstNode::LiteralStatement { kind, value } => {
+                            if kind.clone() == TokenKind::ExactLiteral {
+                                match value.clone() {
+                                    ValueKind::String(val) => {
+                                        if val == "__<#insert#>__".to_owned() {
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    }
+                                    _ => false
+                                }
+                            } else {
+                                false
+                            }
+                        }
+                        _ => false
+                    });
+
+                    if res.is_some() {
+                        match node {
+                            AstNode::DeclareStatement { name: _, r#type: _, value: _ } => {
+                                body_ref[res.unwrap()] = node
+                            }
+                            _ => {
+                                body_ref.remove(res.unwrap());
+                                body_ref.push(node);
+                            }
+                        }
+                    } else {
+                        body_ref.push(node);
+                    }
+
+                    self.position = position;
+                }
+            };
+
+            self.advance();
+        }
+
+        let body = cell.borrow_mut().to_owned().clone();
+
+        body
+    }
+
     fn parse_primary(&mut self) -> AstNode {
         match self.current_token().kind {
-            TokenKind::IntegerLiteral
-            | TokenKind::StringLiteral
-            | TokenKind::CharLiteral
-            | TokenKind::ExactLiteral => self.parse_literal(),
+            token if token.is_literal() => self.parse_literal(),
             TokenKind::Identifier => {
                 if self.is_eof() {
                     self.parse_literal()
@@ -578,7 +778,7 @@ impl<'a> Statement<'a> {
             _ => panic!(
                 "[{:?}] Expected expression, got {:?}",
                 self.current_token().location.display(),
-                self.current_token().kind
+                self.current_token().kind,
             ),
         }
     }
@@ -587,6 +787,8 @@ impl<'a> Statement<'a> {
         let node = match self.current_token().kind {
             TokenKind::Type => self.parse_declare(None),
             TokenKind::Return => self.parse_return(),
+            TokenKind::If => self.parse_if_statement(),
+            TokenKind::While => self.parse_while_statement(),
             _ => self.parse_expression(),
         };
 

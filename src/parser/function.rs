@@ -79,37 +79,38 @@ impl<'a> Function<'a> {
                     )
                     .parse();
 
-                    let len = body.borrow().len();
-
-                    if len <= 2 {
-                        body.borrow_mut().push(node);
-                    } else {
-                        let possible_len = len - 2;
-                        let mut body_ref = body.borrow_mut();
-                        let res = body_ref.get(possible_len);
-
-                        match res {
-                            Some(val) => match val.clone() {
-                                AstNode::LiteralStatement { kind, value } => {
-                                    if kind.clone() == TokenKind::ExactLiteral {
-                                        match value.clone() {
-                                            ValueKind::String(val) => {
-                                                if val == "__<#insert#>__".to_owned() {
-                                                    body_ref[possible_len] = node;
-                                                } else {
-                                                    body_ref.push(node)
-                                                }
-                                            }
-                                            _ => body_ref.push(node),
+                    let mut body_ref = body.borrow_mut();
+                    let res = body_ref.iter().position(|item| match item.clone() {
+                        AstNode::LiteralStatement { kind, value } => {
+                            if kind.clone() == TokenKind::ExactLiteral {
+                                match value.clone() {
+                                    ValueKind::String(val) => {
+                                        if val == "__<#insert#>__".to_owned() {
+                                            true
+                                        } else {
+                                            false
                                         }
-                                    } else {
-                                        body_ref.push(node);
                                     }
+                                    _ => false,
                                 }
-                                _ => body_ref.push(node),
-                            },
+                            } else {
+                                false
+                            }
+                        }
+                        _ => false,
+                    });
+
+                    if res.is_some() {
+                        match node {
+                            AstNode::DeclareStatement {
+                                name: _,
+                                r#type: _,
+                                value: _,
+                            } => body_ref[res.unwrap()] = node,
                             _ => body_ref.push(node),
                         }
+                    } else {
+                        body_ref.push(node);
                     }
 
                     self.parser.position = position;
