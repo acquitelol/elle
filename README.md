@@ -114,25 +114,41 @@ fn printMessage(String message) {
 * Constants must be at the top level of files & start with `const`
 * Returning from functions is done with the `return` keyword
 
-* Exact literals
-  * These expressions will expand into the exact characters you type into the intermediate language code.
-  * Typing `$storeb 0, %tmp_12$` will write exactly this code into the intermediate language, completely ignoring types, sigils, etc.
-  * Only use this for basic operations, it is not intended as a replacement for writing Elle code as block-scoped variables are written with a temporary counter and cannot be referenced directly from exact literals.
+<hr />
+
+### ♡ **Exact literals**
+
+* These expressions will expand into the exact characters you type into the intermediate language code.
+* Typing `$storeb 0, %tmp_12$` will write exactly `storeb 0, %tmp_12` into the intermediate language, completely ignoring types, sigils, etc.
+* Only use this for basic operations, it is not intended as a replacement for writing Elle code as block-scoped variables are written with a temporary counter and cannot be referenced directly from exact literals.
 
 * The function syntax `func!(a, b, c)` works as follows:
   * `func(a, b, c)` expands to `func(a, b, c)`
   * `func!(a, b, c)` expands to `func(a, $...$, b, c)`
   * `func!2(a, b, c)` expands to `func(a, b, $...$, c)`
 
-The number after the `!` can be anything. It is intended to handle variadic functions, as in QBE IR, variadic functions must declare the point at which the variadic arguments begin. So while typing the exact literal `$...$`
+> The number after the `!` can be anything. It is intended to handle variadic functions, as in QBE IR, variadic functions must declare the point at which the variadic arguments begin. So while typing the exact literal `$...$` is valid, writing it out every time for each `printf`, `sprintf`, `scanf` call, etc can get exhausting, which is why this macro exists in the first place.
 
-* Static buffers
-  * You can allocate a buffer with the `Type buf[size]` syntax.
-  * This expands into `data $buf_5 = { z (size * type_size) }`
+### ♡ **Static buffers**
 
-* Dereferencing pointers
-  * Strings are always pointers. This means that you can find an offset from a pointer and then store data at it.
-  * Example
+* You can allocate a buffer with the `Type buf[size]` syntax.
+* This expands into `data $buf_5 = { z (size * type_size) }`
+
+#
+
+* Assuming you wrote the above code, you would be able to reference the `buf` variable which is a pointer to the data section that holds the buffer. The buffer may be called anything though, of course.
+* Example:
+
+```dart
+Char out[128];
+gets(out); // This is unsafe but this is only a demonstration
+puts(out);
+```
+
+### ♡ **Dereferencing pointers**
+
+* Strings are always pointers. This means that you can find an offset from a pointer and then store data at it.
+* Example
 
 ```dart
 String test = "bbbbbbbb"; // Returns a pointer to the start of raw bytes
@@ -142,23 +158,29 @@ Long offset = test + 2; // 0th index + 2 = 3rd index
 offset <- Byte 97; // Stores 'a' at the 3rd index
 ```
 
-* If statements
-  * You can define `if` and then an optional `else` statement
-  * There is currently no `else if` or similar. A workaround is to just define another `if statement` with your new condition.
-  * Example
+### ♡ **If statements**
+
+* You can define an `if` statement and then an optional `else` statement
+* If statement expressions are wrapped in `()`
+* There is currently no `else if` or similar. A workaround is to just define another `if statement` with your new condition.
+* Example:
 
 ```dart
+Int a = 0; // Variables must be initialized.
+
 if (expression) {
-    // do main code
+    a++;
 } else {
-    // do other code
+    a--;
 }
 ```
 
-* While loops
-  * Even though you can loop via recursion, there is also a while loop primitive available.
-  * There is no `do while`, `finally`, or `for loop` functionality at the time of writing this.
-  * Example
+### ♡ **While loops**
+
+* Even though you can loop via recursion, there is also a while loop primitive available.
+* While loop expressions are wrapped in `()`
+* There is no `do while`, `finally`, or `for loop` functionality at the time of writing this.
+* Example
 
 ```dart
 while (expression) {
@@ -177,7 +199,11 @@ while (i < 10) {
 }
 ```
 
-* Due to Elle compiling to QBE IR, this means that we already have access to a variety of C stdlib.h methods. QBE does not allow for dynamically-linked non-functional symbols, so this means that globals from stdio.h such as the `stdin` and `stdout` file pointer do not exist. However, you can use the following methods:
+<hr />
+
+### ♡ **Base methods**
+
+Due to Elle compiling to QBE IR, this means that we already have access to a variety of C stdlib.h methods. QBE does not allow for dynamically-linked non-functional symbols, so this means that globals from stdio.h such as the `stdin` and `stdout` file pointers do not exist. However, you can use the following methods:
 
 ```dart
 // When reading please keep in mind that pointers are always a Long type.
