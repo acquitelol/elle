@@ -51,9 +51,9 @@ data $main_1 = { b "Hello world!", b 0 }
 
 ### ♡ **Example Syntax**
 
-Please keep in mind that syntax such as `arrays`, etc have *not* been implemented at all yet. This means that the code below may *not* compile. It is indended as a pure example of how the syntax is designed to look later on.
+Please keep in mind that syntax such as `arrays`, etc have *not* been implemented at all yet. The code below should compile, but it is indended as a pure example of how the syntax is designed to look.
 
-```rs
+```dart
 // Import statements follow a lib:file@{method1, method2...} format;
 // use elle:int@{random};
 
@@ -80,13 +80,13 @@ fn resultWithNumber(Int num) {
     Char result[64];
     sprintf!2(result, "Result is %d\n", num);
 
-    ret result;
+    return result;
 }
 
-fn randomWithMultiplier(Int biggest, Int multiplier) -> Int {
+fn randomWithMultiplier(Int upper, Int multiplier) -> Int {
     // Use the ret keyword to return from the operation
-    Int res = rand() % biggest;
-    ret res * multiplier;
+    Int res = rand() % upper;
+    return res * multiplier;
 }
 
 // Operations can either return a value or void.
@@ -94,9 +94,9 @@ fn randomWithPossibleError() -> Int {
     Int result = rand() % 6;
 
     if (result == 3) {
-        ret -1;
+        return -1;
     } else {
-        ret result;
+        return result;
     }
 }
 
@@ -112,7 +112,108 @@ fn printMessage(String message) {
 * Single quotes are strictly for characters
 * Double quotes are strictly for strings
 * Constants must be at the top level of files & start with `const`
-* Returning from operations is done with the `ret` keyword
+* Returning from functions is done with the `return` keyword
+
+* Exact literals
+  * These expressions will expand into the exact characters you type into the intermediate language code.
+  * Typing `$storeb 0, %tmp_12$` will write exactly this code into the intermediate language, completely ignoring types, sigils, etc.
+  * Only use this for basic operations, it is not intended as a replacement for writing Elle code as block-scoped variables are written with a temporary counter and cannot be referenced directly from exact literals.
+
+* The function syntax `func!(a, b, c)` works as follows:
+  * `func(a, b, c)` expands to `func(a, b, c)`
+  * `func!(a, b, c)` expands to `func(a, $...$, b, c)`
+  * `func!2(a, b, c)` expands to `func(a, b, $...$, c)`
+
+The number after the `!` can be anything. It is intended to handle variadic functions, as in QBE IR, variadic functions must declare the point at which the variadic arguments begin. So while typing the exact literal `$...$`
+
+* Static buffers
+  * You can allocate a buffer with the `Type buf[size]` syntax.
+  * This expands into `data $buf_5 = { z (size * type_size) }`
+
+* Dereferencing pointers
+  * Strings are always pointers. This means that you can find an offset from a pointer and then store data at it.
+  * Example
+
+```dart
+String test = "bbbbbbbb"; // Returns a pointer to the start of raw bytes
+Long offset = test + 2; // 0th index + 2 = 3rd index
+
+// In this case we're storing a Byte here
+offset <- Byte 97; // Stores 'a' at the 3rd index
+```
+
+* If statements
+  * You can define `if` and then an optional `else` statement
+  * There is currently no `else if` or similar. A workaround is to just define another `if statement` with your new condition.
+  * Example
+
+```dart
+if (expression) {
+    // do main code
+} else {
+    // do other code
+}
+```
+
+* While loops
+  * Even though you can loop via recursion, there is also a while loop primitive available.
+  * There is no `do while`, `finally`, or `for loop` functionality at the time of writing this.
+  * Example
+
+```dart
+while (expression) {
+    // do code
+}
+```
+
+* You also have access to block scoped variables inside of this loop. This means you can create a pseudo `for loop` with the following code:
+
+```dart
+Int i = 0;
+
+while (i < 10) {
+    printf!("%d\n", i);
+    i++;
+}
+```
+
+* Due to Elle compiling to QBE IR, this means that we already have access to a variety of C stdlib.h methods. QBE does not allow for dynamically-linked non-functional symbols, so this means that globals from stdio.h such as the `stdin` and `stdout` file pointer do not exist. However, you can use the following methods:
+
+```dart
+// When reading please keep in mind that pointers are always a Long type.
+
+// -
+
+Long stdin = fdopen(0, "r");
+Long stdout = fdopen(1, "w");
+
+// -
+
+printf!("formatter %d", 1);
+puts("strings only, any other types will segfault");
+
+// -
+
+Char buf[64];
+scanf!("%s", buf);
+
+// -
+
+Long stdin = fdopen(0, "r");
+Char buf[64];
+fgets(buf, 64, stdin);
+
+// -
+
+String test = "aaaaa";
+Long len = strlen(test); // 5
+
+// -
+
+String x = "5";
+Int xAsInt = atoi(x);
+Long xAsLong = atol(x);
+```
 
 > If you have any questions, please [raise an issue](https://github.com/acquitelol/elle/issues/new) :3
 

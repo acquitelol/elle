@@ -74,55 +74,81 @@ function l $fact(l %n_46) {
 	%r_v58_59 =l copy %tmp_58
 	ret %r_v58_59
 }
+function l $exp(l %n_60, l %p_61) {
+@start
+	%i_62 =w copy 0
+	%res_63 =l copy 1
+@loop_64_cond
+	%tmp_65 =w copy %i_62
+	%tmp_66 =w copy %p_61
+	%tmp_67 =w csltw %tmp_65, %tmp_66
+	jnz %tmp_67, @loop_64_body, @loop_64_end
+@loop_64_body
+	%tmp_68 =l copy %res_63
+	%tmp_69 =l copy %n_60
+	%tmp_70 =l mul %tmp_68, %tmp_69
+	%res_63 =l copy %tmp_70
+	%tmp_71 =w copy %i_62
+	%tmp_72 =w copy 1
+	%tmp_73 =w add %tmp_71, %tmp_72
+	%i_62 =w copy %tmp_73
+	jmp @loop_64_cond
+@loop_64_end
+	%r_v73_74 =l copy %res_63
+	ret %r_v73_74
+}
 export function w $main() {
 @start
 
-@loop_60_cond
-	jnz 1, @loop_60_body, @loop_60_end
-@loop_60_body
-	%tmp_63 =l call $input(l $main_62)
-	%userInput_61 =l copy %tmp_63
-	%tmp_65 =l call $atol(l %userInput_61)
-	%number_64 =l copy %tmp_65
-	%tmp_66 =l copy %number_64
-	%tmp_67 =l copy 0
-	%tmp_68 =l ceqw %tmp_66, %tmp_67
-	%tmp_69 =l copy %number_64
-	%tmp_70 =l copy 40
-	%tmp_71 =l csgtw %tmp_69, %tmp_70
-	%tmp_72 =l copy %tmp_68
-	%tmp_73 =l copy %tmp_71
-	%tmp_74 =l or %tmp_72, %tmp_73
-	jnz %tmp_74, @ift_75, @end_75
-@ift_75
-	%tmp_77 =w call $printf(l $main_76, ..., l %number_64)
-	jmp @loop_60_cond
-@end_75
-	%tmp_79 =l call $fact(l %number_64)
-	%tmp_80 =w call $printf(l $main_78, ..., l %number_64, l %tmp_79)
-	%tmp_82 =l call $fib(l %number_64)
-	%tmp_83 =w call $printf(l $main_81, ..., l %number_64, l %tmp_82)
-	%res_84 =l copy $main_85
-	%tmp_86 =l call $isEven(l %number_64)
-	jnz %tmp_86, @ift_87, @iff_87
-@ift_87
-	%res_84 =l copy $main_88
-	jmp @end_87
-@iff_87
-	%res_84 =l copy $main_89
-@end_87
-	%tmp_91 =w call $printf(l $main_90, ..., l %number_64, l %res_84)
-	jmp @loop_60_cond
-@loop_60_end
+@loop_75_cond
+	jnz 1, @loop_75_body, @loop_75_end
+@loop_75_body
+	%tmp_78 =l call $input(l $main_77)
+	%userInput_76 =l copy %tmp_78
+	%tmp_80 =l call $atol(l %userInput_76)
+	%number_79 =l copy %tmp_80
+	%tmp_81 =l copy %number_79
+	%tmp_82 =l copy 0
+	%tmp_83 =l ceqw %tmp_81, %tmp_82
+	%tmp_84 =l copy %number_79
+	%tmp_85 =l copy 40
+	%tmp_86 =l csgtw %tmp_84, %tmp_85
+	%tmp_87 =l copy %tmp_83
+	%tmp_88 =l copy %tmp_86
+	%tmp_89 =l or %tmp_87, %tmp_88
+	jnz %tmp_89, @ift_90, @end_90
+@ift_90
+	%tmp_92 =w call $printf(l $main_91, ..., l %number_79)
+	jmp @loop_75_cond
+@end_90
+	%tmp_94 =l call $fact(l %number_79)
+	%tmp_95 =w call $printf(l $main_93, ..., l %number_79, l %tmp_94)
+	%tmp_97 =l call $fib(l %number_79)
+	%tmp_98 =w call $printf(l $main_96, ..., l %number_79, l %tmp_97)
+	%tmp_100 =l call $exp(l %number_79, w 2)
+	%tmp_101 =w call $printf(l $main_99, ..., l %number_79, l %tmp_100)
+	%res_102 =l copy $main_103
+	%tmp_104 =l call $isEven(l %number_79)
+	jnz %tmp_104, @ift_105, @iff_105
+@ift_105
+	%res_102 =l copy $main_106
+	jmp @end_105
+@iff_105
+	%res_102 =l copy $main_107
+@end_105
+	%tmp_109 =w call $printf(l $main_108, ..., l %number_79, l %res_102)
+	jmp @loop_75_cond
+@loop_75_end
 	ret
 }
 data $input_3 = { b "r", b 0 }
 data $buf_5 = { z 1024 }
-data $main_62 = { b "Enter a number -> ", b 0 }
-data $main_76 = { b "Invalid input: %d\n", b 0 }
-data $main_78 = { b "fact(%ld) = %ld\n", b 0 }
-data $main_81 = { b "fib(%ld) = %ld\n", b 0 }
-data $main_85 = { b "", b 0 }
-data $main_88 = { b "true", b 0 }
-data $main_89 = { b "false", b 0 }
-data $main_90 = { b "isEven(%ld) = %s\n\n", b 0 }
+data $main_77 = { b "Enter a number -> ", b 0 }
+data $main_91 = { b "Invalid input: %d\n", b 0 }
+data $main_93 = { b "fact(%ld) = %ld\n", b 0 }
+data $main_96 = { b "fib(%ld) = %ld\n", b 0 }
+data $main_99 = { b "exp(%ld, 2) = %ld\n", b 0 }
+data $main_103 = { b "", b 0 }
+data $main_106 = { b "true", b 0 }
+data $main_107 = { b "false", b 0 }
+data $main_108 = { b "isEven(%ld) = %s\n\n", b 0 }

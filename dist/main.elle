@@ -10,27 +10,39 @@ fn input(String message) {
     Long newline = buf + index;
 
     newline <- Byte 0;
-    ret buf;
+    return buf;
 }
 
 fn isEven(Long n) -> Long {
-    ret n % 2 == 0;
+    return n % 2 == 0;
 }
 
 fn fib(Long n) -> Long {
     if (n <= 1) {
-        ret n;
+        return n;
     }
 
-    ret fib(n - 1) + fib(n - 2);
+    return fib(n - 1) + fib(n - 2);
 }
 
 fn fact(Long n) -> Long {
     if (n <= 1) {
-        ret n;
+        return n;
     }
 
-    ret n * fact(n - 1);
+    return n * fact(n - 1);
+}
+
+fn exp(Long n, Long p) -> Long {
+    Int i = 0;
+    Long res = 1;
+
+    while (i < p) {
+        res *= n;
+        i++;
+    }
+
+    return res;
 }
 
 pub fn main() {
@@ -45,6 +57,7 @@ pub fn main() {
 
         printf!("fact(%ld) = %ld\n", number, fact(number));
         printf!("fib(%ld) = %ld\n", number, fib(number));
+        printf!("exp(%ld, 2) = %ld\n", number, exp(number, 2));
 
         String res = "";
 
