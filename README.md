@@ -205,12 +205,11 @@ while (i < 10) {
 
 As a general rule of thumb, if a symbol is inside of the C standard library and is a function (regardless of whether it's dynamically linked or not), it will be callable directly from Elle, granted that you pass the correct arguments.
 
-Due to Elle compiling to QBE IR, this means that we cannot access dynamically-linked non-functional symbols, so this means that globals from C stdlib such as the `stdin` and `stdout` file pointers do not exist. However, you can use the methods below.
+Due to Elle compiling to QBE IR, this means that we cannot access dynamically-linked non-functional symbols, so this means that globals from C stdlib such as the `stdin` and `stdout` file pointers do not exist. However, you can use the methods below to define them.
 
-* Please keep in mind that pointers are always a Long type.
-* Also keep in mind that this isn't *all* the methods available.
-* Other methods such as malloc and free are also defined.
-* For more information please read <https://bit.ly/stdlib-defs>
+* Pointers are always a Long type.
+* This isn't *all* the methods available, other methods such as `malloc` and `free` are also defined.
+* For more information about the functions available please read <https://bit.ly/stdlib-defs>
 
 #### ♡ **Getting a file pointer to standard input/output**
 
