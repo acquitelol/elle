@@ -203,39 +203,56 @@ while (i < 10) {
 
 ### ♡ **Base methods**
 
-Due to Elle compiling to QBE IR, this means that we already have access to a variety of C stdlib.h methods. QBE does not allow for dynamically-linked non-functional symbols, so this means that globals from stdio.h such as the `stdin` and `stdout` file pointers do not exist. However, you can use the following methods:
+As a general rule of thumb, if a symbol is inside of the C standard library and is a function (regardless of whether it's dynamically linked or not), it will be callable directly from Elle, granted that you pass the correct arguments.
+
+Due to Elle compiling to QBE IR, this means that we cannot access dynamically-linked non-functional symbols, so this means that globals from C stdlib such as the `stdin` and `stdout` file pointers do not exist. However, you can use the methods below.
+
+* Please keep in mind that pointers are always a Long type.
+* Also keep in mind that this isn't *all* the methods available.
+* Other methods such as malloc and free are also defined.
+* For more information please read <https://bit.ly/stdlib-defs>
+
+#### ♡ **Getting a file pointer to standard input/output**
 
 ```dart
-// When reading please keep in mind that pointers are always a Long type.
-
-// -
-
 Long stdin = fdopen(0, "r");
 Long stdout = fdopen(1, "w");
+```
 
-// -
+#### ♡ **Printing text to the standard output**
 
+```dart
 printf!("formatter %d", 1);
 puts("strings only, any other types will segfault");
+```
 
-// -
+#### ♡ **Using `scanf` to get a user input**
 
+```dart
 Char buf[64];
-scanf!("%s", buf);
+scanf!("%63s", buf); // 1 less than the buffer size
+```
 
-// -
+#### ♡ **Using `fgets` to get a user input**
 
+```dart
 Long stdin = fdopen(0, "r");
 Char buf[64];
 fgets(buf, 64, stdin);
+```
 
-// -
+#### ♡ **Getting the length of a string**
 
+```dart
 String test = "aaaaa";
 Long len = strlen(test); // 5
+```
 
-// -
+#### ♡ **Parsing a string to a number**
+>
+> Note that this is unlike a type conversion, rather it's assuming the string itself contains a serializable number of the type of the function. `"55" -> 55`, `"abc" -> 0`
 
+```dart
 String x = "5";
 Int xAsInt = atoi(x);
 Long xAsLong = atol(x);
