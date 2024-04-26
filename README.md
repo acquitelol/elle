@@ -14,7 +14,7 @@ In fact it's very similar to C!
 
 ```ts
 pub fn main() {
-    puts("Hello world!\n");
+    puts("Hello world!");
 }
 ```
 
@@ -37,7 +37,7 @@ export function w $main() {
     %tmp_2 =w call $puts(l $main_1)
     ret
 }
-data $main_1 = { b "Hello world!\n", b 0 }
+data $main_1 = { b "Hello world!", b 0 }
 ```
 
 * The `main_1` data segment is used to store the literal string later used in `puts`
@@ -51,52 +51,58 @@ data $main_1 = { b "Hello world!\n", b 0 }
 
 ### ♡ **Example Syntax**
 
-Please keep in mind that syntax such as `if statements`, `loops`, `optional types`, `arrays`, `pointers`, `references`, etc have *not* been implemented at all yet. This means that the code below will *not* compile. It is indended as a pure example of how the syntax is designed to look later on.
+Please keep in mind that syntax such as `arrays`, etc have *not* been implemented at all yet. This means that the code below may *not* compile. It is indended as a pure example of how the syntax is designed to look later on.
 
 ```rs
 // Import statements follow a lib:file@{method1, method2...} format;
-use elle:int@{random};
+// use elle:int@{random};
 
 const languageName = "Elle";
 
 // Use `pub` to make functions public so they can be imported by other files
 // You *must* expose the main function for it to be runnable
 pub fn main() {
-    Int resWithThree = randomWithMultiplier(3); // Returns a random number between 0 and 10 multiplied by 3
-    printMessage("Result is %d", resWithThree);
+    srand(time(0));
+
+    Int resWithThree = randomWithMultiplier(10, 3); // Returns a random number between 0 and 10 multiplied by 3
+    printMessage(resultWithNumber(resWithThree));
 
     Int maybeRes = randomWithPossibleError();
 
     if (maybeRes == -1) {
-        // This is a character because it's a single quote.
-        printMessage('a');
-        printMessage("Oh no! We failed.");
+        printMessage("Oh no! We failed.\n");
     } else {
-        printMessage("Result is %d", maybeRes);
+        printMessage(resultWithNumber(maybeRes));
     }
 }
 
-fn randomWithMultiplier(Int multiplier) -> Int {
+fn resultWithNumber(Int num) {
+    Char result[64];
+    sprintf!2(result, "Result is %d\n", num);
+
+    ret result;
+}
+
+fn randomWithMultiplier(Int biggest, Int multiplier) -> Int {
     // Use the ret keyword to return from the operation
-    ret random(0, 10, true) * multiplier;
+    Int res = rand() % biggest;
+    ret res * multiplier;
 }
 
 // Operations can either return a value or void.
-// `nil` is the undefined/null value in Elle.
-// Use the '?' operator at the end of the return type to denote that the function can return nil.
 fn randomWithPossibleError() -> Int {
-    Int result = random(0, 5, true);
+    Int result = rand() % 6;
 
-    ret if (result == 3) {
-        -1;
+    if (result == 3) {
+        ret -1;
     } else {
-        val;
+        ret result;
     }
 }
 
 // No return argument needed if function returns void
 // Note that this means the return type is inferred based on the return value
-op printMessage(String message) {
+fn printMessage(String message) {
     printf!("[%s] %s", languageName, message);
 }
 ```

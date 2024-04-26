@@ -1,0 +1,128 @@
+function l $input(l %message_1) {
+@start
+	%tmp_4 =l call $fdopen(w 0, l $input_3)
+	%stdin_2 =l copy %tmp_4
+	%buf_6 =l copy $buf_5
+	%tmp_7 =w call $printf(l %message_1)
+	%tmp_8 =w call $fgets(l %buf_6, w 1024, l %stdin_2)
+	%tmp_10 =l call $strlen(l %buf_6)
+	%len_9 =l copy %tmp_10
+	%tmp_12 =l copy %len_9
+	%tmp_13 =l copy 1
+	%tmp_14 =l sub %tmp_12, %tmp_13
+	%index_11 =l copy %tmp_14
+	%tmp_16 =l copy %buf_6
+	%tmp_17 =l copy %index_11
+	%tmp_18 =l add %tmp_16, %tmp_17
+	%newline_15 =l copy %tmp_18
+	storeb 0, %newline_15
+	%r_v18_19 =l copy %buf_6
+	ret %r_v18_19
+}
+function l $isEven(l %n_20) {
+@start
+	%tmp_21 =l copy %n_20
+	%tmp_22 =l copy 2
+	%tmp_23 =l rem %tmp_21, %tmp_22
+	%tmp_24 =l copy %tmp_23
+	%tmp_25 =l copy 0
+	%tmp_26 =l ceqw %tmp_24, %tmp_25
+	%r_v26_27 =l copy %tmp_26
+	ret %r_v26_27
+}
+function l $fib(l %n_28) {
+@start
+	%tmp_29 =l copy %n_28
+	%tmp_30 =l copy 1
+	%tmp_31 =l cslew %tmp_29, %tmp_30
+	jnz %tmp_31, @ift_32, @end_32
+@ift_32
+	%r_v32_33 =l copy %n_28
+	ret %r_v32_33
+@end_32
+	%tmp_34 =l copy %n_28
+	%tmp_35 =l copy 1
+	%tmp_36 =l sub %tmp_34, %tmp_35
+	%tmp_37 =l call $fib(l %tmp_36)
+	%tmp_38 =l copy %n_28
+	%tmp_39 =l copy 2
+	%tmp_40 =l sub %tmp_38, %tmp_39
+	%tmp_41 =l call $fib(l %tmp_40)
+	%tmp_42 =l copy %tmp_37
+	%tmp_43 =l copy %tmp_41
+	%tmp_44 =l add %tmp_42, %tmp_43
+	%r_v44_45 =l copy %tmp_44
+	ret %r_v44_45
+}
+function l $fact(l %n_46) {
+@start
+	%tmp_47 =l copy %n_46
+	%tmp_48 =l copy 1
+	%tmp_49 =l cslew %tmp_47, %tmp_48
+	jnz %tmp_49, @ift_50, @end_50
+@ift_50
+	%r_v50_51 =l copy %n_46
+	ret %r_v50_51
+@end_50
+	%tmp_52 =l copy %n_46
+	%tmp_53 =l copy 1
+	%tmp_54 =l sub %tmp_52, %tmp_53
+	%tmp_55 =l call $fact(l %tmp_54)
+	%tmp_56 =l copy %n_46
+	%tmp_57 =l copy %tmp_55
+	%tmp_58 =l mul %tmp_56, %tmp_57
+	%r_v58_59 =l copy %tmp_58
+	ret %r_v58_59
+}
+export function w $main() {
+@start
+
+@loop_60_cond
+	jnz 1, @loop_60_body, @loop_60_end
+@loop_60_body
+	%tmp_63 =l call $input(l $main_62)
+	%userInput_61 =l copy %tmp_63
+	%tmp_65 =l call $atol(l %userInput_61)
+	%number_64 =l copy %tmp_65
+	%tmp_66 =l copy %number_64
+	%tmp_67 =l copy 0
+	%tmp_68 =l ceqw %tmp_66, %tmp_67
+	%tmp_69 =l copy %number_64
+	%tmp_70 =l copy 40
+	%tmp_71 =l csgtw %tmp_69, %tmp_70
+	%tmp_72 =l copy %tmp_68
+	%tmp_73 =l copy %tmp_71
+	%tmp_74 =l or %tmp_72, %tmp_73
+	jnz %tmp_74, @ift_75, @end_75
+@ift_75
+	%tmp_77 =w call $printf(l $main_76, ..., l %number_64)
+	jmp @loop_60_cond
+@end_75
+	%tmp_79 =l call $fact(l %number_64)
+	%tmp_80 =w call $printf(l $main_78, ..., l %number_64, l %tmp_79)
+	%tmp_82 =l call $fib(l %number_64)
+	%tmp_83 =w call $printf(l $main_81, ..., l %number_64, l %tmp_82)
+	%res_84 =l copy $main_85
+	%tmp_86 =l call $isEven(l %number_64)
+	jnz %tmp_86, @ift_87, @iff_87
+@ift_87
+	%res_84 =l copy $main_88
+	jmp @end_87
+@iff_87
+	%res_84 =l copy $main_89
+@end_87
+	%tmp_91 =w call $printf(l $main_90, ..., l %number_64, l %res_84)
+	jmp @loop_60_cond
+@loop_60_end
+	ret
+}
+data $input_3 = { b "r", b 0 }
+data $buf_5 = { z 1024 }
+data $main_62 = { b "Enter a number -> ", b 0 }
+data $main_76 = { b "Invalid input: %d\n", b 0 }
+data $main_78 = { b "fact(%ld) = %ld\n", b 0 }
+data $main_81 = { b "fib(%ld) = %ld\n", b 0 }
+data $main_85 = { b "", b 0 }
+data $main_88 = { b "true", b 0 }
+data $main_89 = { b "false", b 0 }
+data $main_90 = { b "isEven(%ld) = %s\n\n", b 0 }

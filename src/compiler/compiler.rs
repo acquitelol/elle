@@ -18,6 +18,7 @@ pub struct Compiler {
     scopes: Vec<HashMap<String, (Type, Value)>>,
     data_sections: Vec<Data>,
     loop_labels: Vec<String>,
+    ret_types: HashMap<String, Type>,
     tree: Vec<Primitive>,
 }
 
@@ -114,6 +115,10 @@ impl Compiler {
             blocks: Vec::new(),
         };
 
+        if func.return_type.is_some() {
+            self.ret_types.insert(name.clone(), func.clone().return_type.unwrap());
+        }
+
         func.add_block("start".to_string());
 
         let func_ref = RefCell::new(func);
@@ -137,16 +142,21 @@ impl Compiler {
         }
 
         if !func_ref.borrow_mut().returns() {
-            if func_ref.borrow_mut().return_type.is_none() {
-                func_ref
-                    .borrow_mut()
-                    .add_instruction(Instruction::Return(None));
-            } else {
-                return Err(format!(
-                    "\nFunction does not return on all paths.\nReturn type is {:?}\n",
-                    &func_ref.borrow_mut().return_type
-                ));
-            }
+            func_ref
+                .borrow_mut()
+                .add_instruction(Instruction::Return(None));
+
+            // !!! The below does not work with a trailing
+            // if statement. It is not going to be checked for now !!!
+            
+            // if func_ref.borrow_mut().return_type.is_none() {
+                
+            // } else {
+            //     return Err(format!(
+            //         "\nFunction does not return on all paths.\nReturn type is {:?}\n",
+            //         &func_ref.borrow_mut().return_type
+            //     ));
+            // }
         }
 
         if func_ref.borrow_mut().return_type.is_none() {
@@ -238,17 +248,17 @@ impl Compiler {
                 None
             }
             AstNode::ReturnStatement { value } => {
-                match self.generate_statement(func, module, *value.clone(), ty) {
-                    Some((ty, value)) => {
+                match self.generate_statement(func, module, *value.clone(), ty.clone()) {
+                    Some((ret_ty, value)) => {
                         // Generate a unique scoped temporary variable with the tmp_counter to ensure
                         // it can be yielded later for inferring the return type
-                        let tmp = self.new_var(&ty, format!("r_v{}", self.tmp_counter).as_str(), false);
+                        let tmp = self.new_var(&ret_ty.clone(), format!("r_v{}", self.tmp_counter).as_str(), false);
 
                         match tmp {
                             Ok(val) => {
                                 func.borrow_mut().assign_instruction(
                                     val.clone(),
-                                    ty,
+                                    ret_ty.clone(),
                                     Instruction::Copy(value),
                                 );
 
@@ -348,7 +358,7 @@ impl Compiler {
                 func.borrow_mut()
                     .assign_instruction(op_temp.clone(), instruction_ty.clone(), res);
 
-                Some((Type::Word, op_temp))
+                Some((instruction_ty.clone(), op_temp))
             }
             AstNode::LiteralStatement { kind, value } => match kind {
                 TokenKind::Identifier => match value {
@@ -358,8 +368,19 @@ impl Compiler {
                         match var {
                             Ok(res) => Some(res.to_owned()),
                             Err(msg) => {
-                                dbg!(&self.scopes);
-                                panic!("{}", msg);
+                                // If it fails to get the variable from the current scope
+                                // then attempt to get it from a global instead
+                                let tmp_module = module.borrow_mut();
+                                let global = tmp_module.data.iter().find(|item| item.name == val.as_str());
+
+                                if global.is_some() {
+                                    let item = global.unwrap();
+
+                                    Some((Type::Long, Value::Global(item.name.clone())))
+                                } else {
+                                    dbg!(&self.scopes);
+                                    panic!("{}", msg);
+                                }
                             }
                         }
                     }
@@ -460,7 +481,8 @@ impl Compiler {
                 }
 
                 // Get the type of the functions based on the ones currently imported into this module
-                let declarative_ty = ty.unwrap_or(Type::Word);
+                let cached_ty = self.ret_types.get(&name).unwrap_or(&Type::Word).to_owned();
+                let declarative_ty = ty.unwrap_or(cached_ty);
                 let ty = module
                     .borrow_mut()
                     .functions
@@ -481,7 +503,7 @@ impl Compiler {
                 func.borrow_mut().assign_instruction(
                     temp.clone(),
                     ty.clone(),
-                    Instruction::Call(name, params),
+                    Instruction::Call(name.clone(), params),
                 );
 
                 Some((ty, temp))
@@ -664,6 +686,7 @@ impl Compiler {
             scopes: Vec::new(),
             data_sections: Vec::new(),
             loop_labels: Vec::new(),
+            ret_types: HashMap::new(),
             tree,
         };
 

@@ -13,28 +13,47 @@ fn input(String message) {
     ret buf;
 }
 
-fn isEven(Int number) {
-    ret number % 2 == 0;
+fn isEven(Long n) -> Long {
+    ret n % 2 == 0;
 }
 
-fn fib(Int n) -> Int { 
+fn fib(Long n) -> Long {
     if (n <= 1) {
         ret n;
     }
 
     ret fib(n - 1) + fib(n - 2);
-} 
+}
+
+fn fact(Long n) -> Long {
+    if (n <= 1) {
+        ret n;
+    }
+
+    ret n * fact(n - 1);
+}
 
 pub fn main() {
     while (true) {
-        String userInput = input("enter a number -> ");
-        Int number = atoi(userInput);
+        String userInput = input("Enter a number -> ");
+        Long number = atol(userInput);
 
-        if (number == 0) {
-            printf!("invalid input :C\n\n");
+        if (number == 0 || number > 40) {
+            printf!("Invalid input: %d\n", number);
             continue;
         }
 
-        printf!("fibbonaci of %d is %d\n\n", number, fib(number));
+        printf!("fact(%ld) = %ld\n", number, fact(number));
+        printf!("fib(%ld) = %ld\n", number, fib(number));
+
+        String res = "";
+
+        if (isEven(number)) {
+            res = "true";
+        } else {
+            res = "false";
+        }
+
+        printf!("isEven(%ld) = %s\n\n", number, res);
     }
 }

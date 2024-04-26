@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, net};
 
 use crate::lexer::enums::{Token, TokenKind, ValueKind};
 use super::enums::AstNode;
@@ -325,6 +325,7 @@ impl<'a> Statement<'a> {
 
     fn parse_function(&mut self, variadic: bool) -> AstNode {
         let name = self.get_identifier();
+        let mut variadic_index: usize = 1;
 
         self.advance();
         match self.current_token().kind {
@@ -333,6 +334,18 @@ impl<'a> Statement<'a> {
             }
             TokenKind::Not => {
                 self.advance();
+
+                if self.current_token().kind == TokenKind::IntegerLiteral {
+                    match self.current_token().value {
+                        ValueKind::Number(val) => {
+                            variadic_index = val.to_string().parse::<usize>().unwrap();
+                        },
+                        _ => {}
+                    }
+
+                    self.advance();
+                }
+
                 self.expect_token(TokenKind::LeftParenthesis);
                 self.advance();
             }
@@ -380,7 +393,7 @@ impl<'a> Statement<'a> {
                 }
             }
 
-            parameters.push(Statement::new(tokens, 0, &self.body).parse().0);
+            parameters.push(Statement::new(tokens.clone(), 0, &self.body).parse().0);
         }
 
         self.expect_token_with_message(
@@ -392,7 +405,7 @@ impl<'a> Statement<'a> {
 
         if variadic {
             parameters.insert(
-                1,
+                variadic_index,
                 AstNode::LiteralStatement {
                     kind: TokenKind::ExactLiteral,
                     value: ValueKind::String("...".to_owned()),
@@ -407,6 +420,7 @@ impl<'a> Statement<'a> {
         let tokens = self.tokens.clone();
         let mut precedence = TokenKind::highest_precedence();
         let mut precedence_index = 0;
+        let mut nesting = 0;
         let mut index = self.position.clone();
 
         loop {
@@ -418,10 +432,22 @@ impl<'a> Statement<'a> {
 
             let token = tokens[index].clone();
 
+            match token.kind {
+                TokenKind::LeftParenthesis => {
+                    nesting += 1;
+                }
+                TokenKind::RightParenthesis => {
+                    nesting -= 1;
+                }
+                _ => {}
+            }
+
             // Set the precedence to the last lowest precedence found.
             // If the expression is 1 + 2 * 3 + 4 * 5 for example,
             // it'll return the position of the second '+' token
-            if token.kind.is_arithmetic() && token.kind.precedence() <= precedence {
+            if token.kind.is_arithmetic() 
+                && token.kind.precedence() <= precedence
+                && nesting == 0 {
                 precedence_index = index;
                 precedence = token.kind.precedence();
             }

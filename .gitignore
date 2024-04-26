@@ -1,5 +1,4 @@
 /target
 .DS_Store
 /dist/*.out
-/dist/*.ssa
 /dist/*.s
