@@ -1,3 +1,8 @@
+use std::env;
+use std::fs;
+use std::path::Path;
+use std::process::ExitCode;
+
 mod compiler;
 mod lexer;
 mod parser;
@@ -5,14 +10,30 @@ mod parser;
 use compiler::compiler::Compiler;
 use lexer::{enums::TokenKind, lexer::Lexer};
 use parser::parser::Parser;
-use std::fs;
 
-fn main() {
-    let file = "main.elle".to_owned();
-    let binding = fs::read_to_string(&file).unwrap();
-    let input = binding.as_str();
+fn main() -> ExitCode {
+    let mut args = env::args();
+    let program = args.next().expect("program");
 
-    let mut lexer = Lexer::new(file, input);
+    let input_path = if let Some(input_path) = args.next() {
+        input_path
+    } else {
+        eprintln!("Usage: {program} <main.elle>");
+        eprintln!("ERROR: no input is provided");
+        return ExitCode::FAILURE;
+    };
+
+    let output_path = Path::new(&input_path).with_extension("ssa");
+
+    let content = match fs::read_to_string(&input_path) {
+        Ok(content) => content,
+        Err(err) => {
+            eprintln!("ERROR: could not load file {input_path}: {err}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let mut lexer = Lexer::new(input_path, content.as_str());
     let mut tokens = vec![];
 
     while let Some(token) = lexer.next_token() {
@@ -31,5 +52,6 @@ fn main() {
 
     // dbg!(&tree);
 
-    Compiler::compile(tree);
+    Compiler::compile(tree, output_path);
+    ExitCode::SUCCESS
 }

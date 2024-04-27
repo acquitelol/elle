@@ -1,4 +1,4 @@
-use std::{cell::RefCell, net};
+use std::cell::RefCell;
 
 use crate::lexer::enums::{Token, TokenKind, ValueKind};
 use super::enums::AstNode;

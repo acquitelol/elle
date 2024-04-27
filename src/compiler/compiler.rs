@@ -1,5 +1,5 @@
 use std::{
-    cell::RefCell, collections::HashMap, fs::File, io::Write
+    cell::RefCell, collections::HashMap, fs::File, io::Write, path::PathBuf
 };
 
 use crate::{
@@ -148,7 +148,7 @@ impl Compiler {
 
             // !!! The below does not work with a trailing
             // if statement. It is not going to be checked for now !!!
-            
+
             // if func_ref.borrow_mut().return_type.is_none() {
                 
             // } else {
@@ -528,7 +528,7 @@ impl Compiler {
                     Linkage::private(),
                     buf_name.clone(),
                     None,
-                    vec![(Type::Field, DataItem::Const((buf_size as u64 * buf_ty.size()).try_into().unwrap()))],
+                    vec![(Type::Field, DataItem::Const((buf_size as u64 * buf_ty.size()).to_string().parse::<i64>().unwrap()))],
                 ));
 
                 let ty = Type::Long;
@@ -680,7 +680,7 @@ impl Compiler {
         res
     }
 
-    pub fn compile(tree: Vec<Primitive>) {
+    pub fn compile(tree: Vec<Primitive>, output_path: PathBuf) {
         let mut generator = Compiler {
             tmp_counter: 0,
             scopes: Vec::new(),
@@ -779,7 +779,7 @@ impl Compiler {
             module_ref.borrow_mut().add_data(data);
         }
 
-        let mut file = File::create("main.ssa").expect("Failed to create the file.");
+        let mut file = File::create(output_path).expect("Failed to create the file.");
         file.write_all(module_ref.borrow().to_string().as_bytes())
             .expect("Failed to write to file.");
 

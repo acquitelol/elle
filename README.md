@@ -269,20 +269,16 @@ Long xAsLong = atol(x);
     ```
 
     ```terminal
-        $ cd elle/dist
+        $ cd elle
     ```
 
     ```console
-        $ cargo run
-    ```
-
-    ```terminal
-        $ qbe -o out.s main.ssa && cc out.s && ./a.out
+        $ gmake compile
     ```
 
   * **You're done!**
 
-> You can now edit the `main.elle` file in the `dist` directory, and then rebuild to see the output.
+> You can now edit the `main.elle` file in the `dist` directory, and then rebuild (via `gmake compile`) to see the output.
 
 ### ♡ **Licensing**
 

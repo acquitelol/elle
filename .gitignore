@@ -1,4 +1,6 @@
 /target
 .DS_Store
-/dist/*.out
-/dist/*.s
+/dist/*
+
+!/dist/*.elle
+!/dist/*.ssa
