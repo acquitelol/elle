@@ -18,8 +18,8 @@ fn main() -> ExitCode {
     let input_path = if let Some(input_path) = args.next() {
         input_path
     } else {
-        eprintln!("Usage: {program} <main.elle>");
         eprintln!("ERROR: no input is provided");
+        eprintln!("Usage: {program} <main.elle>");
         return ExitCode::FAILURE;
     };
 

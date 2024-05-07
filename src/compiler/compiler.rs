@@ -1,6 +1,4 @@
-use std::{
-    cell::RefCell, collections::HashMap, fs::File, io::Write, path::PathBuf
-};
+use std::{cell::RefCell, collections::HashMap, fs::File, io::Write, path::PathBuf};
 
 use crate::{
     lexer::enums::{TokenKind, ValueKind},
@@ -10,13 +8,14 @@ use crate::{
 type GeneratorResult<T> = Result<T, String>;
 
 use super::enums::{
-    Comparison, Data, DataItem, Function, Instruction, Linkage, Module, Statement, Type, Value,
+    Comparison, Data, DataItem, Function, Instruction, InternalData, Linkage, Module, Statement,
+    Type, Value,
 };
 
 pub struct Compiler {
     tmp_counter: u32,
     scopes: Vec<HashMap<String, (Type, Value)>>,
-    data_sections: Vec<Data>,
+    data_sections: Vec<InternalData>,
     loop_labels: Vec<String>,
     ret_types: HashMap<String, Type>,
     tree: Vec<Primitive>,
@@ -39,6 +38,15 @@ impl Compiler {
         }
     }
 
+    fn add_data_section(&mut self, data: Data) {
+        let result = InternalData {
+            data: data.clone(),
+            size: data.items.iter().map(|item| item.0.size()).sum(),
+        };
+
+        self.data_sections.push(result);
+    }
+
     fn new_temporary(&mut self, name: Option<&str>) -> Value {
         self.tmp_counter += 1;
         Value::Temporary(format!("{}_{}", name.unwrap_or("tmp"), self.tmp_counter))
@@ -51,15 +59,11 @@ impl Compiler {
             self.new_temporary(Some(name))
         } else {
             match existing_var {
-                Ok((_, val)) => {
-                    match val.clone() {
-                        Value::Temporary(_) => {
-                            val.clone()
-                        }
-                        _ => self.new_temporary(Some(name))
-                    }
-                }
-                Err(_) => self.new_temporary(Some(name))
+                Ok((_, val)) => match val.clone() {
+                    Value::Temporary(_) => val.clone(),
+                    _ => self.new_temporary(Some(name)),
+                },
+                Err(_) => self.new_temporary(Some(name)),
             }
         };
 
@@ -80,6 +84,39 @@ impl Compiler {
             .filter_map(|s| s.get(name))
             .next()
             .ok_or_else(|| format!("\nUndefined variable '{}'\n", name))
+    }
+
+    fn compile_literal_to_ascii(&self, val: Value) -> Value {
+        match val {
+            Value::Literal(val) => {
+                if val.len() > 1 {
+                    eprintln!("Literal {} is more than 1 character", val);
+                }
+
+                Value::Const(val.escape_debug().nth(0).unwrap() as i64)
+            }
+            Value::Const(val) => Value::Const(val),
+            Value::Global(name) => {
+                let section = self
+                    .data_sections
+                    .iter()
+                    .find(|section| section.data.name == name)
+                    .unwrap();
+                let item = section.data.items.get(0).unwrap();
+
+                match item.1.clone() {
+                    DataItem::Const(val) => Value::Const(val),
+                    DataItem::String(val) => {
+                        if val.len() > 1 {
+                            eprintln!("Literal {} is more than 1 character", val);
+                        }
+
+                        Value::Const(val.escape_debug().nth(0).unwrap() as i64)
+                    }
+                }
+            }
+            other => panic!("Invalid value {}. Expecting a literal", other),
+        }
     }
 
     fn generate_function(
@@ -116,7 +153,8 @@ impl Compiler {
         };
 
         if func.return_type.is_some() {
-            self.ret_types.insert(name.clone(), func.clone().return_type.unwrap());
+            self.ret_types
+                .insert(name.clone(), func.clone().return_type.unwrap());
         }
 
         func.add_block("start".to_string());
@@ -127,17 +165,19 @@ impl Compiler {
             // Ignore plain literals that aren't assigned to anything
             match statement.clone() {
                 AstNode::LiteralStatement { kind, value: _ } => match kind.clone() {
-                    TokenKind::ExactLiteral => match self.generate_statement(&func_ref, module, statement.clone(), None) {
-                        Some((_, value)) => {
-                            func_ref.borrow_mut().add_instruction(Instruction::Literal(value))
+                    TokenKind::ExactLiteral => {
+                        match self.generate_statement(&func_ref, module, statement.clone(), None) {
+                            Some((_, value)) => func_ref
+                                .borrow_mut()
+                                .add_instruction(Instruction::Literal(value)),
+                            _ => {}
                         }
-                        _ => {}
                     }
                     _ => {}
-                }
+                },
                 _ => match self.generate_statement(&func_ref, module, statement.clone(), None) {
                     _ => {}
-                }
+                },
             }
         }
 
@@ -150,7 +190,7 @@ impl Compiler {
             // if statement. It is not going to be checked for now !!!
 
             // if func_ref.borrow_mut().return_type.is_none() {
-                
+
             // } else {
             //     return Err(format!(
             //         "\nFunction does not return on all paths.\nReturn type is {:?}\n",
@@ -182,7 +222,7 @@ impl Compiler {
                                             let val_temp = val.clone();
                                             let last = val_temp.split("_").last().unwrap().to_string().parse::<i32>().unwrap() - 1;
                                             let var = self.get_variable(format!("r_v{}", last).as_str());
-    
+
                                             match var {
                                                 Ok((ty, _)) => {
                                                     func_ref.borrow_mut().return_type = Some(ty.clone());
@@ -217,7 +257,7 @@ impl Compiler {
         func: &RefCell<Function>,
         module: &RefCell<Module>,
         stmt: AstNode,
-        ty: Option<Type>
+        ty: Option<Type>,
     ) -> Option<(Type, Value)> {
         let res = match stmt {
             AstNode::DeclareStatement {
@@ -227,7 +267,7 @@ impl Compiler {
             } => {
                 let existing = match self.get_variable(name.as_str()) {
                     Ok((ty, _)) => ty.clone(),
-                    Err(_) => Type::Word
+                    Err(_) => Type::Word,
                 };
 
                 if r#type == "Nil".to_owned() && self.get_variable(name.as_str()).is_err() {
@@ -236,7 +276,8 @@ impl Compiler {
 
                 let ty = Self::get_type(r#type).unwrap_or(existing);
                 let temp = self.new_var(&ty, &name, false).unwrap();
-                let parsed = self.generate_statement(func, module, *value.clone(), Some(ty.clone()));
+                let parsed =
+                    self.generate_statement(func, module, *value.clone(), Some(ty.clone()));
 
                 if parsed.is_some() {
                     let (_, value) = parsed.unwrap();
@@ -252,7 +293,11 @@ impl Compiler {
                     Some((ret_ty, value)) => {
                         // Generate a unique scoped temporary variable with the tmp_counter to ensure
                         // it can be yielded later for inferring the return type
-                        let tmp = self.new_var(&ret_ty.clone(), format!("r_v{}", self.tmp_counter).as_str(), false);
+                        let tmp = self.new_var(
+                            &ret_ty.clone(),
+                            format!("r_v{}", self.tmp_counter).as_str(),
+                            false,
+                        );
 
                         match tmp {
                             Ok(val) => {
@@ -281,12 +326,12 @@ impl Compiler {
             } => {
                 // Recursively parse the left and right nodes of the binary tree
                 // This is why we cant do exponentiation if there isn't a built in instruction.
-                // We essentially would have to pseudo-run the code to get the number of 
+                // We essentially would have to pseudo-run the code to get the number of
                 // multiplications that should occur (a ** b) can have a call on lhs or rhs
                 let (left_ty, left_val) = self
                     .generate_statement(func, module, *left.clone(), ty.clone())
                     .unwrap();
-                
+
                 let (_, right_val) = self
                     .generate_statement(func, module, *right.clone(), ty.clone())
                     .unwrap();
@@ -371,7 +416,10 @@ impl Compiler {
                                 // If it fails to get the variable from the current scope
                                 // then attempt to get it from a global instead
                                 let tmp_module = module.borrow_mut();
-                                let global = tmp_module.data.iter().find(|item| item.name == val.as_str());
+                                let global = tmp_module
+                                    .data
+                                    .iter()
+                                    .find(|item| item.name == val.as_str());
 
                                 if global.is_some() {
                                     let item = global.unwrap();
@@ -389,23 +437,25 @@ impl Compiler {
                 TokenKind::ExactLiteral => match value {
                     ValueKind::String(val) => Some((Type::Null, Value::Literal(val))),
                     _ => None,
-                }
+                },
                 TokenKind::Break => {
                     if let Some(label) = &self.loop_labels.last() {
-                        func.borrow_mut().add_instruction(Instruction::Jump(format!("{}_end", label)));
+                        func.borrow_mut()
+                            .add_instruction(Instruction::Jump(format!("{}_end", label)));
                     } else {
                         panic!("Break can only be used while in a loop.");
                     }
-                    
+
                     None
                 }
                 TokenKind::Continue => {
                     if let Some(label) = &self.loop_labels.last() {
-                        func.borrow_mut().add_instruction(Instruction::Jump(format!("{}_cond", label)));
+                        func.borrow_mut()
+                            .add_instruction(Instruction::Jump(format!("{}_cond", label)));
                     } else {
                         panic!("Continue can only be used while in a loop.");
                     }
-                    
+
                     None
                 }
                 _ => match value {
@@ -419,7 +469,7 @@ impl Compiler {
                             self.tmp_counter
                         );
 
-                        self.data_sections.push(Data::new(
+                        self.add_data_section(Data::new(
                             Linkage::private(),
                             name.clone(),
                             None,
@@ -442,13 +492,11 @@ impl Compiler {
                             self.tmp_counter
                         );
 
-                        self.data_sections.push(Data::new(
+                        self.add_data_section(Data::new(
                             Linkage::private(),
                             name.clone(),
                             None,
-                            vec![
-                                (Type::Byte, DataItem::String(val.to_string())),
-                            ],
+                            vec![(Type::Byte, DataItem::Const(val as i64))],
                         ));
 
                         Some((Type::Long, Value::Global(name)))
@@ -462,7 +510,7 @@ impl Compiler {
                             self.tmp_counter
                         );
 
-                        self.data_sections.push(Data::new(
+                        self.add_data_section(Data::new(
                             Linkage::private(),
                             name.clone(),
                             None,
@@ -477,7 +525,10 @@ impl Compiler {
                 let mut params = vec![];
 
                 for parameter in parameters.clone() {
-                    params.push(self.generate_statement(func, module, parameter, ty.clone()).unwrap());
+                    params.push(
+                        self.generate_statement(func, module, parameter, ty.clone())
+                            .unwrap(),
+                    );
                 }
 
                 // Get the type of the functions based on the ones currently imported into this module
@@ -511,123 +562,160 @@ impl Compiler {
             AstNode::BufferStatement { name, r#type, size } => {
                 self.tmp_counter += 1;
 
-                let buf_name = format!(
-                    "{}_{}",
-                    name,
-                    self.tmp_counter
-                );
+                let buf_name = format!("{}_{}", name, self.tmp_counter);
 
                 let buf_size = match size {
                     ValueKind::Number(val) => val,
-                    other => panic!("Invalid size type {:?}", other)
+                    other => panic!("Invalid size type {:?}", other),
                 };
 
                 let buf_ty = Self::get_type(r#type).unwrap_or(Type::Byte);
 
-                self.data_sections.push(Data::new(
+                self.add_data_section(Data::new(
                     Linkage::private(),
                     buf_name.clone(),
                     None,
-                    vec![(Type::Field, DataItem::Const((buf_size as u64 * buf_ty.size()).to_string().parse::<i64>().unwrap()))],
+                    vec![(
+                        Type::Field,
+                        DataItem::Const(
+                            (buf_size as u64 * buf_ty.size())
+                                .to_string()
+                                .parse::<i64>()
+                                .unwrap(),
+                        ),
+                    )],
                 ));
 
                 let ty = Type::Long;
                 let temp = self.new_var(&ty, name.as_str(), false).unwrap();
 
-                func.borrow_mut().assign_instruction(temp, ty, Instruction::Copy(Value::Global(buf_name)));
+                func.borrow_mut().assign_instruction(
+                    temp,
+                    ty,
+                    Instruction::Copy(Value::Global(buf_name)),
+                );
                 None
             }
-            AstNode::StoreStatement { name, r#type, value } => {
+            AstNode::StoreStatement {
+                name,
+                r#type,
+                value,
+            } => {
                 let existing = match self.get_variable(name.as_str()) {
                     Ok(val) => Some(val.clone()),
                     Err(msg) => {
                         eprintln!("{}", msg);
                         None
                     }
-                }.unwrap_or((Type::Byte, Value::Literal("".to_owned())));
+                }
+                .unwrap_or((Type::Byte, Value::Literal("".to_owned())));
 
                 let ty = Self::get_type(r#type).unwrap_or(existing.0);
-                let (_, compiled) = self.generate_statement(func, module, *value.clone(), Some(ty.clone())).unwrap();
+                let (_, compiled) = self
+                    .generate_statement(func, module, *value.clone(), Some(ty.clone()))
+                    .unwrap();
 
-                func.borrow_mut().add_instruction(Instruction::Store(ty, existing.1.to_owned(), compiled));
+                let constant = self.compile_literal_to_ascii(compiled);
+
+                func.borrow_mut().add_instruction(Instruction::Store(
+                    ty,
+                    existing.1.to_owned(),
+                    constant,
+                ));
                 None
             }
-            AstNode::IfStatement { condition, body, else_body } => {
-                let (_, value) = self.generate_statement(func, module, *condition.clone(), ty).unwrap();
+            AstNode::IfStatement {
+                condition,
+                body,
+                else_body,
+            } => {
+                let (_, value) = self
+                    .generate_statement(func, module, *condition.clone(), ty)
+                    .unwrap();
 
                 self.tmp_counter += 1;
                 let true_label = format!("ift_{}", self.tmp_counter);
                 let false_label = format!("iff_{}", self.tmp_counter);
                 let end_label = format!("end_{}", self.tmp_counter);
 
-                func.borrow_mut().add_instruction(
-                    Instruction::JumpNonZero(
-                        value, 
-                        true_label.clone(), 
-                        if else_body.len() > 0 {
-                            false_label.clone()
-                        } else {
-                            end_label.clone()
-                        }
-                    )
-                );
+                func.borrow_mut().add_instruction(Instruction::JumpNonZero(
+                    value,
+                    true_label.clone(),
+                    if else_body.len() > 0 {
+                        false_label.clone()
+                    } else {
+                        end_label.clone()
+                    },
+                ));
 
                 func.borrow_mut().add_block(true_label);
-                
+
                 for statement in body.clone() {
                     match statement.clone() {
                         AstNode::LiteralStatement { kind, value: _ } => match kind.clone() {
-                            TokenKind::ExactLiteral => match self.generate_statement(func, module, statement.clone(), None) {
-                                Some((_, value)) => {
-                                    func.borrow_mut().add_instruction(Instruction::Literal(value))
+                            TokenKind::ExactLiteral => {
+                                match self.generate_statement(func, module, statement.clone(), None)
+                                {
+                                    Some((_, value)) => func
+                                        .borrow_mut()
+                                        .add_instruction(Instruction::Literal(value)),
+                                    _ => {}
                                 }
-                                _ => {}
-                            },
+                            }
                             TokenKind::Break | TokenKind::Continue => {
                                 self.generate_statement(func, module, statement.clone(), None);
-                            },
+                            }
                             _ => {}
-                        }
+                        },
                         _ => match self.generate_statement(func, module, statement.clone(), None) {
                             _ => {}
-                        }
+                        },
                     }
                 }
 
                 if else_body.len() > 0 {
                     if !func.borrow_mut().blocks.last().map_or(false, |b| b.jumps()) {
-                        func.borrow_mut().add_instruction(Instruction::Jump(end_label.clone()));
+                        func.borrow_mut()
+                            .add_instruction(Instruction::Jump(end_label.clone()));
                     }
-        
+
                     func.borrow_mut().add_block(false_label.clone());
-                    
+
                     for statement in else_body.clone() {
                         match statement.clone() {
                             AstNode::LiteralStatement { kind, value: _ } => match kind.clone() {
-                                TokenKind::ExactLiteral => match self.generate_statement(func, module, statement.clone(), None) {
-                                    Some((_, value)) => {
-                                        func.borrow_mut().add_instruction(Instruction::Literal(value))
-                                    }
+                                TokenKind::ExactLiteral => match self.generate_statement(
+                                    func,
+                                    module,
+                                    statement.clone(),
+                                    None,
+                                ) {
+                                    Some((_, value)) => func
+                                        .borrow_mut()
+                                        .add_instruction(Instruction::Literal(value)),
                                     _ => {}
-                                }
+                                },
                                 TokenKind::Break | TokenKind::Continue => {
                                     self.generate_statement(func, module, statement.clone(), None);
-                                },
+                                }
                                 _ => {}
-                            }
-                            _ => match self.generate_statement(func, module, statement.clone(), None) {
-                                _ => {}
+                            },
+                            _ => {
+                                match self.generate_statement(func, module, statement.clone(), None)
+                                {
+                                    _ => {}
+                                }
                             }
                         }
                     }
                 }
-        
+
                 func.borrow_mut().add_block(end_label);
                 None
-            },
-            AstNode::WhileLoop { condition, body} => {
+            }
+            AstNode::WhileLoop { condition, body } => {
                 self.tmp_counter += 1;
-                
+
                 let cond_label = format!("loop_{}_cond", self.tmp_counter);
                 let body_label = format!("loop_{}_body", self.tmp_counter);
                 let end_label = format!("loop_{}_end", self.tmp_counter);
@@ -636,39 +724,43 @@ impl Compiler {
 
                 func.borrow_mut().add_block(cond_label.clone());
 
-                let (_, value) = self.generate_statement(func, module, *condition.clone(), ty.clone()).unwrap();
+                let (_, value) = self
+                    .generate_statement(func, module, *condition.clone(), ty.clone())
+                    .unwrap();
 
-                func.borrow_mut().add_instruction(
-                    Instruction::JumpNonZero(
-                        value, 
-                        body_label.clone(), 
-                        end_label.clone()
-                    )
-                );
+                func.borrow_mut().add_instruction(Instruction::JumpNonZero(
+                    value,
+                    body_label.clone(),
+                    end_label.clone(),
+                ));
 
                 func.borrow_mut().add_block(body_label.clone());
-                
+
                 for statement in body.clone() {
                     match statement.clone() {
                         AstNode::LiteralStatement { kind, value: _ } => match kind.clone() {
-                            TokenKind::ExactLiteral => match self.generate_statement(func, module, statement.clone(), None) {
-                                Some((_, value)) => {
-                                    func.borrow_mut().add_instruction(Instruction::Literal(value))
+                            TokenKind::ExactLiteral => {
+                                match self.generate_statement(func, module, statement.clone(), None)
+                                {
+                                    Some((_, value)) => func
+                                        .borrow_mut()
+                                        .add_instruction(Instruction::Literal(value)),
+                                    _ => {}
                                 }
-                                _ => {}
                             }
                             _ => {}
-                        }
+                        },
                         _ => match self.generate_statement(func, module, statement.clone(), None) {
                             _ => {}
-                        }
+                        },
                     }
                 }
 
                 if !func.borrow_mut().blocks.last().map_or(false, |b| b.jumps()) {
-                    func.borrow_mut().add_instruction(Instruction::Jump(cond_label));
+                    func.borrow_mut()
+                        .add_instruction(Instruction::Jump(cond_label));
                 }
-        
+
                 func.borrow_mut().add_block(end_label);
                 self.loop_labels.pop();
 
@@ -776,7 +868,7 @@ impl Compiler {
         }
 
         for data in generator.data_sections {
-            module_ref.borrow_mut().add_data(data);
+            module_ref.borrow_mut().add_data(data.data);
         }
 
         let mut file = File::create(output_path).expect("Failed to create the file.");

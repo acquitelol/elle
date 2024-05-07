@@ -186,6 +186,12 @@ pub struct Data {
     pub items: Vec<(Type, DataItem)>,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+pub struct InternalData {
+    pub data: Data,
+    pub size: u64,
+}
+
 impl Data {
     pub fn new(
         linkage: Linkage,

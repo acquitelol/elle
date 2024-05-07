@@ -413,9 +413,26 @@ impl Lexer {
     fn consume_char_literal(&mut self) -> char {
         self.advance(); // First advance to get the character
 
-        let character = self.current_char();
+        let mut character = self.current_char();
 
         self.advance(); // Advance again to ensure that the next character is the closing of the char expr
+
+        if character == '\\' {
+            character = match self.current_char() {
+                'a' => '\x07',
+                'b' => '\x08',
+                'f' => '\x0C',
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                'v' => '\x0B',
+                '0' => '\0',
+                '\'' => '\'',
+                _ => panic!("Invalid escape sequence: '{}'", character),
+            };
+
+            self.advance();
+        }
 
         if self.current_char() != '\'' {
             panic!("Using single quotes is for single characters only. Expected the end of a character literal, got '{}'", self.current_char());

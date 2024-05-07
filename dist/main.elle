@@ -9,7 +9,7 @@ fn input(String message) {
     Long index = len - 1;
     Long newline = buf + index;
 
-    newline <- Byte 0;
+    newline <- Byte '\0';
     return buf;
 }
 
@@ -17,23 +17,35 @@ fn isEven(Long n) -> Long {
     return n % 2 == 0;
 }
 
-fn fib(Long n) -> Long {
+fn fibonacci(Long n) -> Long {
     if (n <= 1) {
         return n;
     }
 
-    return fib(n - 1) + fib(n - 2);
+    Long prev = 0;
+    Long current = 1;
+    Long i = 2;
+
+    while (i <= n) {
+        i++;
+
+        Long next = prev + current;
+        prev = current;
+        current = next;
+    }
+
+    return current;
 }
 
-fn fact(Long n) -> Long {
+fn natural(Long n) -> Long {
     if (n <= 1) {
         return n;
     }
 
-    return n * fact(n - 1);
+    return natural(n - 1) + n;
 }
 
-fn exp(Long n, Long p) -> Long {
+fn exponential(Long n, Long p) -> Long {
     Int i = 0;
     Long res = 1;
 
@@ -50,14 +62,20 @@ pub fn main() {
         String userInput = input("Enter a number -> ");
         Long number = atol(userInput);
 
-        if (number == 0 || number > 40) {
-            printf!("Invalid input: %d\n", number);
+        // Checks that all characters are numeric-like
+        if (strspn(userInput, "0123456789.") != strlen(userInput)) {
+            printf!(
+                "Invalid input: %s (parsed to %ld)\n",
+                userInput,
+                number
+            );
+
             continue;
         }
 
-        printf!("fact(%ld) = %ld\n", number, fact(number));
-        printf!("fib(%ld) = %ld\n", number, fib(number));
-        printf!("exp(%ld, 2) = %ld\n", number, exp(number, 2));
+        printf!("natural(%ld) = %ld\n", number, natural(number));
+        printf!("fibonacci(%ld) = %ld\n", number, fibonacci(number));
+        printf!("exponential(%ld, 2) = %ld\n", number, exponential(number, 2));
 
         String res = "";
 
