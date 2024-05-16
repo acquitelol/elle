@@ -16,5 +16,5 @@ main.ssa: compiler
 	qbe -o ./dist/main.s ./dist/main.ssa
 	cc -o ./dist/main ./dist/main.s
 
-compiler:
+compile:
 	rustc -o ./dist/compiler ./src/main.rs

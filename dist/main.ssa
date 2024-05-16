@@ -19,144 +19,149 @@ function l $input(l %message_1) {
 	%r_v19_20 =l copy %buf_6
 	ret %r_v19_20
 }
-function l $isEven(l %n_21) {
+function l $toBool(l %n_21) {
 @start
 	%tmp_22 =l copy %n_21
-	%tmp_23 =l copy 2
-	%tmp_24 =l rem %tmp_22, %tmp_23
-	%tmp_25 =l copy %tmp_24
-	%tmp_26 =l copy 0
-	%tmp_27 =l ceqw %tmp_25, %tmp_26
-	%r_v27_28 =l copy %tmp_27
-	ret %r_v27_28
+	%tmp_23 =l copy 0
+	%tmp_24 =l ceqw %tmp_22, %tmp_23
+	jnz %tmp_24, @ift_25, @end_25
+@ift_25
+	%r_v26_27 =l copy $toBool_26
+	ret %r_v26_27
+@end_25
+	%r_v28_29 =l copy $toBool_28
+	ret %r_v28_29
 }
-function l $fibonacci(l %n_29) {
+function l $isEven(l %n_30) {
 @start
-	%tmp_30 =l copy %n_29
-	%tmp_31 =l copy 1
-	%tmp_32 =l cslew %tmp_30, %tmp_31
-	jnz %tmp_32, @ift_33, @end_33
-@ift_33
-	%r_v33_34 =l copy %n_29
-	ret %r_v33_34
-@end_33
-	%prev_35 =l copy 0
-	%current_36 =l copy 1
-	%i_37 =l copy 2
-@loop_38_cond
-	%tmp_39 =l copy %i_37
-	%tmp_40 =l copy %n_29
+	%tmp_31 =l copy %n_30
+	%tmp_32 =l copy 2
+	%tmp_33 =l rem %tmp_31, %tmp_32
+	%tmp_34 =l copy %tmp_33
+	%tmp_35 =l copy 0
+	%tmp_36 =l ceqw %tmp_34, %tmp_35
+	%r_v36_37 =l copy %tmp_36
+	ret %r_v36_37
+}
+function l $fibonacci(l %n_38) {
+@start
+	%tmp_39 =l copy %n_38
+	%tmp_40 =l copy 1
 	%tmp_41 =l cslew %tmp_39, %tmp_40
-	jnz %tmp_41, @loop_38_body, @loop_38_end
-@loop_38_body
-	%tmp_42 =l copy %i_37
-	%tmp_43 =l copy 1
-	%tmp_44 =l add %tmp_42, %tmp_43
-	%i_37 =l copy %tmp_44
-	%tmp_46 =l copy %prev_35
-	%tmp_47 =l copy %current_36
-	%tmp_48 =l add %tmp_46, %tmp_47
-	%next_45 =l copy %tmp_48
-	%prev_35 =l copy %current_36
-	%current_36 =l copy %next_45
-	jmp @loop_38_cond
-@loop_38_end
-	%r_v48_49 =l copy %current_36
-	ret %r_v48_49
-}
-function l $natural(l %n_50) {
-@start
-	%tmp_51 =l copy %n_50
+	jnz %tmp_41, @ift_42, @end_42
+@ift_42
+	%r_v42_43 =l copy %n_38
+	ret %r_v42_43
+@end_42
+	%prev_44 =l copy 0
+	%current_45 =l copy 1
+	%i_46 =l copy 2
+@loop_47_cond
+	%tmp_48 =l copy %i_46
+	%tmp_49 =l copy %n_38
+	%tmp_50 =l cslew %tmp_48, %tmp_49
+	jnz %tmp_50, @loop_47_body, @loop_47_end
+@loop_47_body
+	%tmp_51 =l copy %i_46
 	%tmp_52 =l copy 1
-	%tmp_53 =l cslew %tmp_51, %tmp_52
-	jnz %tmp_53, @ift_54, @end_54
-@ift_54
-	%r_v54_55 =l copy %n_50
-	ret %r_v54_55
-@end_54
-	%tmp_56 =l copy %n_50
-	%tmp_57 =l copy 1
-	%tmp_58 =l sub %tmp_56, %tmp_57
-	%tmp_59 =l call $natural(l %tmp_58)
-	%tmp_60 =l copy %tmp_59
-	%tmp_61 =l copy %n_50
-	%tmp_62 =l add %tmp_60, %tmp_61
-	%r_v62_63 =l copy %tmp_62
-	ret %r_v62_63
+	%tmp_53 =l add %tmp_51, %tmp_52
+	%i_46 =l copy %tmp_53
+	%tmp_55 =l copy %prev_44
+	%tmp_56 =l copy %current_45
+	%tmp_57 =l add %tmp_55, %tmp_56
+	%next_54 =l copy %tmp_57
+	%prev_44 =l copy %current_45
+	%current_45 =l copy %next_54
+	jmp @loop_47_cond
+@loop_47_end
+	%r_v57_58 =l copy %current_45
+	ret %r_v57_58
 }
-function l $exponential(l %n_64, l %p_65) {
+function l $natural(l %n_59) {
 @start
-	%i_66 =w copy 0
-	%res_67 =l copy 1
-@loop_68_cond
-	%tmp_69 =w copy %i_66
-	%tmp_70 =w copy %p_65
-	%tmp_71 =w csltw %tmp_69, %tmp_70
-	jnz %tmp_71, @loop_68_body, @loop_68_end
-@loop_68_body
-	%tmp_72 =l copy %res_67
-	%tmp_73 =l copy %n_64
-	%tmp_74 =l mul %tmp_72, %tmp_73
-	%res_67 =l copy %tmp_74
-	%tmp_75 =w copy %i_66
-	%tmp_76 =w copy 1
-	%tmp_77 =w add %tmp_75, %tmp_76
-	%i_66 =w copy %tmp_77
-	jmp @loop_68_cond
-@loop_68_end
-	%r_v77_78 =l copy %res_67
-	ret %r_v77_78
+	%tmp_60 =l copy %n_59
+	%tmp_61 =l copy 1
+	%tmp_62 =l cslew %tmp_60, %tmp_61
+	jnz %tmp_62, @ift_63, @end_63
+@ift_63
+	%r_v63_64 =l copy %n_59
+	ret %r_v63_64
+@end_63
+	%tmp_65 =l copy %n_59
+	%tmp_66 =l copy 1
+	%tmp_67 =l sub %tmp_65, %tmp_66
+	%tmp_68 =l call $natural(l %tmp_67)
+	%tmp_69 =l copy %tmp_68
+	%tmp_70 =l copy %n_59
+	%tmp_71 =l add %tmp_69, %tmp_70
+	%r_v71_72 =l copy %tmp_71
+	ret %r_v71_72
+}
+function l $exponential(l %n_73, l %p_74) {
+@start
+	%i_75 =w copy 0
+	%res_76 =l copy 1
+@loop_77_cond
+	%tmp_78 =w copy %i_75
+	%tmp_79 =w copy %p_74
+	%tmp_80 =w csltw %tmp_78, %tmp_79
+	jnz %tmp_80, @loop_77_body, @loop_77_end
+@loop_77_body
+	%tmp_81 =l copy %res_76
+	%tmp_82 =l copy %n_73
+	%tmp_83 =l mul %tmp_81, %tmp_82
+	%res_76 =l copy %tmp_83
+	%tmp_84 =w copy %i_75
+	%tmp_85 =w copy 1
+	%tmp_86 =w add %tmp_84, %tmp_85
+	%i_75 =w copy %tmp_86
+	jmp @loop_77_cond
+@loop_77_end
+	%r_v86_87 =l copy %res_76
+	ret %r_v86_87
 }
 export function w $main() {
 @start
 
-@loop_79_cond
-	jnz 1, @loop_79_body, @loop_79_end
-@loop_79_body
-	%tmp_82 =l call $input(l $main_81)
-	%userInput_80 =l copy %tmp_82
-	%tmp_84 =l call $atol(l %userInput_80)
-	%number_83 =l copy %tmp_84
-	%tmp_86 =w call $strspn(l %userInput_80, l $main_85)
-	%tmp_87 =w call $strlen(l %userInput_80)
-	%tmp_88 =w copy %tmp_86
-	%tmp_89 =w copy %tmp_87
-	%tmp_90 =w cnew %tmp_88, %tmp_89
-	jnz %tmp_90, @ift_91, @end_91
-@ift_91
-	%tmp_93 =w call $printf(l $main_92, ..., l %userInput_80, l %number_83)
-	jmp @loop_79_cond
-@end_91
-	%tmp_95 =l call $natural(l %number_83)
-	%tmp_96 =w call $printf(l $main_94, ..., l %number_83, l %tmp_95)
-	%tmp_98 =l call $fibonacci(l %number_83)
-	%tmp_99 =w call $printf(l $main_97, ..., l %number_83, l %tmp_98)
-	%tmp_101 =l call $exponential(l %number_83, w 2)
-	%tmp_102 =w call $printf(l $main_100, ..., l %number_83, l %tmp_101)
-	%res_103 =l copy $main_104
-	%tmp_105 =l call $isEven(l %number_83)
-	jnz %tmp_105, @ift_106, @iff_106
-@ift_106
-	%res_103 =l copy $main_107
-	jmp @end_106
-@iff_106
-	%res_103 =l copy $main_108
-@end_106
-	%tmp_110 =w call $printf(l $main_109, ..., l %number_83, l %res_103)
-	jmp @loop_79_cond
-@loop_79_end
+@loop_88_cond
+	jnz 1, @loop_88_body, @loop_88_end
+@loop_88_body
+	%tmp_91 =l call $input(l $main_90)
+	%userInput_89 =l copy %tmp_91
+	%tmp_93 =l call $atol(l %userInput_89)
+	%number_92 =l copy %tmp_93
+	%tmp_95 =w call $strspn(l %userInput_89, l $main_94)
+	%tmp_96 =w call $strlen(l %userInput_89)
+	%tmp_97 =w copy %tmp_95
+	%tmp_98 =w copy %tmp_96
+	%tmp_99 =w cnew %tmp_97, %tmp_98
+	jnz %tmp_99, @ift_100, @end_100
+@ift_100
+	%tmp_102 =w call $printf(l $main_101, ..., l %userInput_89, l %number_92)
+	jmp @loop_88_cond
+@end_100
+	%tmp_104 =l call $natural(l %number_92)
+	%tmp_105 =w call $printf(l $main_103, ..., l %number_92, l %tmp_104)
+	%tmp_107 =l call $fibonacci(l %number_92)
+	%tmp_108 =w call $printf(l $main_106, ..., l %number_92, l %tmp_107)
+	%tmp_110 =l call $exponential(l %number_92, w 2)
+	%tmp_111 =w call $printf(l $main_109, ..., l %number_92, l %tmp_110)
+	%tmp_113 =l call $isEven(l %number_92)
+	%tmp_114 =l call $toBool(l %tmp_113)
+	%tmp_115 =w call $printf(l $main_112, ..., l %number_92, l %tmp_114)
+	jmp @loop_88_cond
+@loop_88_end
 	ret
 }
 data $input_3 = { b "r", b 0 }
 data $buf_5 = { z 1024 }
 data $input_19 = { b 0 }
-data $main_81 = { b "Enter a number -> ", b 0 }
-data $main_85 = { b "0123456789.", b 0 }
-data $main_92 = { b "Invalid input: %s (parsed to %ld)\n", b 0 }
-data $main_94 = { b "natural(%ld) = %ld\n", b 0 }
-data $main_97 = { b "fibonacci(%ld) = %ld\n", b 0 }
-data $main_100 = { b "exponential(%ld, 2) = %ld\n", b 0 }
-data $main_104 = { b "", b 0 }
-data $main_107 = { b "true", b 0 }
-data $main_108 = { b "false", b 0 }
-data $main_109 = { b "isEven(%ld) = %s\n\n", b 0 }
+data $toBool_26 = { b "false", b 0 }
+data $toBool_28 = { b "true", b 0 }
+data $main_90 = { b "Enter a number -> ", b 0 }
+data $main_94 = { b "0123456789.", b 0 }
+data $main_101 = { b "Invalid input: %s (parsed to %ld)\n", b 0 }
+data $main_103 = { b "natural(%ld) = %ld\n", b 0 }
+data $main_106 = { b "fibonacci(%ld) = %ld\n", b 0 }
+data $main_109 = { b "exponential(%ld, 2) = %ld\n", b 0 }
+data $main_112 = { b "isEven(%ld) = %s\n\n", b 0 }

@@ -13,6 +13,14 @@ fn input(String message) {
     return buf;
 }
 
+fn toBool(Long n) {
+    if (n == 0) {
+        return "false";
+    }
+
+    return "true";
+}
+
 fn isEven(Long n) -> Long {
     return n % 2 == 0;
 }
@@ -76,15 +84,6 @@ pub fn main() {
         printf!("natural(%ld) = %ld\n", number, natural(number));
         printf!("fibonacci(%ld) = %ld\n", number, fibonacci(number));
         printf!("exponential(%ld, 2) = %ld\n", number, exponential(number, 2));
-
-        String res = "";
-
-        if (isEven(number)) {
-            res = "true";
-        } else {
-            res = "false";
-        }
-
-        printf!("isEven(%ld) = %s\n\n", number, res);
+        printf!("isEven(%ld) = %s\n\n", number, toBool(isEven(number)));
     }
 }
