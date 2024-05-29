@@ -1,7 +1,8 @@
 use std::cell::RefCell;
+use std::iter::FromIterator;
 
-use crate::lexer::enums::{Token, TokenKind, ValueKind};
 use super::enums::AstNode;
+use crate::lexer::enums::{Token, TokenKind, ValueKind};
 
 pub struct Statement<'a> {
     tokens: Vec<Token>,
@@ -86,7 +87,9 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_declare(&mut self, ty: Option<String>) -> AstNode {
-        let r#type = if ty.is_some() { ty.unwrap() } else {
+        let r#type = if ty.is_some() {
+            ty.unwrap()
+        } else {
             let tmp = self.get_type();
             self.advance();
 
@@ -160,9 +163,9 @@ impl<'a> Statement<'a> {
 
             let mapping = res.unwrap();
 
-            self.body.borrow_mut().push(AstNode::LiteralStatement { 
-                kind: TokenKind::ExactLiteral, 
-                value: ValueKind::String("__<#insert#>__".to_owned()) 
+            self.body.borrow_mut().push(AstNode::LiteralStatement {
+                kind: TokenKind::ExactLiteral,
+                value: ValueKind::String("__<#insert#>__".to_owned()),
             });
 
             self.body.borrow_mut().push(AstNode::DeclareStatement {
@@ -180,12 +183,11 @@ impl<'a> Statement<'a> {
                     operator: mapping,
                 }),
             });
-    
 
             return AstNode::LiteralStatement {
                 kind: TokenKind::Identifier,
                 value: ValueKind::String(name.clone()),
-            }
+            };
         }
 
         let mut value = vec![];
@@ -222,29 +224,54 @@ impl<'a> Statement<'a> {
         }
     }
 
+    fn parse_float(&mut self, token: Token) -> AstNode {
+        let value = match token.value {
+            ValueKind::String(val) => val,
+            _ => todo!(),
+        };
+
+        if !value.contains(".") {
+            panic!("Invalid float literal provided");
+        }
+
+        let nodes: Vec<&str> = value.split('.').collect();
+        let left = nodes[0];
+        let right = nodes[1];
+
+        let exponent = right.len();
+        let original = String::from_iter([left, right]).parse::<i64>().unwrap();
+
+        AstNode::ArithmeticOperation {
+            left: Box::new(AstNode::LiteralStatement {
+                kind: TokenKind::DoubleLiteral,
+                value: ValueKind::Number(original),
+            }),
+            right: Box::new(AstNode::LiteralStatement {
+                kind: TokenKind::DoubleLiteral,
+                value: ValueKind::Number(10_i64.pow(exponent as u32)),
+            }),
+            operator: TokenKind::Divide,
+        }
+    }
+
     fn parse_literal(&mut self) -> AstNode {
         if self.tokens.len() - self.position == 1 {
             let current = self.current_token();
 
             match current.kind {
-                TokenKind::TrueLiteral => {
-                    AstNode::LiteralStatement {
-                        kind: TokenKind::IntegerLiteral,
-                        value: ValueKind::Number(1),
-                    }
+                TokenKind::TrueLiteral => AstNode::LiteralStatement {
+                    kind: TokenKind::IntegerLiteral,
+                    value: ValueKind::Number(1),
                 },
-                TokenKind::FalseLiteral => {
-                    AstNode::LiteralStatement {
-                        kind: TokenKind::IntegerLiteral,
-                        value: ValueKind::Number(0),
-                    }
-                }
-                _ => {
-                    AstNode::LiteralStatement {
-                        kind: current.kind,
-                        value: current.value,
-                    }
-                }
+                TokenKind::FalseLiteral => AstNode::LiteralStatement {
+                    kind: TokenKind::IntegerLiteral,
+                    value: ValueKind::Number(0),
+                },
+                TokenKind::FloatLiteral => self.parse_float(current),
+                _ => AstNode::LiteralStatement {
+                    kind: current.kind,
+                    value: current.value,
+                },
             }
         } else {
             match self.next_token() {
@@ -255,24 +282,19 @@ impl<'a> Statement<'a> {
                         self.advance();
 
                         match current.kind {
-                            TokenKind::TrueLiteral => {
-                                AstNode::LiteralStatement {
-                                    kind: TokenKind::IntegerLiteral,
-                                    value: ValueKind::Number(1),
-                                }
+                            TokenKind::TrueLiteral => AstNode::LiteralStatement {
+                                kind: TokenKind::IntegerLiteral,
+                                value: ValueKind::Number(1),
                             },
-                            TokenKind::FalseLiteral => {
-                                AstNode::LiteralStatement {
-                                    kind: TokenKind::IntegerLiteral,
-                                    value: ValueKind::Number(0),
-                                }
-                            }
-                            _ => {
-                                AstNode::LiteralStatement {
-                                    kind: current.kind,
-                                    value: current.value,
-                                }
-                            }
+                            TokenKind::FalseLiteral => AstNode::LiteralStatement {
+                                kind: TokenKind::IntegerLiteral,
+                                value: ValueKind::Number(0),
+                            },
+                            TokenKind::FloatLiteral => self.parse_float(current),
+                            _ => AstNode::LiteralStatement {
+                                kind: current.kind,
+                                value: current.value,
+                            },
                         }
                     }
                     _ => self.parse_arithmetic(),
@@ -299,7 +321,10 @@ impl<'a> Statement<'a> {
         let res = if value.len() > 0 {
             Statement::new(value, 0, &self.body).parse().0
         } else {
-            AstNode::LiteralStatement { kind: TokenKind::IntegerLiteral, value: ValueKind::Number(0) }
+            AstNode::LiteralStatement {
+                kind: TokenKind::IntegerLiteral,
+                value: ValueKind::Number(0),
+            }
         };
 
         let parsed_res = match res.clone() {
@@ -326,6 +351,7 @@ impl<'a> Statement<'a> {
     fn parse_function(&mut self, variadic: bool) -> AstNode {
         let name = self.get_identifier();
         let mut variadic_index: usize = 1;
+        let mut calculate_variadic_size = false;
 
         self.advance();
         match self.current_token().kind {
@@ -345,6 +371,13 @@ impl<'a> Statement<'a> {
 
                     self.advance();
                 }
+
+                self.expect_token(TokenKind::LeftParenthesis);
+                self.advance();
+            }
+            TokenKind::Dot => {
+                self.advance();
+                calculate_variadic_size = true;
 
                 self.expect_token(TokenKind::LeftParenthesis);
                 self.advance();
@@ -404,13 +437,23 @@ impl<'a> Statement<'a> {
         self.advance();
 
         if variadic {
+            if calculate_variadic_size {
+                parameters.insert(
+                    0,
+                    AstNode::LiteralStatement {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number(parameters.len() as i64),
+                    },
+                );
+            }
+
             parameters.insert(
                 variadic_index,
                 AstNode::LiteralStatement {
                     kind: TokenKind::ExactLiteral,
                     value: ValueKind::String("...".to_owned()),
                 },
-            )
+            );
         }
 
         AstNode::FunctionCall { name, parameters }
@@ -424,8 +467,6 @@ impl<'a> Statement<'a> {
         let mut index = self.position.clone();
 
         loop {
-            index += 1;
-
             if index >= tokens.len() - 1 {
                 break;
             }
@@ -445,12 +486,17 @@ impl<'a> Statement<'a> {
             // Set the precedence to the last lowest precedence found.
             // If the expression is 1 + 2 * 3 + 4 * 5 for example,
             // it'll return the position of the second '+' token
-            if token.kind.is_arithmetic() 
-                && token.kind.precedence() <= precedence
-                && nesting == 0 {
+            if token.kind.is_arithmetic() && token.kind.precedence() <= precedence && nesting == 0 {
                 precedence_index = index;
                 precedence = token.kind.precedence();
             }
+
+            // This MUST be here, not at the start of the loop
+            // If it was at the start then it would fail when parsing brackets
+            // at the start of expressions:
+            // (1 + 2) * 4 - 3 would *fail* because it will never parse the 0th bracket
+            // so the nesting will never reach 0.
+            index += 1;
         }
 
         precedence_index
@@ -516,10 +562,10 @@ impl<'a> Statement<'a> {
 
         self.advance();
         self.expect_token_with_message(
-            TokenKind::Identifier, 
+            TokenKind::Identifier,
             Some(
                 format!(
-                    "Expected identifier, got {:?}. You cannot increment anything that isn't an identifier.", 
+                    "Expected identifier, got {:?}. You cannot increment anything that isn't an identifier.",
                     self.current_token().kind
                 ).as_str()
             )
@@ -568,34 +614,10 @@ impl<'a> Statement<'a> {
         self.advance();
         self.expect_token(TokenKind::Semicolon);
 
-        AstNode::BufferStatement { name, r#type: ty.unwrap_or("Byte".to_string()), size }
-    }
-
-    fn parse_store(&mut self) -> AstNode {
-        let name = self.get_identifier();
-        self.advance();
-
-        self.expect_token(TokenKind::LeftArrow);
-        self.advance();
-
-        let r#type = self.get_type();
-        self.advance();
-
-        let mut value = vec![];
-
-        while self.current_token().kind != TokenKind::Semicolon && !self.is_eof() {
-            value.push(self.current_token());
-            self.advance();
-        }
-
-        if !self.is_eof() {
-            self.expect_token(TokenKind::Semicolon);
-        }
-
-        AstNode::StoreStatement {
+        AstNode::BufferStatement {
             name,
-            r#type,
-            value: Box::new(Statement::new(value, 0, &self.body).parse().0),
+            r#type: ty.unwrap_or("Byte".to_string()),
+            size,
         }
     }
 
@@ -650,7 +672,11 @@ impl<'a> Statement<'a> {
 
         self.position -= 1;
 
-        AstNode::IfStatement { condition: Box::new(expression), body, else_body }
+        AstNode::IfStatement {
+            condition: Box::new(expression),
+            body,
+            else_body,
+        }
     }
 
     fn parse_while_statement(&mut self) -> AstNode {
@@ -695,10 +721,391 @@ impl<'a> Statement<'a> {
 
         self.position -= 1;
 
-        AstNode::WhileLoop { condition: Box::new(expression), body }
+        AstNode::WhileLoop {
+            condition: Box::new(expression),
+            body,
+        }
     }
 
-    fn yield_block(&mut self) -> Vec<AstNode> { 
+    fn parse_for_statement(&mut self) -> AstNode {
+        self.advance();
+
+        let ty = match self.current_token().kind {
+            TokenKind::Type => {
+                let tmp = match self.current_token().value {
+                    ValueKind::String(val) => val,
+                    _ => todo!(),
+                };
+
+                self.advance();
+                tmp
+            }
+            TokenKind::Identifier => "Int".to_string(),
+            other => panic!("Invalid token {:?}", other),
+        };
+
+        let iterator = self.current_token();
+        self.advance();
+
+        self.expect_token(TokenKind::Equal);
+        self.advance();
+
+        let mut default_value_tokens = vec![];
+
+        loop {
+            default_value_tokens.push(self.current_token());
+            self.advance();
+
+            if self.current_token().kind == TokenKind::To {
+                break;
+            }
+
+            if self.is_eof() {
+                break;
+            }
+        }
+
+        let default_value = Statement::new(default_value_tokens, 0, &self.body)
+            .parse()
+            .0;
+
+        self.expect_token(TokenKind::To);
+        self.advance();
+
+        let mut to_tokens = vec![];
+
+        loop {
+            to_tokens.push(self.current_token());
+            self.advance();
+
+            if self.current_token().kind == TokenKind::LeftCurlyBrace
+                || self.current_token().kind == TokenKind::Step
+            {
+                break;
+            }
+
+            if self.is_eof() {
+                break;
+            }
+        }
+
+        let to_value = Statement::new(to_tokens, 0, &self.body).parse().0;
+        let mut addition_node = AstNode::LiteralStatement {
+            kind: TokenKind::IntegerLiteral,
+            value: ValueKind::Number(1),
+        };
+
+        if self.current_token().kind == TokenKind::Step {
+            self.advance();
+            let mut step_tokens = vec![];
+
+            loop {
+                step_tokens.push(self.current_token());
+                self.advance();
+
+                if self.current_token().kind == TokenKind::LeftCurlyBrace {
+                    break;
+                }
+
+                if self.is_eof() {
+                    break;
+                }
+            }
+
+            addition_node = Statement::new(step_tokens, 0, &self.body).parse().0;
+        }
+
+        self.expect_token(TokenKind::LeftCurlyBrace);
+        self.advance();
+
+        let mut body = self.yield_block();
+
+        let iterator_node = AstNode::LiteralStatement {
+            kind: iterator.kind,
+            value: iterator.value.clone(),
+        };
+
+        let condition = AstNode::ArithmeticOperation {
+            left: Box::new(iterator_node.clone()),
+            right: Box::new(to_value),
+            operator: TokenKind::LessThanEqual,
+        };
+
+        self.position -= 1;
+
+        self.body.borrow_mut().push(AstNode::DeclareStatement {
+            name: match iterator.value.clone() {
+                ValueKind::String(val) => val,
+                _ => todo!(),
+            },
+            r#type: ty.clone(),
+            value: Box::new(default_value),
+        });
+
+        body.push(AstNode::DeclareStatement {
+            name: match iterator.value.clone() {
+                ValueKind::String(val) => val,
+                _ => todo!(),
+            },
+            r#type: ty.clone(),
+            value: Box::new(AstNode::ArithmeticOperation {
+                left: Box::new(iterator_node.clone()),
+                right: Box::new(addition_node),
+                operator: TokenKind::Add,
+            }),
+        });
+
+        AstNode::WhileLoop {
+            condition: Box::new(condition),
+            body,
+        }
+    }
+
+    fn parse_wrapped_statement(&mut self) -> AstNode {
+        let mut nesting = 0;
+        let mut index = 0;
+
+        loop {
+            let token = self.tokens[index].clone();
+
+            match token.kind {
+                TokenKind::LeftParenthesis => {
+                    nesting += 1;
+                }
+                TokenKind::RightParenthesis => {
+                    if nesting > 0 {
+                        nesting -= 1;
+                    } else {
+                        break;
+                    }
+                }
+                _ => {}
+            }
+
+            if nesting == 0 {
+                break;
+            }
+
+            index += 1;
+        }
+
+        let next_token = self.tokens.get(index + 1);
+
+        if next_token.is_some() && next_token.unwrap().kind.is_arithmetic() {
+            return self.parse_arithmetic();
+        }
+
+        let mut tokens = vec![];
+
+        loop {
+            if nesting == 0 && self.current_token().kind == TokenKind::RightParenthesis {
+                break;
+            }
+
+            if self.current_token().kind == TokenKind::LeftParenthesis {
+                if nesting == 0 {
+                    nesting += 1;
+                    self.advance();
+                    continue;
+                }
+
+                nesting += 1;
+            }
+
+            tokens.push(self.current_token());
+            self.advance();
+
+            if self.current_token().kind == TokenKind::RightParenthesis {
+                if nesting > 0 {
+                    nesting -= 1;
+                } else {
+                    break;
+                }
+            }
+
+            if self.is_eof() {
+                break;
+            }
+        }
+
+        let expression = Statement::new(tokens, 0, &self.body).parse().0;
+
+        self.expect_token(TokenKind::RightParenthesis);
+        self.advance();
+
+        expression
+    }
+
+    fn parse_offset_store(&mut self) -> AstNode {
+        let name_str = self.get_identifier();
+        let original_position = self.position.clone();
+        self.advance();
+
+        self.expect_token(TokenKind::LeftBlockBrace);
+        self.advance();
+
+        let mut tokens = vec![];
+
+        loop {
+            tokens.push(self.current_token());
+            self.advance();
+
+            if self.current_token().kind == TokenKind::RightBlockBrace {
+                break;
+            }
+
+            if self.is_eof() {
+                break;
+            }
+        }
+
+        let offset = Statement::new(tokens, 0, &self.body).parse().0;
+
+        self.expect_token(TokenKind::RightBlockBrace);
+        self.advance();
+
+        if self.current_token().kind.is_arithmetic() {
+            self.position = original_position.clone();
+            return self.parse_arithmetic();
+        }
+
+        if self.current_token().kind == TokenKind::Semicolon || self.is_eof() {
+            return AstNode::LoadStatement {
+                name: name_str,
+                offset: Box::new(offset),
+            };
+        }
+
+        self.expect_token(TokenKind::Equal);
+        self.advance();
+
+        let mut tokens = vec![];
+
+        loop {
+            tokens.push(self.current_token());
+            self.advance();
+
+            if self.current_token().kind == TokenKind::Semicolon {
+                break;
+            }
+
+            if self.is_eof() {
+                break;
+            }
+        }
+
+        let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
+        AstNode::StoreStatement {
+            value,
+            name: name_str,
+            offset: Box::new(offset),
+        }
+    }
+
+    fn parse_variadic(&mut self) -> AstNode {
+        self.advance();
+        let name = self.get_identifier();
+
+        self.advance();
+        self.expect_token(TokenKind::LeftBlockBrace);
+        self.advance();
+
+        let mut tokens = vec![];
+
+        loop {
+            if self.current_token().kind == TokenKind::RightBlockBrace {
+                break;
+            }
+
+            tokens.push(self.current_token());
+            self.advance();
+
+            if self.current_token().kind == TokenKind::RightBlockBrace {
+                break;
+            }
+
+            if self.is_eof() {
+                break;
+            }
+        }
+
+        let size = Box::new(if tokens.len() > 0 {
+            Statement::new(tokens, 0, &self.body).parse().0
+        } else {
+            // Set the size to an arbitrary 8 bytes (64 bits)
+            // Note that this happens only if you don't specify a size
+            // ie. Variadic list[]; instead of Variadic list[12];
+            AstNode::LiteralStatement {
+                kind: TokenKind::IntegerLiteral,
+                value: ValueKind::Number(8),
+            }
+        });
+
+        self.advance();
+
+        if !self.is_eof() {
+            self.expect_token(TokenKind::Semicolon);
+        }
+
+        AstNode::VariadicStatement { name, size }
+    }
+
+    fn parse_yield_variadic(&mut self) -> AstNode {
+        let name = self.get_identifier();
+
+        self.advance();
+        self.expect_token(TokenKind::Yield);
+        self.advance();
+
+        let r#type = self.get_type();
+        self.advance();
+
+        if !self.is_eof() {
+            self.expect_token(TokenKind::Semicolon);
+        }
+
+        AstNode::NextStatement { name, r#type }
+    }
+
+    fn parse_defer(&mut self) -> AstNode {
+        self.advance();
+
+        let mut tokens = vec![];
+
+        if self.current_token().kind == TokenKind::Semicolon {
+            panic!(
+                "[{}] expected expression but got empty defer statement",
+                self.current_token().location.display()
+            );
+        }
+
+        loop {
+            tokens.push(self.current_token());
+            self.advance();
+
+            if self.current_token().kind == TokenKind::Semicolon {
+                break;
+            }
+
+            if self.is_eof() {
+                break;
+            }
+        }
+
+        let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
+        AstNode::DeferStatement { value }
+    }
+
+    fn parse_block(&mut self) -> AstNode {
+        self.expect_token(TokenKind::LeftCurlyBrace);
+        self.advance();
+
+        let body = self.yield_block();
+        self.position -= 1;
+        AstNode::BlockStatement { body }
+    }
+
+    fn yield_block(&mut self) -> Vec<AstNode> {
         let cell: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
 
         loop {
@@ -710,12 +1117,8 @@ impl<'a> Statement<'a> {
                     break;
                 }
                 _ => {
-                    let (node, position) = Statement::new(
-                        self.tokens.clone(),
-                        self.position.clone(),
-                        &cell,
-                    )
-                    .parse();
+                    let (node, position) =
+                        Statement::new(self.tokens.clone(), self.position.clone(), &cell).parse();
 
                     let mut body_ref = cell.borrow_mut();
                     let res = body_ref.iter().position(|item| match item.clone() {
@@ -729,20 +1132,22 @@ impl<'a> Statement<'a> {
                                             false
                                         }
                                     }
-                                    _ => false
+                                    _ => false,
                                 }
                             } else {
                                 false
                             }
                         }
-                        _ => false
+                        _ => false,
                     });
 
                     if res.is_some() {
                         match node {
-                            AstNode::DeclareStatement { name: _, r#type: _, value: _ } => {
-                                body_ref[res.unwrap()] = node
-                            }
+                            AstNode::DeclareStatement {
+                                name: _,
+                                r#type: _,
+                                value: _,
+                            } => body_ref[res.unwrap()] = node,
                             _ => {
                                 body_ref.remove(res.unwrap());
                                 body_ref.push(node);
@@ -759,14 +1164,85 @@ impl<'a> Statement<'a> {
             self.advance();
         }
 
-        let body = cell.borrow_mut().to_owned().clone();
+        let mut res = cell.borrow_mut().to_owned().clone();
+        let mut deferred: Vec<AstNode> = Vec::new();
 
-        body
+        res.retain(|node| match node.clone() {
+            AstNode::DeferStatement { value } => {
+                deferred.push(*value.clone());
+                false
+            }
+            _ => true,
+        });
+
+        fn insert_deferred_statements(
+            nodes: &mut Vec<AstNode>,
+            deferred: &Vec<AstNode>,
+            root: bool,
+        ) {
+            let mut new_nodes = Vec::new();
+            let mut found_return = false;
+
+            for node in nodes.drain(..) {
+                match node {
+                    AstNode::ReturnStatement { .. } => {
+                        new_nodes.extend(deferred.clone());
+                        new_nodes.push(node);
+                        found_return = true;
+                    }
+                    AstNode::WhileLoop {
+                        condition, body, ..
+                    } => {
+                        let mut new_body = body;
+                        insert_deferred_statements(&mut new_body, deferred, false);
+                        new_nodes.push(AstNode::WhileLoop {
+                            condition,
+                            body: new_body,
+                        });
+                    }
+                    AstNode::BlockStatement { body, .. } => {
+                        let mut new_body = body;
+                        insert_deferred_statements(&mut new_body, deferred, false);
+                        new_nodes.push(AstNode::BlockStatement { body: new_body });
+                    }
+                    AstNode::IfStatement {
+                        condition,
+                        body,
+                        else_body,
+                        ..
+                    } => {
+                        let mut new_body = body;
+                        let mut new_else_body = else_body;
+
+                        insert_deferred_statements(&mut new_body, deferred, false);
+                        insert_deferred_statements(&mut new_else_body, deferred, false);
+
+                        new_nodes.push(AstNode::IfStatement {
+                            condition,
+                            body: new_body,
+                            else_body: new_else_body,
+                        });
+                    }
+                    _ => new_nodes.push(node),
+                }
+            }
+
+            if !found_return && root {
+                new_nodes.extend(deferred.clone());
+            }
+
+            *nodes = new_nodes;
+        }
+
+        insert_deferred_statements(&mut res, &deferred, true);
+        res
     }
 
     fn parse_primary(&mut self) -> AstNode {
         match self.current_token().kind {
             token if token.is_literal() => self.parse_literal(),
+            TokenKind::LeftParenthesis => self.parse_wrapped_statement(),
+            TokenKind::LeftCurlyBrace => self.parse_block(),
             TokenKind::Identifier => {
                 if self.is_eof() {
                     self.parse_literal()
@@ -776,8 +1252,14 @@ impl<'a> Statement<'a> {
                     if next.kind == TokenKind::LeftParenthesis {
                         self.parse_function(false)
                     } else if next.kind == TokenKind::LeftBlockBrace {
-                        self.parse_buffer(None, None)
+                        self.parse_offset_store()
                     } else if next.kind == TokenKind::Not {
+                        if self.position + 2 > self.tokens.len() - 1 {
+                            panic!("EOF but specified a variadic identifier")
+                        }
+
+                        self.parse_function(true)
+                    } else if next.kind == TokenKind::Dot {
                         if self.position + 2 > self.tokens.len() - 1 {
                             panic!("EOF but specified a variadic identifier")
                         }
@@ -785,10 +1267,10 @@ impl<'a> Statement<'a> {
                         self.parse_function(true)
                     } else if next.kind == TokenKind::Equal {
                         self.parse_declare(Some("Nil".to_owned()))
-                    } else if next.kind == TokenKind::LeftArrow {
-                        self.parse_store()
                     } else if next.kind.is_declarative() {
                         self.parse_declarative_like()
+                    } else if next.kind == TokenKind::Yield {
+                        self.parse_yield_variadic()
                     } else if next.kind.is_arithmetic() {
                         self.parse_arithmetic()
                     } else {
@@ -812,9 +1294,12 @@ impl<'a> Statement<'a> {
     pub fn parse(&mut self) -> (AstNode, usize) {
         let node = match self.current_token().kind {
             TokenKind::Type => self.parse_declare(None),
+            TokenKind::Variadic => self.parse_variadic(),
             TokenKind::Return => self.parse_return(),
             TokenKind::If => self.parse_if_statement(),
             TokenKind::While => self.parse_while_statement(),
+            TokenKind::For => self.parse_for_statement(),
+            TokenKind::Defer => self.parse_defer(),
             _ => self.parse_expression(),
         };
 

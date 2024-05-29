@@ -50,7 +50,7 @@ fn main() -> ExitCode {
     let mut parser = Parser::new(tokens);
     let tree = parser.parse();
 
-    // dbg!(&tree);
+    dbg!(&tree);
 
     Compiler::compile(tree, output_path);
     ExitCode::SUCCESS

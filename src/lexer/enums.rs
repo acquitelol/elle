@@ -6,6 +6,9 @@ pub enum TokenKind {
     Type,
     Identifier,
     IntegerLiteral,
+    LongLiteral,
+    FloatLiteral,
+    DoubleLiteral,
     CharLiteral,
     StringLiteral,
     TrueLiteral,
@@ -58,6 +61,14 @@ pub enum TokenKind {
     Store,
     Break,
     Continue,
+    To,
+    Ellipsis,
+    Variadic,
+    Next,
+    Dot,
+    Yield,
+    Step,
+    Defer,
 }
 
 impl TokenKind {
@@ -104,6 +115,9 @@ impl TokenKind {
             Self::StringLiteral
             | Self::IntegerLiteral
             | Self::CharLiteral
+            | Self::FloatLiteral
+            | Self::LongLiteral
+            | Self::DoubleLiteral
             | Self::ExactLiteral
             | Self::TrueLiteral
             | Self::FalseLiteral

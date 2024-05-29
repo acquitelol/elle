@@ -18,6 +18,7 @@ pub struct Compiler {
     data_sections: Vec<InternalData>,
     loop_labels: Vec<String>,
     ret_types: HashMap<String, Type>,
+    buf_types: HashMap<Value, Type>,
     tree: Vec<Primitive>,
 }
 
@@ -30,6 +31,7 @@ impl Compiler {
             "String" => Some(Type::Long),
             "Int" => Some(Type::Word),
             "Long" => Some(Type::Long),
+            "Pointer" => Some(Type::Long),
             "Single" => Some(Type::Single),
             "Double" => Some(Type::Double),
             "Char" => Some(Type::Byte),
@@ -49,7 +51,7 @@ impl Compiler {
 
     fn new_temporary(&mut self, name: Option<&str>) -> Value {
         self.tmp_counter += 1;
-        Value::Temporary(format!("{}_{}", name.unwrap_or("tmp"), self.tmp_counter))
+        Value::Temporary(format!("{}.{}", name.unwrap_or("tmp"), self.tmp_counter))
     }
 
     fn new_var(&mut self, ty: &Type, name: &str, new: bool) -> GeneratorResult<Value> {
@@ -87,15 +89,14 @@ impl Compiler {
     }
 
     fn compile_literal_to_ascii(&self, val: Value) -> Value {
-        match val {
-            Value::Literal(val) => {
-                if val.len() > 1 {
-                    eprintln!("Literal {} is more than 1 character", val);
+        match val.clone() {
+            Value::Literal(str) => {
+                if str.len() > 1 {
+                    return val.clone();
                 }
 
-                Value::Const(val.escape_debug().nth(0).unwrap() as i64)
+                Value::Const(Type::Word, str.escape_debug().nth(0).unwrap() as i64)
             }
-            Value::Const(val) => Value::Const(val),
             Value::Global(name) => {
                 let section = self
                     .data_sections
@@ -105,17 +106,17 @@ impl Compiler {
                 let item = section.data.items.get(0).unwrap();
 
                 match item.1.clone() {
-                    DataItem::Const(val) => Value::Const(val),
-                    DataItem::String(val) => {
-                        if val.len() > 1 {
-                            eprintln!("Literal {} is more than 1 character", val);
+                    DataItem::Const(val) => Value::Const(Type::Word, val),
+                    DataItem::String(str) => {
+                        if str.len() > 1 {
+                            return val.clone();
                         }
 
-                        Value::Const(val.escape_debug().nth(0).unwrap() as i64)
+                        Value::Const(Type::Word, str.escape_debug().nth(0).unwrap() as i64)
                     }
                 }
             }
-            other => panic!("Invalid value {}. Expecting a literal", other),
+            other => other,
         }
     }
 
@@ -123,6 +124,7 @@ impl Compiler {
         &mut self,
         name: String,
         public: bool,
+        variadic: bool,
         arguments: &Vec<Argument>,
         return_type: String,
         body: Vec<AstNode>,
@@ -147,6 +149,7 @@ impl Compiler {
                 Linkage::private()
             },
             name: name.clone(),
+            variadic,
             arguments: args,
             return_type: Self::get_type(return_type),
             blocks: Vec::new(),
@@ -216,12 +219,12 @@ impl Compiler {
                                     func_ref.borrow_mut().return_type = Some(Type::Word);
                                 } else {
                                     match value.clone().unwrap() {
-                                        Value::Const(_) => func_ref.borrow_mut().return_type = Some(Type::Word),
+                                        Value::Const(ty, _) => func_ref.borrow_mut().return_type = Some(ty),
                                         Value::Global(_) => func_ref.borrow_mut().return_type = Some(Type::Long),
                                         Value::Temporary(val) => {
                                             let val_temp = val.clone();
-                                            let last = val_temp.split("_").last().unwrap().to_string().parse::<i32>().unwrap() - 1;
-                                            let var = self.get_variable(format!("r_v{}", last).as_str());
+                                            let last = val_temp.split(".").last().unwrap().to_string().parse::<i32>().unwrap() - 1;
+                                            let var = self.get_variable(format!("r.v{}", last).as_str());
 
                                             match var {
                                                 Ok((ty, _)) => {
@@ -295,7 +298,7 @@ impl Compiler {
                         // it can be yielded later for inferring the return type
                         let tmp = self.new_var(
                             &ret_ty.clone(),
-                            format!("r_v{}", self.tmp_counter).as_str(),
+                            format!("r.v{}", self.tmp_counter).as_str(),
                             false,
                         );
 
@@ -332,11 +335,18 @@ impl Compiler {
                     .generate_statement(func, module, *left.clone(), ty.clone())
                     .unwrap();
 
-                let (_, right_val) = self
-                    .generate_statement(func, module, *right.clone(), ty.clone())
-                    .unwrap();
+                // Parse floats as doubles at compile time
+                let instruction_ty = ty.clone().unwrap_or(
+                    if operator == TokenKind::Divide && left_ty == Type::Word {
+                        Type::Double
+                    } else {
+                        left_ty
+                    },
+                );
 
-                let instruction_ty = ty.clone().unwrap_or(left_ty.clone());
+                let (_, right_val) = self
+                    .generate_statement(func, module, *right.clone(), Some(instruction_ty.clone()))
+                    .unwrap();
 
                 let left_temp = self.new_temporary(None);
                 let right_temp = self.new_temporary(None);
@@ -354,6 +364,16 @@ impl Compiler {
                     Instruction::Copy(right_val),
                 );
 
+                let compare = match operator.clone() {
+                    TokenKind::GreaterThan
+                    | TokenKind::GreaterThanEqual
+                    | TokenKind::LessThan
+                    | TokenKind::LessThanEqual
+                    | TokenKind::EqualTo
+                    | TokenKind::NotEqualTo => true,
+                    _ => false,
+                };
+
                 let res = match operator {
                     TokenKind::Add => Instruction::Add(left_temp, right_temp),
                     TokenKind::Subtract => Instruction::Subtract(left_temp, right_temp),
@@ -361,34 +381,37 @@ impl Compiler {
                     TokenKind::Divide => Instruction::Divide(left_temp, right_temp),
                     TokenKind::Modulus => Instruction::Modulus(left_temp, right_temp),
                     TokenKind::GreaterThan => Instruction::Compare(
-                        Type::Word,
+                        instruction_ty.clone(),
                         Comparison::GreaterThan,
                         left_temp,
                         right_temp,
                     ),
                     TokenKind::GreaterThanEqual => Instruction::Compare(
-                        Type::Word,
+                        instruction_ty.clone(),
                         Comparison::GreaterThanEqual,
                         left_temp,
                         right_temp,
                     ),
                     TokenKind::LessThan => Instruction::Compare(
-                        Type::Word,
+                        instruction_ty.clone(),
                         Comparison::LessThan,
                         left_temp,
                         right_temp,
                     ),
                     TokenKind::LessThanEqual => Instruction::Compare(
-                        Type::Word,
+                        instruction_ty.clone(),
                         Comparison::LessThanEqual,
                         left_temp,
                         right_temp,
                     ),
-                    TokenKind::EqualTo => {
-                        Instruction::Compare(Type::Word, Comparison::Equal, left_temp, right_temp)
-                    }
+                    TokenKind::EqualTo => Instruction::Compare(
+                        instruction_ty.clone(),
+                        Comparison::Equal,
+                        left_temp,
+                        right_temp,
+                    ),
                     TokenKind::NotEqualTo => Instruction::Compare(
-                        Type::Word,
+                        instruction_ty.clone(),
                         Comparison::NotEqual,
                         left_temp,
                         right_temp,
@@ -400,12 +423,18 @@ impl Compiler {
 
                 let op_temp = self.new_temporary(None);
 
-                func.borrow_mut()
-                    .assign_instruction(op_temp.clone(), instruction_ty.clone(), res);
+                let final_ty = if compare {
+                    Type::Word
+                } else {
+                    instruction_ty.clone()
+                };
 
-                Some((instruction_ty.clone(), op_temp))
+                func.borrow_mut()
+                    .assign_instruction(op_temp.clone(), final_ty.clone(), res);
+
+                Some((final_ty, op_temp))
             }
-            AstNode::LiteralStatement { kind, value } => match kind {
+            AstNode::LiteralStatement { kind, value } => match kind.clone() {
                 TokenKind::Identifier => match value {
                     ValueKind::String(val) => {
                         let var = self.get_variable(val.as_str());
@@ -426,7 +455,6 @@ impl Compiler {
 
                                     Some((Type::Long, Value::Global(item.name.clone())))
                                 } else {
-                                    dbg!(&self.scopes);
                                     panic!("{}", msg);
                                 }
                             }
@@ -441,7 +469,7 @@ impl Compiler {
                 TokenKind::Break => {
                     if let Some(label) = &self.loop_labels.last() {
                         func.borrow_mut()
-                            .add_instruction(Instruction::Jump(format!("{}_end", label)));
+                            .add_instruction(Instruction::Jump(format!("{}.end", label)));
                     } else {
                         panic!("Break can only be used while in a loop.");
                     }
@@ -451,7 +479,7 @@ impl Compiler {
                 TokenKind::Continue => {
                     if let Some(label) = &self.loop_labels.last() {
                         func.borrow_mut()
-                            .add_instruction(Instruction::Jump(format!("{}_cond", label)));
+                            .add_instruction(Instruction::Jump(format!("{}.cond", label)));
                     } else {
                         panic!("Continue can only be used while in a loop.");
                     }
@@ -459,12 +487,21 @@ impl Compiler {
                     None
                 }
                 _ => match value {
-                    ValueKind::Number(val) => Some((Type::Word, Value::Const(val))),
+                    ValueKind::Number(val) => {
+                        let num_ty = match kind {
+                            TokenKind::IntegerLiteral => Type::Word,
+                            TokenKind::DoubleLiteral => Type::Double,
+                            TokenKind::LongLiteral => Type::Long,
+                            _ => Type::Word,
+                        };
+
+                        Some((num_ty.clone(), Value::Const(ty.unwrap_or(num_ty), val)))
+                    }
                     ValueKind::String(val) => {
                         self.tmp_counter += 1;
 
                         let name = format!(
-                            "{}_{}",
+                            "{}.{}",
                             func.borrow_mut().name.to_string(),
                             self.tmp_counter
                         );
@@ -487,7 +524,7 @@ impl Compiler {
                         self.tmp_counter += 1;
 
                         let name = format!(
-                            "{}_{}",
+                            "{}.{}",
                             func.borrow_mut().name.to_string(),
                             self.tmp_counter
                         );
@@ -505,7 +542,7 @@ impl Compiler {
                         self.tmp_counter += 1;
 
                         let name = format!(
-                            "{}_{}",
+                            "{}.{}",
                             func.borrow_mut().name.to_string(),
                             self.tmp_counter
                         );
@@ -542,6 +579,7 @@ impl Compiler {
                     .unwrap_or(&Function::new(
                         Linkage::public(),
                         name.clone(),
+                        false,
                         vec![],
                         Some(declarative_ty.clone()),
                     ))
@@ -562,7 +600,7 @@ impl Compiler {
             AstNode::BufferStatement { name, r#type, size } => {
                 self.tmp_counter += 1;
 
-                let buf_name = format!("{}_{}", name, self.tmp_counter);
+                let buf_name = format!("{}.{}", name, self.tmp_counter);
 
                 let buf_size = match size {
                     ValueKind::Number(val) => val,
@@ -589,6 +627,8 @@ impl Compiler {
                 let ty = Type::Long;
                 let temp = self.new_var(&ty, name.as_str(), false).unwrap();
 
+                self.buf_types.insert(temp.clone(), buf_ty.clone());
+
                 func.borrow_mut().assign_instruction(
                     temp,
                     ty,
@@ -598,19 +638,35 @@ impl Compiler {
             }
             AstNode::StoreStatement {
                 name,
-                r#type,
+                offset,
                 value,
             } => {
-                let existing = match self.get_variable(name.as_str()) {
-                    Ok(val) => Some(val.clone()),
-                    Err(msg) => {
-                        eprintln!("{}", msg);
-                        None
-                    }
-                }
-                .unwrap_or((Type::Byte, Value::Literal("".to_owned())));
+                let existing = self
+                    .buf_types
+                    .get(&self.get_variable(&name).unwrap().1)
+                    .unwrap_or(&Type::Byte)
+                    .to_owned();
 
-                let ty = Self::get_type(r#type).unwrap_or(existing.0);
+                let node = AstNode::ArithmeticOperation {
+                    left: Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::Identifier,
+                        value: ValueKind::String(name),
+                    }),
+                    right: Box::new(AstNode::ArithmeticOperation {
+                        left: Box::new(AstNode::LiteralStatement {
+                            kind: TokenKind::LongLiteral,
+                            value: ValueKind::Number(existing.size() as i64),
+                        }),
+                        right: offset,
+                        operator: TokenKind::Multiply,
+                    }),
+                    operator: TokenKind::Add,
+                };
+
+                let (ty, compiled_location) = self
+                    .generate_statement(func, module, node.clone(), None)
+                    .unwrap();
+
                 let (_, compiled) = self
                     .generate_statement(func, module, *value.clone(), Some(ty.clone()))
                     .unwrap();
@@ -618,11 +674,59 @@ impl Compiler {
                 let constant = self.compile_literal_to_ascii(compiled);
 
                 func.borrow_mut().add_instruction(Instruction::Store(
-                    ty,
-                    existing.1.to_owned(),
+                    ty.to_owned(),
+                    compiled_location,
                     constant,
                 ));
+
                 None
+            }
+            AstNode::LoadStatement { name, offset } => {
+                let (existing_ty, existing_val) = self.get_variable(&name).unwrap();
+
+                let existing = self
+                    .buf_types
+                    .get(&existing_val)
+                    .unwrap_or(&existing_ty)
+                    .to_owned()
+                    .into_base();
+
+                let node = AstNode::ArithmeticOperation {
+                    left: Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::Identifier,
+                        value: ValueKind::String(name),
+                    }),
+                    right: Box::new(AstNode::ArithmeticOperation {
+                        left: Box::new(AstNode::LiteralStatement {
+                            kind: TokenKind::LongLiteral,
+                            value: ValueKind::Number(existing.size() as i64),
+                        }),
+                        right: offset,
+                        operator: TokenKind::Multiply,
+                    }),
+                    operator: TokenKind::Add,
+                };
+
+                let (_, compiled_location) = self
+                    .generate_statement(func, module, node.clone(), None)
+                    .unwrap();
+
+                self.tmp_counter += 1;
+                let temp = self
+                    .new_var(
+                        &existing.clone(),
+                        format!("{}.{}", "tmp", self.tmp_counter).as_str(),
+                        true,
+                    )
+                    .expect("Variable to be created");
+
+                func.borrow_mut().assign_instruction(
+                    temp.clone(),
+                    existing.clone(),
+                    Instruction::Load(existing.clone(), compiled_location.clone()),
+                );
+
+                Some((existing, temp))
             }
             AstNode::IfStatement {
                 condition,
@@ -634,9 +738,9 @@ impl Compiler {
                     .unwrap();
 
                 self.tmp_counter += 1;
-                let true_label = format!("ift_{}", self.tmp_counter);
-                let false_label = format!("iff_{}", self.tmp_counter);
-                let end_label = format!("end_{}", self.tmp_counter);
+                let true_label = format!("ift.{}", self.tmp_counter);
+                let false_label = format!("iff.{}", self.tmp_counter);
+                let end_label = format!("end.{}", self.tmp_counter);
 
                 func.borrow_mut().add_instruction(Instruction::JumpNonZero(
                     value,
@@ -716,11 +820,11 @@ impl Compiler {
             AstNode::WhileLoop { condition, body } => {
                 self.tmp_counter += 1;
 
-                let cond_label = format!("loop_{}_cond", self.tmp_counter);
-                let body_label = format!("loop_{}_body", self.tmp_counter);
-                let end_label = format!("loop_{}_end", self.tmp_counter);
+                let cond_label = format!("loop.{}.cond", self.tmp_counter);
+                let body_label = format!("loop.{}.body", self.tmp_counter);
+                let end_label = format!("loop.{}.end", self.tmp_counter);
 
-                self.loop_labels.push(format!("loop_{}", self.tmp_counter));
+                self.loop_labels.push(format!("loop.{}", self.tmp_counter));
 
                 func.borrow_mut().add_block(cond_label.clone());
 
@@ -766,6 +870,64 @@ impl Compiler {
 
                 None
             }
+            AstNode::VariadicStatement { name, size } => {
+                let compiled_size = self
+                    .generate_statement(func, module, *size.clone(), ty)
+                    .unwrap();
+
+                let var = self.new_var(&Type::Long, &name, false).unwrap();
+
+                func.borrow_mut().assign_instruction(
+                    var.clone(),
+                    Type::Long,
+                    Instruction::Call("malloc".to_string(), vec![compiled_size]),
+                );
+
+                func.borrow_mut().add_instruction(Instruction::VAStart(var));
+                None
+            }
+            AstNode::NextStatement { name, r#type } => {
+                let ptr = self.get_variable(&name).unwrap().1.clone();
+                let ty = Self::get_type(r#type).unwrap_or(Type::Long);
+                let tmp = self.new_temporary(None);
+
+                func.borrow_mut().assign_instruction(
+                    tmp.clone(),
+                    ty.clone(),
+                    Instruction::VAArg(ptr),
+                );
+
+                Some((ty, tmp))
+            }
+            AstNode::BlockStatement { body } => {
+                self.tmp_counter += 1;
+                let body_label = format!("block.start.{}", self.tmp_counter);
+                let end_label = format!("block.end.{}", self.tmp_counter);
+                func.borrow_mut().add_block(body_label.clone());
+
+                for statement in body.clone() {
+                    match statement.clone() {
+                        AstNode::LiteralStatement { kind, value: _ } => match kind.clone() {
+                            TokenKind::ExactLiteral => {
+                                match self.generate_statement(func, module, statement.clone(), None)
+                                {
+                                    Some((_, value)) => func
+                                        .borrow_mut()
+                                        .add_instruction(Instruction::Literal(value)),
+                                    _ => {}
+                                }
+                            }
+                            _ => {}
+                        },
+                        _ => match self.generate_statement(func, module, statement.clone(), None) {
+                            _ => {}
+                        },
+                    }
+                }
+
+                func.borrow_mut().add_block(end_label);
+                None
+            }
             _ => todo!("statement: {:?}", stmt),
         };
 
@@ -779,6 +941,7 @@ impl Compiler {
             data_sections: Vec::new(),
             loop_labels: Vec::new(),
             ret_types: HashMap::new(),
+            buf_types: HashMap::new(),
             tree,
         };
 
@@ -847,12 +1010,14 @@ impl Compiler {
                 Primitive::Operation {
                     name,
                     public,
+                    variadic,
                     arguments,
                     r#return,
                     body,
                 } => match generator.generate_function(
                     name,
                     public,
+                    variadic,
                     &arguments,
                     r#return,
                     body,

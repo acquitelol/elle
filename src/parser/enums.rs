@@ -1,4 +1,4 @@
-use crate::lexer::enums::{Token, TokenKind, ValueKind};
+use crate::lexer::enums::{TokenKind, ValueKind};
 
 #[derive(Debug, Clone)]
 pub enum AstNode {
@@ -10,6 +10,14 @@ pub enum AstNode {
         name: String,
         r#type: String,
         value: Box<AstNode>,
+    },
+    VariadicStatement {
+        name: String,
+        size: Box<AstNode>,
+    },
+    NextStatement {
+        name: String,
+        r#type: String,
     },
     ReturnStatement {
         value: Box<AstNode>,
@@ -28,11 +36,6 @@ pub enum AstNode {
         body: Vec<AstNode>,
         else_body: Vec<AstNode>,
     },
-    ForLoop {
-        iterator: Token,
-        enumerator: Box<AstNode>,
-        body: Box<AstNode>,
-    },
     WhileLoop {
         condition: Box<AstNode>,
         body: Vec<AstNode>,
@@ -44,8 +47,18 @@ pub enum AstNode {
     },
     StoreStatement {
         name: String,
-        r#type: String,
+        offset: Box<AstNode>,
         value: Box<AstNode>,
+    },
+    LoadStatement {
+        name: String,
+        offset: Box<AstNode>,
+    },
+    DeferStatement {
+        value: Box<AstNode>,
+    },
+    BlockStatement {
+        body: Vec<AstNode>,
     },
 }
 
@@ -59,6 +72,7 @@ pub enum Primitive {
     Operation {
         name: String,
         public: bool,
+        variadic: bool,
         arguments: Vec<Argument>,
         r#return: String,
         body: Vec<AstNode>,

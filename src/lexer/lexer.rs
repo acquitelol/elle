@@ -28,7 +28,7 @@ impl Lexer {
 
         let c = self.current_char();
 
-        if c.is_alphabetic() {
+        if c.is_alphabetic() || c == '_' {
             let (kind, value) = self.consume_identifier();
 
             return Some(Token {
@@ -39,7 +39,7 @@ impl Lexer {
         }
 
         if c.is_digit(10) {
-            let (kind, value) = self.consume_integer_literal();
+            let (kind, value) = self.consume_number_literal();
 
             return Some(Token {
                 kind,
@@ -122,16 +122,19 @@ impl Lexer {
                 } else {
                     match self.current_char().is_digit(10) {
                         true => {
-                            let (kind, value) = self.consume_integer_literal();
+                            let (kind, value) = self.consume_number_literal();
 
-                            let integer = match value {
-                                ValueKind::Number(value) => value,
+                            let result = match value {
+                                ValueKind::Number(value) => ValueKind::Number(-value),
+                                ValueKind::String(value) => {
+                                    ValueKind::String(format!("-{}", value))
+                                }
                                 _ => todo!(),
                             };
 
                             return Some(Token {
                                 kind,
-                                value: ValueKind::Number(-integer),
+                                value: result,
                                 location: self.get_location(),
                             });
                         }
@@ -189,7 +192,7 @@ impl Lexer {
                 } else {
                     match self.current_char().is_digit(10) {
                         true => {
-                            let (kind, value) = self.consume_integer_literal();
+                            let (kind, value) = self.consume_number_literal();
 
                             return Some(Token {
                                 kind,
@@ -271,6 +274,24 @@ impl Lexer {
                 let res = self.consume_exact_literal();
                 (TokenKind::ExactLiteral, ValueKind::String(res))
             }
+            '.' => {
+                self.advance();
+
+                match self.current_char() {
+                    '.' => {
+                        self.advance();
+
+                        match self.current_char() {
+                            '.' => {
+                                self.advance();
+                                (TokenKind::Ellipsis, ValueKind::Nil)
+                            }
+                            _ => panic!("Invalid token: expected (.) or (...) but got (..)."),
+                        }
+                    }
+                    _ => (TokenKind::Dot, ValueKind::Nil),
+                }
+            }
             _ => panic!("Unexpected character: {:?}", c),
         };
 
@@ -322,7 +343,9 @@ impl Lexer {
     fn consume_identifier(&mut self) -> (TokenKind, ValueKind) {
         let start = self.position;
 
-        while !self.is_eof() && self.current_char().is_alphanumeric() {
+        while !self.is_eof()
+            && (self.current_char().is_alphanumeric() || self.current_char() == '_')
+        {
             self.advance();
         }
 
@@ -343,6 +366,15 @@ impl Lexer {
             "store" => TokenKind::Store,
             "break" => TokenKind::Break,
             "continue" => TokenKind::Continue,
+            "to" => TokenKind::To,
+            "next" => TokenKind::Next,
+            "yield" => TokenKind::Yield,
+            "step" => TokenKind::Step,
+
+            // Purposefully capitalize to make it
+            // fit with types for variable declarations
+            "Variadic" => TokenKind::Variadic,
+            "Defer" => TokenKind::Defer,
             _ if identifier
                 .chars()
                 .next()
@@ -370,18 +402,30 @@ impl Lexer {
         string
     }
 
-    fn consume_integer_literal(&mut self) -> (TokenKind, ValueKind) {
+    fn consume_number_literal(&mut self) -> (TokenKind, ValueKind) {
         let start = self.position;
+        let mut float = false;
 
-        while !self.is_eof() && self.current_char().is_digit(10) {
+        while !self.is_eof() && (self.current_char().is_digit(10) || self.current_char() == '.') {
+            if self.current_char() == '.' {
+                float = true;
+            }
+
             self.advance();
         }
 
         let literal: String = self.input[start..self.position].iter().collect();
-        (
-            TokenKind::IntegerLiteral,
-            ValueKind::Number(literal.parse().unwrap()),
-        )
+        if float {
+            (
+                TokenKind::FloatLiteral,
+                ValueKind::String(format!("{}", literal)),
+            )
+        } else {
+            (
+                TokenKind::IntegerLiteral,
+                ValueKind::Number(literal.parse().unwrap()),
+            )
+        }
     }
 
     fn consume_string_literal(&mut self) -> String {

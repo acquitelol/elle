@@ -1,89 +1,17 @@
-fn input(String message) {
-    Long stdin = fdopen(0, "r");
-    Char buf[1024];
+fn add(Int size, ...) {
+    Int res = 0;
+    Variadic args[size];
+    Defer free(args);
 
-    printf(message);
-    fgets(buf, 1024, stdin);
-
-    Long len = strlen(buf);
-    Long index = len - 1;
-    Long newline = buf + index;
-
-    newline <- Byte '\0';
-    return buf;
-}
-
-fn toBool(Long n) {
-    if (n == 0) {
-        return "false";
-    }
-
-    return "true";
-}
-
-fn isEven(Long n) -> Long {
-    return n % 2 == 0;
-}
-
-fn fibonacci(Long n) -> Long {
-    if (n <= 1) {
-        return n;
-    }
-
-    Long prev = 0;
-    Long current = 1;
-    Long i = 2;
-
-    while (i <= n) {
-        i++;
-
-        Long next = prev + current;
-        prev = current;
-        current = next;
-    }
-
-    return current;
-}
-
-fn natural(Long n) -> Long {
-    if (n <= 1) {
-        return n;
-    }
-
-    return natural(n - 1) + n;
-}
-
-fn exponential(Long n, Long p) -> Long {
-    Int i = 0;
-    Long res = 1;
-
-    while (i < p) {
-        res *= n;
-        i++;
+    for _ = 0 to size - 1 {
+        res += args yield Int;
     }
 
     return res;
 }
 
 pub fn main() {
-    while (true) {
-        String userInput = input("Enter a number -> ");
-        Long number = atol(userInput);
-
-        // Checks that all characters are numeric-like
-        if (strspn(userInput, "0123456789.") != strlen(userInput)) {
-            printf!(
-                "Invalid input: %s (parsed to %ld)\n",
-                userInput,
-                number
-            );
-
-            continue;
-        }
-
-        printf!("natural(%ld) = %ld\n", number, natural(number));
-        printf!("fibonacci(%ld) = %ld\n", number, fibonacci(number));
-        printf!("exponential(%ld, 2) = %ld\n", number, exponential(number, 2));
-        printf!("isEven(%ld) = %s\n\n", number, toBool(isEven(number)));
-    }
+    Int res = add.(1, 2, 3, 4);
+    printf!("%d\n", res);
+    return 0;
 }

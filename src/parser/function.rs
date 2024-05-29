@@ -27,9 +27,16 @@ impl<'a> Function<'a> {
         self.parser.advance();
 
         let mut arguments = vec![];
+        let mut variadic = false;
 
         if self.parser.match_token(TokenKind::Type, false) {
             while self.parser.current_token().kind != TokenKind::RightParenthesis {
+                if self.parser.current_token().kind == TokenKind::Ellipsis {
+                    self.parser.advance();
+                    variadic = true;
+                    break;
+                }
+
                 let r#type = self.parser.get_type();
 
                 self.parser.advance();
@@ -118,10 +125,81 @@ impl<'a> Function<'a> {
             };
         }
 
-        let res = body.borrow_mut().to_owned().clone();
+        let mut res = body.borrow_mut().to_owned().clone();
+        let mut deferred: Vec<AstNode> = Vec::new();
+
+        res.retain(|node| match node.clone() {
+            AstNode::DeferStatement { value } => {
+                deferred.push(*value.clone());
+                false
+            }
+            _ => true,
+        });
+
+        fn insert_deferred_statements(
+            nodes: &mut Vec<AstNode>,
+            deferred: &Vec<AstNode>,
+            root: bool,
+        ) {
+            let mut new_nodes = Vec::new();
+            let mut found_return = false;
+
+            for node in nodes.drain(..) {
+                match node {
+                    AstNode::ReturnStatement { .. } => {
+                        new_nodes.extend(deferred.clone());
+                        new_nodes.push(node);
+                        found_return = true;
+                    }
+                    AstNode::WhileLoop {
+                        condition, body, ..
+                    } => {
+                        let mut new_body = body;
+                        insert_deferred_statements(&mut new_body, deferred, false);
+                        new_nodes.push(AstNode::WhileLoop {
+                            condition,
+                            body: new_body,
+                        });
+                    }
+                    AstNode::BlockStatement { body, .. } => {
+                        let mut new_body = body;
+                        insert_deferred_statements(&mut new_body, deferred, false);
+                        new_nodes.push(AstNode::BlockStatement { body: new_body });
+                    }
+                    AstNode::IfStatement {
+                        condition,
+                        body,
+                        else_body,
+                        ..
+                    } => {
+                        let mut new_body = body;
+                        let mut new_else_body = else_body;
+
+                        insert_deferred_statements(&mut new_body, deferred, false);
+                        insert_deferred_statements(&mut new_else_body, deferred, false);
+
+                        new_nodes.push(AstNode::IfStatement {
+                            condition,
+                            body: new_body,
+                            else_body: new_else_body,
+                        });
+                    }
+                    _ => new_nodes.push(node),
+                }
+            }
+
+            if !found_return && root {
+                new_nodes.extend(deferred.clone());
+            }
+
+            *nodes = new_nodes;
+        }
+
+        insert_deferred_statements(&mut res, &deferred, true);
 
         Primitive::Operation {
             public,
+            variadic,
             name,
             arguments,
             r#return,

@@ -27,8 +27,9 @@ pub enum Instruction {
     JumpNonZero(Value, String, String),
     Jump(String),
     Call(String, Vec<(Type, Value)>),
-
-    // Useful for when we implement arrays
+    Cast(Value),
+    VAArg(Value),
+    VAStart(Value),
     Alloc4(u32),
     Alloc8(u64),
     Alloc16(u128),
@@ -45,20 +46,32 @@ impl fmt::Display for Instruction {
             Self::Multiply(lhs, rhs) => write!(formatter, "mul {}, {}", lhs, rhs),
             Self::Divide(lhs, rhs) => write!(formatter, "div {}, {}", lhs, rhs),
             Self::Modulus(lhs, rhs) => write!(formatter, "rem {}, {}", lhs, rhs),
-            Self::Compare(r#type, comparison, lhs, rhs) => {
+            Self::Compare(ty, comparison, lhs, rhs) => {
                 write!(
                     formatter,
                     // All comparisons start with c
                     "c{}{} {}, {}",
-                    match comparison {
-                        Comparison::LessThan => "slt",
-                        Comparison::LessThanEqual => "sle",
-                        Comparison::GreaterThan => "sgt",
-                        Comparison::GreaterThanEqual => "sge",
-                        Comparison::Equal => "eq",
-                        Comparison::NotEqual => "ne",
+                    match ty.clone() {
+                        Type::Double | Type::Single => {
+                            match comparison {
+                                Comparison::LessThan => "lt",
+                                Comparison::LessThanEqual => "le",
+                                Comparison::GreaterThan => "gt",
+                                Comparison::GreaterThanEqual => "ge",
+                                Comparison::Equal => "eq",
+                                Comparison::NotEqual => "ne",
+                            }
+                        }
+                        _ => match comparison {
+                            Comparison::LessThan => "slt",
+                            Comparison::LessThanEqual => "sle",
+                            Comparison::GreaterThan => "sgt",
+                            Comparison::GreaterThanEqual => "sge",
+                            Comparison::Equal => "eq",
+                            Comparison::NotEqual => "ne",
+                        },
                     },
-                    r#type,
+                    ty,
                     lhs,
                     rhs,
                 )
@@ -66,6 +79,9 @@ impl fmt::Display for Instruction {
             Self::BitwiseAnd(lhs, rhs) => write!(formatter, "and {}, {}", lhs, rhs),
             Self::BitwiseOr(lhs, rhs) => write!(formatter, "or {}, {}", lhs, rhs),
             Self::Copy(val) => write!(formatter, "copy {}", val),
+            Self::Cast(val) => write!(formatter, "cast {}", val),
+            Self::VAArg(val) => write!(formatter, "vaarg {}", val),
+            Self::VAStart(val) => write!(formatter, "vastart {}", val),
             Self::Return(val) => match val {
                 Some(val) => write!(formatter, "ret {}", val),
                 None => write!(formatter, "ret"),
@@ -162,8 +178,26 @@ impl fmt::Display for Type {
 pub enum Value {
     Temporary(String),
     Global(String),
-    Const(i64),
+    Const(Type, i64),
     Literal(String),
+}
+
+impl Value {
+    pub fn get_string_inner(&self) -> String {
+        match self.clone() {
+            Self::Temporary(val) => val,
+            Self::Global(val) => val,
+            Self::Literal(val) => val,
+            _ => panic!("Invalid value type {}", self),
+        }
+    }
+
+    pub fn get_number_inner(&self) -> i64 {
+        match self.clone() {
+            Self::Const(_, val) => val,
+            _ => panic!("Invalid value type {}", self),
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -172,7 +206,15 @@ impl fmt::Display for Value {
         match self {
             Self::Temporary(name) => write!(formatter, "%{}", name),
             Self::Global(name) => write!(formatter, "${}", name),
-            Self::Const(value) => write!(formatter, "{}", value),
+            Self::Const(ty, value) => {
+                if ty.clone() == Type::Double {
+                    write!(formatter, "d_").unwrap();
+                } else if ty.clone() == Type::Single {
+                    write!(formatter, "s_").unwrap();
+                }
+
+                write!(formatter, "{}", value)
+            }
             Self::Literal(value) => write!(formatter, "{}", value),
         }
     }
@@ -311,6 +353,7 @@ impl fmt::Display for Block {
 pub struct Function {
     pub linkage: Linkage,
     pub name: String,
+    pub variadic: bool,
     pub arguments: Vec<(Type, Value)>,
     pub return_type: Option<Type>,
     pub blocks: Vec<Block>,
@@ -320,12 +363,14 @@ impl Function {
     pub fn new(
         linkage: Linkage,
         name: impl Into<String>,
+        variadic: bool,
         arguments: Vec<(Type, Value)>,
         return_type: Option<Type>,
     ) -> Self {
         Function {
             linkage,
             name: name.into(),
+            variadic,
             arguments,
             return_type,
             blocks: Vec::new(),
@@ -378,16 +423,22 @@ impl fmt::Display for Function {
             write!(formatter, " {}", r#type)?;
         }
 
+        let mut arguments_clone = self
+            .arguments
+            .iter()
+            .map(|(r#type, temp)| format!("{} {}", r#type, temp))
+            .collect::<Vec<String>>()
+            .clone();
+
+        if self.variadic {
+            arguments_clone.push("...".to_string());
+        }
+
         writeln!(
             formatter,
             " ${name}({args}) {{",
             name = self.name,
-            args = self
-                .arguments
-                .iter()
-                .map(|(r#type, temp)| format!("{} {}", r#type, temp))
-                .collect::<Vec<String>>()
-                .join(", "),
+            args = arguments_clone.join(", "),
         )?;
 
         for blk in self.blocks.iter() {
