@@ -1,2 +1,2 @@
-*.elle linguist-language=Dart
+*.elle linguist-language=Rust
 *.ssa linguist-language=TS
