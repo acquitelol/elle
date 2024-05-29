@@ -190,14 +190,18 @@ impl<'a> Statement<'a> {
             };
         }
 
-        let mut value = vec![];
+        let mut tokens = vec![];
 
-        if self.is_eof() {
-            value.push(self.current_token());
-        } else {
-            while self.current_token().kind != TokenKind::Semicolon && !self.is_eof() {
-                value.push(self.current_token());
-                self.advance();
+        loop {
+            tokens.push(self.current_token());
+            self.advance();
+
+            if self.current_token().kind == TokenKind::Semicolon {
+                break;
+            }
+
+            if self.is_eof() {
+                break;
             }
         }
 
@@ -218,7 +222,7 @@ impl<'a> Statement<'a> {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
                 }),
-                right: Box::new(Statement::new(value, 0, &self.body).parse().0),
+                right: Box::new(Statement::new(tokens, 0, &self.body).parse().0),
                 operator: mapping,
             }),
         }

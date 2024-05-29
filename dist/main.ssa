@@ -24,16 +24,16 @@ function w $add(w %size.1, ...) {
 	%_.4 =w copy %tmp.18
 	jmp @loop.5.cond
 @loop.5.end
-	%tmp.19 =w call $free(l %args.3)
-	%r.v19.20 =w copy %res.2
-	ret %r.v19.20
+	%tmp.19.20 =w call $free(l %args.3)
+	%r.v20.21 =w copy %res.2
+	ret %r.v20.21
 }
 export function w $main() {
 @start
-	%tmp.22 =w call $add(w 4, ..., w 1, w 2, w 3, w 4)
-	%res.21 =w copy %tmp.22
-	%tmp.24 =w call $printf(l $main.23, ..., w %res.21)
-	%r.v24.25 =w copy 0
-	ret %r.v24.25
+	%tmp.23.24 =w call $add(w 4, ..., w 1, w 2, w 3, w 4)
+	%res.22 =w copy %tmp.23.24
+	%tmp.26.27 =w call $printf(l $main.25, ..., w %res.22)
+	%r.v27.28 =w copy 0
+	ret %r.v27.28
 }
-data $main.23 = { b "%d\n", b 0 }
+data $main.25 = { b "%d\n", b 0 }

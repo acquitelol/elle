@@ -1,4 +1,13 @@
-const fs = require("fs");
+/**
+!! THIS FILE IS TEMPORARY !!
+
+* QBE compiles floating point constant data sections with the incorrect name
+* This file simply replaces all instances of "Lfp(some number):" with "_Lfp(some number):"
+which files this issue.
+* The developer of QBE is aware of this and this will probably be fixed in the next release.
+*/
+
+const fs = require("fs"); // Necessary because this isn't a module
 const inputFile = process.argv[2];
 const file = fs.readFileSync(inputFile);
 

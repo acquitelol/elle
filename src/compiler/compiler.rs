@@ -285,8 +285,13 @@ impl Compiler {
                 if parsed.is_some() {
                     let (_, value) = parsed.unwrap();
 
-                    func.borrow_mut()
-                        .assign_instruction(temp, ty, Instruction::Copy(value));
+                    func.borrow_mut().assign_instruction(
+                        temp,
+                        ty.clone(),
+                        Instruction::Copy(value.clone()),
+                    );
+
+                    return Some((ty, value));
                 }
 
                 None
@@ -587,7 +592,10 @@ impl Compiler {
                     .clone()
                     .unwrap_or(declarative_ty);
 
-                let temp = self.new_var(&ty, "tmp", true).unwrap();
+                self.tmp_counter += 1;
+                let temp = self
+                    .new_var(&ty, format!("tmp.{}", self.tmp_counter).as_str(), true)
+                    .unwrap();
 
                 func.borrow_mut().assign_instruction(
                     temp.clone(),
