@@ -710,7 +710,7 @@ impl<'a> Statement<'a> {
         self.expect_token(TokenKind::Semicolon);
         self.advance();
 
-        let mut condition_tokens = if self.current_token().kind != TokenKind::Semicolon {
+        let condition_tokens = if self.current_token().kind != TokenKind::Semicolon {
             self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon])
         } else {
             vec![]
@@ -728,17 +728,42 @@ impl<'a> Statement<'a> {
         self.expect_token(TokenKind::Semicolon);
         self.advance();
 
-        let mut step_tokens = if self.current_token().kind != TokenKind::RightParenthesis {
-            self.yield_tokens_with_delimiters(vec![if wrapped {
-                TokenKind::RightParenthesis
-            } else {
-                TokenKind::LeftCurlyBrace
-            }])
-        } else {
-            vec![]
-        };
+        let mut step_tokens = vec![];
+        let mut nesting = 0;
 
-        if self.current_token().kind == TokenKind::RightParenthesis {
+        if self.current_token().kind != TokenKind::RightParenthesis {
+            loop {
+                if wrapped && self.current_token().kind == TokenKind::LeftParenthesis {
+                    nesting += 1;
+                }
+
+                step_tokens.push(self.current_token());
+                let res = self.advance_opt();
+
+                if self.current_token().kind == TokenKind::LeftCurlyBrace {
+                    break;
+                }
+
+                if wrapped && self.current_token().kind == TokenKind::RightParenthesis {
+                    if nesting > 0 {
+                        nesting -= 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                if self.is_eof() {
+                    if res.is_some() {
+                        step_tokens.push(self.current_token());
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        if wrapped {
+            self.expect_token(TokenKind::RightParenthesis);
             self.advance();
         }
 
