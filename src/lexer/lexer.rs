@@ -292,6 +292,10 @@ impl Lexer {
                     _ => (TokenKind::Dot, ValueKind::Nil),
                 }
             }
+            '$' => {
+                self.advance();
+                (TokenKind::Size, ValueKind::Nil)
+            }
             _ => panic!("Unexpected character: {:?}", c),
         };
 

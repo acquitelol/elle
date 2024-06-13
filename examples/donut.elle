@@ -61,7 +61,7 @@ pub fn main() {
     int height = 24;
     int size = width * height;
 
-    double *zBuffer = malloc(size * 8);
+    double *zBuffer = malloc(size * $(double));
     char *output = malloc(size);
     char *lighting = ".,-~:;=!*#$@";
 

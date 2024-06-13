@@ -1050,6 +1050,25 @@ impl<'a> Statement<'a> {
         AstNode::BlockStatement { body }
     }
 
+    fn parse_size(&mut self) -> AstNode {
+        self.expect_token(TokenKind::Size);
+        self.advance();
+
+        self.expect_token(TokenKind::LeftParenthesis);
+        self.advance();
+
+        let ty = self.get_type();
+        self.advance();
+
+        self.expect_token(TokenKind::RightParenthesis);
+        self.advance();
+
+        AstNode::LiteralStatement {
+            kind: TokenKind::IntegerLiteral,
+            value: ValueKind::Number(ty.size() as i64),
+        }
+    }
+
     fn yield_tokens_with_delimiters(&mut self, delimiters: Vec<TokenKind>) -> Vec<Token> {
         let mut tokens = vec![];
 
@@ -1301,6 +1320,7 @@ impl<'a> Statement<'a> {
             TokenKind::While => self.parse_while_statement(),
             TokenKind::For => self.parse_for_statement(),
             TokenKind::Defer => self.parse_defer(),
+            TokenKind::Size => self.parse_size(),
             _ => self.parse_expression(),
         };
 

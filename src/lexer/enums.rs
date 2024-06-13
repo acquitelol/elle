@@ -71,6 +71,7 @@ pub enum TokenKind {
     Yield,
     Step,
     Defer,
+    Size,
 }
 
 impl TokenKind {
