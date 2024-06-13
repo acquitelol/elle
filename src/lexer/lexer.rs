@@ -270,9 +270,20 @@ impl Lexer {
                     _ => (TokenKind::LessThan, ValueKind::Nil),
                 }
             }
-            '#' => {
-                let res = self.consume_exact_literal();
-                (TokenKind::ExactLiteral, ValueKind::String(res))
+            '$' => {
+                self.advance();
+
+                match self.current_char() {
+                    '$' => {
+                        let res = self.consume_exact_literal();
+                        (TokenKind::ExactLiteral, ValueKind::String(res))
+                    }
+                    _ => panic!(
+                        "[{}] Invalid token: expected \"$$\" for exact literal opening but got {}",
+                        self.get_location().display(),
+                        self.current_char()
+                    ),
+                }
             }
             '.' => {
                 self.advance();
@@ -286,15 +297,31 @@ impl Lexer {
                                 self.advance();
                                 (TokenKind::Ellipsis, ValueKind::Nil)
                             }
-                            _ => panic!("Invalid token: expected (.) or (...) but got (..)."),
+                            _ => panic!(
+                                "[{}] Invalid token: expected \".\" or \"...\" but got \"..\".",
+                                self.get_location().display()
+                            ),
                         }
                     }
                     _ => (TokenKind::Dot, ValueKind::Nil),
                 }
             }
-            '$' => {
+            '#' => {
                 self.advance();
-                (TokenKind::Size, ValueKind::Nil)
+
+                let (_, value) = self.consume_identifier();
+
+                match value {
+                    ValueKind::String(val) => match val.as_str() {
+                        "size" => (TokenKind::Size, ValueKind::Nil),
+                        other => panic!(
+                            "[{}] Unimplemented directive \"{}\"",
+                            self.get_location().display(),
+                            other
+                        ),
+                    },
+                    _ => unreachable!(),
+                }
             }
             _ => panic!("Unexpected character: {:?}", c),
         };
@@ -439,9 +466,23 @@ impl Lexer {
         let mut string = String::new();
         self.advance();
 
-        while !self.is_eof() && self.current_char() != '#' {
+        loop {
             string.push(self.current_char());
             self.advance();
+
+            if self.current_char() == '$' {
+                self.advance();
+
+                if self.current_char() == '$' {
+                    break;
+                } else {
+                    string.push('$');
+                }
+            }
+
+            if self.is_eof() {
+                break;
+            }
         }
 
         self.advance();

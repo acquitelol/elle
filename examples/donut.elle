@@ -3,8 +3,8 @@ fn update(double rotX, double rotZ, double *zBuffer, char *output, char *lightin
     float phiSpacing = 0.02;
     float pi = 3.141592;
 
-    memset(zBuffer, 0, size * 8);
-    memset(output, 32, size);
+    memset(zBuffer, 0, size * #size(double));
+    memset(output, 32, size * #size(char));
 
     double cosRotX = cos(rotX);
     double sinRotX = sin(rotX);
@@ -61,8 +61,8 @@ pub fn main() {
     int height = 24;
     int size = width * height;
 
-    double *zBuffer = malloc(size * $(double));
-    char *output = malloc(size);
+    double *zBuffer = malloc(size * #size(double));
+    char *output = malloc(size * #size(char));
     char *lighting = ".,-~:;=!*#$@";
 
     printf("\x1b[2J");

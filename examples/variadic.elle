@@ -2,11 +2,11 @@
 // meaning a function that can take in a
 // varying number of arguments
 fn add(int size, ...) {
-    int res = 0;
-    variadic args[size];
+    variadic args[size * #size(int)];
     defer free(args);
+    int res = 0;
 
-    for int i = 0; i < size - 1; ++i {
+    for int i = 0; i < size; i++ {
         res += args yield int;
     }
 
