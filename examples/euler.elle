@@ -1,0 +1,26 @@
+// A basic example of recursion and for loops
+// to get `e` (Euler's number) using its
+// series (e = Summation<k = 0 -> inf>[1 / k!])
+fn fact(long n) -> long {
+    if n <= 1 {
+        return 1;
+    }
+
+    return n * fact(n - 1);
+}
+
+fn get_e() -> double {
+    double res = 0.0;
+
+    for long i = 0; i < 21; i++ {
+        res += 1.0 / fact(i);
+    }
+
+    return res;
+}
+
+pub fn main() {
+    double e = get_e();
+    printf!("e = %.50f\n", e);
+    return 0;
+}

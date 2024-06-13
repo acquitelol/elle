@@ -1,4 +1,7 @@
-use crate::lexer::enums::{TokenKind, ValueKind};
+use crate::{
+    compiler::enums::Type,
+    lexer::enums::{TokenKind, ValueKind},
+};
 
 use super::{enums::Primitive, parser::Parser};
 
@@ -48,12 +51,12 @@ impl<'a> Constant<'a> {
         self.parser.advance();
 
         let r#type = match unparsed_type {
-            Some(r#type) => r#type,
+            Some(r#type) => Some(r#type),
             None => match value {
-                ValueKind::String(_) => "String".to_string(),
-                ValueKind::Number(_) => "Int".to_string(),
-                ValueKind::Character(_) => "Char".to_string(),
-                ValueKind::Nil => "Nil".to_string(),
+                ValueKind::String(_) => Some(Type::Pointer(Box::new(Type::Byte))),
+                ValueKind::Number(_) => Some(Type::Word),
+                ValueKind::Character(_) => Some(Type::Byte),
+                ValueKind::Nil => None,
             },
         };
 

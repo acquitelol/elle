@@ -23,23 +23,6 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    pub fn get_type(r#type: String) -> Option<Type> {
-        match r#type.as_str() {
-            "Byte" => Some(Type::Byte),
-            "Halfword" => Some(Type::Halfword),
-            "Word" => Some(Type::Word),
-            "String" => Some(Type::Long),
-            "Int" => Some(Type::Word),
-            "Long" => Some(Type::Long),
-            "Pointer" => Some(Type::Long),
-            "Single" => Some(Type::Single),
-            "Double" => Some(Type::Double),
-            "Char" => Some(Type::Byte),
-            "Nil" => None,
-            _ => Some(Type::Word),
-        }
-    }
-
     fn add_data_section(&mut self, data: Data) {
         let result = InternalData {
             data: data.clone(),
@@ -79,13 +62,32 @@ impl Compiler {
         Ok(tmp)
     }
 
-    fn get_variable(&self, name: &str) -> GeneratorResult<&(Type, Value)> {
-        self.scopes
+    fn get_variable(&self, name: &str) -> GeneratorResult<(Type, Value)> {
+        let var = self
+            .scopes
             .iter()
             .rev()
             .filter_map(|s| s.get(name))
             .next()
-            .ok_or_else(|| format!("\nUndefined variable '{}'\n", name))
+            .ok_or_else(|| format!("\nUndefined variable '{}'\n", name));
+
+        if var.is_err() {
+            for item in self.tree.iter() {
+                match item {
+                    Primitive::Operation { name: op_name, .. } => {
+                        if name == op_name {
+                            return Ok((
+                                Type::Pointer(Box::new(Type::Byte)),
+                                Value::Global(name.to_string()),
+                            ));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        var.map(|item| item.to_owned())
     }
 
     fn compile_literal_to_ascii(&self, val: Value) -> Value {
@@ -125,8 +127,9 @@ impl Compiler {
         name: String,
         public: bool,
         variadic: bool,
+        manual: bool,
         arguments: &Vec<Argument>,
-        return_type: String,
+        return_type: Option<Type>,
         body: Vec<AstNode>,
         module: &RefCell<Module>,
     ) -> GeneratorResult<Function> {
@@ -135,8 +138,7 @@ impl Compiler {
         let mut args = Vec::new();
 
         for argument in arguments.clone() {
-            let ty = Self::get_type(argument.r#type.clone())
-                .expect("Argument cannot have a 'Nil' type.");
+            let ty = argument.r#type.clone();
             let tmp = self.new_var(&ty, &argument.name, false)?;
 
             args.push((ty.into_abi(), tmp));
@@ -150,8 +152,9 @@ impl Compiler {
             },
             name: name.clone(),
             variadic,
+            manual,
             arguments: args,
-            return_type: Self::get_type(return_type),
+            return_type,
             blocks: Vec::new(),
         };
 
@@ -169,7 +172,13 @@ impl Compiler {
             match statement.clone() {
                 AstNode::LiteralStatement { kind, value: _ } => match kind.clone() {
                     TokenKind::ExactLiteral => {
-                        match self.generate_statement(&func_ref, module, statement.clone(), None) {
+                        match self.generate_statement(
+                            &func_ref,
+                            module,
+                            statement.clone(),
+                            None,
+                            false,
+                        ) {
                             Some((_, value)) => func_ref
                                 .borrow_mut()
                                 .add_instruction(Instruction::Literal(value)),
@@ -178,13 +187,16 @@ impl Compiler {
                     }
                     _ => {}
                 },
-                _ => match self.generate_statement(&func_ref, module, statement.clone(), None) {
-                    _ => {}
-                },
+                _ => {
+                    match self.generate_statement(&func_ref, module, statement.clone(), None, false)
+                    {
+                        _ => {}
+                    }
+                }
             }
         }
 
-        if !func_ref.borrow_mut().returns() {
+        if !func_ref.borrow_mut().returns() && !func_ref.borrow_mut().manual {
             func_ref
                 .borrow_mut()
                 .add_instruction(Instruction::Return(None));
@@ -261,6 +273,7 @@ impl Compiler {
         module: &RefCell<Module>,
         stmt: AstNode,
         ty: Option<Type>,
+        is_return: bool,
     ) -> Option<(Type, Value)> {
         let res = match stmt {
             AstNode::DeclareStatement {
@@ -273,31 +286,37 @@ impl Compiler {
                     Err(_) => Type::Word,
                 };
 
-                if r#type == "Nil".to_owned() && self.get_variable(name.as_str()).is_err() {
+                if r#type.is_none() && self.get_variable(name.as_str()).is_err() {
                     panic!("\nVariable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.\n", name);
                 }
 
-                let ty = Self::get_type(r#type).unwrap_or(existing);
+                let ty = r#type.unwrap_or(existing.clone());
                 let temp = self.new_var(&ty, &name, false).unwrap();
                 let parsed =
-                    self.generate_statement(func, module, *value.clone(), Some(ty.clone()));
+                    self.generate_statement(func, module, *value.clone(), Some(ty.clone()), false);
 
                 if parsed.is_some() {
-                    let (_, value) = parsed.unwrap();
+                    let (ret_ty, value) = parsed.unwrap();
+
+                    let (final_ty, final_val) = if ret_ty != ty {
+                        self.convert_to_type(func, ret_ty.clone(), ty.clone(), value.clone())
+                    } else {
+                        (ty.clone(), value.clone())
+                    };
 
                     func.borrow_mut().assign_instruction(
                         temp,
-                        ty.clone(),
-                        Instruction::Copy(value.clone()),
+                        final_ty.clone(),
+                        Instruction::Copy(final_val.clone()),
                     );
 
-                    return Some((ty, value));
+                    return Some((final_ty, final_val));
                 }
 
                 None
             }
             AstNode::ReturnStatement { value } => {
-                match self.generate_statement(func, module, *value.clone(), ty.clone()) {
+                match self.generate_statement(func, module, *value.clone(), ty.clone(), true) {
                     Some((ret_ty, value)) => {
                         // Generate a unique scoped temporary variable with the tmp_counter to ensure
                         // it can be yielded later for inferring the return type
@@ -309,20 +328,26 @@ impl Compiler {
 
                         match tmp {
                             Ok(val) => {
-                                func.borrow_mut().assign_instruction(
-                                    val.clone(),
-                                    ret_ty.clone(),
-                                    Instruction::Copy(value),
-                                );
+                                if !func.borrow_mut().manual {
+                                    func.borrow_mut().assign_instruction(
+                                        val.clone(),
+                                        ret_ty.clone(),
+                                        Instruction::Copy(value),
+                                    );
 
-                                func.borrow_mut()
-                                    .add_instruction(Instruction::Return(Some(val)));
+                                    func.borrow_mut()
+                                        .add_instruction(Instruction::Return(Some(val)))
+                                }
                             }
                             // In this case we should panic because the variable returned should be in scope
                             Err(msg) => panic!("{}", msg),
                         }
                     }
-                    None => func.borrow_mut().add_instruction(Instruction::Return(None)),
+                    None => {
+                        if !func.borrow_mut().manual {
+                            func.borrow_mut().add_instruction(Instruction::Return(None))
+                        }
+                    }
                 }
 
                 None
@@ -336,23 +361,40 @@ impl Compiler {
                 // This is why we cant do exponentiation if there isn't a built in instruction.
                 // We essentially would have to pseudo-run the code to get the number of
                 // multiplications that should occur (a ** b) can have a call on lhs or rhs
-                let (left_ty, left_val) = self
-                    .generate_statement(func, module, *left.clone(), ty.clone())
+                let (left_ty_unparsed, left_val_unparsed) = self
+                    .generate_statement(func, module, *left.clone(), ty.clone(), false)
                     .unwrap();
 
-                // Parse floats as doubles at compile time
-                let instruction_ty = ty.clone().unwrap_or(
-                    if operator == TokenKind::Divide && left_ty == Type::Word {
-                        Type::Double
-                    } else {
-                        left_ty
-                    },
-                );
-
-                let (_, right_val) = self
-                    .generate_statement(func, module, *right.clone(), Some(instruction_ty.clone()))
+                let (right_ty_unparsed, right_val_unparsed) = self
+                    .generate_statement(func, module, *right.clone(), ty.clone(), false)
                     .unwrap();
 
+                let mut left_ty = left_ty_unparsed.clone();
+                let mut left_val = left_val_unparsed.clone();
+                let mut right_val = right_val_unparsed.clone();
+
+                if left_ty_unparsed.weight() > right_ty_unparsed.weight() {
+                    let (_, val) = self.convert_to_type(
+                        func,
+                        right_ty_unparsed,
+                        left_ty_unparsed,
+                        right_val_unparsed,
+                    );
+
+                    right_val = val;
+                } else if left_ty_unparsed.weight() < right_ty_unparsed.weight() {
+                    let (ty, val) = self.convert_to_type(
+                        func,
+                        left_ty_unparsed,
+                        right_ty_unparsed,
+                        left_val_unparsed,
+                    );
+
+                    left_ty = ty;
+                    left_val = val;
+                }
+
+                let instruction_ty = left_ty;
                 let left_temp = self.new_temporary(None);
                 let right_temp = self.new_temporary(None);
 
@@ -445,7 +487,7 @@ impl Compiler {
                         let var = self.get_variable(val.as_str());
 
                         match var {
-                            Ok(res) => Some(res.to_owned()),
+                            Ok((ty, val)) => Some((ty.into_abi(), val)),
                             Err(msg) => {
                                 // If it fails to get the variable from the current scope
                                 // then attempt to get it from a global instead
@@ -500,7 +542,13 @@ impl Compiler {
                             _ => Type::Word,
                         };
 
-                        Some((num_ty.clone(), Value::Const(ty.unwrap_or(num_ty), val)))
+                        let mut final_ty = ty.unwrap_or(num_ty);
+
+                        if is_return {
+                            final_ty = func.borrow_mut().return_type.clone().unwrap_or(final_ty);
+                        }
+
+                        Some((final_ty.clone(), Value::Const(final_ty, val)))
                     }
                     ValueKind::String(val) => {
                         self.tmp_counter += 1;
@@ -521,7 +569,7 @@ impl Compiler {
                             ],
                         ));
 
-                        Some((Type::Long, Value::Global(name)))
+                        Some((Type::Pointer(Box::new(Type::Byte)), Value::Global(name)))
                     }
                     // Characters are just strings enforced to be a single character
                     // This is done at tokenization time
@@ -568,7 +616,7 @@ impl Compiler {
 
                 for parameter in parameters.clone() {
                     params.push(
-                        self.generate_statement(func, module, parameter, ty.clone())
+                        self.generate_statement(func, module, parameter, ty.clone(), false)
                             .unwrap(),
                     );
                 }
@@ -576,14 +624,16 @@ impl Compiler {
                 // Get the type of the functions based on the ones currently imported into this module
                 let cached_ty = self.ret_types.get(&name).unwrap_or(&Type::Word).to_owned();
                 let declarative_ty = ty.unwrap_or(cached_ty);
+
                 let ty = module
                     .borrow_mut()
                     .functions
                     .iter()
-                    .find(|function| function.name == name)
+                    .find(|function| function.name == name.clone())
                     .unwrap_or(&Function::new(
                         Linkage::public(),
                         name.clone(),
+                        false,
                         false,
                         vec![],
                         Some(declarative_ty.clone()),
@@ -597,10 +647,14 @@ impl Compiler {
                     .new_var(&ty, format!("tmp.{}", self.tmp_counter).as_str(), true)
                     .unwrap();
 
+                let (_, val) = self
+                    .get_variable(&name)
+                    .unwrap_or((Type::Long, Value::Global(name)));
+
                 func.borrow_mut().assign_instruction(
                     temp.clone(),
                     ty.clone(),
-                    Instruction::Call(name.clone(), params),
+                    Instruction::Call(val, params),
                 );
 
                 Some((ty, temp))
@@ -615,7 +669,7 @@ impl Compiler {
                     other => panic!("Invalid size type {:?}", other),
                 };
 
-                let buf_ty = Self::get_type(r#type).unwrap_or(Type::Byte);
+                let buf_ty = r#type.unwrap_or(Type::Byte);
 
                 self.add_data_section(Data::new(
                     Linkage::private(),
@@ -632,7 +686,7 @@ impl Compiler {
                     )],
                 ));
 
-                let ty = Type::Long;
+                let ty = Type::Pointer(Box::new(buf_ty.clone()));
                 let temp = self.new_var(&ty, name.as_str(), false).unwrap();
 
                 self.buf_types.insert(temp.clone(), buf_ty.clone());
@@ -642,6 +696,7 @@ impl Compiler {
                     ty,
                     Instruction::Copy(Value::Global(buf_name)),
                 );
+
                 None
             }
             AstNode::StoreStatement {
@@ -649,10 +704,17 @@ impl Compiler {
                 offset,
                 value,
             } => {
+                let (existing_ty, existing_val) = self.get_variable(&name).unwrap();
+
                 let existing = self
                     .buf_types
-                    .get(&self.get_variable(&name).unwrap().1)
-                    .unwrap_or(&Type::Byte)
+                    .get(&existing_val)
+                    .unwrap_or(
+                        &existing_ty
+                            .to_owned()
+                            .unwrap()
+                            .unwrap_or(existing_ty.to_owned()),
+                    )
                     .to_owned();
 
                 let node = AstNode::ArithmeticOperation {
@@ -672,17 +734,17 @@ impl Compiler {
                 };
 
                 let (ty, compiled_location) = self
-                    .generate_statement(func, module, node.clone(), None)
+                    .generate_statement(func, module, node.clone(), None, false)
                     .unwrap();
 
                 let (_, compiled) = self
-                    .generate_statement(func, module, *value.clone(), Some(ty.clone()))
+                    .generate_statement(func, module, *value.clone(), Some(ty.clone()), false)
                     .unwrap();
 
                 let constant = self.compile_literal_to_ascii(compiled);
 
                 func.borrow_mut().add_instruction(Instruction::Store(
-                    ty.to_owned(),
+                    existing.to_owned(),
                     compiled_location,
                     constant,
                 ));
@@ -695,9 +757,13 @@ impl Compiler {
                 let existing = self
                     .buf_types
                     .get(&existing_val)
-                    .unwrap_or(&existing_ty)
-                    .to_owned()
-                    .into_base();
+                    .unwrap_or(
+                        &existing_ty
+                            .to_owned()
+                            .unwrap()
+                            .unwrap_or(existing_ty.to_owned()),
+                    )
+                    .to_owned();
 
                 let node = AstNode::ArithmeticOperation {
                     left: Box::new(AstNode::LiteralStatement {
@@ -716,13 +782,13 @@ impl Compiler {
                 };
 
                 let (_, compiled_location) = self
-                    .generate_statement(func, module, node.clone(), None)
+                    .generate_statement(func, module, node.clone(), None, false)
                     .unwrap();
 
                 self.tmp_counter += 1;
                 let temp = self
                     .new_var(
-                        &existing.clone(),
+                        &existing.clone().into_base().clone(),
                         format!("{}.{}", "tmp", self.tmp_counter).as_str(),
                         true,
                     )
@@ -730,11 +796,11 @@ impl Compiler {
 
                 func.borrow_mut().assign_instruction(
                     temp.clone(),
-                    existing.clone(),
+                    existing.clone().into_base(),
                     Instruction::Load(existing.clone(), compiled_location.clone()),
                 );
 
-                Some((existing, temp))
+                Some((existing.clone().into_base(), temp))
             }
             AstNode::IfStatement {
                 condition,
@@ -742,7 +808,7 @@ impl Compiler {
                 else_body,
             } => {
                 let (_, value) = self
-                    .generate_statement(func, module, *condition.clone(), ty)
+                    .generate_statement(func, module, *condition.clone(), ty, false)
                     .unwrap();
 
                 self.tmp_counter += 1;
@@ -764,22 +830,50 @@ impl Compiler {
 
                 for statement in body.clone() {
                     match statement.clone() {
-                        AstNode::LiteralStatement { kind, value: _ } => match kind.clone() {
+                        AstNode::LiteralStatement {
+                            kind,
+                            value: literal_value,
+                        } => match kind.clone() {
                             TokenKind::ExactLiteral => {
-                                match self.generate_statement(func, module, statement.clone(), None)
-                                {
-                                    Some((_, value)) => func
-                                        .borrow_mut()
-                                        .add_instruction(Instruction::Literal(value)),
+                                match self.generate_statement(
+                                    func,
+                                    module,
+                                    statement.clone(),
+                                    None,
+                                    false,
+                                ) {
+                                    Some((_, value)) => match literal_value.clone() {
+                                        ValueKind::String(val) => match val.as_str() {
+                                            "__MANUAL_RETURN__" => {
+                                                func.borrow_mut().manual = true;
+                                            }
+                                            _ => func
+                                                .borrow_mut()
+                                                .add_instruction(Instruction::Literal(value)),
+                                        },
+                                        _ => todo!(),
+                                    },
                                     _ => {}
                                 }
                             }
                             TokenKind::Break | TokenKind::Continue => {
-                                self.generate_statement(func, module, statement.clone(), None);
+                                self.generate_statement(
+                                    func,
+                                    module,
+                                    statement.clone(),
+                                    None,
+                                    false,
+                                );
                             }
                             _ => {}
                         },
-                        _ => match self.generate_statement(func, module, statement.clone(), None) {
+                        _ => match self.generate_statement(
+                            func,
+                            module,
+                            statement.clone(),
+                            None,
+                            false,
+                        ) {
                             _ => {}
                         },
                     }
@@ -801,6 +895,7 @@ impl Compiler {
                                     module,
                                     statement.clone(),
                                     None,
+                                    false,
                                 ) {
                                     Some((_, value)) => func
                                         .borrow_mut()
@@ -808,13 +903,24 @@ impl Compiler {
                                     _ => {}
                                 },
                                 TokenKind::Break | TokenKind::Continue => {
-                                    self.generate_statement(func, module, statement.clone(), None);
+                                    self.generate_statement(
+                                        func,
+                                        module,
+                                        statement.clone(),
+                                        None,
+                                        false,
+                                    );
                                 }
                                 _ => {}
                             },
                             _ => {
-                                match self.generate_statement(func, module, statement.clone(), None)
-                                {
+                                match self.generate_statement(
+                                    func,
+                                    module,
+                                    statement.clone(),
+                                    None,
+                                    false,
+                                ) {
                                     _ => {}
                                 }
                             }
@@ -837,7 +943,7 @@ impl Compiler {
                 func.borrow_mut().add_block(cond_label.clone());
 
                 let (_, value) = self
-                    .generate_statement(func, module, *condition.clone(), ty.clone())
+                    .generate_statement(func, module, *condition.clone(), ty.clone(), false)
                     .unwrap();
 
                 func.borrow_mut().add_instruction(Instruction::JumpNonZero(
@@ -852,8 +958,13 @@ impl Compiler {
                     match statement.clone() {
                         AstNode::LiteralStatement { kind, value: _ } => match kind.clone() {
                             TokenKind::ExactLiteral => {
-                                match self.generate_statement(func, module, statement.clone(), None)
-                                {
+                                match self.generate_statement(
+                                    func,
+                                    module,
+                                    statement.clone(),
+                                    None,
+                                    false,
+                                ) {
                                     Some((_, value)) => func
                                         .borrow_mut()
                                         .add_instruction(Instruction::Literal(value)),
@@ -862,7 +973,13 @@ impl Compiler {
                             }
                             _ => {}
                         },
-                        _ => match self.generate_statement(func, module, statement.clone(), None) {
+                        _ => match self.generate_statement(
+                            func,
+                            module,
+                            statement.clone(),
+                            None,
+                            false,
+                        ) {
                             _ => {}
                         },
                     }
@@ -880,7 +997,7 @@ impl Compiler {
             }
             AstNode::VariadicStatement { name, size } => {
                 let compiled_size = self
-                    .generate_statement(func, module, *size.clone(), ty)
+                    .generate_statement(func, module, *size.clone(), ty, false)
                     .unwrap();
 
                 let var = self.new_var(&Type::Long, &name, false).unwrap();
@@ -888,7 +1005,7 @@ impl Compiler {
                 func.borrow_mut().assign_instruction(
                     var.clone(),
                     Type::Long,
-                    Instruction::Call("malloc".to_string(), vec![compiled_size]),
+                    Instruction::Call(Value::Global("malloc".to_string()), vec![compiled_size]),
                 );
 
                 func.borrow_mut().add_instruction(Instruction::VAStart(var));
@@ -896,7 +1013,7 @@ impl Compiler {
             }
             AstNode::NextStatement { name, r#type } => {
                 let ptr = self.get_variable(&name).unwrap().1.clone();
-                let ty = Self::get_type(r#type).unwrap_or(Type::Long);
+                let ty = r#type.unwrap_or(Type::Long);
                 let tmp = self.new_temporary(None);
 
                 func.borrow_mut().assign_instruction(
@@ -917,8 +1034,13 @@ impl Compiler {
                     match statement.clone() {
                         AstNode::LiteralStatement { kind, value: _ } => match kind.clone() {
                             TokenKind::ExactLiteral => {
-                                match self.generate_statement(func, module, statement.clone(), None)
-                                {
+                                match self.generate_statement(
+                                    func,
+                                    module,
+                                    statement.clone(),
+                                    None,
+                                    false,
+                                ) {
                                     Some((_, value)) => func
                                         .borrow_mut()
                                         .add_instruction(Instruction::Literal(value)),
@@ -927,7 +1049,13 @@ impl Compiler {
                             }
                             _ => {}
                         },
-                        _ => match self.generate_statement(func, module, statement.clone(), None) {
+                        _ => match self.generate_statement(
+                            func,
+                            module,
+                            statement.clone(),
+                            None,
+                            false,
+                        ) {
                             _ => {}
                         },
                     }
@@ -936,13 +1064,86 @@ impl Compiler {
                 func.borrow_mut().add_block(end_label);
                 None
             }
+            AstNode::Conversion {
+                r#type: second,
+                value,
+            } => {
+                let (first, val) = self
+                    .generate_statement(func, module, *value.clone(), ty, false)
+                    .unwrap();
+
+                return Some(self.convert_to_type(func, first, second.unwrap(), val));
+            }
             _ => todo!("statement: {:?}", stmt),
         };
 
         res
     }
 
-    pub fn compile(tree: Vec<Primitive>, output_path: PathBuf) {
+    fn convert_to_type(
+        &mut self,
+        func: &RefCell<Function>,
+        first: Type,
+        second: Type,
+        val: Value,
+    ) -> (Type, Value) {
+        if first.weight() == second.weight() {
+            return (first, val);
+        } else if first.is_int() && second.is_int() {
+            let conv = self
+                .new_var(&second, &format!("tmp.{}", self.tmp_counter), true)
+                .unwrap();
+            self.tmp_counter += 1;
+
+            let is_first_higher = first.weight() > second.weight();
+
+            func.borrow_mut().assign_instruction(
+                conv.clone(),
+                if is_first_higher {
+                    first.clone()
+                } else {
+                    second.clone()
+                },
+                Instruction::Extension(first, val),
+            );
+
+            return (second, conv);
+        } else if first.is_float() && second.is_float() {
+            let conv = self
+                .new_var(&second, &format!("tmp.{}", self.tmp_counter), true)
+                .unwrap();
+            self.tmp_counter += 1;
+
+            let is_first_higher = first.weight() > second.weight();
+
+            func.borrow_mut().assign_instruction(
+                conv.clone(),
+                if is_first_higher {
+                    first.clone()
+                } else {
+                    second.clone()
+                },
+                Instruction::Extension(first, val),
+            );
+
+            return (second, conv);
+        } else {
+            let conv = self
+                .new_var(&second, &format!("tmp.{}", self.tmp_counter), true)
+                .unwrap();
+            self.tmp_counter += 1;
+
+            func.borrow_mut().assign_instruction(
+                conv.clone(),
+                second.clone(),
+                Instruction::Conversion(first, second.clone(), val),
+            );
+
+            return (second, conv);
+        }
+    }
+
+    pub fn compile(tree: Vec<Primitive>, output_path: String) {
         let mut generator = Compiler {
             tmp_counter: 0,
             scopes: Vec::new(),
@@ -1019,6 +1220,7 @@ impl Compiler {
                     name,
                     public,
                     variadic,
+                    manual,
                     arguments,
                     r#return,
                     body,
@@ -1026,6 +1228,7 @@ impl Compiler {
                     name,
                     public,
                     variadic,
+                    manual,
                     &arguments,
                     r#return,
                     body,

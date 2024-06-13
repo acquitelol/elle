@@ -270,7 +270,7 @@ impl Lexer {
                     _ => (TokenKind::LessThan, ValueKind::Nil),
                 }
             }
-            '$' => {
+            '#' => {
                 let res = self.consume_exact_literal();
                 (TokenKind::ExactLiteral, ValueKind::String(res))
             }
@@ -370,23 +370,13 @@ impl Lexer {
             "next" => TokenKind::Next,
             "yield" => TokenKind::Yield,
             "step" => TokenKind::Step,
-
-            // Purposefully capitalize to make it
-            // fit with types for variable declarations
-            "Variadic" => TokenKind::Variadic,
-            "Defer" => TokenKind::Defer,
-            _ if identifier
-                .chars()
-                .next()
-                .map(char::is_uppercase)
-                .unwrap_or(false) =>
-            {
-                TokenKind::Type
-            }
+            "variadic" => TokenKind::Variadic,
+            "defer" => TokenKind::Defer,
             _ => TokenKind::Identifier,
         };
 
-        (kind, ValueKind::String(identifier))
+        let val = ValueKind::String(identifier);
+        (if val.is_type() { TokenKind::Type } else { kind }, val)
     }
 
     fn consume_comment(&mut self) -> String {
@@ -445,7 +435,7 @@ impl Lexer {
         let mut string = String::new();
         self.advance();
 
-        while !self.is_eof() && self.current_char() != '$' {
+        while !self.is_eof() && self.current_char() != '#' {
             string.push(self.current_char());
             self.advance();
         }

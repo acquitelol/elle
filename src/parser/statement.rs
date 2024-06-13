@@ -2,7 +2,10 @@ use std::cell::RefCell;
 use std::iter::FromIterator;
 
 use super::enums::AstNode;
-use crate::lexer::enums::{Token, TokenKind, ValueKind};
+use crate::{
+    compiler::enums::Type,
+    lexer::enums::{Location, Token, TokenKind, ValueKind},
+};
 
 pub struct Statement<'a> {
     tokens: Vec<Token>,
@@ -24,6 +27,15 @@ impl<'a> Statement<'a> {
             println!("The position of {:?} is the last index of the token stack. Staying at the same position.", self.position);
         } else {
             self.position += 1;
+        }
+    }
+
+    pub fn advance_opt(&mut self) -> Option<()> {
+        if self.is_eof() {
+            None
+        } else {
+            self.position += 1;
+            Some(())
         }
     }
 
@@ -82,18 +94,38 @@ impl<'a> Statement<'a> {
         self.get(TokenKind::Identifier)
     }
 
-    pub fn get_type(&mut self) -> String {
-        self.get(TokenKind::Type)
+    pub fn get_type(&mut self) -> Type {
+        let mut ty = ValueKind::String(self.get(TokenKind::Type))
+            .to_type_string()
+            .unwrap();
+
+        loop {
+            let tmp = self.next_token();
+
+            if tmp.is_some() {
+                match tmp.unwrap().kind {
+                    TokenKind::Multiply => {
+                        ty = Type::Pointer(Box::new(ty));
+                        self.advance();
+                    }
+                    _ => break,
+                }
+            } else {
+                break;
+            }
+        }
+
+        ty
     }
 
-    fn parse_declare(&mut self, ty: Option<String>) -> AstNode {
+    fn parse_declare(&mut self, ty: Option<Option<Type>>) -> AstNode {
         let r#type = if ty.is_some() {
             ty.unwrap()
         } else {
             let tmp = self.get_type();
             self.advance();
 
-            tmp
+            Some(tmp)
         };
 
         let name = self.get_identifier();
@@ -101,24 +133,19 @@ impl<'a> Statement<'a> {
         self.advance();
 
         if self.current_token().kind == TokenKind::LeftBlockBrace {
-            return self.parse_buffer(Some(name), Some(r#type));
+            return self.parse_buffer(Some(name), r#type);
         }
 
         self.expect_token(TokenKind::Equal);
         self.advance();
 
-        let mut value = vec![];
-
-        while self.current_token().kind != TokenKind::Semicolon && !self.is_eof() {
-            value.push(self.current_token());
-            self.advance();
-        }
+        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
         if !self.is_eof() {
             self.expect_token(TokenKind::Semicolon);
         }
 
-        let res = Statement::new(value, 0, &self.body).parse().0;
+        let res = Statement::new(tokens, 0, &self.body).parse().0;
 
         let parsed_res = match res.clone() {
             AstNode::DeclareStatement {
@@ -170,7 +197,7 @@ impl<'a> Statement<'a> {
 
             self.body.borrow_mut().push(AstNode::DeclareStatement {
                 name: name.clone(),
-                r#type: "Nil".to_owned(),
+                r#type: None,
                 value: Box::new(AstNode::ArithmeticOperation {
                     left: Box::new(AstNode::LiteralStatement {
                         kind: TokenKind::Identifier,
@@ -190,21 +217,7 @@ impl<'a> Statement<'a> {
             };
         }
 
-        let mut tokens = vec![];
-
-        loop {
-            tokens.push(self.current_token());
-            self.advance();
-
-            if self.current_token().kind == TokenKind::Semicolon {
-                break;
-            }
-
-            if self.is_eof() {
-                break;
-            }
-        }
-
+        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
         let mapping = match operation.kind {
             TokenKind::AddEqual => TokenKind::Add,
             TokenKind::SubtractEqual => TokenKind::Subtract,
@@ -216,7 +229,7 @@ impl<'a> Statement<'a> {
 
         AstNode::DeclareStatement {
             name: name.clone(),
-            r#type: "Nil".to_owned(),
+            r#type: None,
             value: Box::new(AstNode::ArithmeticOperation {
                 left: Box::new(AstNode::LiteralStatement {
                     kind: TokenKind::Identifier,
@@ -311,19 +324,14 @@ impl<'a> Statement<'a> {
     fn parse_return(&mut self) -> AstNode {
         self.advance();
 
-        let mut value = vec![];
-
-        while self.current_token().kind != TokenKind::Semicolon && !self.is_eof() {
-            value.push(self.current_token());
-            self.advance();
-        }
+        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
         if !self.is_eof() {
             self.expect_token(TokenKind::Semicolon);
         }
 
-        let res = if value.len() > 0 {
-            Statement::new(value, 0, &self.body).parse().0
+        let res = if tokens.len() > 0 {
+            Statement::new(tokens, 0, &self.body).parse().0
         } else {
             AstNode::LiteralStatement {
                 kind: TokenKind::IntegerLiteral,
@@ -580,7 +588,7 @@ impl<'a> Statement<'a> {
 
         AstNode::DeclareStatement {
             name: name.clone(),
-            r#type: "Nil".to_owned(),
+            r#type: None,
             value: Box::new(AstNode::ArithmeticOperation {
                 left: Box::new(AstNode::LiteralStatement {
                     kind: TokenKind::Identifier,
@@ -595,7 +603,7 @@ impl<'a> Statement<'a> {
         }
     }
 
-    fn parse_buffer(&mut self, name: Option<String>, ty: Option<String>) -> AstNode {
+    fn parse_buffer(&mut self, name: Option<String>, ty: Option<Type>) -> AstNode {
         let name = if name.is_some() {
             name.unwrap()
         } else {
@@ -620,7 +628,7 @@ impl<'a> Statement<'a> {
 
         AstNode::BufferStatement {
             name,
-            r#type: ty.unwrap_or("Byte".to_string()),
+            r#type: Some(ty.unwrap_or(Type::Byte)),
             size,
         }
     }
@@ -628,37 +636,8 @@ impl<'a> Statement<'a> {
     fn parse_if_statement(&mut self) -> AstNode {
         self.advance();
 
-        self.expect_token(TokenKind::LeftParenthesis);
-        self.advance();
-
-        let mut tokens = vec![];
-        let mut nesting = 0;
-
-        loop {
-            if self.current_token().kind == TokenKind::LeftParenthesis {
-                nesting += 1;
-            }
-
-            tokens.push(self.current_token());
-            self.advance();
-
-            if self.current_token().kind == TokenKind::RightParenthesis {
-                if nesting > 0 {
-                    nesting -= 1;
-                } else {
-                    break;
-                }
-            }
-
-            if self.is_eof() {
-                break;
-            }
-        }
-
+        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::LeftCurlyBrace]);
         let expression = Statement::new(tokens, 0, &self.body).parse().0;
-
-        self.expect_token(TokenKind::RightParenthesis);
-        self.advance();
 
         self.expect_token(TokenKind::LeftCurlyBrace);
         self.advance();
@@ -686,37 +665,8 @@ impl<'a> Statement<'a> {
     fn parse_while_statement(&mut self) -> AstNode {
         self.advance();
 
-        self.expect_token(TokenKind::LeftParenthesis);
-        self.advance();
-
-        let mut tokens = vec![];
-        let mut nesting = 0;
-
-        loop {
-            if self.current_token().kind == TokenKind::LeftParenthesis {
-                nesting += 1;
-            }
-
-            tokens.push(self.current_token());
-            self.advance();
-
-            if self.current_token().kind == TokenKind::RightParenthesis {
-                if nesting > 0 {
-                    nesting -= 1;
-                } else {
-                    break;
-                }
-            }
-
-            if self.is_eof() {
-                break;
-            }
-        }
-
+        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::LeftCurlyBrace]);
         let expression = Statement::new(tokens, 0, &self.body).parse().0;
-
-        self.expect_token(TokenKind::RightParenthesis);
-        self.advance();
 
         self.expect_token(TokenKind::LeftCurlyBrace);
         self.advance();
@@ -734,130 +684,109 @@ impl<'a> Statement<'a> {
     fn parse_for_statement(&mut self) -> AstNode {
         self.advance();
 
-        let ty = match self.current_token().kind {
-            TokenKind::Type => {
-                let tmp = match self.current_token().value {
-                    ValueKind::String(val) => val,
-                    _ => todo!(),
-                };
-
-                self.advance();
-                tmp
-            }
-            TokenKind::Identifier => "Int".to_string(),
-            other => panic!("Invalid token {:?}", other),
-        };
-
-        let iterator = self.current_token();
-        self.advance();
-
-        self.expect_token(TokenKind::Equal);
-        self.advance();
-
-        let mut default_value_tokens = vec![];
-
-        loop {
-            default_value_tokens.push(self.current_token());
+        let mut wrapped = false;
+        if self.current_token().kind == TokenKind::LeftParenthesis {
+            wrapped = true;
             self.advance();
-
-            if self.current_token().kind == TokenKind::To {
-                break;
-            }
-
-            if self.is_eof() {
-                break;
-            }
         }
 
-        let default_value = Statement::new(default_value_tokens, 0, &self.body)
-            .parse()
-            .0;
-
-        self.expect_token(TokenKind::To);
-        self.advance();
-
-        let mut to_tokens = vec![];
-
-        loop {
-            to_tokens.push(self.current_token());
-            self.advance();
-
-            if self.current_token().kind == TokenKind::LeftCurlyBrace
-                || self.current_token().kind == TokenKind::Step
-            {
-                break;
-            }
-
-            if self.is_eof() {
-                break;
-            }
-        }
-
-        let to_value = Statement::new(to_tokens, 0, &self.body).parse().0;
-        let mut addition_node = AstNode::LiteralStatement {
-            kind: TokenKind::IntegerLiteral,
-            value: ValueKind::Number(1),
+        let declare_tokens = if self.current_token().kind != TokenKind::Semicolon {
+            self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon])
+        } else {
+            vec![]
         };
 
-        if self.current_token().kind == TokenKind::Step {
-            self.advance();
-            let mut step_tokens = vec![];
-
-            loop {
-                step_tokens.push(self.current_token());
-                self.advance();
-
-                if self.current_token().kind == TokenKind::LeftCurlyBrace {
-                    break;
-                }
-
-                if self.is_eof() {
-                    break;
-                }
+        let declare = if declare_tokens.len() > 0 {
+            Statement::new(declare_tokens.clone(), 0, &self.body)
+                .parse()
+                .0
+        } else {
+            AstNode::LiteralStatement {
+                kind: TokenKind::Not,
+                value: ValueKind::Nil,
             }
+        };
 
-            addition_node = Statement::new(step_tokens, 0, &self.body).parse().0;
+        self.expect_token(TokenKind::Semicolon);
+        self.advance();
+
+        let mut condition_tokens = if self.current_token().kind != TokenKind::Semicolon {
+            self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon])
+        } else {
+            vec![]
+        };
+
+        let condition = if condition_tokens.len() > 0 {
+            Statement::new(condition_tokens, 0, &self.body).parse().0
+        } else {
+            AstNode::LiteralStatement {
+                kind: TokenKind::IntegerLiteral,
+                value: ValueKind::Number(1),
+            }
+        };
+
+        self.expect_token(TokenKind::Semicolon);
+        self.advance();
+
+        let mut step_tokens = if self.current_token().kind != TokenKind::RightParenthesis {
+            self.yield_tokens_with_delimiters(vec![if wrapped {
+                TokenKind::RightParenthesis
+            } else {
+                TokenKind::LeftCurlyBrace
+            }])
+        } else {
+            vec![]
+        };
+
+        if self.current_token().kind == TokenKind::RightParenthesis {
+            self.advance();
         }
 
         self.expect_token(TokenKind::LeftCurlyBrace);
         self.advance();
 
-        let mut body = self.yield_block();
+        if step_tokens.len() > 0 {
+            let mut index = self.position.clone();
+            let mut nesting = 0;
 
-        let iterator_node = AstNode::LiteralStatement {
-            kind: iterator.kind,
-            value: iterator.value.clone(),
-        };
+            loop {
+                index += 1;
 
-        let condition = AstNode::ArithmeticOperation {
-            left: Box::new(iterator_node.clone()),
-            right: Box::new(to_value),
-            operator: TokenKind::LessThanEqual,
-        };
+                if self.tokens.get(index).unwrap().kind == TokenKind::LeftCurlyBrace {
+                    nesting += 1;
+                }
+
+                if self.tokens.get(index).unwrap().kind == TokenKind::RightCurlyBrace {
+                    if nesting > 0 {
+                        nesting -= 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                if index + 1 >= self.tokens.len() {
+                    break;
+                }
+            }
+
+            step_tokens.push(Token {
+                kind: TokenKind::Semicolon,
+                value: ValueKind::Nil,
+                location: step_tokens.last().unwrap().clone().location,
+            });
+
+            for token in step_tokens.iter().cloned().rev() {
+                self.tokens.insert(index, token);
+            }
+        }
+
+        let body = self.yield_block();
 
         self.position -= 1;
 
-        self.body.borrow_mut().push(AstNode::DeclareStatement {
-            name: match iterator.value.clone() {
-                ValueKind::String(val) => val,
-                _ => todo!(),
-            },
-            r#type: ty.clone(),
-            value: Box::new(default_value),
-        });
-
-        body.push(AstNode::DeclareStatement {
-            name: match iterator.value.clone() {
-                ValueKind::String(val) => val,
-                _ => todo!(),
-            },
-            r#type: ty.clone(),
-            value: Box::new(AstNode::ArithmeticOperation {
-                left: Box::new(iterator_node.clone()),
-                right: Box::new(addition_node),
-                operator: TokenKind::Add,
-            }),
-        });
+        if declare_tokens.len() > 0 {
+            self.body.borrow_mut().push(declare);
+        }
 
         AstNode::WhileLoop {
             condition: Box::new(condition),
@@ -948,21 +877,7 @@ impl<'a> Statement<'a> {
         self.expect_token(TokenKind::LeftBlockBrace);
         self.advance();
 
-        let mut tokens = vec![];
-
-        loop {
-            tokens.push(self.current_token());
-            self.advance();
-
-            if self.current_token().kind == TokenKind::RightBlockBrace {
-                break;
-            }
-
-            if self.is_eof() {
-                break;
-            }
-        }
-
+        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::RightBlockBrace]);
         let offset = Statement::new(tokens, 0, &self.body).parse().0;
 
         self.expect_token(TokenKind::RightBlockBrace);
@@ -983,21 +898,7 @@ impl<'a> Statement<'a> {
         self.expect_token(TokenKind::Equal);
         self.advance();
 
-        let mut tokens = vec![];
-
-        loop {
-            tokens.push(self.current_token());
-            self.advance();
-
-            if self.current_token().kind == TokenKind::Semicolon {
-                break;
-            }
-
-            if self.is_eof() {
-                break;
-            }
-        }
-
+        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
         let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
         AstNode::StoreStatement {
             value,
@@ -1014,35 +915,11 @@ impl<'a> Statement<'a> {
         self.expect_token(TokenKind::LeftBlockBrace);
         self.advance();
 
-        let mut tokens = vec![];
-
-        loop {
-            if self.current_token().kind == TokenKind::RightBlockBrace {
-                break;
-            }
-
-            tokens.push(self.current_token());
-            self.advance();
-
-            if self.current_token().kind == TokenKind::RightBlockBrace {
-                break;
-            }
-
-            if self.is_eof() {
-                break;
-            }
-        }
-
+        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::RightBlockBrace]);
         let size = Box::new(if tokens.len() > 0 {
             Statement::new(tokens, 0, &self.body).parse().0
         } else {
-            // Set the size to an arbitrary 8 bytes (64 bits)
-            // Note that this happens only if you don't specify a size
-            // ie. Variadic list[]; instead of Variadic list[12];
-            AstNode::LiteralStatement {
-                kind: TokenKind::IntegerLiteral,
-                value: ValueKind::Number(8),
-            }
+            panic!("Invalid size for buffer {}", name);
         });
 
         self.advance();
@@ -1068,36 +945,75 @@ impl<'a> Statement<'a> {
             self.expect_token(TokenKind::Semicolon);
         }
 
-        AstNode::NextStatement { name, r#type }
+        AstNode::NextStatement {
+            name,
+            r#type: Some(r#type),
+        }
     }
 
     fn parse_defer(&mut self) -> AstNode {
         self.advance();
 
+        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
+        let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
+        AstNode::DeferStatement { value }
+    }
+
+    fn parse_type_conversion(&mut self) -> AstNode {
+        self.advance();
+
+        let r#type = self.get_type();
+
+        self.advance();
+        self.expect_token(TokenKind::RightParenthesis);
+        self.advance();
+
         let mut tokens = vec![];
+        let mut nesting = 0;
 
         if self.current_token().kind == TokenKind::Semicolon {
             panic!(
-                "[{}] expected expression but got empty defer statement",
+                "[{}] expected type conversion but got empty passthrough",
                 self.current_token().location.display()
             );
         }
 
         loop {
-            tokens.push(self.current_token());
-            self.advance();
+            if self.current_token().kind == TokenKind::LeftParenthesis {
+                nesting += 1;
+            }
 
-            if self.current_token().kind == TokenKind::Semicolon {
+            tokens.push(self.current_token());
+            let res = self.advance_opt();
+
+            if self.current_token().kind == TokenKind::Semicolon
+                || (self.current_token().kind.is_arithmetic() && nesting == 0)
+            {
                 break;
             }
 
+            if self.current_token().kind == TokenKind::RightParenthesis {
+                if nesting > 0 {
+                    nesting -= 1;
+                } else {
+                    break;
+                }
+            }
+
             if self.is_eof() {
+                if res.is_some() {
+                    tokens.push(self.current_token());
+                }
+
                 break;
             }
         }
 
         let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
-        AstNode::DeferStatement { value }
+        AstNode::Conversion {
+            r#type: Some(r#type),
+            value,
+        }
     }
 
     fn parse_block(&mut self) -> AstNode {
@@ -1107,6 +1023,37 @@ impl<'a> Statement<'a> {
         let body = self.yield_block();
         self.position -= 1;
         AstNode::BlockStatement { body }
+    }
+
+    fn yield_tokens_with_delimiters(&mut self, delimiters: Vec<TokenKind>) -> Vec<Token> {
+        let mut tokens = vec![];
+
+        if delimiters.contains(&self.current_token().kind) {
+            panic!(
+                "[{}] expected expression but got {:?}",
+                self.current_token().location.display(),
+                self.current_token().kind
+            );
+        }
+
+        loop {
+            tokens.push(self.current_token());
+            let res = self.advance_opt();
+
+            if delimiters.contains(&self.current_token().kind) {
+                break;
+            }
+
+            if self.is_eof() {
+                if res.is_some() {
+                    tokens.push(self.current_token());
+                }
+
+                break;
+            }
+        }
+
+        tokens
     }
 
     fn yield_block(&mut self) -> Vec<AstNode> {
@@ -1121,7 +1068,7 @@ impl<'a> Statement<'a> {
                     break;
                 }
                 _ => {
-                    let (node, position) =
+                    let (node, position, tokens) =
                         Statement::new(self.tokens.clone(), self.position.clone(), &cell).parse();
 
                     let mut body_ref = cell.borrow_mut();
@@ -1162,6 +1109,7 @@ impl<'a> Statement<'a> {
                     }
 
                     self.position = position;
+                    self.tokens = tokens;
                 }
             };
 
@@ -1175,6 +1123,22 @@ impl<'a> Statement<'a> {
             AstNode::DeferStatement { value } => {
                 deferred.push(*value.clone());
                 false
+            }
+            AstNode::LiteralStatement { kind, value } => {
+                if kind.clone() == TokenKind::ExactLiteral {
+                    match value.clone() {
+                        ValueKind::String(val) => {
+                            if val == "__<#insert#>__".to_owned() {
+                                false
+                            } else {
+                                true
+                            }
+                        }
+                        _ => true,
+                    }
+                } else {
+                    true
+                }
             }
             _ => true,
         });
@@ -1245,7 +1209,15 @@ impl<'a> Statement<'a> {
     fn parse_primary(&mut self) -> AstNode {
         match self.current_token().kind {
             token if token.is_literal() => self.parse_literal(),
-            TokenKind::LeftParenthesis => self.parse_wrapped_statement(),
+            TokenKind::LeftParenthesis => {
+                let next = self.next_token();
+
+                if next.is_some() && next.unwrap().kind == TokenKind::Type {
+                    self.parse_type_conversion()
+                } else {
+                    self.parse_wrapped_statement()
+                }
+            }
             TokenKind::LeftCurlyBrace => self.parse_block(),
             TokenKind::Identifier => {
                 if self.is_eof() {
@@ -1270,7 +1242,7 @@ impl<'a> Statement<'a> {
 
                         self.parse_function(true)
                     } else if next.kind == TokenKind::Equal {
-                        self.parse_declare(Some("Nil".to_owned()))
+                        self.parse_declare(Some(None))
                     } else if next.kind.is_declarative() {
                         self.parse_declarative_like()
                     } else if next.kind == TokenKind::Yield {
@@ -1295,7 +1267,7 @@ impl<'a> Statement<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> (AstNode, usize) {
+    pub fn parse(&mut self) -> (AstNode, usize, Vec<Token>) {
         let node = match self.current_token().kind {
             TokenKind::Type => self.parse_declare(None),
             TokenKind::Variadic => self.parse_variadic(),
@@ -1307,6 +1279,6 @@ impl<'a> Statement<'a> {
             _ => self.parse_expression(),
         };
 
-        (node, self.position)
+        (node, self.position, self.tokens.clone())
     }
 }

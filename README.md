@@ -49,79 +49,12 @@ data $main_1 = { b "Hello world!", b 0 }
 
 * Simple enough! ♡
 
-### ♡ **Example Syntax**
-
-Please keep in mind that syntax such as `arrays`, etc have *not* been implemented at all yet. The code below should compile, but it is indended as a pure example of how the syntax is designed to look.
-
-```dart
-// Import statements follow a lib:file@{method1, method2...} format;
-// use elle:int@{random};
-
-const languageName = "Elle";
-
-// Use `pub` to make functions public so they can be imported by other files
-// You *must* expose the main function for it to be runnable
-pub fn main() {
-    srand(time(0));
-
-    Int resWithThree = randomWithMultiplier(10, 3); // Returns a random number between 0 and 10 multiplied by 3
-    printMessage(resultWithNumber(resWithThree));
-
-    Int maybeRes = randomWithPossibleError();
-
-    if (maybeRes == -1) {
-        printMessage("Oh no! We failed.\n");
-    } else {
-        printMessage(resultWithNumber(maybeRes));
-    }
-
-    return 0;
-}
-
-fn resultWithNumber(Int num) {
-    Char result[64];
-    sprintf!2(result, "Result is %d\n", num);
-
-    return result;
-}
-
-fn randomWithMultiplier(Int upper, Int multiplier) -> Int {
-    // Use the ret keyword to return from the operation
-    Int res = rand() % upper;
-    return res * multiplier;
-}
-
-// Operations can either return a value or void.
-fn randomWithPossibleError() -> Int {
-    Int result = rand() % 6;
-
-    if (result == 3) {
-        return -1;
-    } else {
-        return result;
-    }
-}
-
-// No return argument needed if function returns void
-// Note that this means the return type is inferred based on the return value
-fn printMessage(String message) {
-    printf!("[%s] %s", languageName, message);
-}
-```
-
-* Semicolons are enforced and are required for parsing
-* Comments start with // and are ignored when parsing
-* Single quotes are strictly for characters
-* Double quotes are strictly for strings
-* Constants must be at the top level of files & start with `const`
-* Returning from functions is done with the `return` keyword
-
 <hr />
 
 ### ♡ **Exact literals**
 
 * These expressions will expand into the exact characters you type into the intermediate language code.
-* Typing `$storeb 0, %tmp_12$` will write exactly `storeb 0, %tmp_12` into the intermediate language, completely ignoring types, sigils, etc.
+* Typing `#storeb 0, %tmp_12#` will write exactly `storeb 0, %tmp_12` into the intermediate language, completely ignoring types, sigils, etc.
 * Only use this for basic operations, it is not intended as a replacement for writing Elle code as block-scoped variables are written with a temporary counter and cannot be referenced directly from exact literals.
 
 * The function syntax `func!(a, b, c)` works as follows:
@@ -129,7 +62,7 @@ fn printMessage(String message) {
   * `func!(a, b, c)` expands to `func(a, $...$, b, c)`
   * `func!2(a, b, c)` expands to `func(a, b, $...$, c)`
 
-> The number after the `!` can be anything. It is intended to handle variadic functions, as in QBE IR, variadic functions must declare the point at which the variadic arguments begin. So while typing the exact literal `$...$` is valid, writing it out every time for each `printf`, `sprintf`, `scanf` call, etc can get exhausting, which is why this macro exists in the first place.
+> The number after the `!` can be anything. It is intended to handle variadic functions, as in QBE IR, variadic functions must declare the point at which the variadic arguments begin. So while typing the exact literal `#...#` is valid, writing it out every time for each `printf`, `sprintf`, `scanf` call, etc can get exhausting, which is why this macro exists in the first place.
 
 * The function syntax `func.(a, b, c)` works as follows:
   * `func(a, b, c)` expands to `func(a, b, c)`
@@ -137,11 +70,11 @@ fn printMessage(String message) {
   * `func.(a, b, c)` expands to `func(3, $...$, a, b, c)`
   * `func.(a, b)` expands to `func(2, $...$, a, b)`
 
-> The number placed before the `$...$` is the number of arguments. This is a simple way to allow to get the number of arguments that were passed into the function without needing to manually specify them.
+> The number placed before the `#...#` is the number of arguments. This is a simple way to allow to get the number of arguments that were passed into the function without needing to manually specify them.
 
 ### ♡ **Static buffers**
 
-* You can allocate a buffer with the `Type buf[size]` syntax.
+* You can allocate a buffer with the `type buf[size]` syntax.
 * This expands into `data $buf_5 = { z (size * type_size) }`
 
 #
@@ -149,8 +82,8 @@ fn printMessage(String message) {
 * Assuming you wrote the above code, you would be able to reference the `buf` variable which is a pointer to the data section that holds the buffer. The buffer may be called anything though, of course.
 * Example:
 
-```dart
-Char out[128];
+```c++
+char out[128];
 gets(out); // This is unsafe but this is only a demonstration
 puts(out);
 ```
@@ -160,25 +93,22 @@ puts(out);
 * Strings are always pointers. This means that you can find an offset from a pointer and then store data at it.
 * Example
 
-```dart
-String test = "bbbbbbbb"; // Returns a pointer to the start of raw bytes
-Long offset = test + 2; // 0th index + 2 = 3rd index
-
-// In this case we're storing a Byte here
-offset <- Byte 97; // Stores 'a' at the 3rd index
+```cpp
+char *test = "bbbbbbbb"; // Returns a pointer to the start of raw bytes
+test[2] = 97; // Stores 'a' at the 3rd index
 ```
 
 ### ♡ **If statements**
 
 * You can define an `if` statement and then an optional `else` statement
-* If statement expressions are wrapped in `()`
+* If statement expressions can be wrapped in `()` but this is not mandatory
 * There is currently no `else if` or similar. A workaround is to just define another `if statement` with your new condition.
 * Example:
 
-```dart
-Int a = 0; // Variables must be initialized.
+```cpp
+int a = 0; // Variables must be initialized.
 
-if (expression) {
+if expression {
     a++;
 } else {
     a--;
@@ -187,13 +117,13 @@ if (expression) {
 
 ### ♡ **Standalone blocks**
 
-* A standalone block is somewhat equivalent to an `if (true)` statement, although they are not implemented exactly the same internally. Therefore, `defer` behaves the same.
+* A standalone block is somewhat equivalent to an `if true` statement, although they are not implemented exactly the same internally. Therefore, `defer` behaves the same.
 
 Here's a simple example:
 
-```dart
+```cpp
 pub fn main() {
-    Int a = 0;
+    int a = 0;
 
     {
         a++;
@@ -207,9 +137,9 @@ pub fn main() {
 
 And it is relatively clear how this code is essentially equal to:
 
-```dart
+```cpp
 pub fn main() {
-    Int a = 0;
+    int a = 0;
 
     if (true) {
         a++;
@@ -224,20 +154,20 @@ pub fn main() {
 ### ♡ **While loops**
 
 * Even though you can loop via recursion, there is also a while loop primitive available.
-* While loop expressions are wrapped in `()`
+* While loop expressions can be wrapped in `()` but this is not mandatory
 * There is no `do while` or `finally` functionality at the time of writing this.
 * Example
 
-```dart
-while (expression) {
+```cpp
+while expression {
     // do code
 }
 ```
 
 * You also have access to block scoped variables inside of this loop. This means you can create a pseudo `for loop` with the following code:
 
-```dart
-Int i = 0;
+```cpp
+int i = 0;
 
 while (i < 10) {
     printf!("%d\n", i);
@@ -250,29 +180,39 @@ while (i < 10) {
 ### ♡ **For loops**
 
 * Iterates from one to the other.
+* For loop expressions can be wrapped in `()` but this is not mandatory
 * Basic example:
 
-```dart
-for i = 0 to 10 {
+```cpp
+for (int i = 0; i < 10; i++) {
     printf!("%d\n", i);
 }
 ```
 
-This works, but there are some other features that are available when using for loops:
+* More advanced example:
+```cpp
+fn fact(long n) -> long {
+    if n <= 1 {
+        return 1;
+    }
 
-* Step size:
-
-```dart
-for i = 0 to 10 step 2 {
-    printf!("%d\n", i);
+    return n * fact(n - 1);
 }
-```
 
-* Iterator types:
+fn get_e() {
+    double res = 0.0;
 
-```dart
-for Double i = 0 to 1.5 step 0.5 {
-    printf!("%f\n", i);
+    for long i = 0; i < 50; i++ {
+        res += 1.0 / fact(i);
+    }
+
+    return res;
+}
+
+pub fn main() {
+    double e = get_e();
+    printf!("e = %.50f\n", e);
+    return 0;
 }
 ```
 
@@ -286,14 +226,14 @@ A variadic function is a function that can take in a variable amount of argument
 
 Here's a basic example of a variadic function which takes in any amount of arguments and returns their sum:
 
-```dart
-fn add(Int size, ...) {
-    Int res = 0;
-    Variadic args[size];
-    Defer free(args);
+```cpp
+fn add(int size, ...) {
+    int res = 0;
+    variadic args[size];
+    defer free(args);
 
-    for _ = 0 to size - 1 {
-        res += args yield Int;
+    for (int _ = 0; _ < size - 1; _++) {
+        res += args yield int;
     }
 
     return res;
@@ -312,9 +252,9 @@ Let's go through an explanation for how this works:
 
 At the call-site, using this function is very easy. It can be done like this:
 
-```dart
+```cpp
 pub fn main() {
-    Int res = add.(1, 2, 3, 4);
+    int res = add.(1, 2, 3, 4);
     printf!("%d\n", res);
     return 0;
 }
@@ -330,17 +270,17 @@ A defer statement is commonly used to group together memory allocation and deall
 
 A very simple example of this is declaring a variable and deferring printing its value, like this:
 
-```dart
-fn print_int(Int num) {
+```cpp
+fn print_int(int num) {
     printf!("%d\n", num);
 }
 
 pub fn main() {
-    Int i = 0;
+    int i = 0;
 
     // If this were not in a defer statement, then this would print 0
     // However, it will print 25 instead.
-    Defer print_int(i);
+    defer print_int(i);
 
     i += 5;
     i *= i;
@@ -351,17 +291,17 @@ pub fn main() {
 You can see how this only calls `print_int` right before it returns 0, which is indeed *after* the `i` variable has had changes made to it. This also works if you return in other scopes, such as if statements, while loops, standalone blocks, etc, as stated above. Any defer statements in inner blocks will not be called on any return, rather will only be called when the inner block is about to leave scope.
 
 This also means that if you, hypothetically, design a program like this
-```dart
-fn print_int(Int num) {
+```cpp
+fn print_int(int num) {
     printf!("%d\n", num);
 }
 
 pub fn main() {
-    Int i = 0;
-    Defer print_int(i);
+    int i = 0;
+    defer print_int(i);
 
     {
-        Defer print_int(i);
+        defer print_int(i);
         i += 2;
     }
 
@@ -374,13 +314,13 @@ The expected output is 2, then 4.
 This is because it will call `print_int` once when the standalone block will leave scope, at which point `i` is 2, then it will call `print_int` again when the function itself will leave scope, at which it will be 4 because `i` was squared (`i *= i`).
 
 You can also write something like this:
-```dart
+```cpp
 pub fn main() {
-    Int i = 0;
-    Defer print_int(i);
+    int i = 0;
+    defer print_int(i);
 
     {
-        Defer print_int(i);
+        defer print_int(i);
         i += 2;
 
         {
@@ -397,20 +337,20 @@ Here we expect `i` (`2`) to be printed to the console twice. Why? When the funct
 The most useful application of deferring is for memory management, however.
 
 Consider this code:
-```dart
+```cpp
 pub fn main() {
-    Long size = 10;
-    Pointer numbers = malloc(size * 8); // 8 = size of a Long
-    Defer free(numbers);
+    long size = 10;
+    long *numbers = malloc(size * 8); // 8 = size of a Long
+    defer free(numbers);
 
-    for Long i = 0 to size - 1 {
-        numbers[i * 8] = i * 2;
-        Long res = numbers[i];
+    for (long i = 0; i < size - 1; i++) {
+        numbers[i] = i * 2;
+        long res = numbers[i];
         printf!("numbers[%ld] = %ld\n", i, res);
     }
 
     // (Ignore that this never runs)
-    if (numbers[2] + 1 * 5 == 10) {
+    if numbers[2] + 1 * 5 == 10 {
         // Calls `free` here
         return 1;
     }
@@ -426,61 +366,26 @@ Of course for a function like the above, you are able to determine what path the
 
 <hr />
 
-### ♡ **Base methods**
+### ♡ **Type Conversions / Type Casting**
 
-As a general rule of thumb, if a symbol is inside of the C standard library and is a function (regardless of whether it's dynamically linked or not), it will be callable directly from Elle, granted that you pass the correct arguments.
+You can cast a type in the exact same manner as C:
 
-Due to Elle compiling to QBE IR, this means that we cannot access dynamically-linked non-functional symbols, so this means that globals from C stdlib such as the `stdin` and `stdout` file pointers do not exist. However, you can use the methods below to define them.
-
-* Pointers are always a Long type.
-* This isn't *all* the methods available, other methods such as `malloc` and `free` are also defined.
-* For more information about the functions available please read <https://bit.ly/stdlib-defs>
-
-#### ♡ **Getting a file pointer to standard input/output**
-
-```dart
-Long stdin = fdopen(0, "r");
-Long stdout = fdopen(1, "w");
+```cpp
+pub fn main() {
+    float a = 1.5;
+    int b = (int)a + 2;
+}
 ```
 
-#### ♡ **Printing text to the standard output**
+You can also cast to pointer types, however note that, unlike C, casting to a pointer type when using `malloc` is *not* necessary because malloc is not interfaced in the Elle internals.
 
-```dart
-printf!("formatter %d", 1);
-puts("strings only, any other types will segfault");
+This means you can write:
+```cpp
+pub fn main() {
+    double *a = malloc(1024 * 8); // Where 8 = size of a double
+}
 ```
-
-#### ♡ **Using `scanf` to get a user input**
-
-```dart
-Char buf[64];
-scanf!("%63s", buf); // 1 less than the buffer size
-```
-
-#### ♡ **Using `fgets` to get a user input**
-
-```dart
-Long stdin = fdopen(0, "r");
-Char buf[64];
-fgets(buf, 64, stdin);
-```
-
-#### ♡ **Getting the length of a string**
-
-```dart
-String test = "aaaaa";
-Long len = strlen(test); // 5
-```
-
-#### ♡ **Parsing a string to a number**
->
-> Note that this is unlike a type conversion, rather it's assuming the string itself contains a serializable number of the type of the function. `"55" -> 55`, `"abc" -> 0`
-
-```dart
-String x = "5";
-Int xAsInt = atoi(x);
-Long xAsLong = atol(x);
-```
+and Elle will not complain. You can, if you wish, cast it, however it will have no effect at the moment.
 
 > If you have any questions, please [raise an issue](https://github.com/acquitelol/elle/issues/new) :3
 

@@ -1,0 +1,45 @@
+// A basic example of obtaining `stdin`
+fn input(char *message) -> char * {
+    long stdin = fdopen(0, "r");
+    char buf[256];
+    printf(message);
+
+    fgets(buf, 256, stdin);
+    buf[strlen(buf) - 1] = '\0';
+
+    char *result = malloc(strlen(buf) + 1);
+    strcpy(result, buf);
+    return result;
+}
+
+pub fn main() {
+    char *winner = malloc(256);
+    int highestScore = 0;
+
+    while true {
+        char *person = input("Enter a person's name: ");
+
+        if (strcmp(person, "stop") == 0) {
+            free(person);
+            break;
+        }
+
+        printf!("Enter %s's score: ", person);
+
+        char *scoreInput = input("");
+        int score = atoi(scoreInput);
+        free(scoreInput);
+
+        if score > highestScore {
+            highestScore = score;
+            strcpy(winner, person);
+        }
+
+        free(person);
+    }
+
+    printf!("The winner is %s with a score of %d\n", winner, highestScore);
+    free(winner);
+
+    return 0;
+}

@@ -1,4 +1,5 @@
 use crate::{
+    compiler::enums::Type,
     lexer::enums::{Token, TokenKind, ValueKind},
     parser::{constant::Constant, function::Function},
 };
@@ -22,6 +23,13 @@ impl Parser {
 
     pub fn current_token(&self) -> Token {
         self.tokens[self.position].clone()
+    }
+
+    fn next_token(&mut self) -> Option<Token> {
+        match self.is_eof() {
+            true => None,
+            false => Some(self.tokens[self.position + 1].clone()),
+        }
     }
 
     pub fn advance(&mut self) {
@@ -84,8 +92,26 @@ impl Parser {
         self.get(TokenKind::Identifier)
     }
 
-    pub fn get_type(&mut self) -> String {
-        self.get(TokenKind::Type)
+    pub fn get_type(&mut self) -> Type {
+        let mut ty = ValueKind::String(self.get(TokenKind::Type))
+            .to_type_string()
+            .unwrap();
+
+        loop {
+            let tmp = self.next_token();
+
+            if tmp.is_some() {
+                match tmp.unwrap().kind {
+                    TokenKind::Multiply => {
+                        ty = Type::Pointer(Box::new(ty));
+                        self.advance();
+                    }
+                    _ => break,
+                }
+            }
+        }
+
+        ty
     }
 
     pub fn parse(&mut self) -> Vec<Primitive> {

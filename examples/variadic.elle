@@ -1,0 +1,20 @@
+// A basic example of a `variadic` function
+// meaning a function that can take in a
+// varying number of arguments
+fn add(int size, ...) {
+    int res = 0;
+    variadic args[size];
+    defer free(args);
+
+    for int i = 0; i < size - 1; ++i {
+        res += args yield int;
+    }
+
+    return res;
+}
+
+pub fn main() {
+    int res = add.(1, 2, 3, 4);
+    printf!("sum = %d\n", res);
+    return 0;
+}

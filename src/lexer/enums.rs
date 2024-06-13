@@ -1,3 +1,5 @@
+use crate::compiler::enums::Type;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {
     Use,
@@ -154,6 +156,30 @@ pub enum ValueKind {
     Number(i64),
     Character(char),
     Nil,
+}
+
+impl ValueKind {
+    pub fn to_type_string(&self) -> Option<Type> {
+        match self.clone() {
+            ValueKind::String(val) => match val.as_str() {
+                "string" => Some(Type::Pointer(Box::new(Type::Byte))),
+                "function" => Some(Type::Byte),
+                "int" => Some(Type::Word),
+                "long" => Some(Type::Long),
+                "single" => Some(Type::Single),
+                "float" => Some(Type::Single),
+                "double" => Some(Type::Double),
+                "char" => Some(Type::Byte),
+                "nil" => None,
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    pub fn is_type(&self) -> bool {
+        self.to_type_string().is_some()
+    }
 }
 
 #[derive(Debug, Clone)]

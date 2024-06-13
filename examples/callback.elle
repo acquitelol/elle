@@ -1,0 +1,19 @@
+pub fn main() {
+    char *test = "Hello World!";
+
+    // Expected result: "H e l l o   W o r l d !"
+    loop(test, formattedPrint);
+
+    printf!("\n");
+    return 0;
+}
+
+fn loop(char *str, function *callback) {
+    for (int i = 0; i < strlen(str); i++) {
+        callback(str[i]);
+    }
+}
+
+fn formattedPrint(char character) {
+    printf!("%c ", character);
+}

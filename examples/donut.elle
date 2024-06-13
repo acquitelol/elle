@@ -1,0 +1,78 @@
+fn update(double rotX, double rotZ, double *zBuffer, char *output, char *lighting, int width, int height, int size) {
+    float thetaSpacing = 0.07;
+    float phiSpacing = 0.02;
+    float pi = 3.141592;
+
+    memset(zBuffer, 0, size * 8);
+    memset(output, 32, size);
+
+    double cosRotX = cos(rotX);
+    double sinRotX = sin(rotX);
+
+    double cosRotZ = cos(rotZ);
+    double sinRotZ = sin(rotZ);
+
+    for double theta = 0; theta < pi * 2; theta += thetaSpacing {
+        for double phi = 0; phi < pi * 2; phi += phiSpacing {
+            double sinPhi = sin(phi);
+            double cosPhi = cos(phi);
+
+            double sinTheta = sin(theta);
+            double cosTheta = cos(theta);
+
+            double thickness = cosTheta + 2;
+            double depth = 1 / (sinPhi * thickness * sinRotX + sinTheta * cosRotX + 5);
+            double projectionOffset = sinPhi * thickness * cosRotX - sinTheta * sinRotX;
+
+            int x = 30 + 36 * depth * (cosPhi * thickness * cosRotZ - projectionOffset * sinRotZ);
+            int y = 12 + 12 * depth * (cosPhi * thickness * sinRotZ + projectionOffset * cosRotZ);
+
+            int offset = x + width * y;
+            int illumination = 8 * ((sinTheta * sinRotX - sinPhi * cosTheta * cosRotX) * cosRotZ - sinPhi * cosTheta * sinRotX - sinTheta * cosRotX - cosPhi * cosTheta * sinRotZ);
+
+            if height > y && y > 0 && x > 0 && width > x && depth > zBuffer[offset] {
+                zBuffer[offset] = depth;
+
+                if illumination > 0 {
+                    output[offset] = lighting[illumination];
+                } else {
+                    output[offset] = lighting[0];
+                }
+            }
+        }
+    }
+
+    printf("\x1b[H");
+
+    for long character = 0; character < size; character++ {
+        if character % width {
+            printf!("%c", output[character]);
+        } else {
+            printf!("\n");
+        }
+    }
+}
+
+pub fn main() {
+    double rotX = 0;
+    double rotZ = 0;
+
+    int width = 100;
+    int height = 24;
+    int size = width * height;
+
+    double *zBuffer = malloc(size * 8);
+    char *output = malloc(size);
+    char *lighting = ".,-~:;=!*#$@";
+
+    printf("\x1b[2J");
+
+    while true {
+        update(rotX, rotZ, zBuffer, output, lighting, width, height, size);
+
+        rotX += 0.004;
+        rotZ += 0.002;
+    }
+
+    return 0;
+}

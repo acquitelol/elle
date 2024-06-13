@@ -2,9 +2,9 @@
 !! THIS FILE IS TEMPORARY !!
 
 * QBE compiles floating point constant data sections with the incorrect name
-* This file simply replaces all instances of "Lfp(some number):" with "_Lfp(some number):"
-which files this issue.
-* The developer of QBE is aware of this and this will probably be fixed in the next release.
+* This file simply replaces all instances of "Lfp(\d+):" with "_Lfp(\d+):"
+which fixes this issue.
+* The developer of QBE is aware of this.
 */
 
 const fs = require("fs"); // Necessary because this isn't a module

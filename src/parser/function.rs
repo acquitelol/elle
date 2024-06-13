@@ -1,6 +1,9 @@
 use std::cell::RefCell;
 
-use crate::lexer::enums::{TokenKind, ValueKind};
+use crate::{
+    compiler::enums::Type,
+    lexer::enums::{TokenKind, ValueKind},
+};
 
 use super::{
     enums::{Argument, AstNode, Primitive},
@@ -28,6 +31,7 @@ impl<'a> Function<'a> {
 
         let mut arguments = vec![];
         let mut variadic = false;
+        let mut manual = false;
 
         if self.parser.match_token(TokenKind::Type, false) {
             while self.parser.current_token().kind != TokenKind::RightParenthesis {
@@ -44,7 +48,11 @@ impl<'a> Function<'a> {
                 let name = match self.parser.current_token().kind {
                     TokenKind::Identifier => self.parser.get_identifier(),
                     TokenKind::ExactLiteral => self.parser.get(TokenKind::ExactLiteral),
-                    other => panic!("Invalid token type {:?}", other),
+                    other => panic!(
+                        "[{}] Invalid token type {:?}",
+                        self.parser.current_token().location.display(),
+                        other
+                    ),
                 };
 
                 self.parser.advance();
@@ -57,10 +65,10 @@ impl<'a> Function<'a> {
         self.parser.expect_token(TokenKind::RightParenthesis);
         self.parser.advance();
 
-        let mut r#return: String = "Nil".to_owned();
+        let mut r#return = None;
 
         if self.parser.match_token(TokenKind::RightArrow, true) {
-            r#return = self.parser.get_type();
+            r#return = Some(self.parser.get_type());
             self.parser.advance();
         }
 
@@ -79,7 +87,7 @@ impl<'a> Function<'a> {
                     break;
                 }
                 _ => {
-                    let (node, position) = Statement::new(
+                    let (node, position, tokens) = Statement::new(
                         self.parser.tokens.clone(),
                         self.parser.position.clone(),
                         &body,
@@ -121,6 +129,7 @@ impl<'a> Function<'a> {
                     }
 
                     self.parser.position = position;
+                    self.parser.tokens = tokens;
                 }
             };
         }
@@ -132,6 +141,22 @@ impl<'a> Function<'a> {
             AstNode::DeferStatement { value } => {
                 deferred.push(*value.clone());
                 false
+            }
+            AstNode::LiteralStatement { kind, value } => {
+                if kind.clone() == TokenKind::ExactLiteral {
+                    match value.clone() {
+                        ValueKind::String(val) => {
+                            if val == "__<#insert#>__".to_owned() {
+                                false
+                            } else {
+                                true
+                            }
+                        }
+                        _ => true,
+                    }
+                } else {
+                    true
+                }
             }
             _ => true,
         });
@@ -197,9 +222,27 @@ impl<'a> Function<'a> {
 
         insert_deferred_statements(&mut res, &deferred, true);
 
+        res.retain(|node| match node.clone() {
+            AstNode::LiteralStatement { kind, value } => match kind {
+                TokenKind::ExactLiteral => match value {
+                    ValueKind::String(val) => match val.as_str() {
+                        "__MANUAL_RETURN__" => {
+                            manual = true;
+                            false
+                        }
+                        _ => true,
+                    },
+                    _ => true,
+                },
+                _ => true,
+            },
+            _ => true,
+        });
+
         Primitive::Operation {
             public,
             variadic,
+            manual,
             name,
             arguments,
             r#return,

@@ -23,7 +23,12 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     };
 
-    let output_path = Path::new(&input_path).with_extension("ssa");
+    let output_path = if let Some(output) = args.next() {
+        output
+    } else {
+        let tmp = Path::new(&input_path).with_extension("ssa");
+        tmp.to_str().unwrap().to_string()
+    };
 
     let content = match fs::read_to_string(&input_path) {
         Ok(content) => content,
@@ -50,7 +55,7 @@ fn main() -> ExitCode {
     let mut parser = Parser::new(tokens);
     let tree = parser.parse();
 
-    dbg!(&tree);
+    // dbg!(&tree);
 
     Compiler::compile(tree, output_path);
     ExitCode::SUCCESS

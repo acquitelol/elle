@@ -1,4 +1,7 @@
-use crate::lexer::enums::{TokenKind, ValueKind};
+use crate::{
+    compiler::enums::Type,
+    lexer::enums::{TokenKind, ValueKind},
+};
 
 #[derive(Debug, Clone)]
 pub enum AstNode {
@@ -8,7 +11,7 @@ pub enum AstNode {
     },
     DeclareStatement {
         name: String,
-        r#type: String,
+        r#type: Option<Type>,
         value: Box<AstNode>,
     },
     VariadicStatement {
@@ -17,7 +20,7 @@ pub enum AstNode {
     },
     NextStatement {
         name: String,
-        r#type: String,
+        r#type: Option<Type>,
     },
     ReturnStatement {
         value: Box<AstNode>,
@@ -42,7 +45,7 @@ pub enum AstNode {
     },
     BufferStatement {
         name: String,
-        r#type: String,
+        r#type: Option<Type>,
         size: ValueKind,
     },
     StoreStatement {
@@ -60,6 +63,10 @@ pub enum AstNode {
     BlockStatement {
         body: Vec<AstNode>,
     },
+    Conversion {
+        r#type: Option<Type>,
+        value: Box<AstNode>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -73,14 +80,15 @@ pub enum Primitive {
         name: String,
         public: bool,
         variadic: bool,
+        manual: bool,
         arguments: Vec<Argument>,
-        r#return: String,
+        r#return: Option<Type>,
         body: Vec<AstNode>,
     },
     Constant {
         name: String,
         public: bool,
-        r#type: String,
+        r#type: Option<Type>,
         value: ValueKind,
     },
 }
@@ -94,5 +102,5 @@ pub struct Case {
 #[derive(Debug, Clone)]
 pub struct Argument {
     pub name: String,
-    pub r#type: String,
+    pub r#type: Type,
 }

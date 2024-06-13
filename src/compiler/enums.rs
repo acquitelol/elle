@@ -1,6 +1,6 @@
 // Roughly references https://github.com/garritfra/qbe-rs/blob/main/src/lib.rs
 // https://github.com/garritfra/qbe-rs/blob/main/LICENSE-MIT
-use std::fmt;
+use std::fmt::{self, write};
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Copy)]
 pub enum Comparison {
@@ -26,7 +26,7 @@ pub enum Instruction {
     Return(Option<Value>),
     JumpNonZero(Value, String, String),
     Jump(String),
-    Call(String, Vec<(Type, Value)>),
+    Call(Value, Vec<(Type, Value)>),
     Cast(Value),
     VAArg(Value),
     VAStart(Value),
@@ -36,6 +36,8 @@ pub enum Instruction {
     Store(Type, Value, Value),
     Load(Type, Value),
     Literal(Value),
+    Conversion(Type, Type, Value),
+    Extension(Type, Value),
 }
 
 impl fmt::Display for Instruction {
@@ -51,25 +53,24 @@ impl fmt::Display for Instruction {
                     formatter,
                     // All comparisons start with c
                     "c{}{} {}, {}",
-                    match ty.clone() {
-                        Type::Double | Type::Single => {
-                            match comparison {
-                                Comparison::LessThan => "lt",
-                                Comparison::LessThanEqual => "le",
-                                Comparison::GreaterThan => "gt",
-                                Comparison::GreaterThanEqual => "ge",
-                                Comparison::Equal => "eq",
-                                Comparison::NotEqual => "ne",
-                            }
+                    if ty.is_float() {
+                        match comparison {
+                            Comparison::LessThan => "lt",
+                            Comparison::LessThanEqual => "le",
+                            Comparison::GreaterThan => "gt",
+                            Comparison::GreaterThanEqual => "ge",
+                            Comparison::Equal => "eq",
+                            Comparison::NotEqual => "ne",
                         }
-                        _ => match comparison {
+                    } else {
+                        match comparison {
                             Comparison::LessThan => "slt",
                             Comparison::LessThanEqual => "sle",
                             Comparison::GreaterThan => "sgt",
                             Comparison::GreaterThanEqual => "sge",
                             Comparison::Equal => "eq",
                             Comparison::NotEqual => "ne",
-                        },
+                        }
                     },
                     ty,
                     lhs,
@@ -93,7 +94,7 @@ impl fmt::Display for Instruction {
             Self::Call(name, args) => {
                 write!(
                     formatter,
-                    "call ${}({})",
+                    "call {}({})",
                     name,
                     args.iter()
                         .map(|(ty, temp)| match ty {
@@ -111,10 +112,44 @@ impl fmt::Display for Instruction {
                 write!(formatter, "store{} {}, {}", r#type, value, dest)
             }
             Self::Load(r#type, src) => {
-                write!(formatter, "load{} {}", r#type, src)
+                write!(
+                    formatter,
+                    "load{} {}",
+                    if r#type.clone().into_base() == Type::Word {
+                        format!("s{}", r#type)
+                    } else {
+                        r#type.to_string()
+                    },
+                    src
+                )
             }
             Self::Literal(val) => {
                 write!(formatter, "{}", val)
+            }
+            Self::Conversion(first, second, value) => {
+                write!(
+                    formatter,
+                    "{}to{} {}",
+                    if first.is_float() {
+                        first.to_string()
+                    } else {
+                        format!("s{}", first)
+                    },
+                    if second.is_float() { "f" } else { "si" },
+                    value
+                )
+            }
+            Self::Extension(ty, value) => {
+                write!(
+                    formatter,
+                    "ext{} {}",
+                    if ty.is_float() {
+                        ty.to_string()
+                    } else {
+                        format!("s{}", ty)
+                    },
+                    value
+                )
             }
         }
     }
@@ -127,23 +162,51 @@ pub enum Type {
     Single,
     Double,
     Byte,
-    Halfword,
     Field,
     Null,
+    Pointer(Box<Type>),
 }
 
 impl Type {
+    pub fn unwrap(self) -> Option<Type> {
+        match self {
+            Self::Pointer(ty) => Some(*ty),
+            _ => None,
+        }
+    }
+
     pub fn into_abi(self) -> Self {
         match self {
-            Self::Byte | Self::Halfword => Self::Word,
+            Self::Byte => Self::Word,
             other => other,
         }
     }
 
     pub fn into_base(self) -> Self {
         match self {
-            Self::Byte | Self::Halfword => Self::Word,
+            Self::Byte => Self::Word,
             other => other,
+        }
+    }
+
+    pub fn is_float(&self) -> bool {
+        match self {
+            Self::Single | Self::Double => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_int(&self) -> bool {
+        !self.is_float()
+    }
+
+    pub fn weight(&self) -> u8 {
+        match self {
+            Self::Double => 4,
+            Self::Single => 3,
+            Self::Long | Self::Pointer(..) => 2,
+            Self::Word => 1,
+            _ => 0,
         }
     }
 
@@ -151,9 +214,8 @@ impl Type {
     pub fn size(&self) -> u64 {
         match self {
             Self::Byte => 1,
-            Self::Halfword => 2,
             Self::Word | Self::Single => 4,
-            Self::Long | Self::Double => 8,
+            Self::Long | Self::Double | Self::Pointer(..) => 8,
             _ => 0,
         }
     }
@@ -163,9 +225,9 @@ impl fmt::Display for Type {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Byte => write!(formatter, "b"),
-            Self::Halfword => write!(formatter, "h"),
             Self::Word => write!(formatter, "w"),
             Self::Long => write!(formatter, "l"),
+            Self::Pointer(..) => write!(formatter, "l"),
             Self::Single => write!(formatter, "s"),
             Self::Double => write!(formatter, "d"),
             Self::Field => write!(formatter, "z"),
@@ -354,6 +416,7 @@ pub struct Function {
     pub linkage: Linkage,
     pub name: String,
     pub variadic: bool,
+    pub manual: bool,
     pub arguments: Vec<(Type, Value)>,
     pub return_type: Option<Type>,
     pub blocks: Vec<Block>,
@@ -364,6 +427,7 @@ impl Function {
         linkage: Linkage,
         name: impl Into<String>,
         variadic: bool,
+        manual: bool,
         arguments: Vec<(Type, Value)>,
         return_type: Option<Type>,
     ) -> Self {
@@ -371,6 +435,7 @@ impl Function {
             linkage,
             name: name.into(),
             variadic,
+            manual,
             arguments,
             return_type,
             blocks: Vec::new(),
