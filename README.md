@@ -408,7 +408,7 @@ and Elle will not complain. You can, if you wish, cast it, however it will have 
 
   * **You're done!**
 
-> You can now edit the `main.elle` file in the `dist` directory, and then rebuild (via `gmake compile`) to see the output.
+> You can now `gmake compile` to compile the compiler into an executable, then run `gmake run <name>` to run a file from the `/examples` directory. For example, you can run `gmake run donut` and it will run `/examples/donut.elle`.
 
 ### ♡ **Licensing**
 
