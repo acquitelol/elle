@@ -1,0 +1,20 @@
+                  pub fn main(){double A =0;
+            double B = 0; double *a = malloc(19200);
+        char*b=malloc(2400);char*c=".,-~:;=!*#$@";printf(
+    "\x1b[2J");while 1 {memset(a,0,19200);memset(b,32,2400)
+   ;double d = cos (A); double e = sin (A); double f =cos(B);
+   double g=sin(B);for double h=0;h<6.28;h+=0.07{for double i=0
+  ;i<6.28;i+=0.02{double j=sin(i);double k=cos(i);double l=sin(h);
+ double m= cos(h);double n=             m+ 2;double o=1 / (j * n*e
+ + l*d+ 5); double p= j*n                 *d- l*e;int x=30+ 36*o*(k
+*n*f- p* g ); int y= 12+                   12 * o * (k * n * g + p*
+f);int q  = x + 100 * y;                   int r = 8 * ((l * e -j*m
+ * d) * f - j * m*e- l *d                 - k * m *g) ;if 24 > y&&
+ y > 0 && x >0&& 100 > x&&o             >a[q] { a[q]=o; if r>0 {
+ b[q] = c[r]; } else { b[q] = c[0]; } } } } printf("\x1b[H");for
+  long s = 0; s < 2400; s++ { if s % 100 { printf!("%c", b[s]);
+    } else {printf!("\n");}}A += 0.004;B +=0.002;}return 0;}
+    //~::;;;;;;*********################*******!!====;;;:~~~
+        //~~~~:::====!!!!!!!!!**********!!!====::::-----
+            //....,,,~~~~;;;========;;;:~~~~~---....
+                //....,,,,------------,,,****///
