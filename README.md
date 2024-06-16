@@ -366,6 +366,26 @@ Of course for a function like the above, you are able to determine what path the
 
 <hr />
 
+### ♡ **Type definitions**
+
+Elle's types are quite similar to C in terms of their definition. They can be a recursive pointer type too such as `char *`. Although C has a limit on the number of pointers that a type can have, Elle does not because types are options and as such, the concept of a `void *` does not exist.
+
+These are the mappings of types in Elle:
+
+`nil` - No type. Can be used to give a function that doesn't return anything an explicit return type. Keep in mind that this is purely semantic and cannot be used as a standalone type for variables.
+`bool` - A mapping to `int`, and works purely as a semantic for boolean literals like `true` or `false` that expand to `1` or `0` respectively.
+`char` - A mapping to `byte` representing a character in ASCII.
+`int` - A "word", also knows as a 32 bit signed integer.
+`long` - A signed integer of the size specified by your computer's architecture. On x64 computers this is a 64-bit signed integer, while on x86 computers this is a 32-bit signed integer.
+`single` - A 32-bit signed floating point number.
+`float` - A mapping to a `single`.
+`double` - A 64-bit signed floating point number, providing double the precision of a `single`.
+`function` - A type that maps to a `byte`. This is intended to be used as a pointer to the first byte of a function definition.
+`pointer` - Denoted by `<type> *` -> As pointers are just a number, an address in memory, a pointer in ELle is just a `long` that holds extra context by holding another type. This is most useful when creating an array to be able to determine the offset multiplier when indexing. You could replace all pointer types with `long` however you lose the context of an inner type that the pointer is.. pointing to, so you may get an incorrect offset based on the inner type of the pointer.
+`string` - A mapping to a `char *`, which is a pointer to the start of the array of bytes (characters).
+
+
+
 ### ♡ **Type Conversions / Type Casting**
 
 You can cast a type in the exact same manner as C:
@@ -386,6 +406,125 @@ pub fn main() {
 }
 ```
 and Elle will not complain. You can, if you wish, cast it, however it will have no effect at the moment.
+
+### ♡ **Unary operators**
+
+There are 3 unary operators in Elle:
+`!`, `-`, and `+`.
+
+Any identifier or literal can be prefixed by one of these operators.
+
+Example:
+
+```cpp
+pub fn main() {
+    bool myBool = false;
+
+    if !myBool {
+        puts("Hello world!");
+    }
+}
+```
+
+### ♡ **Arithmetic operations**
+
+All arithmetic operations are declared with 2 expressions on the left and right of an operator. This means you can call functions, do other arithmetic operations inside of operations, etc.
+
+This is the mapping defined by Elle:
+
+`^` - Xor
+`*` - Multiply
+`/` - Divide
+`+` - Add
+`-` - Subtract
+`%` - Modulus
+
+Keep in mind that you can also assign these to other values.
+This means the following code is valid:
+
+```cpp
+pub fn main() {
+    int a = 1;
+    a ^= 1; // a is now 0;
+    printf!("%d", a);
+
+    return 0;
+}
+```
+
+And of course, this works for every arithmetic operator.
+
+By default, Elle follows the [order of operations](https://github.com/acquitelol/elle/blob/rewrite/src/lexer/enums.rs#L88-L99) described by mathematics (typically named as BIDMAS or PEMDAS), which means you can also wrap expressions in `()` to evaluate them before other expressions.
+
+Example:
+```cpp
+pub fn main() {
+    int a = 1 + (5 ^ 2); // Xor has a lower precedence than addition
+
+    // We're expencting this to be 8
+    // because 5 ^ 2 = 7 and 7 + 1 = 8
+    // without the brackets it would be 4
+    // because it would be 6 ^ 2 = 4
+    printf!("%d", a);
+
+    return 0;
+}
+```
+
+### ♡ **Array literals**
+
+You can create array literals in a very similar manner to a language like C:
+
+```cpp
+const long MAX_SIGNED_LONG = 9_223_372_036_854_775_807;
+const long MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
+
+pub fn main() {
+    long test[] = {MAX_SIGNED_LONG, MIN_SIGNED_LONG, -39};
+
+    for (int i = 0; i < #arrlen(test); i++) {
+        printf!("test[%d] = %ld\n", i, test[i]);
+    }
+
+    return 0;
+}
+```
+
+You can also specify a size in between the square brackets.
+`long test[3] = {MAX_SIGNED_LONG, MIN_SIGNED_LONG, -39};`
+
+These arrays create a buffer of the size specified or the length of the array multiplied by the size of the type of each value.
+
+Keep in mind that this is the length of the array not the size in bytes.
+
+### ♡ **Size directives**
+
+There are currently 2 size directives in Elle:
+`#size()` and `#arrlen()`
+
+You can put both **types** and **buffers** inside of the `#size()` directive and it returns the size of the identifier verbatim.
+
+You can only place **buffers** inside of the `#arrlen()` directive as it returns the size of the buffer divided by the size of each type. This is exactly equivalent to `#size(arr) / #size(arr_type`
+
+### ♡ **Constants**
+
+Anything at the top-level must be prefixed by `const` or `fn`. Constants can be public. A constant internally creates a function that is automatically called when the constant is referenced. Constants that create pointers are called at the top level of each function to bring them in scope.
+
+Example:
+```cpp
+const int WIDTH = 100;
+const int HEIGHT = 24;
+const int SIZE = WIDTH * HEIGHT;
+
+pub fn main() {
+    printf!("%d\n", SIZE);
+    return 0;
+}
+```
+
+In the above code, all of the constants are technically function definitions that return the value after the `=` sign. However, when they're referenced, the function is automatically called. Therefore, you dont need to type `SIZE()` or similar, you can just directly reference `SIZE` as if it was a constant.
+
+It indeed is a constant, because although it can return a different value (it can call any function), it cannot be redeclared.
 
 > If you have any questions, please [raise an issue](https://github.com/acquitelol/elle/issues/new) :3
 

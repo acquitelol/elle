@@ -1,0 +1,75 @@
+const float THETA_SPACING = 0.07;
+const float PHI_SPACING = 0.02;
+const float PI = 3.141592;
+const char *LIGHTING = ".,-~:;=!*#$@";
+
+const int WIDTH = 100;
+const int HEIGHT = 24;
+const int SIZE = WIDTH * HEIGHT;
+
+fn update(double rotX, double rotZ, double *zBuffer, char *output) {
+    memset(zBuffer, 0, SIZE * #size(double));
+    memset(output, 32, SIZE * #size(char));
+
+    double sinRotX = sin(rotX);
+    double cosRotX = cos(rotX);
+
+    double sinRotZ = sin(rotZ);
+    double cosRotZ = cos(rotZ);
+
+    for double theta = 0; theta < PI * 2; theta += THETA_SPACING {
+        for double phi = 0; phi < PI * 2; phi += PHI_SPACING {
+            double sinPhi = sin(phi);
+            double cosPhi = cos(phi);
+
+            double sinTheta = sin(theta);
+            double cosTheta = cos(theta);
+
+            double thickness = cosTheta + 2;
+            double depth = 1 / (sinPhi * thickness * sinRotX + sinTheta * cosRotX + 5);
+            double projectionOffset = sinPhi * thickness * cosRotX - sinTheta * sinRotX;
+
+            int x = 30 + 36 * depth * (cosPhi * thickness * cosRotZ - projectionOffset * sinRotZ);
+            int y = 12 + 12 * depth * (cosPhi * thickness * sinRotZ + projectionOffset * cosRotZ);
+
+            int offset = x + WIDTH * y;
+            int illumination = 8 * ((sinTheta * sinRotX - sinPhi * cosTheta * cosRotX) * cosRotZ - sinPhi * cosTheta * sinRotX - sinTheta * cosRotX - cosPhi * cosTheta * sinRotZ);
+
+            if HEIGHT > y && y > 0 && x > 0 && WIDTH > x && depth > zBuffer[offset] {
+                zBuffer[offset] = depth;
+
+                if illumination > 0 {
+                    output[offset] = LIGHTING[illumination];
+                } else {
+                    output[offset] = LIGHTING[0];
+                }
+            }
+        }
+    }
+
+    printf("\x1b[H");
+
+    for long character = 0; character < SIZE; character++ {
+        if character % WIDTH {
+            printf!("%c", output[character]);
+        } else {
+            printf!("\n");
+        }
+    }
+}
+
+pub fn main() {
+    double rotX = 0;
+    double rotZ = 0;
+
+    double *zBuffer = malloc(SIZE * #size(double));
+    char *output = malloc(SIZE * #size(char));
+    printf("\x1b[2J");
+
+    while true {
+        update(rotX, rotZ, zBuffer, output);
+
+        rotX += 0.004;
+        rotZ += 0.002;
+    }
+}

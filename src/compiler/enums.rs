@@ -21,6 +21,7 @@ pub enum Instruction {
     Modulus(Value, Value),
     BitwiseAnd(Value, Value),
     BitwiseOr(Value, Value),
+    BitwiseXor(Value, Value),
     Compare(Type, Comparison, Value, Value),
     Copy(Value),
     Return(Option<Value>),
@@ -79,6 +80,7 @@ impl fmt::Display for Instruction {
             }
             Self::BitwiseAnd(lhs, rhs) => write!(formatter, "and {}, {}", lhs, rhs),
             Self::BitwiseOr(lhs, rhs) => write!(formatter, "or {}, {}", lhs, rhs),
+            Self::BitwiseXor(lhs, rhs) => write!(formatter, "xor {}, {}", lhs, rhs),
             Self::Copy(val) => write!(formatter, "copy {}", val),
             Self::Cast(val) => write!(formatter, "cast {}", val),
             Self::VAArg(val) => write!(formatter, "vaarg {}", val),
@@ -198,6 +200,13 @@ impl Type {
 
     pub fn is_int(&self) -> bool {
         !self.is_float()
+    }
+
+    pub fn is_pointer(&self) -> bool {
+        match self {
+            Self::Pointer(ty) => true,
+            _ => false,
+        }
     }
 
     pub fn weight(&self) -> u8 {

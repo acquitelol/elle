@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, fs::File, io::Write, path::PathBuf};
+use std::{cell::RefCell, collections::HashMap, fs::File, io::Write, primitive, thread::scope};
 
 use crate::{
     lexer::enums::{TokenKind, ValueKind},
@@ -26,7 +26,20 @@ impl Compiler {
     fn add_data_section(&mut self, data: Data) {
         let result = InternalData {
             data: data.clone(),
-            size: data.items.iter().map(|item| item.0.size()).sum(),
+            size: data
+                .items
+                .iter()
+                .map(|item| {
+                    if item.0 == Type::Field {
+                        match item.1.clone() {
+                            DataItem::Const(val) => val as u64,
+                            other => panic!("Invalid type for field: {}", other),
+                        }
+                    } else {
+                        item.0.size()
+                    }
+                })
+                .sum(),
         };
 
         self.data_sections.push(result);
@@ -37,12 +50,18 @@ impl Compiler {
         Value::Temporary(format!("{}.{}", name.unwrap_or("tmp"), self.tmp_counter))
     }
 
-    fn new_var(&mut self, ty: &Type, name: &str, new: bool) -> GeneratorResult<Value> {
-        let existing_var = self.get_variable(name);
-
+    fn new_var(
+        &mut self,
+        ty: &Type,
+        name: &str,
+        func: Option<&RefCell<Function>>,
+        new: bool,
+    ) -> GeneratorResult<Value> {
         let tmp = if new {
             self.new_temporary(Some(name))
         } else {
+            let existing_var = self.get_variable(name, func);
+
             match existing_var {
                 Ok((_, val)) => match val.clone() {
                     Value::Temporary(_) => val.clone(),
@@ -62,7 +81,11 @@ impl Compiler {
         Ok(tmp)
     }
 
-    fn get_variable(&self, name: &str) -> GeneratorResult<(Type, Value)> {
+    fn get_variable(
+        &mut self,
+        name: &str,
+        func: Option<&RefCell<Function>>,
+    ) -> GeneratorResult<(Type, Value)> {
         let var = self
             .scopes
             .iter()
@@ -72,8 +95,27 @@ impl Compiler {
             .ok_or_else(|| format!("\nUndefined variable '{}'\n", name));
 
         if var.is_err() {
-            for item in self.tree.iter() {
+            for item in self.tree.clone() {
                 match item {
+                    Primitive::Constant {
+                        name: const_name,
+                        r#type: ty,
+                        ..
+                    } => {
+                        if name == const_name && func.is_some() {
+                            let temp = self
+                                .new_var(&ty.clone().unwrap(), &name, func, true)
+                                .unwrap();
+
+                            func.unwrap().borrow_mut().assign_instruction(
+                                temp.clone(),
+                                ty.clone().unwrap(),
+                                Instruction::Call(Value::Global(name.to_string()), vec![]),
+                            );
+
+                            return Ok((ty.unwrap(), temp));
+                        }
+                    }
                     Primitive::Operation { name: op_name, .. } => {
                         if name == op_name {
                             return Ok((
@@ -139,7 +181,7 @@ impl Compiler {
 
         for argument in arguments.clone() {
             let ty = argument.r#type.clone();
-            let tmp = self.new_var(&ty, &argument.name, false)?;
+            let tmp = self.new_var(&ty, &argument.name, None, false)?;
 
             args.push((ty.into_abi(), tmp));
         }
@@ -236,7 +278,7 @@ impl Compiler {
                                         Value::Temporary(val) => {
                                             let val_temp = val.clone();
                                             let last = val_temp.split(".").last().unwrap().to_string().parse::<i32>().unwrap() - 1;
-                                            let var = self.get_variable(format!("r.v{}", last).as_str());
+                                            let var = self.get_variable(format!("r.v{}", last).as_str(), Some(&func_ref));
 
                                             match var {
                                                 Ok((ty, _)) => {
@@ -281,17 +323,17 @@ impl Compiler {
                 r#type,
                 value,
             } => {
-                let existing = match self.get_variable(name.as_str()) {
+                let existing = match self.get_variable(name.as_str(), Some(func)) {
                     Ok((ty, _)) => ty.clone(),
                     Err(_) => Type::Word,
                 };
 
-                if r#type.is_none() && self.get_variable(name.as_str()).is_err() {
+                if r#type.is_none() && self.get_variable(name.as_str(), Some(func)).is_err() {
                     panic!("\nVariable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.\n", name);
                 }
 
                 let ty = r#type.unwrap_or(existing.clone());
-                let temp = self.new_var(&ty, &name, false).unwrap();
+                let temp = self.new_var(&ty, &name, Some(func), false).unwrap();
                 let parsed =
                     self.generate_statement(func, module, *value.clone(), Some(ty.clone()), false);
 
@@ -323,6 +365,7 @@ impl Compiler {
                         let tmp = self.new_var(
                             &ret_ty.clone(),
                             format!("r.v{}", self.tmp_counter).as_str(),
+                            Some(func),
                             false,
                         );
 
@@ -465,6 +508,7 @@ impl Compiler {
                     ),
                     TokenKind::And => Instruction::BitwiseAnd(left_temp, right_temp),
                     TokenKind::Or => Instruction::BitwiseOr(left_temp, right_temp),
+                    TokenKind::Xor => Instruction::BitwiseXor(left_temp, right_temp),
                     _ => panic!("Invalid operator token"),
                 };
 
@@ -484,7 +528,7 @@ impl Compiler {
             AstNode::LiteralStatement { kind, value } => match kind.clone() {
                 TokenKind::Identifier => match value {
                     ValueKind::String(val) => {
-                        let var = self.get_variable(val.as_str());
+                        let var = self.get_variable(val.as_str(), Some(func));
 
                         match var {
                             Ok((ty, val)) => Some((ty.into_abi(), val)),
@@ -538,6 +582,7 @@ impl Compiler {
                         let num_ty = match kind {
                             TokenKind::IntegerLiteral => Type::Word,
                             TokenKind::DoubleLiteral => Type::Double,
+                            TokenKind::FloatLiteral => Type::Single,
                             TokenKind::LongLiteral => Type::Long,
                             _ => Type::Word,
                         };
@@ -644,11 +689,16 @@ impl Compiler {
 
                 self.tmp_counter += 1;
                 let temp = self
-                    .new_var(&ty, format!("tmp.{}", self.tmp_counter).as_str(), true)
+                    .new_var(
+                        &ty,
+                        format!("tmp.{}", self.tmp_counter).as_str(),
+                        Some(func),
+                        true,
+                    )
                     .unwrap();
 
                 let (_, val) = self
-                    .get_variable(&name)
+                    .get_variable(&name, Some(func))
                     .unwrap_or((Type::Long, Value::Global(name)));
 
                 func.borrow_mut().assign_instruction(
@@ -687,7 +737,7 @@ impl Compiler {
                 ));
 
                 let ty = Type::Pointer(Box::new(buf_ty.clone()));
-                let temp = self.new_var(&ty, name.as_str(), false).unwrap();
+                let temp = self.new_var(&ty, name.as_str(), Some(func), false).unwrap();
 
                 self.buf_types.insert(temp.clone(), buf_ty.clone());
 
@@ -704,7 +754,7 @@ impl Compiler {
                 offset,
                 value,
             } => {
-                let (existing_ty, existing_val) = self.get_variable(&name).unwrap();
+                let (existing_ty, existing_val) = self.get_variable(&name, Some(func)).unwrap();
 
                 let existing = self
                     .buf_types
@@ -752,7 +802,7 @@ impl Compiler {
                 None
             }
             AstNode::LoadStatement { name, offset } => {
-                let (existing_ty, existing_val) = self.get_variable(&name).unwrap();
+                let (existing_ty, existing_val) = self.get_variable(&name, Some(func)).unwrap();
 
                 let existing = self
                     .buf_types
@@ -790,6 +840,7 @@ impl Compiler {
                     .new_var(
                         &existing.clone().into_base().clone(),
                         format!("{}.{}", "tmp", self.tmp_counter).as_str(),
+                        Some(func),
                         true,
                     )
                     .expect("Variable to be created");
@@ -1000,7 +1051,7 @@ impl Compiler {
                     .generate_statement(func, module, *size.clone(), ty, false)
                     .unwrap();
 
-                let var = self.new_var(&Type::Long, &name, false).unwrap();
+                let var = self.new_var(&Type::Long, &name, Some(func), false).unwrap();
 
                 func.borrow_mut().assign_instruction(
                     var.clone(),
@@ -1012,7 +1063,7 @@ impl Compiler {
                 None
             }
             AstNode::NextStatement { name, r#type } => {
-                let ptr = self.get_variable(&name).unwrap().1.clone();
+                let ptr = self.get_variable(&name, Some(func)).unwrap().1.clone();
                 let ty = r#type.unwrap_or(Type::Long);
                 let tmp = self.new_temporary(None);
 
@@ -1064,7 +1115,7 @@ impl Compiler {
                 func.borrow_mut().add_block(end_label);
                 None
             }
-            AstNode::Conversion {
+            AstNode::ConversionStatement {
                 r#type: second,
                 value,
             } => {
@@ -1072,8 +1123,93 @@ impl Compiler {
                     .generate_statement(func, module, *value.clone(), ty, false)
                     .unwrap();
 
-                return Some(self.convert_to_type(func, first, second.unwrap(), val));
+                Some(self.convert_to_type(func, first, second.unwrap(), val))
             }
+            AstNode::NotStatement { value } => {
+                let (ty, val) = self
+                    .generate_statement(func, module, *value.clone(), ty, false)
+                    .unwrap();
+
+                let temp = self
+                    .new_var(&ty.clone(), &format!("tmp"), Some(func), true)
+                    .unwrap();
+
+                func.borrow_mut().assign_instruction(
+                    temp.clone(),
+                    ty.clone(),
+                    Instruction::Compare(
+                        ty.clone(),
+                        Comparison::Equal,
+                        val,
+                        Value::Const(ty.clone(), 0),
+                    ),
+                );
+
+                Some((ty, temp))
+            }
+            AstNode::SizeStatement { value, standalone } => match value {
+                Ok(ty) => {
+                    let tmp_ty = Type::Word;
+                    let temp = self.new_var(&tmp_ty, "tmp", Some(func), true).unwrap();
+
+                    func.borrow_mut().assign_instruction(
+                        temp.clone(),
+                        tmp_ty.clone(),
+                        Instruction::Copy(Value::Const(tmp_ty.clone(), ty.size() as i64)),
+                    );
+
+                    Some((tmp_ty, temp))
+                }
+
+                Err(token) => {
+                    match token.value {
+                        ValueKind::String(val) => {
+                            let var = self.get_variable(&val, Some(func)).unwrap();
+                            let inner = var.1.get_string_inner();
+                            let parts: Vec<&str> = inner.split('.').collect();
+
+                            let data_section = self.data_sections.iter().cloned().find(|item| {
+                                item.data.name
+                                    == format!(
+                                        "{}.{}",
+                                        parts[0],
+                                        parts[1].parse::<i32>().unwrap() - 1
+                                    )
+                            });
+
+                            // Get around the borrow checker
+                            let buf_types = self.buf_types.clone();
+                            let buf_types_clone = buf_types.clone();
+                            let buffer = buf_types_clone.get(&var.1);
+
+                            if data_section.is_some() && buffer.is_some() {
+                                let ty = Type::Word;
+                                let temp = self.new_var(&ty, "tmp", Some(func), true).unwrap();
+
+                                func.borrow_mut().assign_instruction(
+                                    temp.clone(),
+                                    ty.clone(),
+                                    Instruction::Copy(Value::Const(
+                                        ty.clone(),
+                                        data_section.unwrap().size as i64
+                                            / if standalone {
+                                                1
+                                            } else {
+                                                buffer.unwrap().size() as i64
+                                            },
+                                    )),
+                                );
+
+                                Some((ty, temp))
+                            } else {
+                                None
+                            }
+                        }
+                        _ => panic!("Invalid identifier value"),
+                    }
+                }
+                _ => panic!("Invalid value to calculate size for"),
+            },
             _ => todo!("statement: {:?}", stmt),
         };
 
@@ -1091,7 +1227,12 @@ impl Compiler {
             return (first, val);
         } else if first.is_int() && second.is_int() {
             let conv = self
-                .new_var(&second, &format!("tmp.{}", self.tmp_counter), true)
+                .new_var(
+                    &second,
+                    &format!("tmp.{}", self.tmp_counter),
+                    Some(func),
+                    true,
+                )
                 .unwrap();
             self.tmp_counter += 1;
 
@@ -1110,7 +1251,12 @@ impl Compiler {
             return (second, conv);
         } else if first.is_float() && second.is_float() {
             let conv = self
-                .new_var(&second, &format!("tmp.{}", self.tmp_counter), true)
+                .new_var(
+                    &second,
+                    &format!("tmp.{}", self.tmp_counter),
+                    Some(func),
+                    true,
+                )
                 .unwrap();
             self.tmp_counter += 1;
 
@@ -1129,7 +1275,12 @@ impl Compiler {
             return (second, conv);
         } else {
             let conv = self
-                .new_var(&second, &format!("tmp.{}", self.tmp_counter), true)
+                .new_var(
+                    &second,
+                    &format!("tmp.{}", self.tmp_counter),
+                    Some(func),
+                    true,
+                )
                 .unwrap();
             self.tmp_counter += 1;
 
@@ -1165,57 +1316,23 @@ impl Compiler {
                 Primitive::Constant {
                     name,
                     public,
-                    r#type: _, // We don't care about the type it only exists for semantics
+                    r#type: ty,
                     value,
-                } => {
-                    let res = match value {
-                        ValueKind::String(value) => Data::new(
-                            if public {
-                                Linkage::public()
-                            } else {
-                                Linkage::private()
-                            },
-                            name.to_string(),
-                            None,
-                            vec![
-                                (Type::Byte, DataItem::String(value.to_string())),
-                                (Type::Byte, DataItem::Const(0)),
-                            ],
-                        ),
-                        ValueKind::Number(value) => Data::new(
-                            if public {
-                                Linkage::public()
-                            } else {
-                                Linkage::private()
-                            },
-                            name.to_string(),
-                            None,
-                            vec![(Type::Word, DataItem::Const(value))],
-                        ),
-                        ValueKind::Character(value) => Data::new(
-                            if public {
-                                Linkage::public()
-                            } else {
-                                Linkage::private()
-                            },
-                            name.to_string(),
-                            None,
-                            vec![(Type::Byte, DataItem::String(value.to_string()))],
-                        ),
-                        ValueKind::Nil => Data::new(
-                            if public {
-                                Linkage::public()
-                            } else {
-                                Linkage::private()
-                            },
-                            name.to_string(),
-                            None,
-                            vec![(Type::Byte, DataItem::Const(0))],
-                        ),
-                    };
-
-                    module_ref.borrow_mut().add_data(res);
-                }
+                } => match generator.generate_function(
+                    name.clone(),
+                    public,
+                    false,
+                    false,
+                    &vec![],
+                    ty,
+                    vec![AstNode::ReturnStatement { value }],
+                    &module_ref,
+                ) {
+                    Ok(function) => {
+                        module_ref.borrow_mut().add_function(function);
+                    }
+                    Err(msg) => eprintln!("{}", msg),
+                },
                 Primitive::Operation {
                     name,
                     public,

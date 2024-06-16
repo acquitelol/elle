@@ -1,9 +1,6 @@
 use std::cell::RefCell;
 
-use crate::{
-    compiler::enums::Type,
-    lexer::enums::{TokenKind, ValueKind},
-};
+use crate::lexer::enums::{TokenKind, ValueKind};
 
 use super::{
     enums::{Argument, AstNode, Primitive},
@@ -238,6 +235,30 @@ impl<'a> Function<'a> {
             },
             _ => true,
         });
+
+        // Initialize pointer constants on every function call
+        for (i, item) in self.parser.tree.iter().cloned().rev().enumerate() {
+            match item {
+                Primitive::Constant { name, r#type, .. } => {
+                    if r#type.is_some() && r#type.clone().unwrap().is_pointer() {
+                        res.insert(
+                            0,
+                            AstNode::DeclareStatement {
+                                // Variable names in Elle cannot contain "."
+                                // so this name is valid
+                                name: format!("constant.{}", i),
+                                r#type,
+                                value: Box::new(AstNode::LiteralStatement {
+                                    kind: TokenKind::Identifier,
+                                    value: ValueKind::String(name),
+                                }),
+                            },
+                        );
+                    }
+                }
+                _ => {}
+            }
+        }
 
         Primitive::Operation {
             public,

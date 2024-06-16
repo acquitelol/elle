@@ -9,6 +9,7 @@ pub enum TokenKind {
     Identifier,
     IntegerLiteral,
     LongLiteral,
+    FloatingPoint,
     FloatLiteral,
     DoubleLiteral,
     CharLiteral,
@@ -33,9 +34,10 @@ pub enum TokenKind {
     MultiplyEqual,
     DivideEqual,
     ModulusEqual,
+    XorEqual,
     AddOne,
     SubtractOne,
-    // Exponent,
+    Exponent,
     RightArrow,
     LeftArrow,
     Semicolon,
@@ -57,6 +59,7 @@ pub enum TokenKind {
     EqualTo,
     NotEqualTo,
     And,
+    Xor,
     Or,
     None,
     Constant,
@@ -72,6 +75,8 @@ pub enum TokenKind {
     Step,
     Defer,
     Size,
+    Unary,
+    ArrayLength,
 }
 
 impl TokenKind {
@@ -88,7 +93,7 @@ impl TokenKind {
             Self::LessThan | Self::LessThanEqual | Self::GreaterThan | Self::GreaterThanEqual => 4,
             Self::EqualTo | Self::NotEqualTo => 3,
             Self::And => 2,
-            Self::Or => 1,
+            Self::Or | Self::Xor => 1,
             _ => 0,
         }
     }
@@ -108,7 +113,8 @@ impl TokenKind {
             | Self::EqualTo
             | Self::NotEqualTo
             | Self::And
-            | Self::Or => true,
+            | Self::Or
+            | Self::Xor => true,
             _ => false,
         }
     }
@@ -125,7 +131,8 @@ impl TokenKind {
             | Self::TrueLiteral
             | Self::FalseLiteral
             | Self::Break
-            | Self::Continue => true,
+            | Self::Continue
+            | Self::FloatingPoint => true,
             _ => false,
         }
     }
@@ -137,8 +144,27 @@ impl TokenKind {
             | Self::MultiplyEqual
             | Self::DivideEqual
             | Self::ModulusEqual
+            | Self::XorEqual
             | Self::AddOne
             | Self::SubtractOne => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_unary_context(&self) -> bool {
+        match self {
+            TokenKind::LeftParenthesis
+            | TokenKind::LeftCurlyBrace
+            | TokenKind::LeftBlockBrace
+            | TokenKind::Comma
+            | TokenKind::Colon
+            | TokenKind::Equal
+            | TokenKind::NotEqualTo
+            | TokenKind::LessThan
+            | TokenKind::LessThanEqual
+            | TokenKind::GreaterThan
+            | TokenKind::GreaterThanEqual
+            | TokenKind::Not => true,
             _ => false,
         }
     }
@@ -171,6 +197,7 @@ impl ValueKind {
                 "float" => Some(Type::Single),
                 "double" => Some(Type::Double),
                 "char" => Some(Type::Byte),
+                "bool" => Some(Type::Word),
                 "nil" => None,
                 _ => None,
             },

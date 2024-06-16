@@ -9,7 +9,7 @@ use super::{enums::Primitive, r#use::Use};
 pub struct Parser {
     pub tokens: Vec<Token>,
     pub position: usize,
-    tree: Vec<Primitive>,
+    pub tree: Vec<Primitive>,
 }
 
 impl Parser {
@@ -37,6 +37,15 @@ impl Parser {
             println!("The position of {:?} is the last index of the token stack. Staying at the same position.", self.position);
         } else {
             self.position += 1;
+        }
+    }
+
+    pub fn advance_opt(&mut self) -> Option<()> {
+        if self.is_eof() {
+            None
+        } else {
+            self.position += 1;
+            Some(())
         }
     }
 

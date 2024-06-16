@@ -1,6 +1,6 @@
 use crate::{
     compiler::enums::Type,
-    lexer::enums::{TokenKind, ValueKind},
+    lexer::enums::{Token, TokenKind, ValueKind},
 };
 
 #[derive(Debug, Clone)]
@@ -63,10 +63,27 @@ pub enum AstNode {
     BlockStatement {
         body: Vec<AstNode>,
     },
-    Conversion {
+    NotStatement {
+        value: Box<AstNode>,
+    },
+    ConversionStatement {
         r#type: Option<Type>,
         value: Box<AstNode>,
     },
+    SizeStatement {
+        // Easy way to return 2 values without a special enum
+        value: Result<Type, Token>,
+        standalone: bool,
+    },
+}
+
+impl AstNode {
+    pub fn token_to_literal(token: Token) -> AstNode {
+        Self::LiteralStatement {
+            kind: token.kind,
+            value: token.value,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -89,7 +106,7 @@ pub enum Primitive {
         name: String,
         public: bool,
         r#type: Option<Type>,
-        value: ValueKind,
+        value: Box<AstNode>,
     },
 }
 

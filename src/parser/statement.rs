@@ -56,12 +56,20 @@ impl<'a> Statement<'a> {
 
     fn expect_token_with_message(&self, expected: TokenKind, message: Option<&str>) {
         if self.current_token().kind != expected {
-            panic!(
-                "[{}] Expected {:?}, found {:?}. {}",
+            let upper = format!(
+                "{}[{}]{}",
+                "-".repeat(20),
                 self.current_token().location.display(),
+                "-".repeat(20)
+            );
+
+            panic!(
+                "\n\n{}\nExpected {:?}, found {:?}. {}\n{}\n\n",
+                upper,
                 expected,
                 self.current_token().kind,
-                message.unwrap_or("")
+                message.unwrap_or(""),
+                "-".repeat(upper.len())
             );
         }
     }
@@ -134,6 +142,17 @@ impl<'a> Statement<'a> {
 
         if self.current_token().kind == TokenKind::LeftBlockBrace {
             return self.parse_buffer(Some(name), r#type);
+        }
+
+        if self.is_eof() || self.current_token().kind == TokenKind::Semicolon {
+            return AstNode::DeclareStatement {
+                name,
+                r#type,
+                value: Box::new(AstNode::LiteralStatement {
+                    kind: TokenKind::IntegerLiteral,
+                    value: ValueKind::Number(0),
+                }),
+            };
         }
 
         self.expect_token(TokenKind::Equal);
@@ -224,6 +243,7 @@ impl<'a> Statement<'a> {
             TokenKind::MultiplyEqual => TokenKind::Multiply,
             TokenKind::DivideEqual => TokenKind::Divide,
             TokenKind::ModulusEqual => TokenKind::Modulus,
+            TokenKind::XorEqual => TokenKind::Xor,
             other => panic!("Invalid identifier operation {:?}", other),
         };
 
@@ -260,11 +280,11 @@ impl<'a> Statement<'a> {
 
         AstNode::ArithmeticOperation {
             left: Box::new(AstNode::LiteralStatement {
-                kind: TokenKind::DoubleLiteral,
+                kind: TokenKind::FloatLiteral,
                 value: ValueKind::Number(original),
             }),
             right: Box::new(AstNode::LiteralStatement {
-                kind: TokenKind::DoubleLiteral,
+                kind: TokenKind::FloatLiteral,
                 value: ValueKind::Number(10_i64.pow(exponent as u32)),
             }),
             operator: TokenKind::Divide,
@@ -284,7 +304,7 @@ impl<'a> Statement<'a> {
                     kind: TokenKind::IntegerLiteral,
                     value: ValueKind::Number(0),
                 },
-                TokenKind::FloatLiteral => self.parse_float(current),
+                TokenKind::FloatingPoint => self.parse_float(current),
                 _ => AstNode::LiteralStatement {
                     kind: current.kind,
                     value: current.value,
@@ -307,7 +327,7 @@ impl<'a> Statement<'a> {
                                 kind: TokenKind::IntegerLiteral,
                                 value: ValueKind::Number(0),
                             },
-                            TokenKind::FloatLiteral => self.parse_float(current),
+                            TokenKind::FloatingPoint => self.parse_float(current),
                             _ => AstNode::LiteralStatement {
                                 kind: current.kind,
                                 value: current.value,
@@ -575,12 +595,7 @@ impl<'a> Statement<'a> {
         self.advance();
         self.expect_token_with_message(
             TokenKind::Identifier,
-            Some(
-                format!(
-                    "Expected identifier, got {:?}. You cannot increment anything that isn't an identifier.",
-                    self.current_token().kind
-                ).as_str()
-            )
+            Some("\nYou cannot increment or decrement anything that isn't an identifier."),
         );
 
         let name = self.get_identifier();
@@ -616,20 +631,86 @@ impl<'a> Statement<'a> {
         self.expect_token(TokenKind::LeftBlockBrace);
         self.advance();
 
-        self.expect_token(TokenKind::IntegerLiteral);
-        let size = self.current_token().value;
+        let mut size = None;
 
-        // These should not be assigned to a variable as they are themselves a variable declaration
-        // Therefore we don't need to check is_eof and can just enforce that there's a semicolon
-        self.advance();
+        if self.current_token().kind == TokenKind::IntegerLiteral {
+            size = Some(self.current_token().value);
+            self.advance();
+        }
+
         self.expect_token(TokenKind::RightBlockBrace);
         self.advance();
+
+        if self.current_token().kind == TokenKind::Equal {
+            return self.parse_array_literal(Some(name), ty, size);
+        }
+
         self.expect_token(TokenKind::Semicolon);
 
         AstNode::BufferStatement {
             name,
             r#type: Some(ty.unwrap_or(Type::Byte)),
-            size,
+            size: size.unwrap(),
+        }
+    }
+
+    fn parse_array_literal(
+        &mut self,
+        name: Option<String>,
+        ty: Option<Type>,
+        size: Option<ValueKind>,
+    ) -> AstNode {
+        let name = name.unwrap();
+
+        self.advance();
+        self.expect_token(TokenKind::LeftCurlyBrace);
+        self.advance();
+
+        let mut values = vec![];
+
+        while self.current_token().kind != TokenKind::RightCurlyBrace && !self.is_eof() {
+            let tmp_tokens = self
+                .yield_tokens_with_delimiters(vec![TokenKind::Comma, TokenKind::RightCurlyBrace]);
+
+            if self.current_token().kind == TokenKind::Comma {
+                self.advance();
+            }
+
+            values.push(Statement::new(tmp_tokens.clone(), 0, &self.body).parse().0);
+        }
+
+        self.advance();
+
+        if !self.is_eof() {
+            self.expect_token(TokenKind::Semicolon);
+        }
+
+        self.body.borrow_mut().push(AstNode::BufferStatement {
+            name: name.clone(),
+            r#type: ty.clone(),
+            size: size.unwrap_or(ValueKind::Number(values.len() as i64)),
+        });
+
+        // Get the last one so we can return it from the function
+        let last = values.pop().unwrap();
+        for (i, value) in values.iter().enumerate() {
+            self.body.borrow_mut().push(AstNode::StoreStatement {
+                name: name.clone(),
+                offset: Box::new(AstNode::LiteralStatement {
+                    kind: TokenKind::IntegerLiteral,
+                    value: ValueKind::Number(i as i64),
+                }),
+                value: Box::new(value.clone()),
+            });
+        }
+
+        AstNode::StoreStatement {
+            name,
+            offset: Box::new(AstNode::LiteralStatement {
+                kind: TokenKind::IntegerLiteral,
+                value: ValueKind::Number(values.len() as i64),
+            }),
+            value: Box::new(last),
         }
     }
 
@@ -1035,7 +1116,7 @@ impl<'a> Statement<'a> {
         }
 
         let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
-        AstNode::Conversion {
+        AstNode::ConversionStatement {
             r#type: Some(r#type),
             value,
         }
@@ -1057,21 +1138,71 @@ impl<'a> Statement<'a> {
         self.expect_token(TokenKind::LeftParenthesis);
         self.advance();
 
-        let ty = self.get_type();
+        let value = if self.current_token().kind == TokenKind::Type {
+            Ok(self.get_type())
+        } else {
+            Err(self.current_token())
+        };
+
         self.advance();
 
         self.expect_token(TokenKind::RightParenthesis);
         self.advance();
 
-        AstNode::LiteralStatement {
-            kind: TokenKind::IntegerLiteral,
-            value: ValueKind::Number(ty.size() as i64),
+        AstNode::SizeStatement {
+            value,
+            standalone: true,
         }
     }
 
-    fn yield_tokens_with_delimiters(&mut self, delimiters: Vec<TokenKind>) -> Vec<Token> {
-        let mut tokens = vec![];
+    fn parse_array_length(&mut self) -> AstNode {
+        self.expect_token(TokenKind::ArrayLength);
+        self.advance();
 
+        self.expect_token(TokenKind::LeftParenthesis);
+        self.advance();
+
+        let value = self.current_token();
+        self.advance();
+
+        self.expect_token(TokenKind::RightParenthesis);
+        self.advance();
+
+        AstNode::SizeStatement {
+            value: Err(value),
+            standalone: false,
+        }
+    }
+
+    fn parse_unary(&mut self) -> AstNode {
+        let token = self.current_token();
+        self.advance();
+
+        let tokens = self.yield_tokens_with_condition(|token| {
+            token.kind.is_arithmetic() || token.kind == TokenKind::Semicolon
+        });
+
+        let parsed = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
+
+        AstNode::ArithmeticOperation {
+            left: parsed,
+            right: Box::new(AstNode::token_to_literal(token)),
+            operator: TokenKind::Multiply,
+        }
+    }
+
+    fn parse_not(&mut self) -> AstNode {
+        self.advance();
+
+        let tokens = self.yield_tokens_with_condition(|token| {
+            token.kind.is_arithmetic() || token.kind == TokenKind::Semicolon
+        });
+
+        let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
+        AstNode::NotStatement { value }
+    }
+
+    fn yield_tokens_with_delimiters(&mut self, delimiters: Vec<TokenKind>) -> Vec<Token> {
         if delimiters.contains(&self.current_token().kind) {
             panic!(
                 "[{}] expected expression but got {:?}",
@@ -1080,11 +1211,20 @@ impl<'a> Statement<'a> {
             );
         }
 
+        return self.yield_tokens_with_condition(|token| delimiters.contains(&token.kind));
+    }
+
+    fn yield_tokens_with_condition<F>(&mut self, condition: F) -> Vec<Token>
+    where
+        F: Fn(Token) -> bool,
+    {
+        let mut tokens = vec![];
+
         loop {
             tokens.push(self.current_token());
             let res = self.advance_opt();
 
-            if delimiters.contains(&self.current_token().kind) {
+            if condition(self.current_token().clone()) {
                 break;
             }
 
@@ -1253,6 +1393,10 @@ impl<'a> Statement<'a> {
     fn parse_primary(&mut self) -> AstNode {
         match self.current_token().kind {
             token if token.is_literal() => self.parse_literal(),
+            TokenKind::Unary => self.parse_unary(),
+            TokenKind::Not => self.parse_not(),
+            TokenKind::Size => self.parse_size(),
+            TokenKind::ArrayLength => self.parse_array_length(),
             TokenKind::LeftParenthesis => {
                 let next = self.next_token();
 
@@ -1320,7 +1464,6 @@ impl<'a> Statement<'a> {
             TokenKind::While => self.parse_while_statement(),
             TokenKind::For => self.parse_for_statement(),
             TokenKind::Defer => self.parse_defer(),
-            TokenKind::Size => self.parse_size(),
             _ => self.parse_expression(),
         };
 

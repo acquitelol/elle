@@ -6,6 +6,7 @@ pub struct Lexer {
     position: usize,
     row: usize,
     bol: usize,
+    prev_token: Option<Token>,
 }
 
 impl Lexer {
@@ -16,10 +17,18 @@ impl Lexer {
             position: 0,
             row: 0,
             bol: 0,
+            prev_token: None,
         }
     }
 
     pub fn next_token(&mut self) -> Option<Token> {
+        let token = self.internal_next_token();
+        self.prev_token = token.clone();
+
+        return token;
+    }
+
+    fn internal_next_token(&mut self) -> Option<Token> {
         self.skip_whitespace();
 
         if self.is_eof() {
@@ -120,25 +129,10 @@ impl Lexer {
                     self.advance();
                     (TokenKind::SubtractOne, ValueKind::Nil)
                 } else {
-                    match self.current_char().is_digit(10) {
-                        true => {
-                            let (kind, value) = self.consume_number_literal();
-
-                            let result = match value {
-                                ValueKind::Number(value) => ValueKind::Number(-value),
-                                ValueKind::String(value) => {
-                                    ValueKind::String(format!("-{}", value))
-                                }
-                                _ => todo!(),
-                            };
-
-                            return Some(Token {
-                                kind,
-                                value: result,
-                                location: self.get_location(),
-                            });
-                        }
-                        false => (TokenKind::Subtract, ValueKind::Nil),
+                    if self.is_unary_context() {
+                        (TokenKind::Unary, ValueKind::Number(-1))
+                    } else {
+                        (TokenKind::Subtract, ValueKind::Nil)
                     }
                 }
             }
@@ -156,13 +150,22 @@ impl Lexer {
                 if self.current_char() == '=' {
                     self.advance();
                     (TokenKind::MultiplyEqual, ValueKind::Nil)
-                }
-                /* else if self.current_char() == '*' {
+                } else if self.current_char() == '*' {
                     self.advance();
                     (TokenKind::Exponent, ValueKind::Nil)
-                } */
-                else {
+                } else {
                     (TokenKind::Multiply, ValueKind::Nil)
+                }
+            }
+            '^' => {
+                self.advance();
+
+                match self.current_char() {
+                    '=' => {
+                        self.advance();
+                        (TokenKind::XorEqual, ValueKind::Nil)
+                    }
+                    _ => (TokenKind::Xor, ValueKind::Nil),
                 }
             }
             '/' => {
@@ -190,17 +193,10 @@ impl Lexer {
                     self.advance();
                     (TokenKind::AddOne, ValueKind::Nil)
                 } else {
-                    match self.current_char().is_digit(10) {
-                        true => {
-                            let (kind, value) = self.consume_number_literal();
-
-                            return Some(Token {
-                                kind,
-                                value,
-                                location: self.get_location(),
-                            });
-                        }
-                        false => (TokenKind::Add, ValueKind::Nil),
+                    if self.is_unary_context() {
+                        (TokenKind::Unary, ValueKind::Number(1))
+                    } else {
+                        (TokenKind::Add, ValueKind::Nil)
                     }
                 }
             }
@@ -314,6 +310,7 @@ impl Lexer {
                 match value {
                     ValueKind::String(val) => match val.as_str() {
                         "size" => (TokenKind::Size, ValueKind::Nil),
+                        "arrlen" => (TokenKind::ArrayLength, ValueKind::Nil),
                         other => panic!(
                             "[{}] Unimplemented directive \"{}\"",
                             self.get_location().display(),
@@ -368,6 +365,14 @@ impl Lexer {
             file: self.file.clone(),
             row: self.row,
             column: self.position - self.bol,
+        }
+    }
+
+    fn is_unary_context(&self) -> bool {
+        if let Some(ref prev_token) = self.prev_token {
+            prev_token.kind.is_unary_context()
+        } else {
+            true
         }
     }
 
@@ -427,7 +432,11 @@ impl Lexer {
         let start = self.position;
         let mut float = false;
 
-        while !self.is_eof() && (self.current_char().is_digit(10) || self.current_char() == '.') {
+        while !self.is_eof()
+            && (self.current_char().is_digit(10)
+                || self.current_char() == '.'
+                || self.current_char() == '_')
+        {
             if self.current_char() == '.' {
                 float = true;
             }
@@ -435,15 +444,21 @@ impl Lexer {
             self.advance();
         }
 
-        let literal: String = self.input[start..self.position].iter().collect();
+        let unparsed_literal: String = self.input[start..self.position].iter().collect();
+        let literal = unparsed_literal.replace("_", "");
+
         if float {
             (
-                TokenKind::FloatLiteral,
+                TokenKind::FloatingPoint,
                 ValueKind::String(format!("{}", literal)),
             )
         } else {
             (
-                TokenKind::IntegerLiteral,
+                if literal.len() > 10 {
+                    TokenKind::LongLiteral
+                } else {
+                    TokenKind::IntegerLiteral
+                },
                 ValueKind::Number(literal.parse().unwrap()),
             )
         }
