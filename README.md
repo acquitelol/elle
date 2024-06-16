@@ -372,17 +372,17 @@ Elle's types are quite similar to C in terms of their definition. They can be a 
 
 These are the mappings of types in Elle:
 
-`nil` - No type. Can be used to give a function that doesn't return anything an explicit return type. Keep in mind that this is purely semantic and cannot be used as a standalone type for variables.
-`bool` - A mapping to `int`, and works purely as a semantic for boolean literals like `true` or `false` that expand to `1` or `0` respectively.
-`char` - A mapping to `byte` representing a character in ASCII.
-`int` - A "word", also knows as a 32 bit signed integer.
-`long` - A signed integer of the size specified by your computer's architecture. On x64 computers this is a 64-bit signed integer, while on x86 computers this is a 32-bit signed integer.
-`single` - A 32-bit signed floating point number.
-`float` - A mapping to a `single`.
-`double` - A 64-bit signed floating point number, providing double the precision of a `single`.
-`function` - A type that maps to a `byte`. This is intended to be used as a pointer to the first byte of a function definition.
-`pointer` - Denoted by `<type> *` -> As pointers are just a number, an address in memory, a pointer in ELle is just a `long` that holds extra context by holding another type. This is most useful when creating an array to be able to determine the offset multiplier when indexing. You could replace all pointer types with `long` however you lose the context of an inner type that the pointer is.. pointing to, so you may get an incorrect offset based on the inner type of the pointer.
-`string` - A mapping to a `char *`, which is a pointer to the start of the array of bytes (characters).
+- `nil` - No type. Can be used to give a function that doesn't return anything an explicit return type. Keep in mind that this is purely semantic and cannot be used as a standalone type for variables.
+- `bool` - A mapping to `int`, and works purely as a semantic for boolean literals like `true` or `false` that expand to `1` or `0` respectively.
+- `char` - A mapping to `byte` representing a character in ASCII.
+- `int` - A "word", also knows as a 32 bit signed integer.
+- `long` - A signed integer of the size specified by your computer's architecture. On x64 computers this is a 64-bit signed integer, while on x86 computers this is a 32-bit signed integer.
+- `single` - A 32-bit signed floating point number.
+- `float` - A mapping to a `single`.
+- `double` - A 64-bit signed floating point number, providing double the precision of a `single`.
+- `function` - A type that maps to a `byte`. This is intended to be used as a pointer to the first byte of a function definition.
+- `pointer` - Denoted by `<type> *` -> As pointers are just a number, an address in memory, a pointer in ELle is just a `long` that holds extra context by holding another type. This is most useful when creating an array to be able to determine the offset multiplier when indexing. You could replace all pointer types with `long` however you lose the context of an inner type that the pointer is.. pointing to, so you may get an incorrect offset based on the inner type of the pointer.
+- `string` - A mapping to a `char *`, which is a pointer to the start of the array of bytes (characters).
 
 
 
@@ -432,12 +432,12 @@ All arithmetic operations are declared with 2 expressions on the left and right 
 
 This is the mapping defined by Elle:
 
-`^` - Xor
-`*` - Multiply
-`/` - Divide
-`+` - Add
-`-` - Subtract
-`%` - Modulus
+- `^` - Xor
+- `*` - Multiply
+- `/` - Divide
+- `+` - Add
+- `-` - Subtract
+- `%` - Modulus
 
 Keep in mind that you can also assign these to other values.
 This means the following code is valid:
