@@ -37,7 +37,7 @@ pub enum TokenKind {
     XorEqual,
     AddOne,
     SubtractOne,
-    Exponent,
+    // Exponent,
     RightArrow,
     LeftArrow,
     Semicolon,
@@ -87,13 +87,14 @@ impl TokenKind {
 
     pub fn precedence(&self) -> i8 {
         match self {
-            // Self::Exponent => 7,
-            Self::Multiply | Self::Divide | Self::Modulus => 6,
-            Self::Add | Self::Subtract => 5,
-            Self::LessThan | Self::LessThanEqual | Self::GreaterThan | Self::GreaterThanEqual => 4,
-            Self::EqualTo | Self::NotEqualTo => 3,
-            Self::And => 2,
-            Self::Or | Self::Xor => 1,
+            // Self::Exponent => 8,
+            Self::Multiply | Self::Divide | Self::Modulus => 7,
+            Self::Add | Self::Subtract => 6,
+            Self::LessThan | Self::LessThanEqual | Self::GreaterThan | Self::GreaterThanEqual => 5,
+            Self::EqualTo | Self::NotEqualTo => 4,
+            Self::And => 3,
+            Self::Xor => 2,
+            Self::Or => 1,
             _ => 0,
         }
     }

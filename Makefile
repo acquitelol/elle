@@ -33,7 +33,7 @@ $(IR_PATH): examples/$(RUN_ARGS).elle dist/compiler
 .PHONY: run
 run:
 	clear
-	@$(EXEC_PATH)
+	@$(EXEC_PATH) "you can pass arguments to Elle programs!" ":3"
 
 compile:
 	mkdir -p dist

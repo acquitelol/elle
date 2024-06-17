@@ -150,9 +150,9 @@ impl Lexer {
                 if self.current_char() == '=' {
                     self.advance();
                     (TokenKind::MultiplyEqual, ValueKind::Nil)
-                } else if self.current_char() == '*' {
-                    self.advance();
-                    (TokenKind::Exponent, ValueKind::Nil)
+                // } else if self.current_char() == '*' {
+                //     self.advance();
+                //     (TokenKind::Exponent, ValueKind::Nil)
                 } else {
                     (TokenKind::Multiply, ValueKind::Nil)
                 }
