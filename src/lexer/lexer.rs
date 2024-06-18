@@ -408,6 +408,7 @@ impl Lexer {
             "step" => TokenKind::Step,
             "variadic" => TokenKind::Variadic,
             "defer" => TokenKind::Defer,
+            "external" => TokenKind::External,
             _ => TokenKind::Identifier,
         };
 

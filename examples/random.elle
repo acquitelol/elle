@@ -1,0 +1,47 @@
+const int NULL = 0;
+const int BUF_SIZE = 256;
+
+external fn printf(char *formatter, ...);
+external fn fprintf(long fd, char *formatter, ...);
+
+fn input(char *message) -> char * {
+    long stdin = fdopen(0, "r");
+    char *buf = malloc(BUF_SIZE * #size(char));
+    defer free(buf);
+
+    printf(message);
+    fgets(buf, BUF_SIZE, stdin);
+    buf[strlen(buf) - 1] = '\0';
+
+    char *result = malloc(strlen(buf) + 1);
+    strcpy(result, buf);
+    return result;
+}
+
+fn input_as_int(char *message) -> int {
+    char *res = input(message);
+    defer free(res);
+
+    if (strspn(res, "0123456789") != strlen(res)) {
+        long stderr = fdopen(2, "w");
+        fprintf(stderr, "Invalid input: '%s'. Falling back to 0\n", res);
+        return 0;
+    }
+
+    // Ensure the free call is done after we get the integer
+    int converted = atoi(res);
+    return converted;
+}
+
+fn random(int lower, int upper) {
+    return rand() % (upper - lower + 1) + lower;
+}
+
+pub fn main() {
+    srand(time(NULL));
+    int lower = input_as_int("Enter the lower bound: ");
+    int upper = input_as_int("Enter the upper bound: ");
+
+    printf!("Rolled %d\n", random(lower, upper));
+    return 0;
+}

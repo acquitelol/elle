@@ -93,7 +93,7 @@ while expression {
 int i = 0;
 
 while (i < 10) {
-    printf!("%d\n", i);
+    printf("%d\n", i);
     i++;
 }
 ```
@@ -117,7 +117,7 @@ Essentially, the loop creates the variable defined in (1), and evaluates the blo
 
 ```cpp
 for (int i = 0; i < 10; i++) {
-    printf!("%d\n", i);
+    printf("%d\n", i);
 }
 ```
 
@@ -143,7 +143,7 @@ fn get_e() {
 
 pub fn main() {
     double e = get_e();
-    printf!("e = %.50f\n", e);
+    printf("e = %.50f\n", e);
     return 0;
 }
 ```
@@ -225,12 +225,12 @@ At the call-site, using this function is easy due to the syntactic sugar provide
 ```cpp
 pub fn main() {
     int res = add.(1, 2, 3, 4);
-    printf!("%d\n", res);
+    printf("%d\n", res);
     return 0;
 }
 ```
 
-Notice the `add.(a, b)` syntax. This is a compile time macro which automatically adds the argument length as the 0th argument of the function, substituting it for the size of the variadic function. This means that calling `add.(a, b, c)` is actually identical to calling `add!(3, a, b, c)`, you simply no longer need to pass the argument length manually, like in C.
+Notice the `add.(a, b)` syntax. This is a compile time macro which automatically adds the argument length as the 0th argument of the function, substituting it for the size of the variadic function. This means that calling `add.(a, b, c)` is actually identical to calling `add(3, a, b, c)`, you simply no longer need to pass the argument length manually, like in C.
 
 <hr />
 
@@ -257,7 +257,7 @@ pub fn main() {
 
     // Print the value at the 0th index (pointer start + 0)
     // This is identical to `some_buffer[0]`
-    printf!("%d\n", deref(some_buffer + 0));
+    printf("%d\n", deref(some_buffer + 0));
     return 0;
 }
 ```
@@ -266,20 +266,13 @@ pub fn main() {
 * Typing `$$storeb 0, %tmp_12$$` will write exactly `storeb 0, %tmp_12` into the intermediate language, completely ignoring types, sigils, etc.
 * Only use this for basic operations, it is not intended as a replacement for writing Elle code as block-scoped variables are written with a temporary counter and cannot be referenced directly from exact literals.
 
-* The function syntax `func!(a, b, c)` works as follows:
-  * `func(a, b, c)` expands to `func(a, b, c)`
-  * `func!(a, b, c)` expands to `func(a, $...$, b, c)`
-  * `func!2(a, b, c)` expands to `func(a, b, $...$, c)`
-
-> The number after the `!` can be anything. It is intended to handle variadic functions, as in QBE IR, variadic functions must declare the point at which the variadic arguments begin. So while typing the exact literal `#...#` is valid, writing it out every time for each `printf`, `sprintf`, `scanf` call, etc can get exhausting, which is why this macro exists in the first place.
-
 * The function syntax `func.(a, b, c)` works as follows:
   * `func(a, b, c)` expands to `func(a, b, c)`
-  * `func.(a, b, c, d)` expands to `func(4, $...$, a, b, c, d)`
-  * `func.(a, b, c)` expands to `func(3, $...$, a, b, c)`
-  * `func.(a, b)` expands to `func(2, $...$, a, b)`
+  * `func.(a, b, c, d)` expands to `func(4, a, b, c, d)`
+  * `func.(a, b, c)` expands to `func(3, a, b, c)`
+  * `func.(a, b)` expands to `func(2, a, b)`
 
-> The number placed before the `#...#` is the number of arguments. This is a simple way to allow to get the number of arguments that were passed into the function without needing to manually specify them.
+> The number placed at the 0th argument is the number of arguments. This is a simple way to allow to get the number of arguments that were passed into the function without needing to manually specify them.
 
 <hr />
 
@@ -312,7 +305,7 @@ A very simple example of this is declaring a variable and deferring printing its
 
 ```cpp
 fn print_int(int num) {
-    printf!("%d\n", num);
+    printf("%d\n", num);
 }
 
 pub fn main() {
@@ -333,7 +326,7 @@ You can see how this only calls `print_int` right before it returns 0, which is 
 This also means that if you, hypothetically, design a program like this
 ```cpp
 fn print_int(int num) {
-    printf!("%d\n", num);
+    printf("%d\n", num);
 }
 
 pub fn main() {
@@ -387,7 +380,7 @@ pub fn main() {
     for (long i = 0; i < size - 1; i++) {
         numbers[i] = i * 2;
         long res = numbers[i];
-        printf!("numbers[%ld] = %ld\n", i, res);
+        printf("numbers[%ld] = %ld\n", i, res);
     }
 
     // (Ignore that this never runs)
@@ -514,7 +507,7 @@ This means the following code is valid:
 pub fn main() {
     int a = 1;
     a ^= 1; // a is now 0;
-    printf!("%d", a);
+    printf("%d", a);
 
     return 0;
 }
@@ -534,7 +527,7 @@ pub fn main() {
     //  5 ^ 2 = 7 and 7 + 1 = 8, however
     // without the brackets it would be 4
     // because it would evaluate to 6 ^ 2 = 4
-    printf!("%d", a);
+    printf("%d", a);
 
     return 0;
 }
@@ -566,7 +559,7 @@ pub fn main() {
     long test[] = {MAX_SIGNED_LONG, MIN_SIGNED_LONG, -39};
 
     for int i = 0; i < #arrlen(test); i++ {
-        printf!("test[%d] = %ld\n", i, test[i]);
+        printf("test[%d] = %ld\n", i, test[i]);
     }
 
     return 0;
@@ -598,7 +591,7 @@ pub fn main() {
     char *some_array[] = {"abc", "meow", "test"};
 
     for int i = 0; i < #arrlen(some_array); i++ {
-        printf!("some_array[%d] = %s\n", i, some_array[i]);
+        printf("some_array[%d] = %s\n", i, some_array[i]);
     }
 
     return 0;
@@ -622,7 +615,7 @@ const int HEIGHT = 24;
 const int SIZE = WIDTH * HEIGHT;
 
 pub fn main() {
-    printf!("%d\n", SIZE);
+    printf("%d\n", SIZE);
     return 0;
 }
 ```
@@ -644,7 +637,7 @@ Consider this function which accepts argv and prints them all to the console:
 ```cpp
 pub fn main(int argc, char **argv) {
     for int i = 0; i < argc; i++ {
-        printf!("argv[%d] = %s\n", i, argv[i]);
+        printf("argv[%d] = %s\n", i, argv[i]);
     }
 
     return 0;
@@ -654,6 +647,40 @@ pub fn main(int argc, char **argv) {
 It accepts `argc` as a signed 32-bit integer and `argv` as an array of `char *` (denoted by `char **`, basically a pointer to the start of the array holding `char *` which is a pointer to the start of each string). These arguments are optional, as you may have noticed from code examples above.
 
 You can also accept `char **envp` (and `char **apple` on MacOS/Darwin platforms, which provides arbitrary OS information, such as the path to the executing binary).
+
+<hr />
+
+### ♡ **External symbols**
+
+* An external symbol is a definition for a function or constant that was defined elsewhere (such as in C) and is implicitly defined in Elle. This is mostly used for inferring the index of the start of variadic arguments in functions.
+
+As Elle has no modules currently, to effectively use `printf` and similar functions you must declare their interface at the top level.
+<br/>
+
+You can do this with the following example:
+```cpp
+external fn printf(char *formatter, ...);
+```
+
+It essentially tells Elle where it should put the variadic argument starter. You could exclude this, if you like, but you will have to explicitly declare where the variadic arguments begin, because Elle no longer has this context.
+
+You can also make these statements public:
+```cpp
+pub external fn fprintf(long fd, char *formatter, ...);
+```
+In fact the order of prefixes before `fn` is not enforced, you can write `external pub fn` and achieve the same result.
+
+If you do not want to declare the function's interface, you can still use the function as long as you do not pass any arguments that are variadic. If you attempt to do so, and do not declare the interface, all of the data printed will be garbage. You also have this alternative to use the function with variadic arguments but without an interface definition:
+
+```cpp
+printf("%d, %d\n", $$...$$, a, b);
+```
+
+Even though this achieves the same behavior, manually specifying this index each time you are calling the function is not very efficient.
+
+Keep in mind that all other examples in this README.md have the `printf` interface implicitly defined, however any examples in the `/examples` directory will have this interface (and any other necessary ones) defined explicitly.
+
+**Technical note:** This declaration does not emit any IR code. It simply exists to provide more context to functions called in Elle that may not have been originally declared in Elle.
 
 <hr />
 

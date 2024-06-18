@@ -1,6 +1,8 @@
 // A basic example of a `variadic` function
 // meaning a function that can take in a
 // varying number of arguments
+external fn printf(char *formatter, ...);
+
 fn add(int size, ...) {
     variadic args[size * #size(int)];
     defer free(args);
@@ -15,6 +17,6 @@ fn add(int size, ...) {
 
 pub fn main() {
     int res = add.(1, 2, 3, 4);
-    printf!("sum = %d\n", res);
+    printf("sum = %d\n", res);
     return 0;
 }

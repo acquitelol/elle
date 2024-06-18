@@ -124,8 +124,19 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Vec<Primitive> {
+        let mut public = false;
+        let mut external = false;
+
         loop {
             match self.current_token().kind {
+                TokenKind::Public => {
+                    public = true;
+                    self.advance();
+                }
+                TokenKind::External => {
+                    external = true;
+                    self.advance();
+                }
                 TokenKind::Use => {
                     let mut r#use = Use::new(self);
                     let statement = r#use.parse();
@@ -133,32 +144,22 @@ impl Parser {
                 }
                 TokenKind::Function => {
                     let mut function = Function::new(self);
-                    let statement = function.parse(false);
+                    let statement = function.parse(public, external);
                     self.tree.push(statement);
+
+                    public = false;
+                    external = false;
                 }
                 TokenKind::Constant => {
                     let mut constant = Constant::new(self);
-                    let statement = constant.parse(false);
+                    let statement = constant.parse(public, external);
                     self.tree.push(statement);
-                }
-                TokenKind::Public => {
-                    self.advance();
 
-                    match self.current_token().kind {
-                        TokenKind::Function => {
-                            let mut function = Function::new(self);
-                            let statement = function.parse(true);
-                            self.tree.push(statement);
-                        }
-                        TokenKind::Constant => {
-                            let mut constant = Constant::new(self);
-                            let statement = constant.parse(true);
-                            self.tree.push(statement);
-                        }
-                        _ => todo!(),
-                    }
+                    public = false;
+                    external = false;
                 }
                 _ => {
+                    dbg!(self.current_token().kind);
                     break;
                 }
             }

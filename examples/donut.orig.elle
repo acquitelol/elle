@@ -7,6 +7,8 @@ const int WIDTH = 100;
 const int HEIGHT = 24;
 const int SIZE = WIDTH * HEIGHT;
 
+external fn printf(char *formatter, ...);
+
 fn update(double rotX, double rotZ, double *zBuffer, char *output) {
     memset(zBuffer, 0, SIZE * #size(double));
     memset(output, 32, SIZE * #size(char));
@@ -51,9 +53,9 @@ fn update(double rotX, double rotZ, double *zBuffer, char *output) {
 
     for long character = 0; character < SIZE; character++ {
         if character % WIDTH {
-            printf!("%c", output[character]);
+            printf("%c", output[character]);
         } else {
-            printf!("\n");
+            printf("\n");
         }
     }
 }

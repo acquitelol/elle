@@ -94,7 +94,7 @@ impl Compiler {
                             return Ok((ty.unwrap(), temp));
                         }
                     }
-                    Primitive::Operation { name: op_name, .. } => {
+                    Primitive::Function { name: op_name, .. } => {
                         if name == op_name {
                             return Ok((
                                 Type::Pointer(Box::new(Type::Byte)),
@@ -148,6 +148,7 @@ impl Compiler {
         public: bool,
         variadic: bool,
         manual: bool,
+        external: bool,
         arguments: &Vec<Argument>,
         return_type: Option<Type>,
         body: Vec<AstNode>,
@@ -172,11 +173,18 @@ impl Compiler {
             },
             name: name.clone(),
             variadic,
+            // Make a good guess if the function isn't defined as variadic
+            variadic_index: if variadic { args.len() } else { 1 },
             manual,
+            external,
             arguments: args,
             return_type,
             blocks: Vec::new(),
         };
+
+        if external {
+            return Ok(func);
+        }
 
         if func.return_type.is_some() {
             self.ret_types
@@ -219,19 +227,7 @@ impl Compiler {
         if !func_ref.borrow_mut().returns() && !func_ref.borrow_mut().manual {
             func_ref
                 .borrow_mut()
-                .add_instruction(Instruction::Return(None));
-
-            // !!! The below does not work with a trailing
-            // if statement. It is not going to be checked for now !!!
-
-            // if func_ref.borrow_mut().return_type.is_none() {
-
-            // } else {
-            //     return Err(format!(
-            //         "\nFunction does not return on all paths.\nReturn type is {:?}\n",
-            //         &func_ref.borrow_mut().return_type
-            //     ));
-            // }
+                .add_instruction(Instruction::Return(Some(Value::Const(Type::Word, 0))));
         }
 
         if func_ref.borrow_mut().return_type.is_none() {
@@ -648,22 +644,41 @@ impl Compiler {
                 let cached_ty = self.ret_types.get(&name).unwrap_or(&Type::Word).to_owned();
                 let declarative_ty = ty.unwrap_or(cached_ty);
 
-                let ty = module
-                    .borrow_mut()
+                let module_ref = module.borrow_mut();
+                let tmp_function = module_ref
                     .functions
                     .iter()
                     .find(|function| function.name == name.clone())
-                    .unwrap_or(&Function::new(
+                    .map(|function| function.clone())
+                    .unwrap_or(Function::new(
                         Linkage::public(),
                         name.clone(),
+                        false,
+                        0,
                         false,
                         false,
                         vec![],
                         Some(declarative_ty.clone()),
-                    ))
-                    .return_type
-                    .clone()
-                    .unwrap_or(declarative_ty);
+                    ));
+
+                let ty = tmp_function.return_type.clone().unwrap_or(declarative_ty);
+
+                if tmp_function.variadic {
+                    let res = self
+                        .generate_statement(
+                            func,
+                            module,
+                            AstNode::LiteralStatement {
+                                kind: TokenKind::ExactLiteral,
+                                value: ValueKind::String("...".to_string()),
+                            },
+                            Some(ty.clone()),
+                            false,
+                        )
+                        .unwrap();
+
+                    params.insert(tmp_function.variadic_index, res);
+                }
 
                 self.tmp_counter += 1;
                 let temp = self
@@ -1429,6 +1444,7 @@ impl Compiler {
                     public,
                     false,
                     false,
+                    false,
                     &vec![],
                     ty,
                     vec![AstNode::ReturnStatement { value }],
@@ -1439,11 +1455,12 @@ impl Compiler {
                     }
                     Err(msg) => eprintln!("{}", msg),
                 },
-                Primitive::Operation {
+                Primitive::Function {
                     name,
                     public,
                     variadic,
                     manual,
+                    external,
                     arguments,
                     r#return,
                     body,
@@ -1452,6 +1469,7 @@ impl Compiler {
                     public,
                     variadic,
                     manual,
+                    external,
                     &arguments,
                     r#return,
                     body,

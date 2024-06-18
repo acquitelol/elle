@@ -1,11 +1,13 @@
 const long MAX_SIGNED_LONG = 9_223_372_036_854_775_807;
 const long MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
 
+external fn printf(char *formatter, ...);
+
 pub fn main() {
     long test[] = {MAX_SIGNED_LONG, MIN_SIGNED_LONG, -39};
 
     for (int i = 0; i < #arrlen(test); i++) {
-        printf!("test[%d] = %ld\n", i, test[i]);
+        printf("test[%d] = %ld\n", i, test[i]);
     }
 
     return 0;

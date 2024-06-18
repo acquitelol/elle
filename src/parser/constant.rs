@@ -48,7 +48,7 @@ impl<'a> Constant<'a> {
         tokens
     }
 
-    pub fn parse(&mut self, public: bool) -> Primitive {
+    pub fn parse(&mut self, public: bool, _: bool) -> Primitive {
         self.parser.advance();
 
         let ty = self.parser.get_type();

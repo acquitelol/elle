@@ -1,4 +1,6 @@
 // A basic example of obtaining `stdin`
+external fn printf(char *formatter, ...);
+
 fn input(char *message, int size) -> char * {
     long stdin = fdopen(0, "r");
     char *buf = malloc(size * #size(char));
@@ -26,7 +28,7 @@ pub fn main() {
             break;
         }
 
-        printf!("Enter %s's score: ", person);
+        printf("Enter %s's score: ", person);
 
         char *scoreInput = input("", size);
         int score = atoi(scoreInput);
@@ -40,7 +42,7 @@ pub fn main() {
         free(person);
     }
 
-    printf!("The winner is %s with a score of %d\n", winner, highestScore);
+    printf("The winner is %s with a score of %d\n", winner, highestScore);
     free(winner);
 
     return 0;

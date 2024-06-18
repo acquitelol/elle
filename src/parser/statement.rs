@@ -380,31 +380,13 @@ impl<'a> Statement<'a> {
         }
     }
 
-    fn parse_function(&mut self, variadic: bool) -> AstNode {
+    fn parse_function(&mut self) -> AstNode {
         let name = self.get_identifier();
-        let mut variadic_index: usize = 1;
         let mut calculate_variadic_size = false;
 
         self.advance();
         match self.current_token().kind {
             TokenKind::LeftParenthesis => {
-                self.advance();
-            }
-            TokenKind::Not => {
-                self.advance();
-
-                if self.current_token().kind == TokenKind::IntegerLiteral {
-                    match self.current_token().value {
-                        ValueKind::Number(val) => {
-                            variadic_index = val.to_string().parse::<usize>().unwrap();
-                        },
-                        _ => {}
-                    }
-
-                    self.advance();
-                }
-
-                self.expect_token(TokenKind::LeftParenthesis);
                 self.advance();
             }
             TokenKind::Dot => {
@@ -468,22 +450,12 @@ impl<'a> Statement<'a> {
 
         self.advance();
 
-        if variadic {
-            if calculate_variadic_size {
-                parameters.insert(
-                    0,
-                    AstNode::LiteralStatement {
-                        kind: TokenKind::IntegerLiteral,
-                        value: ValueKind::Number(parameters.len() as i64),
-                    },
-                );
-            }
-
+        if calculate_variadic_size {
             parameters.insert(
-                variadic_index,
+                0,
                 AstNode::LiteralStatement {
-                    kind: TokenKind::ExactLiteral,
-                    value: ValueKind::String("...".to_owned()),
+                    kind: TokenKind::IntegerLiteral,
+                    value: ValueKind::Number(parameters.len() as i64),
                 },
             );
         }
@@ -1470,21 +1442,15 @@ impl<'a> Statement<'a> {
                     let next = self.tokens[self.position + 1].clone();
 
                     if next.kind == TokenKind::LeftParenthesis {
-                        self.parse_function(false)
+                        self.parse_function()
                     } else if next.kind == TokenKind::LeftBlockBrace {
                         self.parse_offset_store()
-                    } else if next.kind == TokenKind::Not {
-                        if self.position + 2 > self.tokens.len() - 1 {
-                            panic!("EOF but specified a variadic identifier")
-                        }
-
-                        self.parse_function(true)
                     } else if next.kind == TokenKind::Dot {
                         if self.position + 2 > self.tokens.len() - 1 {
                             panic!("EOF but specified a variadic identifier")
                         }
 
-                        self.parse_function(true)
+                        self.parse_function()
                     } else if next.kind == TokenKind::Equal {
                         self.parse_declare(Some(None))
                     } else if next.kind.is_declarative() {

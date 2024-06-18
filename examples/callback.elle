@@ -1,3 +1,5 @@
+external fn printf(char *formatter, ...);
+
 pub fn main() {
     char *test = "Hello World!";
 
@@ -15,5 +17,5 @@ fn loop(char *str, function *callback) {
 }
 
 fn formattedPrint(char character) {
-    printf!("%c ", character);
+    printf("%c ", character);
 }

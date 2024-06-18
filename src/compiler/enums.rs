@@ -461,7 +461,9 @@ pub struct Function {
     pub linkage: Linkage,
     pub name: String,
     pub variadic: bool,
+    pub variadic_index: usize,
     pub manual: bool,
+    pub external: bool,
     pub arguments: Vec<(Type, Value)>,
     pub return_type: Option<Type>,
     pub blocks: Vec<Block>,
@@ -472,7 +474,9 @@ impl Function {
         linkage: Linkage,
         name: impl Into<String>,
         variadic: bool,
+        variadic_index: usize,
         manual: bool,
+        external: bool,
         arguments: Vec<(Type, Value)>,
         return_type: Option<Type>,
     ) -> Self {
@@ -480,7 +484,9 @@ impl Function {
             linkage,
             name: name.into(),
             variadic,
+            variadic_index,
             manual,
+            external,
             arguments,
             return_type,
             blocks: Vec::new(),
@@ -654,7 +660,9 @@ impl Module {
 impl fmt::Display for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for func in self.functions.iter() {
-            writeln!(f, "{}", func)?;
+            if !func.external {
+                writeln!(f, "{}", func)?;
+            }
         }
 
         for r#type in self.types.iter() {

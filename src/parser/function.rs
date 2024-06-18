@@ -17,7 +17,7 @@ impl<'a> Function<'a> {
         Function { parser }
     }
 
-    pub fn parse(&mut self, public: bool) -> Primitive {
+    pub fn parse(&mut self, public: bool, external: bool) -> Primitive {
         self.parser.advance();
 
         let name = self.parser.get_identifier();
@@ -67,6 +67,22 @@ impl<'a> Function<'a> {
         if self.parser.match_token(TokenKind::RightArrow, true) {
             r#return = Some(self.parser.get_type());
             self.parser.advance();
+        }
+
+        if external {
+            self.parser.expect_token(TokenKind::Semicolon);
+            self.parser.advance();
+
+            return Primitive::Function {
+                public,
+                variadic,
+                manual,
+                name,
+                external,
+                arguments,
+                r#return,
+                body: vec![],
+            };
         }
 
         self.parser.expect_token(TokenKind::LeftCurlyBrace);
@@ -260,11 +276,12 @@ impl<'a> Function<'a> {
             }
         }
 
-        Primitive::Operation {
+        Primitive::Function {
             public,
             variadic,
             manual,
             name,
+            external,
             arguments,
             r#return,
             body: res,

@@ -98,11 +98,12 @@ pub enum Primitive {
         module: String,
         functions: Vec<String>,
     },
-    Operation {
+    Function {
         name: String,
         public: bool,
         variadic: bool,
         manual: bool,
+        external: bool,
         arguments: Vec<Argument>,
         r#return: Option<Type>,
         body: Vec<AstNode>,
