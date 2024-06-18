@@ -1,6 +1,6 @@
 // Roughly references https://github.com/garritfra/qbe-rs/blob/main/src/lib.rs
 // https://github.com/garritfra/qbe-rs/blob/main/LICENSE-MIT
-use std::fmt::{self, write};
+use std::fmt::{self, write, Write};
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Copy)]
 pub enum Comparison {
@@ -50,6 +50,11 @@ impl fmt::Display for Instruction {
             Self::Divide(lhs, rhs) => write!(formatter, "div {}, {}", lhs, rhs),
             Self::Modulus(lhs, rhs) => write!(formatter, "rem {}, {}", lhs, rhs),
             Self::Compare(ty, comparison, lhs, rhs) => {
+                assert!(
+                    !matches!(ty, Type::Aggregate(_)),
+                    "Cannot compare aggregate types"
+                );
+
                 write!(
                     formatter,
                     // All comparisons start with c
@@ -111,13 +116,21 @@ impl fmt::Display for Instruction {
             Self::Alloc8(size) => write!(formatter, "alloc8 {}", size),
             Self::Alloc16(size) => write!(formatter, "alloc16 {}", size),
             Self::Store(r#type, dest, value) => {
+                if matches!(r#type, Type::Aggregate(_)) {
+                    unimplemented!("Store to an aggregate type");
+                }
+
                 write!(formatter, "store{} {}, {}", r#type, value, dest)
             }
             Self::Load(r#type, src) => {
+                if matches!(r#type, Type::Aggregate(_)) {
+                    unimplemented!("Load from an aggregate type");
+                }
+
                 write!(
                     formatter,
                     "load{} {}",
-                    if r#type.clone().into_base() == Type::Word {
+                    if r#type.clone().into_abi() == Type::Word {
                         format!("s{}", r#type)
                     } else {
                         r#type.to_string()
@@ -164,9 +177,10 @@ pub enum Type {
     Single,
     Double,
     Byte,
-    Field,
+    Char,
     Null,
     Pointer(Box<Type>),
+    Aggregate(TypeDef),
 }
 
 impl Type {
@@ -179,14 +193,7 @@ impl Type {
 
     pub fn into_abi(self) -> Self {
         match self {
-            Self::Byte => Self::Word,
-            other => other,
-        }
-    }
-
-    pub fn into_base(self) -> Self {
-        match self {
-            Self::Byte => Self::Word,
+            Self::Byte | Self::Char => Self::Word,
             other => other,
         }
     }
@@ -204,7 +211,7 @@ impl Type {
 
     pub fn is_pointer(&self) -> bool {
         match self {
-            Self::Pointer(ty) => true,
+            Self::Pointer(_) => true,
             _ => false,
         }
     }
@@ -222,7 +229,7 @@ impl Type {
     /// Returns number of bytes
     pub fn size(&self) -> u64 {
         match self {
-            Self::Byte => 1,
+            Self::Byte | Self::Char => 1,
             Self::Word | Self::Single => 4,
             Self::Long | Self::Double | Self::Pointer(..) => 8,
             _ => 0,
@@ -234,14 +241,47 @@ impl fmt::Display for Type {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Byte => write!(formatter, "b"),
+            Self::Char => write!(formatter, "b"),
             Self::Word => write!(formatter, "w"),
             Self::Long => write!(formatter, "l"),
             Self::Pointer(..) => write!(formatter, "l"),
             Self::Single => write!(formatter, "s"),
             Self::Double => write!(formatter, "d"),
-            Self::Field => write!(formatter, "z"),
             Self::Null => write!(formatter, ""),
+            Self::Aggregate(td) => write!(formatter, ":{}", td.name),
         }
+    }
+}
+
+/// QBE aggregate type definition
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+pub struct TypeDef {
+    pub name: String,
+    pub align: Option<u64>,
+    // TODO: Opaque types?
+    pub items: Vec<(Type, usize)>,
+}
+
+impl fmt::Display for TypeDef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "type :{} = ", self.name)?;
+        if let Some(align) = self.align {
+            write!(f, "align {} ", align)?;
+        }
+
+        write!(
+            f,
+            "{{ {} }}",
+            self.items
+                .iter()
+                .map(|(ty, count)| if *count > 1 {
+                    format!("{} {}", ty, count)
+                } else {
+                    format!("{}", ty)
+                })
+                .collect::<Vec<String>>()
+                .join(", "),
+        )
     }
 }
 
@@ -249,6 +289,8 @@ impl fmt::Display for Type {
 pub enum Value {
     Temporary(String),
     Global(String),
+
+    /// Const(prefix, literal)
     Const(Type, i64),
     Literal(String),
 }
@@ -279,9 +321,9 @@ impl fmt::Display for Value {
             Self::Global(name) => write!(formatter, "${}", name),
             Self::Const(ty, value) => {
                 if ty.clone() == Type::Double {
-                    write!(formatter, "d_").unwrap();
+                    write!(formatter, "d_");
                 } else if ty.clone() == Type::Single {
-                    write!(formatter, "s_").unwrap();
+                    write!(formatter, "s_");
                 }
 
                 write!(formatter, "{}", value)
@@ -297,12 +339,6 @@ pub struct Data {
     pub name: String,
     pub align: Option<u64>,
     pub items: Vec<(Type, DataItem)>,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
-pub struct InternalData {
-    pub data: Data,
-    pub size: u64,
 }
 
 impl Data {
@@ -386,7 +422,7 @@ impl Block {
 
     pub fn assign_instruction(&mut self, temp: Value, r#type: Type, instruction: Instruction) {
         self.statements
-            .push(Statement::Assign(temp, r#type.into_base(), instruction));
+            .push(Statement::Assign(temp, r#type.into_abi(), instruction));
     }
 
     /// Returns true if the block's last instruction is a jump
@@ -586,7 +622,7 @@ impl fmt::Display for Linkage {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub struct Module {
     pub functions: Vec<Function>,
-    pub types: Vec<Type>,
+    pub types: Vec<TypeDef>,
     pub data: Vec<Data>,
 }
 
@@ -604,7 +640,7 @@ impl Module {
         return self.functions.last_mut().unwrap();
     }
 
-    pub fn add_type(&mut self, def: Type) -> &mut Type {
+    pub fn add_type(&mut self, def: TypeDef) -> &mut TypeDef {
         self.types.push(def);
         self.types.last_mut().unwrap()
     }

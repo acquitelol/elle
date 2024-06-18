@@ -642,7 +642,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         if self.current_token().kind == TokenKind::Equal {
-            return self.parse_array_literal(Some(name), ty, size);
+            return self.parse_array_literal(Some(name), ty);
         }
 
         self.expect_token(TokenKind::Semicolon);
@@ -654,12 +654,7 @@ impl<'a> Statement<'a> {
         }
     }
 
-    fn parse_array_literal(
-        &mut self,
-        name: Option<String>,
-        ty: Option<Type>,
-        size: Option<ValueKind>,
-    ) -> AstNode {
+    fn parse_array_literal(&mut self, name: Option<String>, ty: Option<Type>) -> AstNode {
         let name = name.unwrap();
 
         self.advance();
@@ -685,32 +680,10 @@ impl<'a> Statement<'a> {
             self.expect_token(TokenKind::Semicolon);
         }
 
-        self.body.borrow_mut().push(AstNode::BufferStatement {
-            name: name.clone(),
-            r#type: ty.clone(),
-            size: size.unwrap_or(ValueKind::Number(values.len() as i64)),
-        });
-
-        // Get the last one so we can return it from the function
-        let last = values.pop().unwrap();
-        for (i, value) in values.iter().enumerate() {
-            self.body.borrow_mut().push(AstNode::StoreStatement {
-                name: name.clone(),
-                offset: Box::new(AstNode::LiteralStatement {
-                    kind: TokenKind::IntegerLiteral,
-                    value: ValueKind::Number(i as i64),
-                }),
-                value: Box::new(value.clone()),
-            });
-        }
-
-        AstNode::StoreStatement {
+        AstNode::ArrayStatement {
             name,
-            offset: Box::new(AstNode::LiteralStatement {
-                kind: TokenKind::IntegerLiteral,
-                value: ValueKind::Number(values.len() as i64),
-            }),
-            value: Box::new(last),
+            r#type: ty,
+            values,
         }
     }
 
@@ -1141,7 +1114,49 @@ impl<'a> Statement<'a> {
         let value = if self.current_token().kind == TokenKind::Type {
             Ok(self.get_type())
         } else {
-            Err(self.current_token())
+            let mut tokens = vec![];
+            let mut nesting = 0;
+
+            if self.current_token().kind == TokenKind::Semicolon {
+                panic!(
+                    "[{}] expected size directive but got empty passthrough",
+                    self.current_token().location.display()
+                );
+            }
+
+            loop {
+                if self.current_token().kind == TokenKind::LeftParenthesis {
+                    nesting += 1;
+                }
+
+                tokens.push(self.current_token());
+                let res = self.advance_opt();
+
+                if self.current_token().kind == TokenKind::Semicolon
+                    || (self.current_token().kind.is_arithmetic() && nesting == 0)
+                {
+                    break;
+                }
+
+                if self.current_token().kind == TokenKind::RightParenthesis {
+                    if nesting > 0 {
+                        nesting -= 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                if self.is_eof() {
+                    if res.is_some() {
+                        tokens.push(self.current_token());
+                    }
+
+                    break;
+                }
+            }
+
+            let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
+            Err(value)
         };
 
         self.advance();
@@ -1162,7 +1177,48 @@ impl<'a> Statement<'a> {
         self.expect_token(TokenKind::LeftParenthesis);
         self.advance();
 
-        let value = self.current_token();
+        let mut tokens = vec![];
+        let mut nesting = 0;
+
+        if self.current_token().kind == TokenKind::Semicolon {
+            panic!(
+                "[{}] expected type conversion but got empty passthrough",
+                self.current_token().location.display()
+            );
+        }
+
+        loop {
+            if self.current_token().kind == TokenKind::LeftParenthesis {
+                nesting += 1;
+            }
+
+            tokens.push(self.current_token());
+            let res = self.advance_opt();
+
+            if self.current_token().kind == TokenKind::Semicolon
+                || (self.current_token().kind.is_arithmetic() && nesting == 0)
+            {
+                break;
+            }
+
+            if self.current_token().kind == TokenKind::RightParenthesis {
+                if nesting > 0 {
+                    nesting -= 1;
+                } else {
+                    break;
+                }
+            }
+
+            if self.is_eof() {
+                if res.is_some() {
+                    tokens.push(self.current_token());
+                }
+
+                break;
+            }
+        }
+
+        let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
         self.advance();
 
         self.expect_token(TokenKind::RightParenthesis);

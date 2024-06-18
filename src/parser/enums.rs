@@ -48,6 +48,11 @@ pub enum AstNode {
         r#type: Option<Type>,
         size: ValueKind,
     },
+    ArrayStatement {
+        name: String,
+        r#type: Option<Type>,
+        values: Vec<AstNode>,
+    },
     StoreStatement {
         name: String,
         offset: Box<AstNode>,
@@ -72,7 +77,7 @@ pub enum AstNode {
     },
     SizeStatement {
         // Easy way to return 2 values without a special enum
-        value: Result<Type, Token>,
+        value: Result<Type, Box<AstNode>>,
         standalone: bool,
     },
 }

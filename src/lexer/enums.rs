@@ -190,14 +190,14 @@ impl ValueKind {
     pub fn to_type_string(&self) -> Option<Type> {
         match self.clone() {
             ValueKind::String(val) => match val.as_str() {
-                "string" => Some(Type::Pointer(Box::new(Type::Byte))),
+                "string" => Some(Type::Pointer(Box::new(Type::Char))),
                 "function" => Some(Type::Byte),
                 "int" => Some(Type::Word),
                 "long" => Some(Type::Long),
                 "single" => Some(Type::Single),
                 "float" => Some(Type::Single),
                 "double" => Some(Type::Double),
-                "char" => Some(Type::Byte),
+                "char" => Some(Type::Char),
                 "bool" => Some(Type::Word),
                 "nil" => None,
                 _ => None,
