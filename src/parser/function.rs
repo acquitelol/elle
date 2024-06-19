@@ -194,6 +194,7 @@ impl<'a> Function<'a> {
                     } => {
                         let mut new_body = body;
                         insert_deferred_statements(&mut new_body, deferred, false);
+
                         new_nodes.push(AstNode::WhileLoop {
                             condition,
                             body: new_body,

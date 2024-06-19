@@ -28,7 +28,6 @@ fn input_as_int(char *message) -> int {
         return 0;
     }
 
-    // Ensure the free call is done after we get the integer
     int converted = atoi(res);
     return converted;
 }
@@ -42,6 +41,6 @@ pub fn main() {
     int lower = input_as_int("Enter the lower bound: ");
     int upper = input_as_int("Enter the upper bound: ");
 
-    printf!("Rolled %d\n", random(lower, upper));
+    printf("Rolled %d\n", random(lower, upper));
     return 0;
 }

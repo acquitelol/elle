@@ -1,6 +1,3 @@
-// A basic example of a `variadic` function
-// meaning a function that can take in a
-// varying number of arguments
 external fn printf(char *formatter, ...);
 
 fn add(int size, ...) {

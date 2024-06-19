@@ -3,6 +3,7 @@ ifeq (run,$(firstword $(MAKECMDGOALS)))
   $(eval $(RUN_ARGS):;@:)
 endif
 
+EXAMPLES_PATH = examples
 DIST_PATH = dist/$(RUN_ARGS)
 IR_PATH = $(DIST_PATH)/target.ssa
 TMP_PATH = $(DIST_PATH)/tmp
@@ -25,7 +26,7 @@ $(TMP_PATH)/out.tmp.s: $(IR_PATH)
 	mkdir -p $(TMP_PATH)
 	qbe -o $@ $<
 
-$(IR_PATH): examples/$(RUN_ARGS).elle dist/compiler
+$(IR_PATH): $(EXAMPLES_PATH)/$(RUN_ARGS).elle dist/compiler
 	rm -rf $(DIST_PATH)
 	mkdir -p $(DIST_PATH)
 	dist/compiler $< $@ > /dev/null
@@ -34,6 +35,13 @@ $(IR_PATH): examples/$(RUN_ARGS).elle dist/compiler
 run:
 	clear
 	@$(EXEC_PATH) "you can pass arguments to Elle programs!" ":3"
+
+all:
+	@$(foreach file, \
+	    $(filter-out $(EXAMPLES_PATH)/donut%, $(wildcard $(EXAMPLES_PATH)/*)), \
+		make run $$(echo "$(file)" | sed 's|examples/\(.*\)\.elle|\1|') \
+		$$(sleep 1) \
+	;)
 
 compile:
 	mkdir -p dist

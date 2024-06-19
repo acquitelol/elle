@@ -1,12 +1,13 @@
-// A basic example of obtaining `stdin`
+const int BUF_SIZE = 256;
 external fn printf(char *formatter, ...);
 
-fn input(char *message, int size) -> char * {
+fn input(char *message) -> char * {
     long stdin = fdopen(0, "r");
-    char *buf = malloc(size * #size(char));
-    printf(message);
+    char *buf = malloc(BUF_SIZE * #size(char));
+    defer free(buf);
 
-    fgets(buf, size, stdin);
+    printf(message);
+    fgets(buf, BUF_SIZE, stdin);
     buf[strlen(buf) - 1] = '\0';
 
     char *result = malloc(strlen(buf) + 1);
@@ -14,36 +15,42 @@ fn input(char *message, int size) -> char * {
     return result;
 }
 
-pub fn main() {
-    int size = 256;
-    int highestScore = 0;
+fn input_as_int(char *message) -> int {
+    char *res = input(message);
+    defer free(res);
 
-    char *winner = malloc(size * #size(char));
+    if (strspn(res, "0123456789") != strlen(res)) {
+        long stderr = fdopen(2, "w");
+        fprintf(stderr, "Invalid input: '%s'. Falling back to 0\n", res);
+        return 0;
+    }
+
+    int converted = atoi(res);
+    return converted;
+}
+
+pub fn main() {
+    int highestScore = 0;
+    char *winner = malloc(BUF_SIZE * #size(char));
+    defer free(winner);
 
     while true {
-        char *person = input("Enter a person's name: ", size);
+        char *person = input("Enter a person's name: ");
+        defer free(person);
 
         if (strcmp(person, "stop") == 0) {
-            free(person);
             break;
         }
 
         printf("Enter %s's score: ", person);
-
-        char *scoreInput = input("", size);
-        int score = atoi(scoreInput);
-        free(scoreInput);
+        int score = input_as_int("");
 
         if score > highestScore {
             highestScore = score;
             strcpy(winner, person);
         }
-
-        free(person);
     }
 
     printf("The winner is %s with a score of %d\n", winner, highestScore);
-    free(winner);
-
     return 0;
 }

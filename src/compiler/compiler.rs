@@ -19,6 +19,7 @@ pub struct Compiler {
     type_sections: Vec<TypeDef>,
     loop_labels: Vec<String>,
     ret_types: HashMap<String, Type>,
+    buf_metadata: HashMap<Value, (Type, u64)>,
     tree: Vec<Primitive>,
 }
 
@@ -536,7 +537,7 @@ impl Compiler {
                         func.borrow_mut()
                             .add_instruction(Instruction::Jump(format!("{}.end", label)));
                     } else {
-                        panic!("Break can only be used while in a loop.");
+                        panic!("Break can only be used in a loop.");
                     }
 
                     None
@@ -546,7 +547,7 @@ impl Compiler {
                         func.borrow_mut()
                             .add_instruction(Instruction::Jump(format!("{}.cond", label)));
                     } else {
-                        panic!("Continue can only be used while in a loop.");
+                        panic!("Continue can only be used in a loop.");
                     }
 
                     None
@@ -704,9 +705,15 @@ impl Compiler {
             }
             AstNode::BufferStatement { name, r#type, size } => {
                 let buf_ty = Type::Pointer(Box::new(r#type.clone().unwrap()));
-                let buf_size = match size {
+                let precalculated_size = match size {
                     ValueKind::Number(val) => val,
                     _ => panic!("Invalid value kind"),
+                };
+
+                let buf_size = if let Some(ty) = r#type.clone() {
+                    ty.size() * precalculated_size as u64
+                } else {
+                    0
                 };
 
                 let tmp = self
@@ -716,36 +723,13 @@ impl Compiler {
                 func.borrow_mut().assign_instruction(
                     tmp.clone(),
                     buf_ty.clone(),
-                    Instruction::Alloc8(
-                        Type::Long.size()
-                            + if let Some(ty) = r#type.clone() {
-                                ty.size() * buf_size as u64
-                            } else {
-                                0
-                            },
-                    ),
+                    Instruction::Alloc8(buf_size),
                 );
 
-                func.borrow_mut().add_instruction(Instruction::Store(
-                    Type::Long,
-                    tmp.clone(),
-                    Value::Const(Type::Word, buf_size as i64),
-                ));
+                self.buf_metadata
+                    .insert(tmp.clone(), (buf_ty.clone().unwrap().unwrap(), buf_size));
 
-                self.tmp_counter += 1;
-                let name = format!("buffer.{}.{}", name, self.tmp_counter);
-                let typedef = TypeDef {
-                    name: name.clone(),
-                    align: None,
-                    items: if let Some(ty) = r#type {
-                        vec![(Type::Long, 1), (ty, buf_size as usize)]
-                    } else {
-                        vec![(Type::Long, 1)]
-                    },
-                };
-
-                self.type_sections.push(typedef.clone());
-                Some((Type::Aggregate(typedef.clone()), tmp))
+                Some((Type::Pointer(Box::new(buf_ty)), tmp))
             }
             AstNode::StoreStatement {
                 name,
@@ -761,17 +745,6 @@ impl Compiler {
 
                 let inner = existing_ty.clone().unwrap().unwrap();
 
-                // Hacky fix to ensure the `argv` is not offset by 8 because it
-                // does not have the size at the 0th arg like other arrays
-                let is_argv = &func.borrow_mut().name == "main"
-                    && &name == "argv"
-                    && existing_ty.clone()
-                        == Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char))));
-
-                // Ensure strings do not have their size set as to maintain the
-                // C compatibility for passing strings made in QBE to printf
-                let is_string = existing_ty.clone() == Type::Pointer(Box::new(Type::Char));
-
                 let node = AstNode::ArithmeticOperation {
                     left: Box::new(AstNode::LiteralStatement {
                         kind: TokenKind::Identifier,
@@ -780,21 +753,10 @@ impl Compiler {
                     right: Box::new(AstNode::ArithmeticOperation {
                         left: Box::new(AstNode::LiteralStatement {
                             kind: TokenKind::LongLiteral,
-                            value: ValueKind::Number(if is_argv || is_string {
-                                0
-                            } else {
-                                Type::Long.size() as i64
-                            }),
+                            value: ValueKind::Number(inner.size() as i64),
                         }),
-                        right: Box::new(AstNode::ArithmeticOperation {
-                            left: Box::new(AstNode::LiteralStatement {
-                                kind: TokenKind::LongLiteral,
-                                value: ValueKind::Number(inner.size() as i64),
-                            }),
-                            right: offset,
-                            operator: TokenKind::Multiply,
-                        }),
-                        operator: TokenKind::Add,
+                        right: offset,
+                        operator: TokenKind::Multiply,
                     }),
                     operator: TokenKind::Add,
                 };
@@ -827,17 +789,6 @@ impl Compiler {
 
                 let inner = existing_ty.clone().unwrap().unwrap();
 
-                // Hacky fix to ensure the `argv` is not offset by 8 because it
-                // does not have the size at the 0th arg like other arrays
-                let is_argv = &func.borrow_mut().name == "main"
-                    && &name == "argv"
-                    && existing_ty.clone()
-                        == Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char))));
-
-                // Ensure strings do not have their size set as to maintain the
-                // C compatibility for passing strings made in QBE to printf
-                let is_string = existing_ty.clone() == Type::Pointer(Box::new(Type::Char));
-
                 let node = AstNode::ArithmeticOperation {
                     left: Box::new(AstNode::LiteralStatement {
                         kind: TokenKind::Identifier,
@@ -846,21 +797,10 @@ impl Compiler {
                     right: Box::new(AstNode::ArithmeticOperation {
                         left: Box::new(AstNode::LiteralStatement {
                             kind: TokenKind::LongLiteral,
-                            value: ValueKind::Number(if is_argv || is_string {
-                                0
-                            } else {
-                                Type::Long.size() as i64
-                            }),
+                            value: ValueKind::Number(inner.size() as i64),
                         }),
-                        right: Box::new(AstNode::ArithmeticOperation {
-                            left: Box::new(AstNode::LiteralStatement {
-                                kind: TokenKind::LongLiteral,
-                                value: ValueKind::Number(inner.size() as i64),
-                            }),
-                            right: offset,
-                            operator: TokenKind::Multiply,
-                        }),
-                        operator: TokenKind::Add,
+                        right: offset,
+                        operator: TokenKind::Multiply,
                     }),
                     operator: TokenKind::Add,
                 };
@@ -1209,6 +1149,12 @@ impl Compiler {
                 }
 
                 let buf_ty = Type::Pointer(Box::new(first_type.clone().unwrap()));
+                let buf_size = if let Some(ty) = first_type.clone() {
+                    ty.size() * (values.len() as u64)
+                } else {
+                    0
+                };
+
                 let tmp = self
                     .new_var(&buf_ty, &name.clone(), Some(func), true)
                     .unwrap();
@@ -1216,21 +1162,11 @@ impl Compiler {
                 func.borrow_mut().assign_instruction(
                     tmp.clone(),
                     buf_ty.clone(),
-                    Instruction::Alloc8(
-                        Type::Long.size()
-                            + if let Some(ty) = first_type.clone() {
-                                ty.size() * (values.len() as u64)
-                            } else {
-                                0
-                            },
-                    ),
+                    Instruction::Alloc8(buf_size),
                 );
 
-                func.borrow_mut().add_instruction(Instruction::Store(
-                    Type::Long,
-                    tmp.clone(),
-                    Value::Const(Type::Word, values.len() as i64),
-                ));
+                self.buf_metadata
+                    .insert(tmp.clone(), (buf_ty.clone().unwrap().unwrap(), buf_size));
 
                 for (i, value) in results.iter().enumerate() {
                     let value_ptr = self.new_var(&Type::Long, "tmp", Some(func), true).unwrap();
@@ -1242,8 +1178,7 @@ impl Compiler {
                             tmp.clone(),
                             Value::Const(
                                 Type::Word,
-                                Type::Long.size() as i64
-                                    + i as i64 * first_type.as_ref().unwrap().size() as i64,
+                                i as i64 * first_type.as_ref().unwrap().size() as i64,
                             ),
                         ),
                     );
@@ -1255,20 +1190,7 @@ impl Compiler {
                     ));
                 }
 
-                self.tmp_counter += 1;
-                let name = format!("array.{}.{}", name, self.tmp_counter);
-                let typedef = TypeDef {
-                    name: name.clone(),
-                    align: None,
-                    items: if let Some(ty) = first_type {
-                        vec![(Type::Long, 1), (ty, values.len())]
-                    } else {
-                        vec![(Type::Long, 1)]
-                    },
-                };
-
-                self.type_sections.push(typedef.clone());
-                Some((Type::Aggregate(typedef.clone()), tmp))
+                Some((Type::Pointer(Box::new(buf_ty)), tmp))
             }
             AstNode::SizeStatement { value, standalone } => match value {
                 Ok(ty) => {
@@ -1289,35 +1211,47 @@ impl Compiler {
                         .generate_statement(func, module, *value.clone(), ty.clone(), false)
                         .unwrap();
 
+                    let size = self.new_var(&ty, "tmp", Some(func), true).unwrap();
+
                     match ty.clone() {
-                        Type::Pointer(inner) => {
+                        Type::Pointer(_) => {
                             let ty = Type::Long;
-                            let len = self.new_var(&ty, "tmp", Some(func), true).unwrap();
 
-                            func.borrow_mut().assign_instruction(
-                                len.clone(),
-                                ty.clone(),
-                                Instruction::Load(ty.clone(), val),
+                            if let Some((buf_ty, buf_size)) =
+                                self.buf_metadata.get(&val).map(|item| item.to_owned())
+                            {
+                                func.borrow_mut().assign_instruction(
+                                    size.clone(),
+                                    ty.clone(),
+                                    if standalone {
+                                        Instruction::Copy(Value::Const(Type::Word, buf_size as i64))
+                                    } else {
+                                        Instruction::Divide(
+                                            Value::Const(Type::Word, buf_size as i64),
+                                            Value::Const(Type::Word, buf_ty.size() as i64),
+                                        )
+                                    },
+                                );
+
+                                return Some((ty, size));
+                            }
+
+                            assert!(
+                                standalone,
+                                "Cannot find the length of an array that isn't defined in the current function"
                             );
-
-                            let size = self.new_var(&ty, "tmp", Some(func), true).unwrap();
 
                             func.borrow_mut().assign_instruction(
                                 size.clone(),
                                 ty.clone(),
-                                Instruction::Multiply(
-                                    len.clone(),
-                                    Value::Const(Type::Word, (*inner).size() as i64),
-                                ),
+                                Instruction::Copy(Value::Const(Type::Word, ty.size() as i64)),
                             );
 
-                            Some((ty, if standalone { size } else { len }))
+                            Some((ty, size))
                         }
                         other => {
-                            let temp = self.new_var(&other, "tmp", Some(func), true).unwrap();
-
                             func.borrow_mut().assign_instruction(
-                                temp.clone(),
+                                size.clone(),
                                 other.clone(),
                                 Instruction::Copy(Value::Const(
                                     other.clone(),
@@ -1325,11 +1259,10 @@ impl Compiler {
                                 )),
                             );
 
-                            Some((other, temp))
+                            Some((other, size))
                         }
                     }
                 }
-                _ => panic!("Invalid value to calculate size for"),
             },
             _ => todo!("statement: {:?}", stmt),
         };
@@ -1423,6 +1356,7 @@ impl Compiler {
             type_sections: Vec::new(),
             loop_labels: Vec::new(),
             ret_types: HashMap::new(),
+            buf_metadata: HashMap::new(),
             tree,
         };
 

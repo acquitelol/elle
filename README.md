@@ -98,7 +98,7 @@ while (i < 10) {
 }
 ```
 
-Please keep in mind that you also have access to the `break` and `continue` keywords while inside of a loop, which break exeuction early or continue to the next iteration respectively.
+Please keep in mind that you also have access to the `break` and `continue` keywords while inside of a loop, which break execution early or continue to the next iteration respectively.
 
 <hr />
 
@@ -578,19 +578,83 @@ You can also specify an enforced size in between the square brackets, if you pre
 There are currently 2 size directives in Elle:
 `#size()` and `#arrlen()`
 
-You can put both **types** and **buffers** inside of the `#size()` directive and it returns the size of the identifier verbatim.
+You can put both **types** and **expressions** inside of the `#size()` directive and it returns the size of the statement verbatim.
 
-You can only place **buffers** inside of the `#arrlen()` directive as it returns the size of the buffer divided by the size of each type. This is exactly equivalent to `#size(arr) / #size(arr_type)`
+You can only place **expressions** inside of the `#arrlen()` directive as it returns the size of the buffer divided by the size of each type. This is exactly equivalent to `#size(arr) / #size(arr_type)`. It will crash if you try to use it on a buffer that wasn't defined in the current function.
 
-Please note that currently you **cannot** use `#size` or `#arrlen` on buffers that are taken in as an argument to a function because the structure of the compiler is written in a way where there is not enough context to get the size of the buffer from another function. `#size` usage with **types** (and eventually structs) will always be available at any point, as the scope is not necessary.
+For example, take this snippet:
 
-Here is a basic example of using `#arrlen` to loop through an array of strings and print its values:
+```cpp
+fn other(int *buf) {
+    printf(
+        "(fn other)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
+        #size(buf),
+        #arrlen(buf)
+    );
+}
+
+pub fn main() {
+    int buf[100];
+    buf[0] = 123;
+
+    printf(
+        "(fn main)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
+        #size(buf),
+        #arrlen(buf)
+    );
+
+    other(buf);
+    return 0;
+}
+
+```
+
+At this part:
+
+```cpp
+printf(
+    "(fn other)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
+    #size(buf),
+    #arrlen(buf)
+);
+```
+
+Elle will throw a compilation error. It only has a pointer to the buffer in the `other` function, which means the `#size` call will return the size of a pointer (8 bytes on 64-bit architectures and 4 bytes on 32-bit architectures). On the other hand, trying to get the length of this array will fail because that makes no sense conceptually. In this function, the size of the array is not available, so returning anything for the `#arrlen` function when you have no size makes no sense.
+
+In this example:
+
+```cpp
+fn other(int *buf) {
+    printf("(fn other)\n\t#size(buf) = %d\n", #size(buf));
+}
+
+pub fn main() {
+    int buf[100];
+    buf[0] = 123;
+
+    printf(
+        "(fn main)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
+        #size(buf),
+        #arrlen(buf)
+    );
+
+    other(buf);
+    return 0;
+}
+```
+
+The code will compile successfully, because `#arrlen` is no longer used on a buffer that isn't defined in the current function.
+
+<hr/>
+
+Finally, here is a basic example of using `#arrlen` to loop through an array of strings and print its values:
 
 ```cpp
 pub fn main() {
     char *some_array[] = {"abc", "meow", "test"};
 
     for int i = 0; i < #arrlen(some_array); i++ {
+        // Here typeof(some_array[i]) = char * = string
         printf("some_array[%d] = %s\n", i, some_array[i]);
     }
 
