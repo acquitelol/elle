@@ -1,4 +1,4 @@
-external fn printf(char *formatter, ...);
+external fn printf(string formatter, ...);
 
 fn add(int size, ...) {
     variadic args[size * #size(int)];

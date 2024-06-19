@@ -1,22 +1,22 @@
 const int BUF_SIZE = 256;
-external fn printf(char *formatter, ...);
+external fn printf(string formatter, ...);
 
-fn input(char *message) -> char * {
+fn input(string message) -> string {
     long stdin = fdopen(0, "r");
-    char *buf = malloc(BUF_SIZE * #size(char));
+    string buf = malloc(BUF_SIZE * #size(char));
     defer free(buf);
 
     printf(message);
     fgets(buf, BUF_SIZE, stdin);
     buf[strlen(buf) - 1] = '\0';
 
-    char *result = malloc(strlen(buf) + 1);
+    string result = malloc(strlen(buf) + 1);
     strcpy(result, buf);
     return result;
 }
 
-fn input_as_int(char *message) -> int {
-    char *res = input(message);
+fn input_as_int(string message) -> int {
+    string res = input(message);
     defer free(res);
 
     if (strspn(res, "0123456789") != strlen(res)) {
@@ -31,11 +31,11 @@ fn input_as_int(char *message) -> int {
 
 pub fn main() {
     int highestScore = 0;
-    char *winner = malloc(BUF_SIZE * #size(char));
+    string winner = malloc(BUF_SIZE * #size(char));
     defer free(winner);
 
     while true {
-        char *person = input("Enter a person's name: ");
+        string person = input("Enter a person's name: ");
         defer free(person);
 
         if (strcmp(person, "stop") == 0) {

@@ -1,4 +1,4 @@
-external fn printf(char *formatter, ...);
+external fn printf(string formatter, ...);
 
 fn concat(int size, ...) {
     variadic args[size * #size(string)];
@@ -32,7 +32,7 @@ fn concat(int size, ...) {
 }
 
 pub fn main() {
-    char *res = concat.(
+    string res = concat.(
         "‎ ‎╱|、\n",
         "(˚ˎ 。7\n",
         "|、˜〵\n",

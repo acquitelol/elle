@@ -1,7 +1,7 @@
-external fn printf(char *formatter, ...);
+external fn printf(string formatter, ...);
 
 pub fn main() {
-    char *test = "Hello World!";
+    string test = "Hello World!";
 
     // Expected result: "H e l l o   W o r l d !"
     loop(test, formattedPrint);
@@ -10,7 +10,7 @@ pub fn main() {
     return 0;
 }
 
-fn loop(char *str, function *callback) {
+fn loop(string str, function *callback) {
     for (int i = 0; i < strlen(str); i++) {
         callback(str[i]);
     }

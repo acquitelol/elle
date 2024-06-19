@@ -1,6 +1,6 @@
 // An approximation of `sqrt(2)` using Newton's
 // approximation algorithm.
-external fn printf(char *formatter, ...);
+external fn printf(string formatter, ...);
 
 pub fn main() {
     double x = 2;

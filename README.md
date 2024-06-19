@@ -205,11 +205,11 @@ Here's a basic example of a variadic function which takes in any amount of argum
 
 ```cpp
 fn add(int size, ...) {
-    int res = 0;
-    variadic args[size];
+    variadic args[size * #size(int)];
     defer free(args);
+    int res = 0;
 
-    for (int _ = 0; _ < size - 1; _++) {
+    for int i = 0; i < size; i++ {
         res += args yield int;
     }
 
@@ -219,10 +219,10 @@ fn add(int size, ...) {
 
 Let's go through an explanation for how this works:
 
-* L1: Declare the function signature. We declare an `Int size` as a static positional argument, then the `...` denotes that the function is variaidic.
-* L2: Initialize the result at `0`.
-* L3: Declare the `args` variable as a pointer to the start of the variadic arguments. This is denoted by `Variadic name[size]`. You can also not declare a size by writing `Variadic name[]`, and this allocates memory for a fixed 8 bytes (64 bits). This call internally calls the `malloc` function with the size specified and then calls `vastart` on the returned pointer.
-* L4: Defer the call to `free`. This means that `free` will only be called on the pointer when the function is about to go out of scope, ie at any return statements or an implicit function exit for subroutines that don't return a value.
+* L1: Declare the function signature. We declare an `int size` as a static positional argument, then the `...` denotes that the function is variaidic.
+* L2: Declare the `args` variable as a pointer to the start of the variadic arguments. This is denoted by `variadic name[size * #size(ty)]`. Ensure that whatever type you pass into `#size` is the type you're going to yield later. This call internally calls the `malloc` function with the size specified and then calls `vastart` on the returned pointer.
+* L3: Defer the call to `free`. This means that `free` will only be called on the pointer when the function is about to go out of scope, ie at any return statements or an implicit function exit for subroutines that don't return a value.
+* L4: Initialize the result at `0`.
 * L6: Declare a for loop with an unused iterator from 0 to the size - 1. This will allow you to loop through all of the arguments that will be provided by the user. This is necessary because you can yield arguments forever, however if you don't know how many there are then you will enter uninitialized memory. A method of passing the argument length will be shown later at the call site.
 * L7: Yield the next argument from the `args` pointer as an `Int` type, and add it to the result value
 * L9: Return the summed value. Right before this point, the `free` call that we deferred earlier would be called.
@@ -238,6 +238,8 @@ pub fn main() {
 ```
 
 Notice the `add.(a, b)` syntax. This is a compile time macro which automatically adds the argument length as the 0th argument of the function, substituting it for the size of the variadic function. This means that calling `add.(a, b, c)` is actually identical to calling `add(3, a, b, c)`, you simply no longer need to pass the argument length manually, like in C.
+
+Examples that contain variadic functions include [`concat.elle`](https://github.com/acquitelol/elle/blob/rewrite/examples/concat.elle) and [`variadic.elle`](https://github.com/acquitelol/elle/blob/rewrite/examples/variadic.elle).
 
 <hr />
 
