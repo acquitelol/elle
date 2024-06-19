@@ -1,8 +1,15 @@
 # ₊˚ Elle ♡︎
 
-## An experimental, purely functional language built in Rust
+### An experimental, purely functional language built in Rust using QBE as its backend
 
-#### This language is not designed to be used by any developer, it is intended simply as an experiment to better understand the internals of modern languages and how they work :3
+‎ ‎ ╱|、
+<br />
+(˚ˎ 。7
+<br />
+|、˜〵
+<br />
+じしˍ,)ノ
+<br />
 
 ### ✩ *If you like this project, consider giving it a star!* ✩
 
