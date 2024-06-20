@@ -31,8 +31,8 @@ pub enum Instruction {
     Cast(Value),
     VAArg(Value),
     VAStart(Value),
-    Alloc4(u32),
-    Alloc8(u64),
+    Alloc4(Type, Value),
+    Alloc8(Type, Value),
     Alloc16(u128),
     Store(Type, Value, Value),
     Load(Type, Value),
@@ -112,8 +112,22 @@ impl fmt::Display for Instruction {
                         .join(", "),
                 )
             }
-            Self::Alloc4(size) => write!(formatter, "alloc4 {}", size),
-            Self::Alloc8(size) => write!(formatter, "alloc8 {}", size),
+            Self::Alloc4(ty, val) => {
+                assert!(
+                    ty.size() == 4,
+                    "Incorrect size type. Please use alloc8 for 64-bit integer allocations"
+                );
+
+                write!(formatter, "alloc4 {}", val)
+            }
+            Self::Alloc8(ty, val) => {
+                assert!(
+                    ty.size() == 8,
+                    "Incorrect size type. Please use alloc4 for 32-bit integer allocations"
+                );
+
+                write!(formatter, "alloc8 {}", val)
+            }
             Self::Alloc16(size) => write!(formatter, "alloc16 {}", size),
             Self::Store(r#type, dest, value) => {
                 if matches!(r#type, Type::Aggregate(_)) {

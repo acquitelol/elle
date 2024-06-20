@@ -605,9 +605,9 @@ impl<'a> Statement<'a> {
 
         let mut size = None;
 
-        if self.current_token().kind == TokenKind::IntegerLiteral {
-            size = Some(self.current_token().value);
-            self.advance();
+        if self.current_token().kind != TokenKind::RightBlockBrace {
+            let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::RightBlockBrace]);
+            size = Some(Statement::new(tokens, 0, &self.body).parse().0);
         }
 
         self.expect_token(TokenKind::RightBlockBrace);
@@ -622,7 +622,7 @@ impl<'a> Statement<'a> {
         AstNode::BufferStatement {
             name,
             r#type: Some(ty.unwrap_or(Type::Byte)),
-            size: size.unwrap(),
+            size: Box::new(size.unwrap()),
         }
     }
 

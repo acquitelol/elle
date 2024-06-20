@@ -4,13 +4,15 @@ fn concat(int size, ...) {
     variadic args[size * #size(string)];
     defer free(args);
 
-    string *strings = malloc(size * #size(string));
+    string strings[size];
+    int sizes[size];
     long length = 0;
 
     // Collect the strings and the final string length
     for int i = 0; i < size; i++ {
         strings[i] = args yield string;
-        length += strlen(strings[i]);
+        sizes[i] = strlen(strings[i]);
+        length += sizes[i];
     }
 
     string result = malloc((length + 1) * #size(char));
@@ -20,7 +22,7 @@ fn concat(int size, ...) {
     for int i = 0; i < size; i++ {
         string current = strings[i];
 
-        for int j = 0; j < strlen(current); j++ {
+        for int j = 0; j < sizes[i]; j++ {
             result[index] = current[j];
             index++;
         }

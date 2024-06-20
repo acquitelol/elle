@@ -46,7 +46,7 @@ pub enum AstNode {
     BufferStatement {
         name: String,
         r#type: Option<Type>,
-        size: ValueKind,
+        size: Box<AstNode>,
     },
     ArrayStatement {
         name: String,

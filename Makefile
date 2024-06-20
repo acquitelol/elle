@@ -15,21 +15,26 @@ run: $(EXEC_PATH)
 $(EXEC_PATH): $(ASM_PATH)
 	cc -o $@ $<
 
-$(ASM_PATH): $(TMP_PATH)/out.new.s
+$(ASM_PATH): $(TMP_PATH)/out.tmp3.s
 	mv $< $@
 	rm -rf $(TMP_PATH)
 
-$(TMP_PATH)/out.new.s: $(TMP_PATH)/out.tmp.s
+# Fix codegen issue when taking size for a buffer as an argument
+$(TMP_PATH)/out.tmp3.s: $(TMP_PATH)/out.tmp2.s
+	sed -E 's/and\t(.*), #(.*), lsl (.*)/lsl\t\1, \3\n\tand\t\1, #\2/g' $< > $@
+
+# Fix codegen issue for generating floating point numbers
+$(TMP_PATH)/out.tmp2.s: $(TMP_PATH)/out.tmp1.s
 	sed -E 's/Lfp([0-9]+):/_Lfp\1:/g' $< > $@
 
-$(TMP_PATH)/out.tmp.s: $(IR_PATH)
+$(TMP_PATH)/out.tmp1.s: $(IR_PATH)
 	mkdir -p $(TMP_PATH)
 	qbe -o $@ $<
 
 $(IR_PATH): $(EXAMPLES_PATH)/$(RUN_ARGS).elle dist/compiler
 	rm -rf $(DIST_PATH)
 	mkdir -p $(DIST_PATH)
-	dist/compiler $< $@ > /dev/null
+	dist/compiler $< $@
 
 .PHONY: run
 run:

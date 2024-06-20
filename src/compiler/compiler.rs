@@ -19,7 +19,7 @@ pub struct Compiler {
     type_sections: Vec<TypeDef>,
     loop_labels: Vec<String>,
     ret_types: HashMap<String, Type>,
-    buf_metadata: HashMap<Value, (Type, u64)>,
+    buf_metadata: HashMap<Value, (Type, Value)>,
     tree: Vec<Primitive>,
 }
 
@@ -705,29 +705,46 @@ impl Compiler {
             }
             AstNode::BufferStatement { name, r#type, size } => {
                 let buf_ty = Type::Pointer(Box::new(r#type.clone().unwrap()));
-                let precalculated_size = match size {
-                    ValueKind::Number(val) => val,
-                    _ => panic!("Invalid value kind"),
-                };
-
-                let buf_size = if let Some(ty) = r#type.clone() {
-                    ty.size() * precalculated_size as u64
-                } else {
-                    0
-                };
+                let (ty, val) = self
+                    .generate_statement(
+                        func,
+                        module,
+                        if let Some(ty) = r#type.clone() {
+                            AstNode::ArithmeticOperation {
+                                left: size,
+                                right: Box::new(AstNode::LiteralStatement {
+                                    kind: TokenKind::LongLiteral,
+                                    value: ValueKind::Number(ty.size() as i64),
+                                }),
+                                operator: TokenKind::Multiply,
+                            }
+                        } else {
+                            AstNode::LiteralStatement {
+                                kind: TokenKind::LongLiteral,
+                                value: ValueKind::Number(0),
+                            }
+                        },
+                        r#type,
+                        false,
+                    )
+                    .unwrap();
 
                 let tmp = self
                     .new_var(&buf_ty, &name.clone(), Some(func), true)
                     .unwrap();
 
+                let (converted_ty, converted_val) = self.convert_to_type(func, ty, Type::Long, val);
+
                 func.borrow_mut().assign_instruction(
                     tmp.clone(),
                     buf_ty.clone(),
-                    Instruction::Alloc8(buf_size),
+                    Instruction::Alloc8(converted_ty, converted_val.clone()),
                 );
 
-                self.buf_metadata
-                    .insert(tmp.clone(), (buf_ty.clone().unwrap().unwrap(), buf_size));
+                self.buf_metadata.insert(
+                    tmp.clone(),
+                    (buf_ty.clone().unwrap().unwrap(), converted_val),
+                );
 
                 Some((Type::Pointer(Box::new(buf_ty)), tmp))
             }
@@ -1149,24 +1166,49 @@ impl Compiler {
                 }
 
                 let buf_ty = Type::Pointer(Box::new(first_type.clone().unwrap()));
-                let buf_size = if let Some(ty) = first_type.clone() {
-                    ty.size() * (values.len() as u64)
-                } else {
-                    0
-                };
+                let (ty, val) = self
+                    .generate_statement(
+                        func,
+                        module,
+                        if let Some(ty) = r#type.clone() {
+                            AstNode::ArithmeticOperation {
+                                left: Box::new(AstNode::LiteralStatement {
+                                    kind: TokenKind::LongLiteral,
+                                    value: ValueKind::Number(ty.size() as i64),
+                                }),
+                                right: Box::new(AstNode::LiteralStatement {
+                                    kind: TokenKind::LongLiteral,
+                                    value: ValueKind::Number(values.len() as i64),
+                                }),
+                                operator: TokenKind::Multiply,
+                            }
+                        } else {
+                            AstNode::LiteralStatement {
+                                kind: TokenKind::LongLiteral,
+                                value: ValueKind::Number(0),
+                            }
+                        },
+                        r#type,
+                        false,
+                    )
+                    .unwrap();
 
                 let tmp = self
                     .new_var(&buf_ty, &name.clone(), Some(func), true)
                     .unwrap();
 
+                let (converted_ty, converted_val) = self.convert_to_type(func, ty, Type::Long, val);
+
                 func.borrow_mut().assign_instruction(
                     tmp.clone(),
                     buf_ty.clone(),
-                    Instruction::Alloc8(buf_size),
+                    Instruction::Alloc8(converted_ty, converted_val.clone()),
                 );
 
-                self.buf_metadata
-                    .insert(tmp.clone(), (buf_ty.clone().unwrap().unwrap(), buf_size));
+                self.buf_metadata.insert(
+                    tmp.clone(),
+                    (buf_ty.clone().unwrap().unwrap(), converted_val),
+                );
 
                 for (i, value) in results.iter().enumerate() {
                     let value_ptr = self.new_var(&Type::Long, "tmp", Some(func), true).unwrap();
@@ -1217,17 +1259,17 @@ impl Compiler {
                         Type::Pointer(_) => {
                             let ty = Type::Long;
 
-                            if let Some((buf_ty, buf_size)) =
+                            if let Some((buf_ty, buf_val)) =
                                 self.buf_metadata.get(&val).map(|item| item.to_owned())
                             {
                                 func.borrow_mut().assign_instruction(
                                     size.clone(),
                                     ty.clone(),
                                     if standalone {
-                                        Instruction::Copy(Value::Const(Type::Word, buf_size as i64))
+                                        Instruction::Copy(buf_val.clone())
                                     } else {
                                         Instruction::Divide(
-                                            Value::Const(Type::Word, buf_size as i64),
+                                            buf_val,
                                             Value::Const(Type::Word, buf_ty.size() as i64),
                                         )
                                     },
