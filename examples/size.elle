@@ -4,7 +4,7 @@ fn other(int *buf) {
     printf("(fn other)\n\t#size(buf) = %d\n", #size(buf));
 }
 
-pub fn main() {
+fn main() {
     int buf[100];
     buf[0] = 123;
 
@@ -15,5 +15,4 @@ pub fn main() {
     );
 
     other(buf);
-    return 0;
 }

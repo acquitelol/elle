@@ -60,7 +60,7 @@ fn update(double rotX, double rotZ, double *zBuffer, string output) {
     }
 }
 
-pub fn main() {
+fn main() {
     double rotX = 0;
     double rotZ = 0;
 

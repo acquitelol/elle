@@ -29,7 +29,7 @@ impl Compiler {
         Value::Temporary(format!("{}.{}", name.unwrap_or("tmp"), self.tmp_counter))
     }
 
-    fn new_var(
+    fn new_variable(
         &mut self,
         ty: &Type,
         name: &str,
@@ -83,7 +83,7 @@ impl Compiler {
                     } => {
                         if name == const_name && func.is_some() {
                             let temp = self
-                                .new_var(&ty.clone().unwrap(), &name, func, true)
+                                .new_variable(&ty.clone().unwrap(), &name, func, true)
                                 .unwrap();
 
                             func.unwrap().borrow_mut().assign_instruction(
@@ -161,13 +161,13 @@ impl Compiler {
 
         for argument in arguments.clone() {
             let ty = argument.r#type.clone();
-            let tmp = self.new_var(&ty, &argument.name, None, false)?;
+            let tmp = self.new_variable(&ty, &argument.name, None, false)?;
 
             args.push((ty.into_abi(), tmp));
         }
 
         let mut func = Function {
-            linkage: if public {
+            linkage: if public || &name == "main" {
                 Linkage::public()
             } else {
                 Linkage::private()
@@ -308,7 +308,7 @@ impl Compiler {
                 }
 
                 let ty = r#type.unwrap_or(existing.clone());
-                let temp = self.new_var(&ty, &name, Some(func), false).unwrap();
+                let temp = self.new_variable(&ty, &name, Some(func), false).unwrap();
                 let parsed =
                     self.generate_statement(func, module, *value.clone(), Some(ty.clone()), false);
 
@@ -337,7 +337,7 @@ impl Compiler {
                     Some((ret_ty, value)) => {
                         // Generate a unique scoped temporary variable with the tmp_counter to ensure
                         // it can be yielded later for inferring the return type
-                        let tmp = self.new_var(
+                        let tmp = self.new_variable(
                             &ret_ty.clone(),
                             format!("r.v{}", self.tmp_counter).as_str(),
                             Some(func),
@@ -683,7 +683,7 @@ impl Compiler {
 
                 self.tmp_counter += 1;
                 let temp = self
-                    .new_var(
+                    .new_variable(
                         &ty,
                         format!("tmp.{}", self.tmp_counter).as_str(),
                         Some(func),
@@ -730,7 +730,7 @@ impl Compiler {
                     .unwrap();
 
                 let tmp = self
-                    .new_var(&buf_ty, &name.clone(), Some(func), true)
+                    .new_variable(&buf_ty, &name.clone(), Some(func), true)
                     .unwrap();
 
                 let (converted_ty, converted_val) = self.convert_to_type(func, ty, Type::Long, val);
@@ -828,7 +828,7 @@ impl Compiler {
 
                 self.tmp_counter += 1;
                 let temp = self
-                    .new_var(
+                    .new_variable(
                         &inner.clone().into_abi().clone(),
                         format!("{}.{}", "tmp", self.tmp_counter).as_str(),
                         Some(func),
@@ -1042,7 +1042,9 @@ impl Compiler {
                     .generate_statement(func, module, *size.clone(), ty, false)
                     .unwrap();
 
-                let var = self.new_var(&Type::Long, &name, Some(func), false).unwrap();
+                let var = self
+                    .new_variable(&Type::Long, &name, Some(func), false)
+                    .unwrap();
 
                 func.borrow_mut().assign_instruction(
                     var.clone(),
@@ -1122,7 +1124,7 @@ impl Compiler {
                     .unwrap();
 
                 let temp = self
-                    .new_var(&ty.clone(), &format!("tmp"), Some(func), true)
+                    .new_variable(&ty.clone(), &format!("tmp"), Some(func), true)
                     .unwrap();
 
                 func.borrow_mut().assign_instruction(
@@ -1194,7 +1196,7 @@ impl Compiler {
                     .unwrap();
 
                 let tmp = self
-                    .new_var(&buf_ty, &name.clone(), Some(func), true)
+                    .new_variable(&buf_ty, &name.clone(), Some(func), true)
                     .unwrap();
 
                 let (converted_ty, converted_val) = self.convert_to_type(func, ty, Type::Long, val);
@@ -1211,7 +1213,9 @@ impl Compiler {
                 );
 
                 for (i, value) in results.iter().enumerate() {
-                    let value_ptr = self.new_var(&Type::Long, "tmp", Some(func), true).unwrap();
+                    let value_ptr = self
+                        .new_variable(&Type::Long, "tmp", Some(func), true)
+                        .unwrap();
 
                     func.borrow_mut().assign_instruction(
                         value_ptr.clone(),
@@ -1237,7 +1241,7 @@ impl Compiler {
             AstNode::SizeStatement { value, standalone } => match value {
                 Ok(ty) => {
                     let tmp_ty = Type::Word;
-                    let temp = self.new_var(&tmp_ty, "tmp", Some(func), true).unwrap();
+                    let temp = self.new_variable(&tmp_ty, "tmp", Some(func), true).unwrap();
 
                     func.borrow_mut().assign_instruction(
                         temp.clone(),
@@ -1253,7 +1257,7 @@ impl Compiler {
                         .generate_statement(func, module, *value.clone(), ty.clone(), false)
                         .unwrap();
 
-                    let size = self.new_var(&ty, "tmp", Some(func), true).unwrap();
+                    let size = self.new_variable(&ty, "tmp", Some(func), true).unwrap();
 
                     match ty.clone() {
                         Type::Pointer(_) => {
@@ -1323,7 +1327,7 @@ impl Compiler {
             return (first, val);
         } else if first.is_int() && second.is_int() {
             let conv = self
-                .new_var(
+                .new_variable(
                     &second,
                     &format!("tmp.{}", self.tmp_counter),
                     Some(func),
@@ -1347,7 +1351,7 @@ impl Compiler {
             return (second, conv);
         } else if first.is_float() && second.is_float() {
             let conv = self
-                .new_var(
+                .new_variable(
                     &second,
                     &format!("tmp.{}", self.tmp_counter),
                     Some(func),
@@ -1371,7 +1375,7 @@ impl Compiler {
             return (second, conv);
         } else {
             let conv = self
-                .new_var(
+                .new_variable(
                     &second,
                     &format!("tmp.{}", self.tmp_counter),
                     Some(func),

@@ -12,8 +12,7 @@ fn add(int size, ...) {
     return res;
 }
 
-pub fn main() {
+fn main() {
     int res = add.(1, 2, 3, 4);
     printf("sum = %d\n", res);
-    return 0;
 }

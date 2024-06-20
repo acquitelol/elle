@@ -36,11 +36,10 @@ fn random(int lower, int upper) {
     return rand() % (upper - lower + 1) + lower;
 }
 
-pub fn main() {
+fn main() {
     srand(time(NULL));
     int lower = input_as_int("Enter the lower bound: ");
     int upper = input_as_int("Enter the upper bound: ");
 
     printf("Rolled %d\n", random(lower, upper));
-    return 0;
 }

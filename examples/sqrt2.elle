@@ -2,7 +2,7 @@
 // approximation algorithm.
 external fn printf(string formatter, ...);
 
-pub fn main() {
+fn main() {
     double x = 2;
     double a = x;
 
@@ -11,5 +11,4 @@ pub fn main() {
     }
 
     printf("sqrt(%.0f) ≈ %.50f\n", x, a);
-    return 0;
 }

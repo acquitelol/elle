@@ -29,7 +29,7 @@ fn input_as_int(string message) -> int {
     return converted;
 }
 
-pub fn main() {
+fn main() {
     int highestScore = 0;
     string winner = malloc(BUF_SIZE * #size(char));
     defer free(winner);
@@ -52,5 +52,4 @@ pub fn main() {
     }
 
     printf("The winner is %s with a score of %d\n", winner, highestScore);
-    return 0;
 }

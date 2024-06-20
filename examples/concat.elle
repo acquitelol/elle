@@ -33,7 +33,7 @@ fn concat(int size, ...) {
     return result;
 }
 
-pub fn main() {
+fn main() {
     string res = concat.(
         "‎ ‎╱|、\n",
         "(˚ˎ 。7\n",
@@ -42,5 +42,4 @@ pub fn main() {
     );
 
     printf("%s", res);
-    return 0;
 }

@@ -21,8 +21,7 @@ fn get_e() -> double {
     return res;
 }
 
-pub fn main() {
+fn main() {
     double e = get_e();
     printf("e = %.50f\n", e);
-    return 0;
 }
