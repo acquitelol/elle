@@ -1230,6 +1230,15 @@ impl<'a> Statement<'a> {
         AstNode::NotStatement { value }
     }
 
+    fn parse_address(&mut self) -> AstNode {
+        self.advance();
+
+        let name = self.get_identifier();
+        self.advance();
+
+        AstNode::AddressStatement { name }
+    }
+
     fn yield_tokens_with_delimiters(&mut self, delimiters: Vec<TokenKind>) -> Vec<Token> {
         if delimiters.contains(&self.current_token().kind) {
             panic!(
@@ -1424,6 +1433,7 @@ impl<'a> Statement<'a> {
             token if token.is_literal() => self.parse_literal(),
             TokenKind::Unary => self.parse_unary(),
             TokenKind::Not => self.parse_not(),
+            TokenKind::Address => self.parse_address(),
             TokenKind::Size => self.parse_size(),
             TokenKind::ArrayLength => self.parse_array_length(),
             TokenKind::LeftParenthesis => {

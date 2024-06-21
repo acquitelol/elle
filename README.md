@@ -467,9 +467,9 @@ and Elle will not complain. You can, if you wish, cast it, however it will have 
 
 * A unary operator is a token used as a prefix to a literal or identifer to apply some operation to it, like negating it.
 
-There are 3 unary operators in Elle:
+There are 4 unary operators in Elle:
 <br />
-`!`, `-`, and `+`.
+`!`, `&`, `-`, and `+`.
 
 Any identifier or literal can be prefixed by one of these operators.
 
@@ -493,6 +493,22 @@ const long MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
 ```
 
 Using unary `-` will multiply the expression by -1 while unary `+` will multiply the expression by 1.
+
+The unary `&` operator is used to get the memory address of a local variable in a function. Here is an example:
+
+```cpp
+fn other(int *something) {
+    printf("%d\n", something[0]);
+}
+
+pub fn main() {
+    int a = 39;
+    other(&a);
+    return 0;
+}
+```
+
+Here we declare `a` as 39, then we pass the "address" of `a` to `other` as a pointer to an `int`, then this pointer is dereferenced. Keep in mind that you can only take the address of an identifier. A `&` operator must **ALWAYS** have an identifier following it.
 
 <hr />
 

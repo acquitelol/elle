@@ -218,7 +218,7 @@ impl Lexer {
                         self.advance();
                         (TokenKind::And, ValueKind::Nil)
                     }
-                    _ => (TokenKind::None, ValueKind::Nil),
+                    _ => (TokenKind::Address, ValueKind::Nil),
                 }
             }
             '|' => {

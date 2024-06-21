@@ -308,6 +308,9 @@ impl Compiler {
                 }
 
                 let ty = r#type.unwrap_or(existing.clone());
+                let addr_temp = self
+                    .new_variable(&ty, &format!("{}.addr", name), Some(func), false)
+                    .unwrap();
                 let temp = self.new_variable(&ty, &name, Some(func), false).unwrap();
                 let parsed =
                     self.generate_statement(func, module, *value.clone(), Some(ty.clone()), false);
@@ -322,12 +325,27 @@ impl Compiler {
                     };
 
                     func.borrow_mut().assign_instruction(
-                        temp,
-                        final_ty.clone(),
-                        Instruction::Copy(final_val.clone()),
+                        addr_temp.clone(),
+                        Type::Pointer(Box::new(final_ty.clone())),
+                        Instruction::Alloc4(
+                            Type::Word,
+                            Value::Const(Type::Word, final_ty.size() as i64),
+                        ),
                     );
 
-                    return Some((final_ty, final_val));
+                    func.borrow_mut().add_instruction(Instruction::Store(
+                        final_ty.clone(),
+                        addr_temp.clone(),
+                        final_val,
+                    ));
+
+                    func.borrow_mut().assign_instruction(
+                        temp.clone(),
+                        ty.clone(),
+                        Instruction::Load(ty.clone(), addr_temp),
+                    );
+
+                    return Some((final_ty.clone(), temp));
                 }
 
                 None
@@ -1237,6 +1255,14 @@ impl Compiler {
                 }
 
                 Some((Type::Pointer(Box::new(buf_ty)), tmp))
+            }
+            AstNode::AddressStatement { name } => {
+                let (ty, tmp) = self.get_variable(&name, Some(func)).unwrap();
+                let tmp_name = tmp.get_string_inner();
+                let parts: Vec<&str> = tmp_name.split('.').collect();
+                let addr = format!("{}.addr.{}", parts[0], parts[1].parse::<i64>().unwrap() - 1);
+
+                Some((Type::Pointer(Box::new(ty)), Value::Temporary(addr)))
             }
             AstNode::SizeStatement { value, standalone } => match value {
                 Ok(ty) => {

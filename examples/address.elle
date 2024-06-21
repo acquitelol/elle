@@ -1,0 +1,12 @@
+external fn printf(string formatter, ...);
+
+fn other(int *other, string *str) {
+    printf("(fn other)\n\tother = %d\n\tstr = %s\n", other[0], str[0]);
+}
+
+fn main() {
+    int a = 39;
+    string str = "Hello world!";
+
+    other(&a, &str);
+}

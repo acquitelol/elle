@@ -78,6 +78,7 @@ pub enum TokenKind {
     Unary,
     ArrayLength,
     External,
+    Address,
 }
 
 impl TokenKind {

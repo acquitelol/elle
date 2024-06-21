@@ -71,6 +71,9 @@ pub enum AstNode {
     NotStatement {
         value: Box<AstNode>,
     },
+    AddressStatement {
+        name: String,
+    },
     ConversionStatement {
         r#type: Option<Type>,
         value: Box<AstNode>,

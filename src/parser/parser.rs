@@ -159,7 +159,6 @@ impl Parser {
                     external = false;
                 }
                 _ => {
-                    dbg!(self.current_token().kind);
                     break;
                 }
             }
