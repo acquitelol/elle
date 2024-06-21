@@ -2,6 +2,7 @@ external fn printf(string formatter, ...);
 
 fn other(int *other, string *str) {
     printf("(fn other)\n\tother = %d\n\tstr = %s\n", other[0], str[0]);
+    other[0] = 542;
 }
 
 fn main() {
@@ -9,4 +10,5 @@ fn main() {
     string str = "Hello world!";
 
     other(&a, &str);
+    printf("(fn main)\n\ta = %d\n", a);
 }

@@ -307,6 +307,7 @@ impl Compiler {
                     panic!("\nVariable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.\n", name);
                 }
 
+                let res = self.get_variable(&format!("{}.addr", name), Some(func));
                 let ty = r#type.unwrap_or(existing.clone());
                 let addr_temp = self
                     .new_variable(&ty, &format!("{}.addr", name), Some(func), false)
@@ -323,6 +324,32 @@ impl Compiler {
                     } else {
                         (ty.clone(), value.clone())
                     };
+
+                    if res.is_ok() {
+                        let (addr_ty, addr_val) = res.unwrap();
+                        let tmp = self
+                            .new_variable(&addr_ty, &name, Some(func), true)
+                            .unwrap();
+
+                        assert!(
+                            addr_ty == final_ty,
+                            "Cannot redeclare variable with another type"
+                        );
+
+                        func.borrow_mut().add_instruction(Instruction::Store(
+                            addr_ty.clone(),
+                            addr_val.clone(),
+                            final_val,
+                        ));
+
+                        func.borrow_mut().assign_instruction(
+                            tmp.clone(),
+                            addr_ty.clone(),
+                            Instruction::Load(addr_ty.clone().into_abi(), addr_val),
+                        );
+
+                        return Some((addr_ty.into_abi(), tmp));
+                    }
 
                     func.borrow_mut().assign_instruction(
                         addr_temp.clone(),
@@ -520,19 +547,34 @@ impl Compiler {
             }
             AstNode::LiteralStatement { kind, value } => match kind.clone() {
                 TokenKind::Identifier => match value {
-                    ValueKind::String(val) => {
-                        let var = self.get_variable(val.as_str(), Some(func));
+                    ValueKind::String(name) => {
+                        let var = self.get_variable(&name, Some(func));
 
                         match var {
-                            Ok((ty, val)) => Some((ty.into_abi(), val)),
+                            Ok((ty, val)) => {
+                                let res = self.get_variable(&format!("{}.addr", name), Some(func));
+
+                                if res.is_ok() {
+                                    let (_, addr_val) = res.unwrap();
+                                    let tmp =
+                                        self.new_variable(&ty, &name, Some(func), true).unwrap();
+
+                                    func.borrow_mut().assign_instruction(
+                                        tmp.clone(),
+                                        ty.clone(),
+                                        Instruction::Load(ty.clone().into_abi(), addr_val),
+                                    );
+
+                                    return Some((ty.into_abi(), tmp));
+                                }
+
+                                Some((ty.into_abi(), val))
+                            }
                             Err(msg) => {
                                 // If it fails to get the variable from the current scope
                                 // then attempt to get it from a global instead
                                 let tmp_module = module.borrow_mut();
-                                let global = tmp_module
-                                    .data
-                                    .iter()
-                                    .find(|item| item.name == val.as_str());
+                                let global = tmp_module.data.iter().find(|item| item.name == name);
 
                                 if global.is_some() {
                                     let item = global.unwrap();
@@ -1257,12 +1299,11 @@ impl Compiler {
                 Some((Type::Pointer(Box::new(buf_ty)), tmp))
             }
             AstNode::AddressStatement { name } => {
-                let (ty, tmp) = self.get_variable(&name, Some(func)).unwrap();
-                let tmp_name = tmp.get_string_inner();
-                let parts: Vec<&str> = tmp_name.split('.').collect();
-                let addr = format!("{}.addr.{}", parts[0], parts[1].parse::<i64>().unwrap() - 1);
+                let (ty, val) = self
+                    .get_variable(&format!("{}.addr", name), Some(func))
+                    .unwrap();
 
-                Some((Type::Pointer(Box::new(ty)), Value::Temporary(addr)))
+                Some((ty, val))
             }
             AstNode::SizeStatement { value, standalone } => match value {
                 Ok(ty) => {
