@@ -1,5 +1,5 @@
-const int NULL = 0;
-const int BUF_SIZE = 256;
+const long NULL = 0;
+const long BUF_SIZE = 256;
 
 external fn printf(string formatter, ...);
 external fn fprintf(long fd, string formatter, ...);

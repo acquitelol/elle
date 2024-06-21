@@ -1,0 +1,24 @@
+const long NULL = 0;
+external fn printf(string formatter, ...);
+
+fn direction(int *other) {
+    int x = 0;
+
+    if !other {
+        return direction(&x);
+    } else {
+        return &x > other;
+    }
+}
+
+fn formattedDirection() -> string {
+    if direction(0) {
+        return "up";
+    } else {
+        return "down";
+    }
+}
+
+fn main() {
+    printf("The stack is growing %swards for your architecture.\n", formattedDirection());
+}

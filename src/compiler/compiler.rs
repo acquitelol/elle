@@ -649,7 +649,7 @@ impl Compiler {
                             ],
                         ));
 
-                        Some((Type::Pointer(Box::new(Type::Byte)), Value::Global(name)))
+                        Some((Type::Pointer(Box::new(Type::Char)), Value::Global(name)))
                     }
                     // Characters are just strings enforced to be a single character
                     // This is done at tokenization time

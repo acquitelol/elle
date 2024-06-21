@@ -1,4 +1,4 @@
-const int BUF_SIZE = 256;
+const long BUF_SIZE = 256;
 external fn printf(string formatter, ...);
 
 fn input(string message) -> string {
