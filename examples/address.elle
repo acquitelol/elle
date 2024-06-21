@@ -1,8 +1,8 @@
 external fn printf(string formatter, ...);
 
-fn other(int *other, string *str) {
-    printf("(fn other)\n\tother = %d\n\tstr = %s\n", other[0], str[0]);
-    other[0] = 542;
+fn other(int *a, string *str) {
+    printf("(fn other)\n\ta = %d\n\tstr = %s\n", *a, *str);
+    *a = 542;
 }
 
 fn main() {

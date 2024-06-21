@@ -54,13 +54,13 @@ pub enum AstNode {
         values: Vec<AstNode>,
     },
     StoreStatement {
-        name: String,
-        offset: Box<AstNode>,
+        left: Box<AstNode>,
+        right: Box<AstNode>,
         value: Box<AstNode>,
     },
     LoadStatement {
-        name: String,
-        offset: Box<AstNode>,
+        left: Box<AstNode>,
+        right: Box<AstNode>,
     },
     DeferStatement {
         value: Box<AstNode>,

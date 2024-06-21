@@ -20,5 +20,8 @@ fn formattedDirection() -> string {
 }
 
 fn main() {
-    printf("The stack is growing %swards for your architecture.\n", formattedDirection());
+    printf(
+        "The stack is growing %swards for your architecture.\n",
+        formattedDirection()
+    );
 }

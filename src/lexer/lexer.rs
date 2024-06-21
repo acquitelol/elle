@@ -154,7 +154,11 @@ impl Lexer {
                 //     self.advance();
                 //     (TokenKind::Exponent, ValueKind::Nil)
                 } else {
-                    (TokenKind::Multiply, ValueKind::Nil)
+                    if self.is_unary_context() {
+                        (TokenKind::Deref, ValueKind::Nil)
+                    } else {
+                        (TokenKind::Multiply, ValueKind::Nil)
+                    }
                 }
             }
             '^' => {

@@ -73,6 +73,7 @@ pub enum TokenKind {
     Dot,
     Yield,
     Step,
+    Deref,
     Defer,
     Size,
     Unary,
@@ -167,7 +168,8 @@ impl TokenKind {
             | TokenKind::LessThanEqual
             | TokenKind::GreaterThan
             | TokenKind::GreaterThanEqual
-            | TokenKind::Not => true,
+            | TokenKind::Not
+            | TokenKind::Semicolon => true,
             _ => false,
         }
     }

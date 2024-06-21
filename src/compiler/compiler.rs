@@ -808,31 +808,34 @@ impl Compiler {
 
                 Some((Type::Pointer(Box::new(buf_ty)), tmp))
             }
-            AstNode::StoreStatement {
-                name,
-                offset,
-                value,
-            } => {
-                let (existing_ty, _) = self.get_variable(&name, Some(func)).unwrap();
+            AstNode::StoreStatement { left, right, value } => {
+                let (left_ty, _) = self
+                    .generate_statement(func, module, *left.clone(), ty.clone(), false)
+                    .unwrap();
+
+                let (right_ty, _) = self
+                    .generate_statement(func, module, *right.clone(), ty.clone(), false)
+                    .unwrap();
 
                 assert!(
-                    matches!(existing_ty, Type::Pointer(_)),
+                    matches!(left_ty, Type::Pointer(_)) || matches!(right_ty, Type::Pointer(_)),
                     "Cannot store data to non-pointer types"
                 );
 
-                let inner = existing_ty.clone().unwrap().unwrap();
+                let inner = if left_ty.is_pointer() {
+                    left_ty.unwrap().unwrap()
+                } else {
+                    right_ty.unwrap().unwrap()
+                };
 
                 let node = AstNode::ArithmeticOperation {
-                    left: Box::new(AstNode::LiteralStatement {
-                        kind: TokenKind::Identifier,
-                        value: ValueKind::String(name),
-                    }),
+                    left,
                     right: Box::new(AstNode::ArithmeticOperation {
                         left: Box::new(AstNode::LiteralStatement {
                             kind: TokenKind::LongLiteral,
                             value: ValueKind::Number(inner.size() as i64),
                         }),
-                        right: offset,
+                        right,
                         operator: TokenKind::Multiply,
                     }),
                     operator: TokenKind::Add,
@@ -856,27 +859,36 @@ impl Compiler {
 
                 None
             }
-            AstNode::LoadStatement { name, offset } => {
-                let (existing_ty, _) = self.get_variable(&name, Some(func)).unwrap();
+            AstNode::LoadStatement { left, right } => {
+                let (left_ty, _) = self
+                    .generate_statement(func, module, *left.clone(), ty.clone(), false)
+                    .unwrap();
+
+                let (right_ty, _) = self
+                    .generate_statement(func, module, *right.clone(), ty.clone(), false)
+                    .unwrap();
 
                 assert!(
-                    matches!(existing_ty, Type::Pointer(_)),
-                    "Cannot load data from non-pointer types"
+                    matches!(left_ty, Type::Pointer(_)) || matches!(right_ty, Type::Pointer(_)),
+                    "Cannot store data to non-pointer types"
                 );
+
+                let existing_ty = if left_ty.is_pointer() {
+                    left_ty
+                } else {
+                    right_ty
+                };
 
                 let inner = existing_ty.clone().unwrap().unwrap();
 
                 let node = AstNode::ArithmeticOperation {
-                    left: Box::new(AstNode::LiteralStatement {
-                        kind: TokenKind::Identifier,
-                        value: ValueKind::String(name),
-                    }),
+                    left,
                     right: Box::new(AstNode::ArithmeticOperation {
                         left: Box::new(AstNode::LiteralStatement {
                             kind: TokenKind::LongLiteral,
                             value: ValueKind::Number(inner.size() as i64),
                         }),
-                        right: offset,
+                        right,
                         operator: TokenKind::Multiply,
                     }),
                     operator: TokenKind::Add,

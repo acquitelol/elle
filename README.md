@@ -498,7 +498,7 @@ The unary `&` operator is used to get the memory address of a local variable in 
 
 ```cpp
 fn other(int *something) {
-    printf("%d\n", something[0]);
+    printf("%d\n", *something);
 }
 
 pub fn main() {
@@ -509,6 +509,44 @@ pub fn main() {
 ```
 
 Here we declare `a` as 39, then we pass the "address" of `a` to `other` as a pointer to an `int`, then this pointer is dereferenced. Keep in mind that you can only take the address of an identifier. A `&` operator must **ALWAYS** have an identifier following it.
+
+<hr />
+
+The unary `*` operator is used to dereference a pointer to a value:
+
+```cpp
+fn other(int *a, string *str) {
+    printf("(fn other)\n\ta = %d\n\tstr = %s\n", *a, *str);
+    *a = 542;
+}
+
+fn main() {
+    int a = 39;
+    string str = "Hello world!";
+
+    other(&a, &str);
+    printf("(fn main)\n\ta = %d\n", a);
+}
+```
+
+The example also implies that you can store values at those dereferenced addresses. You can put as many tokens as you want after the operator. It will yield until:
+- it matches a semicolon (;)
+- it matches an arithmetic operator
+- it reaches the end of the token vector
+
+This means that if you want to manipulate the address before it is dereferenced, you can wrap it in ().
+
+This code:
+```cpp
+printf("%d\n", *a + 1);
+```
+will dereference `a` and then add 1 to the result.
+
+This code, however:
+```cpp
+printf("%d\n", *(a + 1));
+```
+will first add 1 to the address of `a`, and then will dereference that address.
 
 <hr />
 

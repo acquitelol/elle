@@ -921,15 +921,15 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_offset_store(&mut self) -> AstNode {
-        let name_str = self.get_identifier();
         let original_position = self.position.clone();
-        self.advance();
+        let left_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::LeftBlockBrace]);
+        let left = Box::new(Statement::new(left_tokens, 0, &self.body).parse().0);
 
         self.expect_token(TokenKind::LeftBlockBrace);
         self.advance();
 
-        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::RightBlockBrace]);
-        let offset = Statement::new(tokens, 0, &self.body).parse().0;
+        let right_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::RightBlockBrace]);
+        let right = Box::new(Statement::new(right_tokens, 0, &self.body).parse().0);
 
         self.expect_token(TokenKind::RightBlockBrace);
         self.advance();
@@ -940,10 +940,7 @@ impl<'a> Statement<'a> {
         }
 
         if self.current_token().kind == TokenKind::Semicolon || self.is_eof() {
-            return AstNode::LoadStatement {
-                name: name_str,
-                offset: Box::new(offset),
-            };
+            return AstNode::LoadStatement { left, right };
         }
 
         self.expect_token(TokenKind::Equal);
@@ -951,11 +948,7 @@ impl<'a> Statement<'a> {
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
         let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
-        AstNode::StoreStatement {
-            value,
-            name: name_str,
-            offset: Box::new(offset),
-        }
+        AstNode::StoreStatement { left, right, value }
     }
 
     fn parse_variadic(&mut self) -> AstNode {
@@ -1239,6 +1232,33 @@ impl<'a> Statement<'a> {
         AstNode::AddressStatement { name }
     }
 
+    fn parse_deref(&mut self) -> AstNode {
+        self.advance();
+
+        let addr_tokens = self.yield_tokens_with_condition(|token| {
+            token.kind.is_arithmetic()
+                || token.kind == TokenKind::Semicolon
+                || token.kind == TokenKind::Equal
+        });
+
+        let left = Box::new(Statement::new(addr_tokens, 0, &self.body).parse().0);
+        let right = Box::new(AstNode::LiteralStatement {
+            kind: TokenKind::LongLiteral,
+            value: ValueKind::Number(0),
+        });
+
+        if self.current_token().kind == TokenKind::Equal {
+            self.advance();
+
+            let value_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
+            let value = Box::new(Statement::new(value_tokens, 0, &self.body).parse().0);
+
+            AstNode::StoreStatement { left, right, value }
+        } else {
+            AstNode::LoadStatement { left, right }
+        }
+    }
+
     fn yield_tokens_with_delimiters(&mut self, delimiters: Vec<TokenKind>) -> Vec<Token> {
         if delimiters.contains(&self.current_token().kind) {
             panic!(
@@ -1433,6 +1453,7 @@ impl<'a> Statement<'a> {
             token if token.is_literal() => self.parse_literal(),
             TokenKind::Unary => self.parse_unary(),
             TokenKind::Not => self.parse_not(),
+            TokenKind::Deref => self.parse_deref(),
             TokenKind::Address => self.parse_address(),
             TokenKind::Size => self.parse_size(),
             TokenKind::ArrayLength => self.parse_array_length(),
