@@ -355,7 +355,7 @@ impl Compiler {
                         addr_temp.clone(),
                         Type::Pointer(Box::new(final_ty.clone())),
                         Instruction::Alloc4(
-                            Type::Word,
+                            Type::Long,
                             Value::Const(Type::Word, final_ty.size() as i64),
                         ),
                     );
@@ -1110,9 +1110,11 @@ impl Compiler {
                 None
             }
             AstNode::VariadicStatement { name, size } => {
-                let compiled_size = self
+                let (ty, size) = self
                     .generate_statement(func, module, *size.clone(), ty, false)
                     .unwrap();
+
+                let (final_ty, final_val) = self.convert_to_type(func, ty, Type::Long, size);
 
                 let var = self
                     .new_variable(&Type::Long, &name, Some(func), false)
@@ -1121,7 +1123,7 @@ impl Compiler {
                 func.borrow_mut().assign_instruction(
                     var.clone(),
                     Type::Long,
-                    Instruction::Call(Value::Global("malloc".to_string()), vec![compiled_size]),
+                    Instruction::Alloc4(final_ty, final_val),
                 );
 
                 func.borrow_mut().add_instruction(Instruction::VAStart(var));

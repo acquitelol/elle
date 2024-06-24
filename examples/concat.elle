@@ -2,8 +2,6 @@ external fn printf(string formatter, ...);
 
 fn concat(int size, ...) {
     variadic args[size * #size(string)];
-    defer free(args);
-
     string strings[size];
     int sizes[size];
     long length = 0;

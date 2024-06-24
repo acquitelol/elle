@@ -206,7 +206,6 @@ Here's a basic example of a variadic function which takes in any amount of argum
 ```cpp
 fn add(int size, ...) {
     variadic args[size * #size(int)];
-    defer free(args);
     int res = 0;
 
     for int i = 0; i < size; i++ {
@@ -220,11 +219,10 @@ fn add(int size, ...) {
 Let's go through an explanation for how this works:
 
 * L1: Declare the function signature. We declare an `int size` as a static positional argument, then the `...` denotes that the function is variaidic.
-* L2: Declare the `args` variable as a pointer to the start of the variadic arguments. This is denoted by `variadic name[size * #size(ty)]`. Ensure that whatever type you pass into `#size` is the type you're going to yield later. This call internally calls the `malloc` function with the size specified and then calls `vastart` on the returned pointer.
-* L3: Defer the call to `free`. This means that `free` will only be called on the pointer when the function is about to go out of scope, ie at any return statements or an implicit function exit for subroutines that don't return a value.
-* L4: Initialize the result at `0`.
-* L6: Declare a for loop with an unused iterator from 0 to the size - 1. This will allow you to loop through all of the arguments that will be provided by the user. This is necessary because you can yield arguments forever, however if you don't know how many there are then you will enter uninitialized memory. A method of passing the argument length will be shown later at the call site.
-* L7: Yield the next argument from the `args` pointer as an `Int` type, and add it to the result value
+* L2: Declare the `args` variable as a pointer to the start of the variadic arguments. This is denoted by `variadic name[size * #size(ty)]`. Ensure that whatever type you pass into `#size` is the type you're going to yield later. This call internally stack allocates memory of the size specified and then calls `vastart` on the returned pointer.
+* L3: Initialize the result at `0`.
+* L5: Declare a for loop with an unused iterator from 0 to the size - 1. This will allow you to loop through all of the arguments that will be provided by the user. This is necessary because you can yield arguments forever, however if you don't know how many there are then you will enter uninitialized memory. A method of passing the argument length will be shown later at the call site.
+* L6: Yield the next argument from the `args` pointer as an `Int` type, and add it to the result value
 * L9: Return the summed value. Right before this point, the `free` call that we deferred earlier would be called.
 
 At the call-site, using this function is easy due to the syntactic sugar provided by Elle. It can be done like this:

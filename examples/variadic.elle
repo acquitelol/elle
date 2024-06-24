@@ -2,7 +2,6 @@ external fn printf(string formatter, ...);
 
 fn add(int size, ...) {
     variadic args[size * #size(int)];
-    defer free(args);
     int res = 0;
 
     for int i = 0; i < size; i++ {

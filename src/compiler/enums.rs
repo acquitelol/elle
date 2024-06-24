@@ -114,8 +114,8 @@ impl fmt::Display for Instruction {
             }
             Self::Alloc4(ty, val) => {
                 assert!(
-                    ty.size() == 4,
-                    "Incorrect size type. Please use alloc8 for 64-bit integer allocations"
+                    ty.size() == 8,
+                    "Incorrect size type. Size types must be 8 bytes."
                 );
 
                 write!(formatter, "alloc4 {}", val)
@@ -123,7 +123,7 @@ impl fmt::Display for Instruction {
             Self::Alloc8(ty, val) => {
                 assert!(
                     ty.size() == 8,
-                    "Incorrect size type. Please use alloc4 for 32-bit integer allocations"
+                    "Incorrect size type. Size types must be 8 bytes."
                 );
 
                 write!(formatter, "alloc8 {}", val)
