@@ -169,7 +169,9 @@ impl TokenKind {
             | TokenKind::GreaterThan
             | TokenKind::GreaterThanEqual
             | TokenKind::Not
-            | TokenKind::Semicolon => true,
+            | TokenKind::Semicolon
+            | TokenKind::Return
+            | TokenKind::EqualTo => true,
             _ => false,
         }
     }

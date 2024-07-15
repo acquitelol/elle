@@ -1,0 +1,52 @@
+const long NULL = 0;
+const int ITERATIONS = 100_000;
+const double EPSILON = 0.0206;
+external fn printf(string formatter, ...);
+
+fn random(int lower, int upper) {
+    return rand() % (upper - lower + 1) + lower;
+}
+
+fn roll(int* results) {
+    int attempts = 0;
+    double roll = 1_000_000;
+
+    while roll > EPSILON {
+        int randomResult = random(0, 1_000_000);
+
+        // Normalize it to a decimal between 0-100
+        // We cannot use random(0, 100) because this
+        // won't provide sufficient accuracy for
+        // sub-integer epsilons like 0.0206
+        roll = randomResult / 10_000;
+
+        attempts++;
+    }
+
+    return attempts;
+}
+
+fn calculateAverage(int* results) {
+    int sum = 0;
+
+    for int i = 0; i < ITERATIONS; i++ {
+        sum += results[i];
+    }
+
+    return sum / ITERATIONS;
+}
+
+fn main() {
+    int results[ITERATIONS];
+    srand(time(NULL));
+
+    for int i = 0; i < ITERATIONS; i++ {
+        results[i] = roll(results);
+    }
+
+    printf(
+        "Rolled a %.4f%% chance in an average of %d attempts",
+        EPSILON,
+        calculateAverage(results)
+    );
+}
