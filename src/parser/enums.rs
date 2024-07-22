@@ -51,6 +51,7 @@ pub enum AstNode {
     ArrayStatement {
         name: String,
         r#type: Option<Type>,
+        size: Box<AstNode>,
         values: Vec<AstNode>,
     },
     StoreStatement {

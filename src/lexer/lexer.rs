@@ -407,7 +407,6 @@ impl Lexer {
             "break" => TokenKind::Break,
             "continue" => TokenKind::Continue,
             "to" => TokenKind::To,
-            "next" => TokenKind::Next,
             "yield" => TokenKind::Yield,
             "step" => TokenKind::Step,
             "variadic" => TokenKind::Variadic,

@@ -1,6 +1,9 @@
 // Roughly references https://github.com/garritfra/qbe-rs/blob/main/src/lib.rs
 // https://github.com/garritfra/qbe-rs/blob/main/LICENSE-MIT
-use std::fmt::{self, write, Write};
+use std::{
+    fmt::{self, write, Write},
+    mem,
+};
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Copy)]
 pub enum Comparison {
@@ -245,7 +248,9 @@ impl Type {
         match self {
             Self::Byte | Self::Char => 1,
             Self::Word | Self::Single => 4,
-            Self::Long | Self::Double | Self::Pointer(..) => 8,
+            Self::Double => 8,
+            // Returns 4 on 32-bit and 8 on 64-bit
+            Self::Long | Self::Pointer(..) => mem::size_of::<usize>() as u64,
             _ => 0,
         }
     }

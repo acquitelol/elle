@@ -1217,6 +1217,7 @@ impl Compiler {
             AstNode::ArrayStatement {
                 name,
                 r#type,
+                size,
                 values,
             } => {
                 let mut first_type: Option<Type> = None;
@@ -1252,10 +1253,7 @@ impl Compiler {
                                     kind: TokenKind::LongLiteral,
                                     value: ValueKind::Number(ty.size() as i64),
                                 }),
-                                right: Box::new(AstNode::LiteralStatement {
-                                    kind: TokenKind::LongLiteral,
-                                    value: ValueKind::Number(values.len() as i64),
-                                }),
+                                right: size,
                                 operator: TokenKind::Multiply,
                             }
                         } else {

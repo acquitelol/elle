@@ -1,7 +1,7 @@
 const long NULL = 0;
 const int ITERATIONS = 100_000;
 const int ACCURACY = 1_000_000;
-const double EPSILON = 0.0214;
+const double EPSILON = 0.53;
 
 external fn printf(string formatter, ...);
 

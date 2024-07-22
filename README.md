@@ -15,12 +15,10 @@
 
 ### ♡ **Hello, World!**
 
-Writing a hello world program in Elle is super easy.
-<br/>
-Consider this basic example of a Hello World program in Elle:
+Writing a hello world program in Elle is super easy:
 
 ```ts
-pub fn main() {
+fn main() {
     puts("Hello world!");
 }
 ```
@@ -48,7 +46,7 @@ data $main_1 = { b "Hello world!", b 0 }
 ```
 
 * The `main_1` data segment is used to store the literal string later used in `puts`
-* The function is exported, as denoted with the `export` keyword
+* The function is exported, as denoted with the `export` keyword. Even if you do not denote a function with `pub`, Elle will automatically make the `main` function public.
 * The function returns a `w` (`word`), is called `main`, and uses the `$` sigil to denote it is global.
 * The `@start` directive describes the beginning of the function
 * We then use the `call` operation and the global `puts` function with the `l` (`long`) data section we stored earlier.
@@ -86,7 +84,7 @@ if expression {
 * Even though you can loop via recursion, the while loop primitive may be simpler to understand and use in many cases, therefore it is provided in Elle.
 * While loop expressions can be wrapped in `()` but this is not mandatory
 * There is no `do while` or `finally` functionality at the time of writing this.
-* Example
+* Example:
 
 ```cpp
 while expression {
@@ -117,7 +115,7 @@ Please keep in mind that you also have access to the `break` and `continue` keyw
 2. Condition - The condition to break out of the loop
 3. Variable step - The amount that the variable should increase on each iteration.
 
-Essentially, the loop creates the variable defined in (1), and evaluates the block specified, aswell as the step in (3), until the condition defined in (2) is zero, when it returns to the main branch and continues execution.
+Essentially, the loop creates the variable defined in (1), and evaluates the block (code) specified, aswell as (3), until the condition defined in (2) is false (zero), when it returns to the main branch and continues execution.
 
 * For loop expressions can be wrapped in `()` but this is not mandatory
 * Basic example of a for loop that prints the digits 0-9 to the stdout:
@@ -148,10 +146,9 @@ fn get_e() {
     return res;
 }
 
-pub fn main() {
+fn main() {
     double e = get_e();
     printf("e = %.50f\n", e);
-    return 0;
 }
 ```
 
@@ -166,7 +163,7 @@ Please keep in mind that you also have access to the `break` and `continue` keyw
 Here's a simple example:
 
 ```cpp
-pub fn main() {
+fn main() {
     int a = 0;
 
     {
@@ -174,15 +171,13 @@ pub fn main() {
         // If we do *something* here like calling defer then
         // the defer would run when this block leaves its scope
     }
-
-    return 0;
 }
 ```
 
 And it is relatively clear how this code is essentially equal to:
 
 ```cpp
-pub fn main() {
+fn main() {
     int a = 0;
 
     if true {
@@ -190,8 +185,6 @@ pub fn main() {
         // If we do *something* here like calling defer then
         // the defer would run when this block leaves its scope
     }
-
-    return 0;
 }
 ```
 
@@ -205,6 +198,8 @@ Here's a basic example of a variadic function which takes in any amount of argum
 
 ```cpp
 fn add(int size, ...) {
+    // Note: `int` should be the same as the type
+    // you are yielding from later.
     variadic args[size * #size(int)];
     int res = 0;
 
@@ -228,10 +223,9 @@ Let's go through an explanation for how this works:
 At the call-site, using this function is easy due to the syntactic sugar provided by Elle. It can be done like this:
 
 ```cpp
-pub fn main() {
+fn main() {
     int res = add.(1, 2, 3, 4);
     printf("%d\n", res);
-    return 0;
 }
 ```
 
@@ -242,6 +236,9 @@ Examples that contain variadic functions include [`concat.elle`](https://github.
 <hr />
 
 ### ♡ **Exact literals**
+
+> [!NOTE]
+> You will probably never use exact literals when writing pure Elle code. Their only realistic use is to implement language features that don't exist yet.
 
 * An exact literal is Elle's way of implementing inline IR into the language. This basically means that you can write intermediate language code directly in Elle which compiles without any type, size, scope, or name context.
 
@@ -258,14 +255,13 @@ fn deref(int *ptr) -> int {
     $$ret %deref.val$$;
 }
 
-pub fn main() {
+fn main() {
     int some_buffer[1];
     some_buffer[0] = 123;
 
     // Print the value at the 0th index (pointer start + 0)
     // This is identical to `some_buffer[0]`
     printf("%d\n", deref(some_buffer + 0));
-    return 0;
 }
 ```
 
@@ -279,34 +275,30 @@ pub fn main() {
   * `func.(a, b, c)` expands to `func(3, a, b, c)`
   * `func.(a, b)` expands to `func(2, a, b)`
 
+> [!TIP]
 > The number placed at the 0th argument is the number of arguments. This is a simple way to allow to get the number of arguments that were passed into the function without needing to manually specify them.
 
 <hr />
 
 ### ♡ **Static buffers**
 
-* A static buffer is a basic allocation of stack memory with a specified, static size (you cannot put variables here, only literals like numbers).
-* You can allocate a buffer with the `type buf[size]` syntax.
-* This expands into the following IR:
+* A static buffer is a basic allocation of stack memory with a specified, static size.
+* You can allocate a buffer with the `type buf[size];` syntax.
 
-```cpp
-data $buf_5 = { z (size * type_size) }
-```
-
-* Assuming you wrote the above code, you would be able to reference the `buf` variable which is a pointer to the data section that holds the buffer. The buffer may be called anything though, of course.
+* Assuming you wrote the above code, you would now have a variable in scope, defined with the name `buf`. This variable is a pointer to the type specified.
 * Example:
 
 ```cpp
 char out[128];
-gets(out); // Keep in mind that this is unsafe
-puts(out);
+out[0] = 'a'; // Keep in mind that `out` is a `char *`
+printf("%c", out[0]);
 ```
 
 <hr />
 
 ### ♡ **Defer statements**
 
-* A defer statement is commonly used to group together memory allocation and deallocation. A simple explanation is that it consumes whatever operation is defined inside and only runs this code when the function is about to go out of scope, ie during a return in a block/if statement/while loop, or an implicit return due to the function scope being left.
+* A defer statement is commonly used to group together memory allocation and deallocation. A simple explanation is that it stores whatever operation is defined inside and does not run it until the function is about to go out of scope, ie during a return, a block being left, or an implicit return due to the function scope being left.
 
 A very simple example of this is declaring a variable and deferring printing its value, like this:
 
@@ -315,17 +307,16 @@ fn print_int(int num) {
     printf("%d\n", num);
 }
 
-pub fn main() {
+fn main() {
     int i = 0;
 
     // If this were not in a defer statement, then this would print 0
     // However, it will print 25 instead.
+    // Realistically this code only runs right before `return 0`.
     defer print_int(i);
 
     i += 5;
     i *= i;
-
-    return 0;
 }
 ```
 You can see how this only calls `print_int` right before it returns 0, which is indeed *after* the `i` variable has had changes made to it. This also works if you return in other scopes, such as if statements, while loops, standalone blocks, etc, as stated above. Any defer statements in inner blocks will not be called on any return, rather will only be called when the inner block is about to leave scope.
@@ -336,7 +327,7 @@ fn print_int(int num) {
     printf("%d\n", num);
 }
 
-pub fn main() {
+fn main() {
     int i = 0;
     defer print_int(i);
 
@@ -346,16 +337,15 @@ pub fn main() {
     }
 
     i *= i;
-    return 0;
 }
 ```
 
 The expected output is 2, then 4.
-This is because it will call `print_int` once when the standalone block will leave scope, at which point `i` is 2, then it will call `print_int` again when the function itself will leave scope, at which it will be 4 because `i` was squared (`i *= i`).
+This is because it will call `print_int` once when the standalone block will leave scope, at which point `i` is 2, then it will call `print_int` again when the function itself (`main`) will leave scope, at which point it will be 4 because `i` was squared (`i *= i`).
 
 You can also write something like this:
 ```cpp
-pub fn main() {
+fn main() {
     int i = 0;
     defer print_int(i);
 
@@ -369,7 +359,6 @@ pub fn main() {
     }
 
     i *= i;
-    return 0;
 }
 ```
 Here we expect `i` (`2`) to be printed to the console twice. Why? When the function returns, the scope created by the standalone block is also inherently about to be left. Hence, we also need to call all non-root deferrers here.
@@ -379,9 +368,9 @@ The most useful application of deferring is for memory management, however.
 Consider this code:
 
 ```cpp
-pub fn main() {
+fn main() {
     long size = 10;
-    long *numbers = malloc(size * 8); // 8 = size of a Long
+    long *numbers = malloc(size * #size(long));
     defer free(numbers);
 
     for (long i = 0; i < size - 1; i++) {
@@ -397,7 +386,6 @@ pub fn main() {
     }
 
     // Calls `free` here
-    return 0;
 }
 ```
 
@@ -411,21 +399,21 @@ Of course for a function like the above, you are able to determine what path the
 
 * A type definition is used to differentiate between the scope and size of different variables. You must define a type when declaring variables, taking variables as arguments in a function, and yielding the next value from a variadic argument pointer.
 
-Elle's types are quite similar to C in terms of their definition. They can be a recursive pointer type too such as `char *`. Although C has a limit on the number of pointers that a type can have (it is 2 in the C spec), Elle does **not** because a type is an Option<T> internally and as such, the concept of a `void *` or `nil *` does not exist.
+Elle's types are quite similar to C in terms of their definition. They can be a recursive pointer type too such as `char **` (An array of strings). Although C has a limit on the number of pointers that a type can have (it is 2 in the C spec), Elle does **not** because a type is an Option<T> internally and as such, the concept of a `void *` or `nil *` does not exist.
 
 These are the mappings of types in Elle:
 
 - `nil` - No type. Can be used to give a function that doesn't return anything an explicit return type. Keep in mind that this is purely semantic and cannot be used as a standalone type for variables.
 - `bool` - A mapping to `int`, and works purely as a semantic for boolean literals like `true` or `false` that expand to `1` or `0` respectively.
 - `char` - A mapping to `byte` representing a character in ASCII.
-- `int` - A "word", also knows as a 32 bit signed integer.
+- `int` - A "word", also known as a 32 bit signed integer.
 - `long` - A signed integer of the size specified by your computer's architecture. On x64 computers this is a 64-bit signed integer, while on x86 computers this is a 32-bit signed integer.
 - `single` - A 32-bit signed floating point number.
 - `float` - A mapping to a `single`.
 - `double` - A 64-bit signed floating point number, providing double the precision of a `single`.
 - `function` - A type that maps to a `byte`. This is intended to be used as a pointer to the first byte of a function definition.
 - `pointer` - Denoted by `<type> *` -> As pointers are just a number, an address in memory, a pointer in Elle is just a `long` that holds extra context by holding another type so that it can use its size to calculate an offset when indexing an array.
-- `string` - A mapping to a `char *`, which is a pointer to the start of the array of characters.
+- `string` - A mapping to a `char *`, which is essentially an array of characters.
 
 <hr />
 
@@ -439,22 +427,22 @@ You can cast a type in a similar manner to C.
 Here is an example that casts a float to an integer to add it to another integer:
 
 ```cpp
-pub fn main() {
+fn main() {
     float a = 1.5;
     int b = (int)a + 2;
 }
 ```
 
-Casting is not necessary here, because the Elle compiler is smart enough to automatically cast the float to an int when compiling the arithmetic operation, based on a [weight](https://github.com/acquitelol/elle/blob/rewrite/src/compiler/enums.rs#L212-L220) that each type is assigned.
+Casting is not necessary here, because the Elle compiler is smart enough to automatically cast the `float` to an `int` when compiling the arithmetic operation, based on a [weight](https://github.com/acquitelol/elle/blob/rewrite/src/compiler/enums.rs#L233-L241) that each type is assigned.
 
 <br />
 
-You can also cast to pointer types, however note that, unlike C, casting to a pointer type when using `malloc` is *not* necessary because malloc is not interfaced in the Elle internals.
+You can also cast to pointer types, however note that, unlike C, casting to a pointer type when using `malloc` is *not* necessary (yet) because malloc is not interfaced in the Elle internals with `external fn`.
 
 This means you can write:
 ```cpp
-pub fn main() {
-    double *a = malloc(1024 * 8); // Where 8 = size of a double
+fn main() {
+    double *a = malloc(1024 * #size(double));
 }
 ```
 and Elle will not complain. You can, if you wish, cast it, however it will have no effect at the moment.
@@ -465,9 +453,13 @@ and Elle will not complain. You can, if you wish, cast it, however it will have 
 
 * A unary operator is a token used as a prefix to a literal or identifer to apply some operation to it, like negating it.
 
-There are 4 unary operators in Elle:
+There are 5 unary operators in Elle:
 <br />
-`!`, `&`, `-`, and `+`.
+- `!` - Bitwise NOT
+- `&` - Stack address
+- `-` - Negative number
+- `+` - Positive number
+- `*` - Pointer dereference
 
 Any identifier or literal can be prefixed by one of these operators.
 
@@ -528,11 +520,11 @@ fn main() {
 ```
 
 The example also implies that you can store values at those dereferenced addresses. You can put as many tokens as you want after the operator. It will yield until:
-- it matches a semicolon (;)
+- it matches a semicolon (`;`)
 - it matches an arithmetic operator
 - it reaches the end of the token vector
 
-This means that if you want to manipulate the address before it is dereferenced, you can wrap it in ().
+This means that if you want to manipulate the address before it is dereferenced, you can wrap it in `()`.
 
 This code:
 ```cpp
@@ -550,7 +542,7 @@ will first add 1 to the address of `a`, and then will dereference that address.
 
 ### ♡ **Arithmetic operations**
 
-* All arithmetic operations are declared with 2 expressions on the left and right of an operator. This means you can call functions, do other arithmetic operations inside of operations, etc.
+* All arithmetic operations are declared with an expression on the left and right of an operator. This means you can call functions, do other arithmetic operations inside of operations, etc.
 
 This is the mapping defined by Elle:
 
@@ -561,24 +553,22 @@ This is the mapping defined by Elle:
 - `-` - Subtract
 - `%` - Modulus
 
-Keep in mind that you can also assign these to other values.
+Keep in mind that you can also use these operators when doing a variable declaration.
 This means the following code is valid:
 
 ```cpp
-pub fn main() {
+fn main() {
     int a = 1;
-    a ^= 1; // a is now 0;
+    a ^= 1; // a is now 0
     printf("%d", a);
-
-    return 0;
 }
 ```
 
-And of course, this works for every arithmetic operator, not just `xor ^`.
+And of course, this works for every arithmetic operator, not just `^`.
 
-Elle follows the standard [order of operations](https://github.com/acquitelol/elle/blob/rewrite/src/lexer/enums.rs#L88-L100) described by mathematics (typically defined as BIDMAS or PEMDAS), which means you can also wrap expressions in `()` to evaluate them before other expressions that may have a higher precedence.
+Elle follows the standard [order of operations](https://github.com/acquitelol/elle/blob/rewrite/src/lexer/enums.rs#L90-L102) described by mathematics (typically defined as BIDMAS or PEMDAS), which means you can also wrap expressions in `()` to evaluate them before other expressions that may have a higher precedence.
 
-Example of a program that calculates the `xor ^` and `add +` of some values:
+Example of a program that calculates the xor (`^`) and sum (`+`) of some values:
 
 ```cpp
 pub fn main() {
@@ -616,19 +606,20 @@ Here is an example of an array that holds 3 `long`s:
 const long MAX_SIGNED_LONG = 9_223_372_036_854_775_807;
 const long MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
 
-pub fn main() {
+fn main() {
     long test[] = {MAX_SIGNED_LONG, MIN_SIGNED_LONG, -39};
 
     for int i = 0; i < #arrlen(test); i++ {
         printf("test[%d] = %ld\n", i, test[i]);
     }
-
-    return 0;
 }
 ```
 
 You can also specify an enforced size in between the square brackets, if you prefer not to fill the whole array at declaration-time:
 - `long test[3] = {MAX_SIGNED_LONG, MIN_SIGNED_LONG, -39};`
+
+> [!NOTE]
+> If you do not specify a size in the square brackets, it will just assume that the array is the length of the elements you passed in the curly braces.
 
 <hr />
 
@@ -639,9 +630,9 @@ You can also specify an enforced size in between the square brackets, if you pre
 There are currently 2 size directives in Elle:
 `#size()` and `#arrlen()`
 
-You can put both **types** and **expressions** inside of the `#size()` directive and it returns the size of the statement verbatim.
+You can put both **types** and **expressions** inside of the `#size()` directive and it returns the size of the statement provided.
 
-You can only place **expressions** inside of the `#arrlen()` directive as it returns the size of the buffer divided by the size of each type. This is exactly equivalent to `#size(arr) / #size(arr_type)`. It will crash if you try to use it on a buffer that wasn't defined in the current function.
+You can only place **expressions** inside of the `#arrlen()` directive as it returns the size of the buffer divided by the size of each type. This is exactly equivalent to `#size(arr) / #size(arr_type)`. It will crash if you try  to use it on a buffer that wasn't defined in the function that the directive is called from.
 
 For example, take this snippet:
 
@@ -654,7 +645,7 @@ fn other(int *buf) {
     );
 }
 
-pub fn main() {
+fn main() {
     int buf[100];
     buf[0] = 123;
 
@@ -665,7 +656,6 @@ pub fn main() {
     );
 
     other(buf);
-    return 0;
 }
 
 ```
@@ -680,7 +670,9 @@ printf(
 );
 ```
 
-Elle will throw a compilation error. It only has a pointer to the buffer in the `other` function, which means the `#size` call will return the size of a pointer (8 bytes on 64-bit architectures and 4 bytes on 32-bit architectures). On the other hand, trying to get the length of this array will fail because that makes no sense conceptually. In this function, the size of the array is not available, so returning anything for the `#arrlen` function when you have no size makes no sense.
+Elle will throw a compilation error. The `buf` buffer was not defined in the function called `other`, so therefore the compiler does not have enough context to get its length, as arguments in Elle are not fat (they don't contain extra metadata).
+
+Essentially, contextually this means that the `buf` variable is just an `int *` to the compiler. As it no longer has context to the size of the `buf` allocation, it cannot evaluate the `#arrlen` directive, and throws an error.
 
 In this example:
 
@@ -689,7 +681,7 @@ fn other(int *buf) {
     printf("(fn other)\n\t#size(buf) = %d\n", #size(buf));
 }
 
-pub fn main() {
+fn main() {
     int buf[100];
     buf[0] = 123;
 
@@ -700,26 +692,23 @@ pub fn main() {
     );
 
     other(buf);
-    return 0;
 }
 ```
 
-The code will compile successfully, because `#arrlen` is no longer used on a buffer that isn't defined in the current function.
+The code will compile successfully, because `#arrlen` is no longer used on a buffer that isn't defined in the function where the directive was called.
 
 <hr/>
 
-Finally, here is a basic example of using `#arrlen` to loop through an array of strings and print its values:
+Finally, here is a basic example of using `#arrlen` to loop through an array of strings and print their values:
 
 ```cpp
-pub fn main() {
+fn main() {
     char *some_array[] = {"abc", "meow", "test"};
 
     for int i = 0; i < #arrlen(some_array); i++ {
         // Here typeof(some_array[i]) = char * = string
         printf("some_array[%d] = %s\n", i, some_array[i]);
     }
-
-    return 0;
 }
 ```
 
@@ -727,9 +716,8 @@ pub fn main() {
 
 ### ♡ **Constants**
 
-* A constant is a value that cannot be redeclared. In Elle, constants can only be defined at the top level of files, and the reverse is also true, where the top level of files can *only* be constants and functions.
+* A constant is a value that cannot be redeclared. In Elle, constants can only be defined at the top level of files, and vice versa too, where the top level of files can *only* be constants and functions. You cannot define normal variables at the top level.
 * Constants can be public, declared using the `pub` keyword.
-* A constant internally creates a function that is automatically called when the constant is referenced.
 * Constants that create pointers (such as string literals) are referenced as the first statement of each function to bring them in scope.
 
 Consider this example that uses constants:
@@ -747,29 +735,27 @@ pub fn main() {
 
 In the above code, all of the constants are technically function definitions that return the value after the `=` sign. However, when they're referenced, the function is automatically called. Therefore, you dont need to type `SIZE()` or similar, you can just directly reference `SIZE` as if it was a constant.
 
-It is labelled as a "constant", because although it can return a different value (it can call any function), it cannot be redeclared.
+It is labelled as a "`constant`", because although it can return a different value (it can call any function), it cannot be redeclared.
 
 <hr />
 
 ### ♡ **Argc and argv**
 
-* These are variables that can be taken as arguments from the `main` function that allow you to pass extra data to the executable. Conventionally, the first argument, `argc`, is the number of arguments, and the second argument, `argv`, is an array of the arguments themselves, or rather a pointer to them.
+* These are variables that can be taken as arguments from the `main` function that allow you to pass extra data to the executable. Conventionally, the first argument, `argc`, is the number of arguments, and the second argument, `argv`, is an array of the arguments, or rather a pointer to them.
 
-Due to Elle's compilation to QBE-IR which implements the C ABI, getting input from `argc` and `argv` is actually *exactly* the same as C. There is practically no difference.
+Due to Elle's compilation to QBE which implements the C ABI, getting input from `argc` and `argv` is actually *exactly* the same as C. There is practically no difference.
 
 Consider this function which accepts argv and prints them all to the console:
 
 ```cpp
-pub fn main(int argc, char **argv) {
+fn main(int argc, char **argv) {
     for int i = 0; i < argc; i++ {
         printf("argv[%d] = %s\n", i, argv[i]);
     }
-
-    return 0;
 }
 ```
 
-It accepts `argc` as a signed 32-bit integer and `argv` as an array of `char *` (denoted by `char **`, basically a pointer to the start of the array holding `char *` which is a pointer to the start of each string). These arguments are optional, as you may have noticed from code examples above.
+It accepts `argc` as a signed 32-bit integer and `argv` as an array of `char *` (denoted by `char **`, basically an array of strings). These arguments are optional, as you may have noticed from code examples above, where some `main` functions did not take an `argc` or `argv`.
 
 You can also accept `char **envp` (and `char **apple` on MacOS/Darwin platforms, which provides arbitrary OS information, such as the path to the executing binary).
 
@@ -777,7 +763,7 @@ You can also accept `char **envp` (and `char **apple` on MacOS/Darwin platforms,
 
 ### ♡ **External symbols**
 
-* An external symbol is a definition for a function or constant that was defined elsewhere (such as in C) and is implicitly defined in Elle. This is mostly used for inferring the index of the start of variadic arguments in functions.
+* An external symbol is a definition for a function or constant that was defined elsewhere (such as in C) and is implicitly defined in Elle. This is used to give definition and context to functions that were not defined in Elle but you wish to use in when writing Elle code.
 
 As Elle has no modules currently, to effectively use `printf` and similar functions you must declare their interface at the top level.
 <br/>
@@ -801,11 +787,14 @@ If you do not want to declare the function's interface, you can still use the fu
 printf("%d, %d\n", $$...$$, a, b);
 ```
 
+> [!NOTE]
+> The code example above uses exact literals. You can read up on those, if you like, however, as mentioned in that part of the README, these shouldn't be used unless you really know what you're doing.
+
 Even though this achieves the same behavior, manually specifying this index each time you are calling the function is not very efficient.
 
 Keep in mind that all other examples in this README.md have the `printf` interface implicitly defined, however any examples in the `/examples` directory will have this interface (and any other necessary ones) defined explicitly.
 
-**Technical note:** This declaration does not emit any IR code. It simply exists to provide more context to functions called in Elle that may not have been originally declared in Elle.
+**Technical note:** This declaration does not emit any IR code. This means that all these definitions do is provide more information and context to the compiler. They do not change the output of the program directly.
 
 <hr />
 

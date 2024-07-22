@@ -69,7 +69,6 @@ pub enum TokenKind {
     To,
     Ellipsis,
     Variadic,
-    Next,
     Dot,
     Yield,
     Step,

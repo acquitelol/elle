@@ -1,0 +1,46 @@
+const int ITERATIONS = 60;
+external fn printf(string formatter, ...);
+
+fn fibonacci_cached(int n, long* cache) -> long {
+    if n <= 1 {
+        return (long)n;
+    }
+
+    if cache[n] == -1 {
+        cache[n] = fibonacci_cached(n - 1, cache)
+            + fibonacci_cached(n - 2, cache);
+    }
+
+    return cache[n];
+}
+
+fn fibonacci_iterative(int n) -> long {
+    if n <= 1 {
+        return (long)n;
+    }
+
+    long previous = 0;
+    long current = 1;
+
+    for int i = 1; i < n; i++ {
+        long next = previous + current;
+
+        previous = current;
+        current = next;
+    }
+
+    return current;
+}
+
+fn main() {
+    long cache[ITERATIONS + 1];
+    memset(cache, -1, #size(cache));
+
+    printf(
+        "fibonacci_cached(%d) = %ld\nfibonacci_iterative(%d) = %ld\n",
+        ITERATIONS,
+        fibonacci_cached(ITERATIONS, cache),
+        ITERATIONS,
+        fibonacci_iterative(ITERATIONS)
+    );
+}

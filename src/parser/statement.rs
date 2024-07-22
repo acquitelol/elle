@@ -614,7 +614,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         if self.current_token().kind == TokenKind::Equal {
-            return self.parse_array_literal(Some(name), ty);
+            return self.parse_array_literal(Some(name), ty, size);
         }
 
         self.expect_token(TokenKind::Semicolon);
@@ -626,7 +626,12 @@ impl<'a> Statement<'a> {
         }
     }
 
-    fn parse_array_literal(&mut self, name: Option<String>, ty: Option<Type>) -> AstNode {
+    fn parse_array_literal(
+        &mut self,
+        name: Option<String>,
+        ty: Option<Type>,
+        size: Option<AstNode>,
+    ) -> AstNode {
         let name = name.unwrap();
 
         self.advance();
@@ -655,6 +660,10 @@ impl<'a> Statement<'a> {
         AstNode::ArrayStatement {
             name,
             r#type: ty,
+            size: Box::new(size.unwrap_or(AstNode::LiteralStatement {
+                kind: TokenKind::LongLiteral,
+                value: ValueKind::Number(values.len() as i64),
+            })),
             values,
         }
     }
