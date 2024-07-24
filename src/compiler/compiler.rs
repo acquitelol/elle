@@ -621,7 +621,7 @@ impl Compiler {
                 TokenKind::Continue => {
                     if let Some(label) = &self.loop_labels.last() {
                         func.borrow_mut()
-                            .add_instruction(Instruction::Jump(format!("{}.cond", label)));
+                            .add_instruction(Instruction::Jump(format!("{}.step", label)));
                     } else {
                         panic!("Continue can only be used in a loop.");
                     }
@@ -1069,10 +1069,15 @@ impl Compiler {
                 func.borrow_mut().add_block(end_label);
                 None
             }
-            AstNode::WhileLoop { condition, body } => {
+            AstNode::WhileLoop {
+                condition,
+                step,
+                body,
+            } => {
                 self.tmp_counter += 1;
 
                 let cond_label = format!("loop.{}.cond", self.tmp_counter);
+                let step_label = format!("loop.{}.step", self.tmp_counter);
                 let body_label = format!("loop.{}.body", self.tmp_counter);
                 let end_label = format!("loop.{}.end", self.tmp_counter);
 
@@ -1089,6 +1094,23 @@ impl Compiler {
                     body_label.clone(),
                     end_label.clone(),
                 ));
+
+                func.borrow_mut().add_block(step_label.clone());
+
+                if step.is_some() {
+                    self.generate_statement(
+                        func,
+                        module,
+                        *step.clone().unwrap(),
+                        ty.clone(),
+                        None,
+                        false,
+                    )
+                    .unwrap();
+                }
+
+                func.borrow_mut()
+                    .add_instruction(Instruction::Jump(cond_label.clone()));
 
                 func.borrow_mut().add_block(body_label.clone());
 
@@ -1127,7 +1149,7 @@ impl Compiler {
 
                 if !func.borrow_mut().blocks.last().map_or(false, |b| b.jumps()) {
                     func.borrow_mut()
-                        .add_instruction(Instruction::Jump(cond_label));
+                        .add_instruction(Instruction::Jump(step_label));
                 }
 
                 func.borrow_mut().add_block(end_label);

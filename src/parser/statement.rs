@@ -11,14 +11,21 @@ pub struct Statement<'a> {
     tokens: Vec<Token>,
     position: usize,
     body: &'a RefCell<Vec<AstNode>>,
+    standalone: bool,
 }
 
 impl<'a> Statement<'a> {
-    pub fn new(tokens: Vec<Token>, position: usize, body: &'a RefCell<Vec<AstNode>>) -> Self {
+    pub fn new(
+        tokens: Vec<Token>,
+        position: usize,
+        body: &'a RefCell<Vec<AstNode>>,
+        standalone: bool,
+    ) -> Self {
         Statement {
             tokens,
             position,
             body,
+            standalone,
         }
     }
 
@@ -164,7 +171,7 @@ impl<'a> Statement<'a> {
             self.expect_token(TokenKind::Semicolon);
         }
 
-        let res = Statement::new(tokens, 0, &self.body).parse().0;
+        let res = Statement::new(tokens, 0, &self.body, false).parse().0;
 
         let parsed_res = match res.clone() {
             AstNode::DeclareStatement {
@@ -208,6 +215,24 @@ impl<'a> Statement<'a> {
             }
 
             let mapping = res.unwrap();
+
+            if self.standalone {
+                return AstNode::DeclareStatement {
+                    name: name.clone(),
+                    r#type: None,
+                    value: Box::new(AstNode::ArithmeticOperation {
+                        left: Box::new(AstNode::LiteralStatement {
+                            kind: TokenKind::Identifier,
+                            value: ValueKind::String(name.clone()),
+                        }),
+                        right: Box::new(AstNode::LiteralStatement {
+                            kind: TokenKind::IntegerLiteral,
+                            value: ValueKind::Number(1),
+                        }),
+                        operator: mapping,
+                    }),
+                };
+            }
 
             self.body.borrow_mut().push(AstNode::LiteralStatement {
                 kind: TokenKind::ExactLiteral,
@@ -255,7 +280,7 @@ impl<'a> Statement<'a> {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
                 }),
-                right: Box::new(Statement::new(tokens, 0, &self.body).parse().0),
+                right: Box::new(Statement::new(tokens, 0, &self.body, false).parse().0),
                 operator: mapping,
             }),
         }
@@ -351,7 +376,7 @@ impl<'a> Statement<'a> {
         }
 
         let res = if tokens.len() > 0 {
-            Statement::new(tokens, 0, &self.body).parse().0
+            Statement::new(tokens, 0, &self.body, false).parse().0
         } else {
             AstNode::LiteralStatement {
                 kind: TokenKind::IntegerLiteral,
@@ -456,7 +481,11 @@ impl<'a> Statement<'a> {
                 }
             }
 
-            parameters.push(Statement::new(tokens.clone(), 0, &self.body).parse().0);
+            parameters.push(
+                Statement::new(tokens.clone(), 0, &self.body, false)
+                    .parse()
+                    .0,
+            );
         }
 
         self.expect_token_with_message(
@@ -547,8 +576,8 @@ impl<'a> Statement<'a> {
         };
 
         AstNode::ArithmeticOperation {
-            left: Box::new(Statement::new(left, 0, &self.body).parse().0),
-            right: Box::new(Statement::new(right, 0, &self.body).parse().0),
+            left: Box::new(Statement::new(left, 0, &self.body, false).parse().0),
+            right: Box::new(Statement::new(right, 0, &self.body, false).parse().0),
             operator,
         }
     }
@@ -623,7 +652,7 @@ impl<'a> Statement<'a> {
 
         if self.current_token().kind != TokenKind::RightBlockBrace {
             let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::RightBlockBrace]);
-            size = Some(Statement::new(tokens, 0, &self.body).parse().0);
+            size = Some(Statement::new(tokens, 0, &self.body, false).parse().0);
         }
 
         self.expect_token(TokenKind::RightBlockBrace);
@@ -651,7 +680,11 @@ impl<'a> Statement<'a> {
                 self.advance();
             }
 
-            values.push(Statement::new(tmp_tokens.clone(), 0, &self.body).parse().0);
+            values.push(
+                Statement::new(tmp_tokens.clone(), 0, &self.body, false)
+                    .parse()
+                    .0,
+            );
         }
 
         self.advance();
@@ -675,7 +708,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::LeftCurlyBrace]);
-        let expression = Statement::new(tokens, 0, &self.body).parse().0;
+        let expression = Statement::new(tokens, 0, &self.body, false).parse().0;
 
         self.expect_token(TokenKind::LeftCurlyBrace);
         self.advance();
@@ -704,7 +737,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::LeftCurlyBrace]);
-        let expression = Statement::new(tokens, 0, &self.body).parse().0;
+        let expression = Statement::new(tokens, 0, &self.body, false).parse().0;
 
         self.expect_token(TokenKind::LeftCurlyBrace);
         self.advance();
@@ -715,6 +748,7 @@ impl<'a> Statement<'a> {
 
         AstNode::WhileLoop {
             condition: Box::new(expression),
+            step: None,
             body,
         }
     }
@@ -735,7 +769,7 @@ impl<'a> Statement<'a> {
         };
 
         let declare = if declare_tokens.len() > 0 {
-            Statement::new(declare_tokens.clone(), 0, &self.body)
+            Statement::new(declare_tokens.clone(), 0, &self.body, true)
                 .parse()
                 .0
         } else {
@@ -755,7 +789,9 @@ impl<'a> Statement<'a> {
         };
 
         let condition = if condition_tokens.len() > 0 {
-            Statement::new(condition_tokens, 0, &self.body).parse().0
+            Statement::new(condition_tokens, 0, &self.body, true)
+                .parse()
+                .0
         } else {
             AstNode::LiteralStatement {
                 kind: TokenKind::IntegerLiteral,
@@ -808,40 +844,14 @@ impl<'a> Statement<'a> {
         self.expect_token(TokenKind::LeftCurlyBrace);
         self.advance();
 
-        if step_tokens.len() > 0 {
-            let mut index = self.position.clone();
-            let mut nesting = 0;
-
-            loop {
-                index += 1;
-
-                if self.tokens.get(index).unwrap().kind == TokenKind::LeftCurlyBrace {
-                    nesting += 1;
-                }
-
-                if self.tokens.get(index).unwrap().kind == TokenKind::RightCurlyBrace {
-                    if nesting > 0 {
-                        nesting -= 1;
-                    } else {
-                        break;
-                    }
-                }
-
-                if index + 1 >= self.tokens.len() {
-                    break;
-                }
+        let step = if step_tokens.len() > 0 {
+            Statement::new(step_tokens, 0, &self.body, true).parse().0
+        } else {
+            AstNode::LiteralStatement {
+                kind: TokenKind::IntegerLiteral,
+                value: ValueKind::Number(1),
             }
-
-            step_tokens.push(Token {
-                kind: TokenKind::Semicolon,
-                value: ValueKind::Nil,
-                location: step_tokens.last().unwrap().clone().location,
-            });
-
-            for token in step_tokens.iter().cloned().rev() {
-                self.tokens.insert(index, token);
-            }
-        }
+        };
 
         let body = self.yield_block();
 
@@ -853,6 +863,7 @@ impl<'a> Statement<'a> {
 
         AstNode::WhileLoop {
             condition: Box::new(condition),
+            step: Some(Box::new(step)),
             body,
         }
     }
@@ -924,7 +935,7 @@ impl<'a> Statement<'a> {
             }
         }
 
-        let expression = Statement::new(tokens, 0, &self.body).parse().0;
+        let expression = Statement::new(tokens, 0, &self.body, false).parse().0;
 
         self.expect_token(TokenKind::RightParenthesis);
         self.advance();
@@ -944,14 +955,14 @@ impl<'a> Statement<'a> {
         let left = Box::new(if maybe_left.is_some() {
             maybe_left.unwrap()
         } else {
-            Statement::new(left_tokens, 0, &self.body).parse().0
+            Statement::new(left_tokens, 0, &self.body, false).parse().0
         });
 
         self.expect_token(TokenKind::LeftBlockBrace);
         self.advance();
 
         let right_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::RightBlockBrace]);
-        let right = Box::new(Statement::new(right_tokens, 0, &self.body).parse().0);
+        let right = Box::new(Statement::new(right_tokens, 0, &self.body, false).parse().0);
 
         self.expect_token(TokenKind::RightBlockBrace);
         self.advance();
@@ -969,7 +980,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
-        let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
+        let value = Box::new(Statement::new(tokens, 0, &self.body, false).parse().0);
         AstNode::StoreStatement { left, right, value }
     }
 
@@ -983,7 +994,7 @@ impl<'a> Statement<'a> {
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::RightBlockBrace]);
         let size = Box::new(if tokens.len() > 0 {
-            Statement::new(tokens, 0, &self.body).parse().0
+            Statement::new(tokens, 0, &self.body, false).parse().0
         } else {
             panic!("Invalid size for buffer {}", name);
         });
@@ -1021,7 +1032,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
-        let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
+        let value = Box::new(Statement::new(tokens, 0, &self.body, false).parse().0);
         AstNode::DeferStatement { value }
     }
 
@@ -1075,7 +1086,7 @@ impl<'a> Statement<'a> {
             }
         }
 
-        let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
+        let value = Box::new(Statement::new(tokens, 0, &self.body, false).parse().0);
         AstNode::ConversionStatement {
             r#type: Some(r#type),
             value,
@@ -1142,7 +1153,7 @@ impl<'a> Statement<'a> {
                 }
             }
 
-            let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
+            let value = Box::new(Statement::new(tokens, 0, &self.body, false).parse().0);
             Err(value)
         };
 
@@ -1205,7 +1216,7 @@ impl<'a> Statement<'a> {
             }
         }
 
-        let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
+        let value = Box::new(Statement::new(tokens, 0, &self.body, false).parse().0);
         self.advance();
 
         self.expect_token(TokenKind::RightParenthesis);
@@ -1225,7 +1236,7 @@ impl<'a> Statement<'a> {
             token.kind.is_arithmetic() || token.kind == TokenKind::Semicolon
         });
 
-        let parsed = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
+        let parsed = Box::new(Statement::new(tokens, 0, &self.body, false).parse().0);
 
         AstNode::ArithmeticOperation {
             left: parsed,
@@ -1241,7 +1252,7 @@ impl<'a> Statement<'a> {
             token.kind.is_arithmetic() || token.kind == TokenKind::Semicolon
         });
 
-        let value = Box::new(Statement::new(tokens, 0, &self.body).parse().0);
+        let value = Box::new(Statement::new(tokens, 0, &self.body, false).parse().0);
         AstNode::NotStatement { value }
     }
 
@@ -1263,7 +1274,7 @@ impl<'a> Statement<'a> {
                 || token.kind == TokenKind::Equal
         });
 
-        let left = Box::new(Statement::new(addr_tokens, 0, &self.body).parse().0);
+        let left = Box::new(Statement::new(addr_tokens, 0, &self.body, false).parse().0);
         let right = Box::new(AstNode::LiteralStatement {
             kind: TokenKind::LongLiteral,
             value: ValueKind::Number(0),
@@ -1273,7 +1284,7 @@ impl<'a> Statement<'a> {
             self.advance();
 
             let value_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
-            let value = Box::new(Statement::new(value_tokens, 0, &self.body).parse().0);
+            let value = Box::new(Statement::new(value_tokens, 0, &self.body, false).parse().0);
 
             AstNode::StoreStatement { left, right, value }
         } else {
@@ -1332,7 +1343,8 @@ impl<'a> Statement<'a> {
                 }
                 _ => {
                     let (node, position, tokens) =
-                        Statement::new(self.tokens.clone(), self.position.clone(), &cell).parse();
+                        Statement::new(self.tokens.clone(), self.position.clone(), &cell, false)
+                            .parse();
 
                     let mut body_ref = cell.borrow_mut();
                     let res = body_ref.iter().position(|item| match item.clone() {
@@ -1422,13 +1434,17 @@ impl<'a> Statement<'a> {
                         found_return = true;
                     }
                     AstNode::WhileLoop {
-                        condition, body, ..
+                        condition,
+                        step,
+                        body,
+                        ..
                     } => {
                         let mut new_body = body;
                         insert_deferred_statements(&mut new_body, deferred, false);
 
                         new_nodes.push(AstNode::WhileLoop {
                             condition,
+                            step,
                             body: new_body,
                         });
                     }

@@ -64,7 +64,7 @@ impl<'a> Constant<'a> {
         self.parser.advance();
 
         let body: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
-        let value = Statement::new(tokens, 0, &body).parse().0;
+        let value = Statement::new(tokens, 0, &body, false).parse().0;
 
         Primitive::Constant {
             name,

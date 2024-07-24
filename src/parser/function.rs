@@ -104,6 +104,7 @@ impl<'a> Function<'a> {
                         self.parser.tokens.clone(),
                         self.parser.position.clone(),
                         &body,
+                        false,
                     )
                     .parse();
 
@@ -190,13 +191,17 @@ impl<'a> Function<'a> {
                         found_return = true;
                     }
                     AstNode::WhileLoop {
-                        condition, body, ..
+                        condition,
+                        step,
+                        body,
+                        ..
                     } => {
                         let mut new_body = body;
                         insert_deferred_statements(&mut new_body, deferred, false);
 
                         new_nodes.push(AstNode::WhileLoop {
                             condition,
+                            step,
                             body: new_body,
                         });
                     }

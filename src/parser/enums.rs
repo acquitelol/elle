@@ -41,6 +41,7 @@ pub enum AstNode {
     },
     WhileLoop {
         condition: Box<AstNode>,
+        step: Option<Box<AstNode>>,
         body: Vec<AstNode>,
     },
     BufferStatement {
