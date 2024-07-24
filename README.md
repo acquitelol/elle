@@ -25,7 +25,6 @@ fn main() {
 
 Let's dissect the code:
 
-* The `pub` keyword declares the main function as public/exported
 * The `fn` keyword declares the identifier as a function
 * The word `main` defines the function as the entry point of our program.
 * The function call `puts` is part of the C ABI. It takes the 0th argument and writes it to the standard output.
