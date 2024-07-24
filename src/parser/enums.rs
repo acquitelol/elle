@@ -49,8 +49,6 @@ pub enum AstNode {
         size: Box<AstNode>,
     },
     ArrayStatement {
-        name: String,
-        r#type: Option<Type>,
         size: Box<AstNode>,
         values: Vec<AstNode>,
     },

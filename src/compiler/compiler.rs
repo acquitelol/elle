@@ -206,6 +206,7 @@ impl Compiler {
                             module,
                             statement.clone(),
                             None,
+                            None,
                             false,
                         ) {
                             Some((_, value)) => func_ref
@@ -217,8 +218,14 @@ impl Compiler {
                     _ => {}
                 },
                 _ => {
-                    match self.generate_statement(&func_ref, module, statement.clone(), None, false)
-                    {
+                    match self.generate_statement(
+                        &func_ref,
+                        module,
+                        statement.clone(),
+                        None,
+                        None,
+                        false,
+                    ) {
                         _ => {}
                     }
                 }
@@ -290,6 +297,7 @@ impl Compiler {
         module: &RefCell<Module>,
         stmt: AstNode,
         ty: Option<Type>,
+        value: Option<Value>,
         is_return: bool,
     ) -> Option<(Type, Value)> {
         let res = match stmt {
@@ -313,8 +321,15 @@ impl Compiler {
                     .new_variable(&ty, &format!("{}.addr", name), Some(func), false)
                     .unwrap();
                 let temp = self.new_variable(&ty, &name, Some(func), false).unwrap();
-                let parsed =
-                    self.generate_statement(func, module, *value.clone(), Some(ty.clone()), false);
+                dbg!(&temp);
+                let parsed = self.generate_statement(
+                    func,
+                    module,
+                    *value.clone(),
+                    Some(ty.clone()),
+                    Some(temp.clone()),
+                    false,
+                );
 
                 if parsed.is_some() {
                     let (ret_ty, value) = parsed.unwrap();
@@ -331,10 +346,12 @@ impl Compiler {
                             .new_variable(&addr_ty, &name, Some(func), true)
                             .unwrap();
 
-                        assert!(
-                            addr_ty == final_ty,
-                            "Cannot redeclare variable with another type"
-                        );
+                        if addr_ty != final_ty {
+                            panic!(
+                                "Cannot redeclare a variable which has type {:?} to type {:?}",
+                                addr_ty, final_ty
+                            )
+                        }
 
                         func.borrow_mut().add_instruction(Instruction::Store(
                             addr_ty.clone(),
@@ -378,7 +395,8 @@ impl Compiler {
                 None
             }
             AstNode::ReturnStatement { value } => {
-                match self.generate_statement(func, module, *value.clone(), ty.clone(), true) {
+                match self.generate_statement(func, module, *value.clone(), ty.clone(), None, true)
+                {
                     Some((ret_ty, value)) => {
                         // Generate a unique scoped temporary variable with the tmp_counter to ensure
                         // it can be yielded later for inferring the return type
@@ -425,11 +443,11 @@ impl Compiler {
                 // We essentially would have to pseudo-run the code to get the number of
                 // multiplications that should occur (a ** b) can have a call on lhs or rhs
                 let (left_ty_unparsed, left_val_unparsed) = self
-                    .generate_statement(func, module, *left.clone(), ty.clone(), false)
+                    .generate_statement(func, module, *left.clone(), ty.clone(), None, false)
                     .unwrap();
 
                 let (right_ty_unparsed, right_val_unparsed) = self
-                    .generate_statement(func, module, *right.clone(), ty.clone(), false)
+                    .generate_statement(func, module, *right.clone(), ty.clone(), None, false)
                     .unwrap();
 
                 let mut left_ty = left_ty_unparsed.clone();
@@ -556,16 +574,14 @@ impl Compiler {
 
                                 if res.is_ok() {
                                     let (_, addr_val) = res.unwrap();
-                                    let tmp =
-                                        self.new_variable(&ty, &name, Some(func), true).unwrap();
 
                                     func.borrow_mut().assign_instruction(
-                                        tmp.clone(),
+                                        val.clone(),
                                         ty.clone(),
                                         Instruction::Load(ty.clone().into_abi(), addr_val),
                                     );
 
-                                    return Some((ty.into_abi(), tmp));
+                                    return Some((ty.into_abi(), val));
                                 }
 
                                 Some((ty.into_abi(), val))
@@ -696,7 +712,7 @@ impl Compiler {
 
                 for parameter in parameters.clone() {
                     params.push(
-                        self.generate_statement(func, module, parameter, ty.clone(), false)
+                        self.generate_statement(func, module, parameter, ty.clone(), None, false)
                             .unwrap(),
                     );
                 }
@@ -734,6 +750,7 @@ impl Compiler {
                                 value: ValueKind::String("...".to_string()),
                             },
                             Some(ty.clone()),
+                            None,
                             false,
                         )
                         .unwrap();
@@ -785,6 +802,7 @@ impl Compiler {
                             }
                         },
                         r#type,
+                        None,
                         false,
                     )
                     .unwrap();
@@ -810,11 +828,11 @@ impl Compiler {
             }
             AstNode::StoreStatement { left, right, value } => {
                 let (left_ty, _) = self
-                    .generate_statement(func, module, *left.clone(), ty.clone(), false)
+                    .generate_statement(func, module, *left.clone(), ty.clone(), None, false)
                     .unwrap();
 
                 let (right_ty, _) = self
-                    .generate_statement(func, module, *right.clone(), ty.clone(), false)
+                    .generate_statement(func, module, *right.clone(), ty.clone(), None, false)
                     .unwrap();
 
                 assert!(
@@ -842,11 +860,11 @@ impl Compiler {
                 };
 
                 let (ty, compiled_location) = self
-                    .generate_statement(func, module, node.clone(), None, false)
+                    .generate_statement(func, module, node.clone(), None, None, false)
                     .unwrap();
 
                 let (_, compiled) = self
-                    .generate_statement(func, module, *value.clone(), Some(ty.clone()), false)
+                    .generate_statement(func, module, *value.clone(), Some(ty.clone()), None, false)
                     .unwrap();
 
                 let constant = self.compile_literal_to_ascii(compiled);
@@ -861,11 +879,11 @@ impl Compiler {
             }
             AstNode::LoadStatement { left, right } => {
                 let (left_ty, _) = self
-                    .generate_statement(func, module, *left.clone(), ty.clone(), false)
+                    .generate_statement(func, module, *left.clone(), ty.clone(), None, false)
                     .unwrap();
 
                 let (right_ty, _) = self
-                    .generate_statement(func, module, *right.clone(), ty.clone(), false)
+                    .generate_statement(func, module, *right.clone(), ty.clone(), None, false)
                     .unwrap();
 
                 assert!(
@@ -895,7 +913,7 @@ impl Compiler {
                 };
 
                 let (_, compiled_location) = self
-                    .generate_statement(func, module, node.clone(), ty, false)
+                    .generate_statement(func, module, node.clone(), ty, None, false)
                     .unwrap();
 
                 self.tmp_counter += 1;
@@ -922,7 +940,7 @@ impl Compiler {
                 else_body,
             } => {
                 let (_, value) = self
-                    .generate_statement(func, module, *condition.clone(), ty, false)
+                    .generate_statement(func, module, *condition.clone(), ty, None, false)
                     .unwrap();
 
                 self.tmp_counter += 1;
@@ -954,6 +972,7 @@ impl Compiler {
                                     module,
                                     statement.clone(),
                                     None,
+                                    None,
                                     false,
                                 ) {
                                     Some((_, value)) => match literal_value.clone() {
@@ -976,6 +995,7 @@ impl Compiler {
                                     module,
                                     statement.clone(),
                                     None,
+                                    None,
                                     false,
                                 );
                             }
@@ -985,6 +1005,7 @@ impl Compiler {
                             func,
                             module,
                             statement.clone(),
+                            None,
                             None,
                             false,
                         ) {
@@ -1009,6 +1030,7 @@ impl Compiler {
                                     module,
                                     statement.clone(),
                                     None,
+                                    None,
                                     false,
                                 ) {
                                     Some((_, value)) => func
@@ -1022,6 +1044,7 @@ impl Compiler {
                                         module,
                                         statement.clone(),
                                         None,
+                                        None,
                                         false,
                                     );
                                 }
@@ -1032,6 +1055,7 @@ impl Compiler {
                                     func,
                                     module,
                                     statement.clone(),
+                                    None,
                                     None,
                                     false,
                                 ) {
@@ -1057,7 +1081,7 @@ impl Compiler {
                 func.borrow_mut().add_block(cond_label.clone());
 
                 let (_, value) = self
-                    .generate_statement(func, module, *condition.clone(), ty.clone(), false)
+                    .generate_statement(func, module, *condition.clone(), ty.clone(), None, false)
                     .unwrap();
 
                 func.borrow_mut().add_instruction(Instruction::JumpNonZero(
@@ -1077,6 +1101,7 @@ impl Compiler {
                                     module,
                                     statement.clone(),
                                     None,
+                                    None,
                                     false,
                                 ) {
                                     Some((_, value)) => func
@@ -1091,6 +1116,7 @@ impl Compiler {
                             func,
                             module,
                             statement.clone(),
+                            None,
                             None,
                             false,
                         ) {
@@ -1111,7 +1137,7 @@ impl Compiler {
             }
             AstNode::VariadicStatement { name, size } => {
                 let (ty, size) = self
-                    .generate_statement(func, module, *size.clone(), ty, false)
+                    .generate_statement(func, module, *size.clone(), ty, None, false)
                     .unwrap();
 
                 let (final_ty, final_val) = self.convert_to_type(func, ty, Type::Long, size);
@@ -1157,6 +1183,7 @@ impl Compiler {
                                     module,
                                     statement.clone(),
                                     None,
+                                    None,
                                     false,
                                 ) {
                                     Some((_, value)) => func
@@ -1171,6 +1198,7 @@ impl Compiler {
                             func,
                             module,
                             statement.clone(),
+                            None,
                             None,
                             false,
                         ) {
@@ -1187,14 +1215,14 @@ impl Compiler {
                 value,
             } => {
                 let (first, val) = self
-                    .generate_statement(func, module, *value.clone(), ty, false)
+                    .generate_statement(func, module, *value.clone(), ty, None, false)
                     .unwrap();
 
                 Some(self.convert_to_type(func, first, second.unwrap(), val))
             }
             AstNode::NotStatement { value } => {
                 let (ty, val) = self
-                    .generate_statement(func, module, *value.clone(), ty, false)
+                    .generate_statement(func, module, *value.clone(), ty, None, false)
                     .unwrap();
 
                 let temp = self
@@ -1214,21 +1242,42 @@ impl Compiler {
 
                 Some((ty, temp))
             }
-            AstNode::ArrayStatement {
-                name,
-                r#type,
-                size,
-                values,
-            } => {
+            AstNode::ArrayStatement { size, values } => {
                 let mut first_type: Option<Type> = None;
                 let mut results: Vec<Value> = Vec::new();
 
+                assert!(
+                    if ty.is_some() {
+                        ty.clone().unwrap().is_pointer()
+                    } else {
+                        true
+                    },
+                    "The type of an array must be a pointer to the inner type of the array"
+                );
+
+                let inner_ty = if ty.is_some() {
+                    ty.clone().unwrap().unwrap()
+                } else {
+                    None
+                };
+
                 for value in values.iter() {
                     let (ty, val) = self
-                        .generate_statement(func, module, value.clone(), r#type.clone(), false)
+                        .generate_statement(
+                            func,
+                            module,
+                            value.clone(),
+                            if inner_ty.is_some() {
+                                inner_ty.clone()
+                            } else {
+                                first_type.clone()
+                            },
+                            None,
+                            false,
+                        )
                         .unwrap();
 
-                    results.push(val);
+                    results.push(val.clone());
 
                     if let Some(first_type) = first_type.clone() {
                         if ty != first_type {
@@ -1236,6 +1285,13 @@ impl Compiler {
                                 "Inconsistent array types {:?} and {:?} (possibly more)",
                                 first_type, ty
                             );
+                        }
+
+                        if inner_ty.is_some() && inner_ty.clone().unwrap() != first_type {
+                            panic!(
+                                "Inconsistent array type definition {:?} and type of value in array {:?}",
+                                inner_ty, first_type
+                            )
                         }
                     } else {
                         first_type = Some(ty);
@@ -1247,7 +1303,7 @@ impl Compiler {
                     .generate_statement(
                         func,
                         module,
-                        if let Some(ty) = r#type.clone() {
+                        if let Some(ty) = first_type.clone() {
                             AstNode::ArithmeticOperation {
                                 left: Box::new(AstNode::LiteralStatement {
                                     kind: TokenKind::LongLiteral,
@@ -1262,14 +1318,13 @@ impl Compiler {
                                 value: ValueKind::Number(0),
                             }
                         },
-                        r#type,
+                        first_type.clone(),
+                        None,
                         false,
                     )
                     .unwrap();
 
-                let tmp = self
-                    .new_variable(&buf_ty, &name.clone(), Some(func), true)
-                    .unwrap();
+                let tmp = self.new_variable(&buf_ty, "tmp", Some(func), true).unwrap();
 
                 let (converted_ty, converted_val) = self.convert_to_type(func, ty, Type::Long, val);
 
@@ -1280,7 +1335,7 @@ impl Compiler {
                 );
 
                 self.buf_metadata.insert(
-                    tmp.clone(),
+                    value.clone().unwrap_or(tmp.clone()),
                     (buf_ty.clone().unwrap().unwrap(), converted_val),
                 );
 
@@ -1333,8 +1388,10 @@ impl Compiler {
 
                 Err(value) => {
                     let (ty, val) = self
-                        .generate_statement(func, module, *value.clone(), ty.clone(), false)
+                        .generate_statement(func, module, *value.clone(), ty.clone(), None, false)
                         .unwrap();
+
+                    dbg!(&ty, &val);
 
                     let size = self.new_variable(&ty, "tmp", Some(func), true).unwrap();
 

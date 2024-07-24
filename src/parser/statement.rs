@@ -403,18 +403,23 @@ impl<'a> Statement<'a> {
 
         while self.current_token().kind != TokenKind::RightParenthesis && !self.is_eof() {
             let mut tokens = vec![];
-            let mut nesting = 0;
+            let mut paren_nesting = 0;
+            let mut block_nesting = 0;
 
             loop {
                 if self.current_token().kind == TokenKind::LeftParenthesis {
-                    nesting += 1;
+                    paren_nesting += 1;
+                }
+
+                if self.current_token().kind == TokenKind::LeftBlockBrace {
+                    block_nesting += 1;
                 }
 
                 tokens.push(self.current_token());
                 self.advance();
 
                 if self.current_token().kind == TokenKind::Comma {
-                    if nesting > 0 {
+                    if paren_nesting > 0 || block_nesting > 0 {
                         // Comma in an inner function should just be added to the
                         // token list to be parsed
                         tokens.push(self.current_token());
@@ -428,10 +433,21 @@ impl<'a> Statement<'a> {
                 }
 
                 if self.current_token().kind == TokenKind::RightParenthesis {
-                    if nesting > 0 {
-                        nesting -= 1;
+                    if paren_nesting > 0 {
+                        paren_nesting -= 1;
                     } else {
                         break; // The function call has ended
+                    }
+                }
+
+                if self.current_token().kind == TokenKind::RightBlockBrace {
+                    if block_nesting > 0 {
+                        block_nesting -= 1;
+                    } else {
+                        panic!(
+                            "[{}] Invalid balance of block braces",
+                            self.current_token().location.display()
+                        )
                     }
                 }
 
@@ -612,11 +628,6 @@ impl<'a> Statement<'a> {
 
         self.expect_token(TokenKind::RightBlockBrace);
         self.advance();
-
-        if self.current_token().kind == TokenKind::Equal {
-            return self.parse_array_literal(Some(name), ty, size);
-        }
-
         self.expect_token(TokenKind::Semicolon);
 
         AstNode::BufferStatement {
@@ -626,23 +637,15 @@ impl<'a> Statement<'a> {
         }
     }
 
-    fn parse_array_literal(
-        &mut self,
-        name: Option<String>,
-        ty: Option<Type>,
-        size: Option<AstNode>,
-    ) -> AstNode {
-        let name = name.unwrap();
-
-        self.advance();
-        self.expect_token(TokenKind::LeftCurlyBrace);
+    fn parse_array(&mut self) -> AstNode {
+        self.expect_token(TokenKind::LeftBlockBrace);
         self.advance();
 
         let mut values = vec![];
 
-        while self.current_token().kind != TokenKind::RightCurlyBrace && !self.is_eof() {
+        while self.current_token().kind != TokenKind::RightBlockBrace && !self.is_eof() {
             let tmp_tokens = self
-                .yield_tokens_with_delimiters(vec![TokenKind::Comma, TokenKind::RightCurlyBrace]);
+                .yield_tokens_with_delimiters(vec![TokenKind::Comma, TokenKind::RightBlockBrace]);
 
             if self.current_token().kind == TokenKind::Comma {
                 self.advance();
@@ -653,19 +656,19 @@ impl<'a> Statement<'a> {
 
         self.advance();
 
-        if !self.is_eof() {
-            self.expect_token(TokenKind::Semicolon);
-        }
-
-        AstNode::ArrayStatement {
-            name,
-            r#type: ty,
-            size: Box::new(size.unwrap_or(AstNode::LiteralStatement {
+        let array = AstNode::ArrayStatement {
+            size: Box::new(AstNode::LiteralStatement {
                 kind: TokenKind::LongLiteral,
                 value: ValueKind::Number(values.len() as i64),
-            })),
+            }),
             values,
+        };
+
+        if self.current_token().kind == TokenKind::LeftBlockBrace {
+            return self.parse_offset_store(Some(array));
         }
+
+        array
     }
 
     fn parse_if_statement(&mut self) -> AstNode {
@@ -929,10 +932,20 @@ impl<'a> Statement<'a> {
         expression
     }
 
-    fn parse_offset_store(&mut self) -> AstNode {
+    fn parse_offset_store(&mut self, maybe_left: Option<AstNode>) -> AstNode {
         let original_position = self.position.clone();
-        let left_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::LeftBlockBrace]);
-        let left = Box::new(Statement::new(left_tokens, 0, &self.body).parse().0);
+
+        let left_tokens = if maybe_left.is_some() {
+            vec![]
+        } else {
+            self.yield_tokens_with_delimiters(vec![TokenKind::LeftBlockBrace])
+        };
+
+        let left = Box::new(if maybe_left.is_some() {
+            maybe_left.unwrap()
+        } else {
+            Statement::new(left_tokens, 0, &self.body).parse().0
+        });
 
         self.expect_token(TokenKind::LeftBlockBrace);
         self.advance();
@@ -1476,6 +1489,7 @@ impl<'a> Statement<'a> {
                 }
             }
             TokenKind::LeftCurlyBrace => self.parse_block(),
+            TokenKind::LeftBlockBrace => self.parse_array(),
             TokenKind::Identifier => {
                 if self.is_eof() {
                     self.parse_literal()
@@ -1485,7 +1499,7 @@ impl<'a> Statement<'a> {
                     if next.kind == TokenKind::LeftParenthesis {
                         self.parse_function()
                     } else if next.kind == TokenKind::LeftBlockBrace {
-                        self.parse_offset_store()
+                        self.parse_offset_store(None)
                     } else if next.kind == TokenKind::Dot {
                         if self.position + 2 > self.tokens.len() - 1 {
                             panic!("EOF but specified a variadic identifier")

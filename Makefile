@@ -31,10 +31,10 @@ $(TMP_PATH)/out.tmp1.s: $(IR_PATH)
 	mkdir -p $(TMP_PATH)
 	qbe -o $@ $<
 
-$(IR_PATH): $(EXAMPLES_PATH)/$(RUN_ARGS).elle dist/compiler
+$(IR_PATH): $(EXAMPLES_PATH)/$(RUN_ARGS).elle dist/ellec
 	rm -rf $(DIST_PATH)
 	mkdir -p $(DIST_PATH)
-	dist/compiler $< $@
+	dist/ellec $< $@
 
 .PHONY: run
 run:
@@ -50,4 +50,4 @@ all:
 
 compile:
 	mkdir -p dist
-	rustc -o dist/compiler src/main.rs
+	rustc -o dist/ellec src/main.rs

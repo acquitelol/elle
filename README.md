@@ -591,7 +591,7 @@ pub fn main() {
 * An array literal is a simple and intuitive syntax to automatically allocate stack memory for a buffer and assign values at each offset based on the literal definition. Essentially, an expression like this:
 
 ```cpp
-int some_arr[] = {512, 1, -3};
+int *some_arr = [512, 1, -3];
 ```
 
 would first allocate memory to a buffer and store that in a variable called `some_arr` with the size of `3 * 4 = 12` (because there are 3 items and the size of an `int` is 4 bytes) and then it would offset the pointer returned and store each value specified at that address.
@@ -607,7 +607,7 @@ const long MAX_SIGNED_LONG = 9_223_372_036_854_775_807;
 const long MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
 
 fn main() {
-    long test[] = {MAX_SIGNED_LONG, MIN_SIGNED_LONG, -39};
+    long *test = [MAX_SIGNED_LONG, MIN_SIGNED_LONG, -39];
 
     for int i = 0; i < #arrlen(test); i++ {
         printf("test[%d] = %ld\n", i, test[i]);
@@ -615,11 +615,21 @@ fn main() {
 }
 ```
 
-You can also specify an enforced size in between the square brackets, if you prefer not to fill the whole array at declaration-time:
-- `long test[3] = {MAX_SIGNED_LONG, MIN_SIGNED_LONG, -39};`
+Array literals are not required to be assigned to a variable. Please look at this example:
 
-> [!NOTE]
-> If you do not specify a size in the square brackets, it will just assume that the array is the length of the elements you passed in the curly braces.
+```c
+fn other(long *arr, int val) {
+    printf("\narr[0] = %ld\nval = %ld\n", arr[0], val);
+}
+
+fn main() {
+    other([MAX_SIGNED_LONG], [123][0]);
+}
+```
+
+where we pass an array literal directly to another function or operation. An array literal, internally, will simply return the memory address of the start of the array. As these arrays has no variable declaration linked to them, there is no way to get their type, however we can infer this type based on the type of the values inside, so it can still be indexed correctly.
+
+You can also get the size and length of these arrays. Simply wrap them in `#size` or `#arrlen` just like if you wanted to get the size of an array that was declared to a variable. For more information, please read the size directives chapter.
 
 <hr />
 
