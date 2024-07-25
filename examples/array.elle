@@ -5,7 +5,7 @@ external fn printf(string formatter, ...);
 
 fn other(long *arr, int val, int size) {
     printf(
-        "\narr[0] = %ld\nval = %ld\nsize = %d\n",
+        "\narr[0] = %ld\nval = %d\nsize = %d\n",
         arr[0], val, size
     );
 }
