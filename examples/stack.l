@@ -1,5 +1,4 @@
-const long NULL = 0;
-external fn printf(string formatter, ...);
+use std/io;
 
 fn direction(int *other) {
     int x = 0;
@@ -12,7 +11,7 @@ fn direction(int *other) {
 }
 
 fn formattedDirection() -> string {
-    if direction(0) {
+    if direction(NULL) {
         return "up";
     } else {
         return "down";

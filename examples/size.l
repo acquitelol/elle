@@ -1,4 +1,4 @@
-external fn printf(string formatter, ...);
+use std/io;
 
 fn other(int *buf) {
     printf("(fn other)\n\t#size(buf) = %d\n", #size(buf));

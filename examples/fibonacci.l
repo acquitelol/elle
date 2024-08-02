@@ -1,5 +1,6 @@
+use std/io;
+
 const int ITERATIONS = 60;
-external fn printf(string formatter, ...);
 
 fn fibonacci_cached(int n, long* cache) -> long {
     if n <= 1 {

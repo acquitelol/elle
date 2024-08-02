@@ -13,6 +13,8 @@ EXEC_PATH = $(DIST_PATH)/build
 run: $(EXEC_PATH)
 
 $(EXEC_PATH): $(ASM_PATH)
+	# only enable if you want to run ball.l
+	# cc -lraylib -o $@ $<
 	cc -o $@ $<
 
 $(ASM_PATH): $(TMP_PATH)/out.tmp3.s
@@ -31,23 +33,27 @@ $(TMP_PATH)/out.tmp1.s: $(IR_PATH)
 	mkdir -p $(TMP_PATH)
 	qbe -o $@ $<
 
-$(IR_PATH): $(EXAMPLES_PATH)/$(RUN_ARGS).elle dist/ellec
+$(IR_PATH): $(EXAMPLES_PATH)/$(RUN_ARGS).l dist/ellec
 	rm -rf $(DIST_PATH)
 	mkdir -p $(DIST_PATH)
 	dist/ellec $< $@
 
 .PHONY: run
-run:
+run: $(EXEC_PATH)
 	clear
 	@$(EXEC_PATH) "you can pass arguments to Elle programs!" ":3"
 
 all:
 	@$(foreach file, \
 	    $(filter-out $(EXAMPLES_PATH)/donut%, $(wildcard $(EXAMPLES_PATH)/*)), \
-		make run $$(echo "$(file)" | sed 's|examples/\(.*\)\.elle|\1|') \
+		make run $$(echo "$(file)" | sed 's|examples/\(.*\)\.l|\1|') \
 		$$(sleep 1) \
 	;)
 
 compile:
 	mkdir -p dist
 	rustc -o dist/ellec src/main.rs
+
+clean:
+	rm -rf dist
+	@make compile

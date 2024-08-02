@@ -1,4 +1,4 @@
-external fn printf(string formatter, ...);
+use std/io;
 
 fn main(int argc, string *argv) {
     for (int i = 0; i < argc; i++) {

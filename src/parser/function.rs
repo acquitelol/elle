@@ -82,6 +82,9 @@ impl<'a> Function<'a> {
                 arguments,
                 r#return,
                 body: vec![],
+                usable: true,
+                imported: false,
+                location: self.parser.current_token().location,
             };
         }
 
@@ -110,7 +113,7 @@ impl<'a> Function<'a> {
 
                     let mut body_ref = body.borrow_mut();
                     let res = body_ref.iter().position(|item| match item.clone() {
-                        AstNode::LiteralStatement { kind, value } => {
+                        AstNode::LiteralStatement { kind, value, .. } => {
                             if kind.clone() == TokenKind::ExactLiteral {
                                 match value.clone() {
                                     ValueKind::String(val) => {
@@ -131,11 +134,7 @@ impl<'a> Function<'a> {
 
                     if res.is_some() {
                         match node {
-                            AstNode::DeclareStatement {
-                                name: _,
-                                r#type: _,
-                                value: _,
-                            } => body_ref[res.unwrap()] = node,
+                            AstNode::DeclareStatement { .. } => body_ref[res.unwrap()] = node,
                             _ => body_ref.push(node),
                         }
                     } else {
@@ -152,11 +151,11 @@ impl<'a> Function<'a> {
         let mut deferred: Vec<AstNode> = Vec::new();
 
         res.retain(|node| match node.clone() {
-            AstNode::DeferStatement { value } => {
+            AstNode::DeferStatement { value, .. } => {
                 deferred.push(*value.clone());
                 false
             }
-            AstNode::LiteralStatement { kind, value } => {
+            AstNode::LiteralStatement { kind, value, .. } => {
                 if kind.clone() == TokenKind::ExactLiteral {
                     match value.clone() {
                         ValueKind::String(val) => {
@@ -194,7 +193,7 @@ impl<'a> Function<'a> {
                         condition,
                         step,
                         body,
-                        ..
+                        location,
                     } => {
                         let mut new_body = body;
                         insert_deferred_statements(&mut new_body, deferred, false);
@@ -203,18 +202,23 @@ impl<'a> Function<'a> {
                             condition,
                             step,
                             body: new_body,
+                            location,
                         });
                     }
-                    AstNode::BlockStatement { body, .. } => {
+                    AstNode::BlockStatement { body, location } => {
                         let mut new_body = body;
                         insert_deferred_statements(&mut new_body, deferred, false);
-                        new_nodes.push(AstNode::BlockStatement { body: new_body });
+
+                        new_nodes.push(AstNode::BlockStatement {
+                            body: new_body,
+                            location,
+                        });
                     }
                     AstNode::IfStatement {
                         condition,
                         body,
                         else_body,
-                        ..
+                        location,
                     } => {
                         let mut new_body = body;
                         let mut new_else_body = else_body;
@@ -226,6 +230,7 @@ impl<'a> Function<'a> {
                             condition,
                             body: new_body,
                             else_body: new_else_body,
+                            location,
                         });
                     }
                     _ => new_nodes.push(node),
@@ -242,7 +247,7 @@ impl<'a> Function<'a> {
         insert_deferred_statements(&mut res, &deferred, true);
 
         res.retain(|node| match node.clone() {
-            AstNode::LiteralStatement { kind, value } => match kind {
+            AstNode::LiteralStatement { kind, value, .. } => match kind {
                 TokenKind::ExactLiteral => match value {
                     ValueKind::String(val) => match val.as_str() {
                         "__MANUAL_RETURN__" => {
@@ -258,25 +263,24 @@ impl<'a> Function<'a> {
             _ => true,
         });
 
-        // Initialize pointer constants on every function call
         for (i, item) in self.parser.tree.iter().cloned().rev().enumerate() {
             match item {
                 Primitive::Constant { name, r#type, .. } => {
-                    if r#type.is_some() && r#type.clone().unwrap().is_pointer() {
-                        res.insert(
-                            0,
-                            AstNode::DeclareStatement {
-                                // Variable names in Elle cannot contain "."
-                                // so this name is valid
-                                name: format!("constant.{}", i),
-                                r#type,
-                                value: Box::new(AstNode::LiteralStatement {
-                                    kind: TokenKind::Identifier,
-                                    value: ValueKind::String(name),
-                                }),
-                            },
-                        );
-                    }
+                    res.insert(
+                        0,
+                        AstNode::DeclareStatement {
+                            // Variable names in Elle cannot contain "."
+                            // so this name is valid
+                            name: format!("constant.{}", i),
+                            r#type,
+                            value: Box::new(AstNode::LiteralStatement {
+                                kind: TokenKind::Identifier,
+                                value: ValueKind::String(name),
+                                location: self.parser.current_token().location,
+                            }),
+                            location: self.parser.current_token().location,
+                        },
+                    );
                 }
                 _ => {}
             }
@@ -291,6 +295,9 @@ impl<'a> Function<'a> {
             arguments,
             r#return,
             body: res,
+            usable: true,
+            imported: false,
+            location: self.parser.current_token().location,
         }
     }
 }

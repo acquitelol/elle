@@ -73,7 +73,11 @@ impl<'a> Constant<'a> {
             value: Box::new(AstNode::ConversionStatement {
                 r#type: Some(ty),
                 value: Box::new(value),
+                location: self.parser.current_token().location,
             }),
+            usable: true,
+            imported: false,
+            location: self.parser.current_token().location,
         }
     }
 }

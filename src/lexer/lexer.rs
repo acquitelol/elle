@@ -1,4 +1,4 @@
-use super::enums::{Location, Token, TokenKind, ValueKind};
+use super::enums::{Location, ParseResult, Token, TokenKind, ValueKind};
 
 pub struct Lexer {
     file: String,
@@ -167,9 +167,9 @@ impl Lexer {
                 match self.current_char() {
                     '=' => {
                         self.advance();
-                        (TokenKind::XorEqual, ValueKind::Nil)
+                        (TokenKind::BitwiseXorEqual, ValueKind::Nil)
                     }
-                    _ => (TokenKind::Xor, ValueKind::Nil),
+                    _ => (TokenKind::BitwiseXor, ValueKind::Nil),
                 }
             }
             '/' => {
@@ -222,7 +222,13 @@ impl Lexer {
                         self.advance();
                         (TokenKind::And, ValueKind::Nil)
                     }
-                    _ => (TokenKind::Address, ValueKind::Nil),
+                    _ => {
+                        if self.is_unary_context() {
+                            (TokenKind::Address, ValueKind::Nil)
+                        } else {
+                            (TokenKind::BitwiseAnd, ValueKind::Nil)
+                        }
+                    }
                 }
             }
             '|' => {
@@ -233,7 +239,13 @@ impl Lexer {
                         self.advance();
                         (TokenKind::Or, ValueKind::Nil)
                     }
-                    _ => (TokenKind::None, ValueKind::Nil),
+                    _ => {
+                        if self.is_unary_context() {
+                            (TokenKind::None, ValueKind::Nil)
+                        } else {
+                            (TokenKind::BitwiseOr, ValueKind::Nil)
+                        }
+                    }
                 }
             }
             '"' => (
@@ -248,6 +260,17 @@ impl Lexer {
                 self.advance();
 
                 match self.current_char() {
+                    '>' => {
+                        self.advance();
+
+                        match self.current_char() {
+                            '=' => {
+                                self.advance();
+                                (TokenKind::ShiftRightEqual, ValueKind::Nil)
+                            }
+                            _ => (TokenKind::ShiftRight, ValueKind::Nil),
+                        }
+                    }
                     '=' => {
                         self.advance();
                         (TokenKind::GreaterThanEqual, ValueKind::Nil)
@@ -259,6 +282,17 @@ impl Lexer {
                 self.advance();
 
                 match self.current_char() {
+                    '<' => {
+                        self.advance();
+
+                        match self.current_char() {
+                            '=' => {
+                                self.advance();
+                                (TokenKind::ShiftLeftEqual, ValueKind::Nil)
+                            }
+                            _ => (TokenKind::ShiftLeft, ValueKind::Nil),
+                        }
+                    }
                     '=' => {
                         self.advance();
                         (TokenKind::LessThanEqual, ValueKind::Nil)
@@ -416,7 +450,14 @@ impl Lexer {
         };
 
         let val = ValueKind::String(identifier);
-        (if val.is_type() { TokenKind::Type } else { kind }, val)
+        (
+            if val.is_base_type() {
+                TokenKind::Type
+            } else {
+                kind
+            },
+            val,
+        )
     }
 
     fn consume_comment(&mut self) -> String {
@@ -435,21 +476,126 @@ impl Lexer {
     fn consume_number_literal(&mut self) -> (TokenKind, ValueKind) {
         let start = self.position;
         let mut float = false;
+        let mut scientific = false;
+        let mut radix = 10;
 
         while !self.is_eof()
-            && (self.current_char().is_digit(10)
+            && (self.current_char().is_digit(radix)
                 || self.current_char() == '.'
                 || self.current_char() == '_')
+            || vec!['x', 'o', 'b', 'e'].contains(&self.current_char())
         {
             if self.current_char() == '.' {
                 float = true;
+            }
+
+            // Don't want to set the radix again
+            // after it was first set to something
+            // via 0x 0o 0b etc
+            if radix == 10 {
+                match self.current_char() {
+                    'x' => {
+                        radix = 16;
+                    }
+                    'o' => {
+                        radix = 8;
+                    }
+                    'b' => {
+                        radix = 2;
+                    }
+                    'e' => {
+                        scientific = true;
+                    }
+                    _ => {}
+                }
             }
 
             self.advance();
         }
 
         let unparsed_literal: String = self.input[start..self.position].iter().collect();
-        let literal = unparsed_literal.replace("_", "");
+        let mut literal = unparsed_literal.replace("_", "");
+
+        if radix != 10 {
+            if self.current_char().is_digit(10) {
+                panic!(
+                    "{}",
+                    self.get_location().error(format!(
+                        "Character '{}' is not a valid digit of radix {}.",
+                        self.current_char(),
+                        radix
+                    ))
+                );
+            }
+
+            if float {
+                panic!(
+                    "{}",
+                    self.get_location().error(format!(
+                        "Cannot have a floating point or scientific literal of a base other than 10."
+                    ))
+                )
+            }
+
+            literal = format!("{:?}", u128::from_str_radix(&literal[2..], radix).unwrap());
+        }
+
+        if scientific {
+            let base_string =
+                literal
+                    .split("e")
+                    .next()
+                    .expect(&self.get_location().error(format!(
+                        "Failed to get the base string of {} for scientific literal",
+                        literal
+                    )));
+
+            let base = if float {
+                base_string
+                    .parse::<f64>()
+                    .map(ParseResult::Float)
+                    .map_err(|e| e.to_string())
+            } else {
+                base_string
+                    .parse::<i64>()
+                    .map(ParseResult::Int)
+                    .map_err(|e| e.to_string())
+            }
+            .expect(&self.get_location().error(format!(
+                "Failed to parse the base {} of scientific literal into a number",
+                base_string
+            )));
+
+            let exponent_base =
+                literal
+                    .split("e")
+                    .skip(1)
+                    .next()
+                    .expect(&self.get_location().error(format!(
+                        "Failed to get the base string of {} for scientific literal",
+                        literal
+                    )));
+
+            let exponent = exponent_base
+                .parse::<i64>()
+                .expect(&self.get_location().error(format!(
+                    "Failed to parse the exponent {} of scientific literal into an integer",
+                    exponent_base
+                )));
+
+            match base {
+                ParseResult::Float(val) => {
+                    literal = (val * 10_f64.powf(exponent as f64)).to_string();
+
+                    if !literal.contains('.') {
+                        literal.push_str(".0");
+                    }
+                }
+                ParseResult::Int(val) => {
+                    literal = (val * 10_i64.pow(exponent as u32)).to_string();
+                }
+            };
+        }
 
         if float {
             (
@@ -458,6 +604,7 @@ impl Lexer {
             )
         } else {
             (
+                // 10 = INT_MAX digits
                 if literal.len() > 10 {
                     TokenKind::LongLiteral
                 } else {

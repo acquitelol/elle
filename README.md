@@ -13,6 +13,10 @@
 
 ### ✩ *If you like this project, consider giving it a star!* ✩
 
+### ♡ **How is this better than C?**
+
+- It's not.
+
 ### ♡ **Hello, World!**
 
 Writing a hello world program in Elle is super easy:
@@ -127,6 +131,8 @@ for (int i = 0; i < 10; i++) {
 
 * More advanced example:
 ```cpp
+use std/io;
+
 fn fact(long n) -> long {
     if n <= 1 {
         return 1;
@@ -248,6 +254,8 @@ You can also use the manual return directive, which states that Elle should **NO
 Here is a basic example that dereferences an `int *` to the underlying `int`:
 
 ```cpp
+use std/io;
+
 fn deref(int *ptr) -> int {
     $$__MANUAL_RETURN__$$;
     $$%deref.val =w loadsb %ptr.1$$;
@@ -367,6 +375,8 @@ The most useful application of deferring is for memory management, however.
 Consider this code:
 
 ```cpp
+use std/io;
+
 fn main() {
     long size = 10;
     long *numbers = malloc(size * #size(long));
@@ -465,6 +475,8 @@ Any identifier or literal can be prefixed by one of these operators.
 Example of using bitwise `NOT`:
 
 ```cpp
+use std/io;
+
 pub fn main() {
     bool myBool = false;
 
@@ -486,6 +498,8 @@ Using unary `-` will multiply the expression by -1 while unary `+` will multiply
 The unary `&` operator is used to get the memory address of a local variable in a function. Here is an example:
 
 ```cpp
+use std/io;
+
 fn other(int *something) {
     printf("%d\n", *something);
 }
@@ -504,6 +518,8 @@ Here we declare `a` as 39, then we pass the "address" of `a` to `other` as a poi
 The unary `*` operator is used to dereference a pointer to a value:
 
 ```cpp
+use std/io;
+
 fn other(int *a, string *str) {
     printf("(fn other)\n\ta = %d\n\tstr = %s\n", *a, *str);
     *a = 542;
@@ -551,11 +567,19 @@ This is the mapping defined by Elle:
 - `+` - Add
 - `-` - Subtract
 - `%` - Modulus
+- `&` - Bitwise And
+- `|` - Bitwise Or
+- `<<` - Shift Left
+- `>>` - Shift Right
+- `&&` - Logical And (Not usable when declaring a variable)
+- `||` - Logical Or (Not usable when declaring a variable)
 
 Keep in mind that you can also use these operators when doing a variable declaration.
 This means the following code is valid:
 
 ```cpp
+use std/io;
+
 fn main() {
     int a = 1;
     a ^= 1; // a is now 0
@@ -570,6 +594,8 @@ Elle follows the standard [order of operations](https://github.com/acquitelol/el
 Example of a program that calculates the xor (`^`) and sum (`+`) of some values:
 
 ```cpp
+use std/io;
+
 pub fn main() {
     int a = 1 + (5 ^ 2); // Xor has a lower precedence than addition
 
@@ -602,6 +628,8 @@ So it would first store `512` at `some_arr + 0`, then it would store `1` at `som
 Here is an example of an array that holds 3 `long`s:
 
 ```cpp
+use std/io;
+
 const long MAX_SIGNED_LONG = 9_223_372_036_854_775_807;
 const long MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
 
@@ -617,6 +645,8 @@ fn main() {
 Array literals are not required to be assigned to a variable. Please look at this example:
 
 ```c
+use std/io;
+
 fn other(long *arr, int val) {
     printf("\narr[0] = %ld\nval = %ld\n", arr[0], val);
 }
@@ -646,6 +676,8 @@ You can only place **expressions** inside of the `#arrlen()` directive as it ret
 For example, take this snippet:
 
 ```cpp
+use std/io;
+
 fn other(int *buf) {
     printf(
         "(fn other)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
@@ -686,6 +718,8 @@ Essentially, contextually this means that the `buf` variable is just an `int *` 
 In this example:
 
 ```cpp
+use std/io;
+
 fn other(int *buf) {
     printf("(fn other)\n\t#size(buf) = %d\n", #size(buf));
 }
@@ -711,6 +745,8 @@ The code will compile successfully, because `#arrlen` is no longer used on a buf
 Finally, here is a basic example of using `#arrlen` to loop through an array of strings and print their values:
 
 ```cpp
+use std/io;
+
 fn main() {
     char *some_array[] = {"abc", "meow", "test"};
 
@@ -732,6 +768,8 @@ fn main() {
 Consider this example that uses constants:
 
 ```cpp
+use std/io;
+
 const int WIDTH = 100;
 const int HEIGHT = 24;
 const int SIZE = WIDTH * HEIGHT;
@@ -747,6 +785,75 @@ In the above code, all of the constants are technically function definitions tha
 It is labelled as a "`constant`", because although it can return a different value (it can call any function), it cannot be redeclared.
 
 <hr />
+
+### ♡ **Non-base-10 literals**
+
+* These are literal numbers which are not declared in base 10.
+
+These may include:
+
+- Hex - 0xFFFFFF
+- Octal - 0o777777
+- Binary - 0b111111
+- Scientific - 2.1e3
+
+Basic example:
+
+```c
+use std/io;
+
+fn main() {
+    long a = 0xDEADBEEF;
+    int b = 0o273451456;
+    int c = 0b111010011011111010010100101;
+    long d = 1.2e9;
+    double e = 2.7182818e2;
+
+    printf(
+        "a = %X\nb = %d\nc = %d\nd = %ld\ne = %f\n",
+        a, b, c, d, e
+    );
+}
+```
+
+<hr />
+
+### ♡ **Imports/modules**
+
+Elle's module system works in the following way:
+
+- Elle will look in the /usr/local/elle folder for modules (not implemented yet)
+- Elle will look in the current working directory for modules
+
+The syntax for importing is as follows:
+
+```c
+use path/to/module;
+```
+
+where, in your current directory, there is a `./path/to/module.elle` or a `./path/to/module.l` file.
+
+You may also choose to import specific symbols from this module:
+
+```c
+use path/to/module@{func1, const2};
+```
+
+The syntax to export a symbol from your current file is as follows:
+
+```c
+// ./module.l
+pub const int myFavouriteNumber = 7;
+
+pub fn foo() {
+    return 1;
+}
+```
+
+which you can then import
+```c
+use module@{myFavouriteNumber, foo};
+```
 
 ### ♡ **Argc and argv**
 
@@ -773,8 +880,6 @@ You can also accept `char **envp` (and `char **apple` on MacOS/Darwin platforms,
 ### ♡ **External symbols**
 
 * An external symbol is a definition for a function or constant that was defined elsewhere (such as in C) and is implicitly defined in Elle. This is used to give definition and context to functions that were not defined in Elle but you wish to use in when writing Elle code.
-
-As Elle has no modules currently, to effectively use `printf` and similar functions you must declare their interface at the top level.
 <br/>
 
 You can do this with the following example:

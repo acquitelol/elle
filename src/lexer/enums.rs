@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::compiler::enums::Type;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -34,7 +36,9 @@ pub enum TokenKind {
     MultiplyEqual,
     DivideEqual,
     ModulusEqual,
-    XorEqual,
+    BitwiseXorEqual,
+    BitwiseOrEqual,
+    BitwiseAndEqual,
     AddOne,
     SubtractOne,
     // Exponent,
@@ -59,8 +63,10 @@ pub enum TokenKind {
     EqualTo,
     NotEqualTo,
     And,
-    Xor,
+    BitwiseAnd,
+    BitwiseXor,
     Or,
+    BitwiseOr,
     None,
     Constant,
     Store,
@@ -79,6 +85,10 @@ pub enum TokenKind {
     ArrayLength,
     External,
     Address,
+    ShiftRight,
+    ShiftLeft,
+    ShiftRightEqual,
+    ShiftLeftEqual,
 }
 
 impl TokenKind {
@@ -89,14 +99,15 @@ impl TokenKind {
 
     pub fn precedence(&self) -> i8 {
         match self {
-            // Self::Exponent => 8,
-            Self::Multiply | Self::Divide | Self::Modulus => 7,
-            Self::Add | Self::Subtract => 6,
+            // Self::Exponent => 9,
+            Self::Multiply | Self::Divide | Self::Modulus => 8,
+            Self::Add | Self::Subtract => 7,
+            Self::ShiftLeft | Self::ShiftRight => 6,
             Self::LessThan | Self::LessThanEqual | Self::GreaterThan | Self::GreaterThanEqual => 5,
             Self::EqualTo | Self::NotEqualTo => 4,
-            Self::And => 3,
-            Self::Xor => 2,
-            Self::Or => 1,
+            Self::And | Self::BitwiseAnd => 3,
+            Self::BitwiseXor => 2,
+            Self::Or | Self::BitwiseOr => 1,
             _ => 0,
         }
     }
@@ -117,7 +128,11 @@ impl TokenKind {
             | Self::NotEqualTo
             | Self::And
             | Self::Or
-            | Self::Xor => true,
+            | Self::BitwiseXor
+            | Self::BitwiseOr
+            | Self::BitwiseAnd
+            | Self::ShiftLeft
+            | Self::ShiftRight => true,
             _ => false,
         }
     }
@@ -147,9 +162,25 @@ impl TokenKind {
             | Self::MultiplyEqual
             | Self::DivideEqual
             | Self::ModulusEqual
-            | Self::XorEqual
+            | Self::BitwiseXorEqual
+            | Self::BitwiseOrEqual
+            | Self::BitwiseAndEqual
+            | Self::ShiftLeftEqual
+            | Self::ShiftRightEqual
             | Self::AddOne
             | Self::SubtractOne => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_comparative(&self) -> bool {
+        match self {
+            TokenKind::GreaterThan
+            | TokenKind::GreaterThanEqual
+            | TokenKind::LessThan
+            | TokenKind::LessThanEqual
+            | TokenKind::EqualTo
+            | TokenKind::NotEqualTo => true,
             _ => false,
         }
     }
@@ -171,7 +202,24 @@ impl TokenKind {
             | TokenKind::Semicolon
             | TokenKind::Return
             | TokenKind::EqualTo => true,
+            other if other.is_declarative() => true,
             _ => false,
+        }
+    }
+
+    pub fn to_non_declarative(&self) -> TokenKind {
+        match self {
+            TokenKind::AddEqual => TokenKind::Add,
+            TokenKind::SubtractEqual => TokenKind::Subtract,
+            TokenKind::MultiplyEqual => TokenKind::Multiply,
+            TokenKind::DivideEqual => TokenKind::Divide,
+            TokenKind::ModulusEqual => TokenKind::Modulus,
+            TokenKind::BitwiseXorEqual => TokenKind::BitwiseXor,
+            TokenKind::BitwiseAndEqual => TokenKind::BitwiseAnd,
+            TokenKind::BitwiseOrEqual => TokenKind::BitwiseOr,
+            TokenKind::ShiftLeftEqual => TokenKind::ShiftLeft,
+            TokenKind::ShiftRightEqual => TokenKind::ShiftRight,
+            other => panic!("Invalid identifier operation {:?}", other),
         }
     }
 
@@ -180,6 +228,12 @@ impl TokenKind {
             Self::AddOne | Self::SubtractOne => true,
             _ => false,
         }
+    }
+}
+
+impl fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", format!("{:?}", self).to_lowercase())
     }
 }
 
@@ -211,8 +265,12 @@ impl ValueKind {
         }
     }
 
-    pub fn is_type(&self) -> bool {
+    pub fn is_base_type(&self) -> bool {
         self.to_type_string().is_some()
+            && match self.to_type_string().unwrap() {
+                Type::Aggregate(_) => false,
+                _ => true,
+            }
     }
 }
 
@@ -224,8 +282,33 @@ pub struct Location {
 }
 
 impl Location {
-    pub fn display(&mut self) -> String {
+    pub fn display(&self) -> String {
         return format!("{}:{}:{}", self.file, self.row + 1, self.column + 1);
+    }
+
+    pub fn error(&self, message: String) -> String {
+        let upper = format!("{}[{}]{}", "-".repeat(20), self.display(), "-".repeat(20));
+
+        return format!(
+            "\n\n{}\n{}\n{}\n\n",
+            upper,
+            message,
+            "-".repeat(upper.len())
+        );
+    }
+
+    pub fn default(file: String) -> Location {
+        Location {
+            file,
+            row: 0,
+            column: 0,
+        }
+    }
+}
+
+impl fmt::Display for Location {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}:{}:{}", self.file, self.row + 1, self.column + 1)
     }
 }
 
@@ -234,4 +317,10 @@ pub struct Token {
     pub kind: TokenKind,
     pub location: Location,
     pub value: ValueKind,
+}
+
+#[derive(Debug, Clone)]
+pub enum ParseResult {
+    Float(f64),
+    Int(i64),
 }

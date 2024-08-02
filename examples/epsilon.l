@@ -1,21 +1,18 @@
-const long NULL = 0;
+use std/io;
+use std/rand;
+use std/time;
+
 const int ITERATIONS = 100_000;
 const int ACCURACY = 1_000_000;
-const double EPSILON = 0.53;
-
-external fn printf(string formatter, ...);
-
-fn random(int lower, int upper) {
-    return rand() % (upper - lower + 1) + lower;
-}
+const double EPSILON = 0.1305;
 
 fn roll(int* results, int formattedEpsilon) {
     int attempts = 0;
     int roll = ACCURACY;
 
     while roll > formattedEpsilon {
-        roll = random(0, ACCURACY);
         attempts++;
+        roll = random(0, ACCURACY);
     }
 
     return attempts;

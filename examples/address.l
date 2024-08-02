@@ -1,4 +1,4 @@
-external fn printf(string formatter, ...);
+use std/io;
 
 fn other(int *a, string *str) {
     printf("(fn other)\n\ta = %d\n\tstr = %s\n", *a, *str);

@@ -27,14 +27,14 @@ pub enum Instruction {
     BitwiseXor(Value, Value),
     Compare(Type, Comparison, Value, Value),
     Copy(Value),
-    Return(Option<Value>),
+    Return(Option<(Type, Value)>),
     JumpNonZero(Value, String, String),
     Jump(String),
     Call(Value, Vec<(Type, Value)>),
     Cast(Value),
     VAArg(Value),
     VAStart(Value),
-    Alloc4(Type, Value),
+    // Alloc4(Type, Value),
     Alloc8(Type, Value),
     Alloc16(u128),
     Store(Type, Value, Value),
@@ -42,6 +42,10 @@ pub enum Instruction {
     Literal(Value),
     Conversion(Type, Type, Value),
     Extension(Type, Value),
+    Truncate(Value),
+    ShiftLeft(Value, Value),
+    ArithmeticShiftRight(Value, Value),
+    LogicalShiftRight(Value, Value),
 }
 
 impl fmt::Display for Instruction {
@@ -94,7 +98,7 @@ impl fmt::Display for Instruction {
             Self::VAArg(val) => write!(formatter, "vaarg {}", val),
             Self::VAStart(val) => write!(formatter, "vastart {}", val),
             Self::Return(val) => match val {
-                Some(val) => write!(formatter, "ret {}", val),
+                Some((_, val)) => write!(formatter, "ret {}", val),
                 None => write!(formatter, "ret"),
             },
             Self::JumpNonZero(val, if_nonzero, if_zero) => {
@@ -115,32 +119,30 @@ impl fmt::Display for Instruction {
                         .join(", "),
                 )
             }
-            Self::Alloc4(ty, val) => {
-                write!(formatter, "alloc4 {}", val)
-            }
+            // Self::Alloc4(ty, val) => {
+            //     write!(formatter, "alloc4 {}", val)
+            // }
             Self::Alloc8(ty, val) => {
                 write!(formatter, "alloc8 {}", val)
             }
             Self::Alloc16(size) => write!(formatter, "alloc16 {}", size),
             Self::Store(r#type, dest, value) => {
-                if matches!(r#type, Type::Aggregate(_)) {
-                    unimplemented!("Store to an aggregate type");
-                }
-
-                write!(formatter, "store{} {}, {}", r#type, value, dest)
+                write!(
+                    formatter,
+                    "store{} {}, {}",
+                    r#type.clone().into_base(),
+                    value,
+                    dest
+                )
             }
             Self::Load(r#type, src) => {
-                if matches!(r#type, Type::Aggregate(_)) {
-                    unimplemented!("Load from an aggregate type");
-                }
-
                 write!(
                     formatter,
                     "load{} {}",
                     if r#type.clone().into_abi() == Type::Word {
-                        format!("s{}", r#type)
+                        format!("s{}", r#type.clone().into_base())
                     } else {
-                        r#type.to_string()
+                        r#type.clone().into_base().to_string()
                     },
                     src
                 )
@@ -155,7 +157,7 @@ impl fmt::Display for Instruction {
                     if first.is_float() {
                         first.to_string()
                     } else {
-                        format!("s{}", first)
+                        format!("s{}", first.clone().into_abi())
                     },
                     if second.is_float() { "f" } else { "si" },
                     value
@@ -173,6 +175,18 @@ impl fmt::Display for Instruction {
                     value
                 )
             }
+            Self::Truncate(value) => {
+                write!(formatter, "truncd {}", value)
+            }
+            Self::ShiftLeft(val, amount) => {
+                write!(formatter, "shl {}, {}", val, amount)
+            }
+            Self::LogicalShiftRight(val, amount) => {
+                write!(formatter, "shr {}, {}", val, amount)
+            }
+            Self::ArithmeticShiftRight(val, amount) => {
+                write!(formatter, "sar {}, {}", val, amount)
+            }
         }
     }
 }
@@ -187,7 +201,8 @@ pub enum Type {
     Char,
     Null,
     Pointer(Box<Type>),
-    Aggregate(TypeDef),
+    // name, size
+    Aggregate(String),
 }
 
 impl Type {
@@ -205,6 +220,13 @@ impl Type {
         }
     }
 
+    pub fn into_base(self) -> Self {
+        match self {
+            Self::Byte | Self::Char => Self::Word,
+            other => other,
+        }
+    }
+
     pub fn is_float(&self) -> bool {
         match self {
             Self::Single | Self::Double => true,
@@ -214,6 +236,20 @@ impl Type {
 
     pub fn is_int(&self) -> bool {
         !self.is_float()
+    }
+
+    pub fn is_aggregate(&self) -> bool {
+        match self {
+            Self::Aggregate(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn get_aggregate_inner(&self) -> Option<String> {
+        match self.clone() {
+            Self::Aggregate(val) => Some(val),
+            _ => None,
+        }
     }
 
     pub fn is_pointer(&self) -> bool {
@@ -257,7 +293,7 @@ impl fmt::Display for Type {
             Self::Single => write!(formatter, "s"),
             Self::Double => write!(formatter, "d"),
             Self::Null => write!(formatter, ""),
-            Self::Aggregate(td) => write!(formatter, ":{}", td.name),
+            Self::Aggregate(td) => write!(formatter, ":{}", td),
         }
     }
 }
@@ -267,7 +303,6 @@ impl fmt::Display for Type {
 pub struct TypeDef {
     pub name: String,
     pub align: Option<u64>,
-    // TODO: Opaque types?
     pub items: Vec<(Type, usize)>,
 }
 
@@ -473,6 +508,8 @@ pub struct Function {
     pub variadic_index: usize,
     pub manual: bool,
     pub external: bool,
+    pub usable: bool,
+    pub imported: bool,
     pub arguments: Vec<(Type, Value)>,
     pub return_type: Option<Type>,
     pub blocks: Vec<Block>,
@@ -486,6 +523,8 @@ impl Function {
         variadic_index: usize,
         manual: bool,
         external: bool,
+        usable: bool,
+        imported: bool,
         arguments: Vec<(Type, Value)>,
         return_type: Option<Type>,
     ) -> Self {
@@ -496,6 +535,8 @@ impl Function {
             variadic_index,
             manual,
             external,
+            usable,
+            imported,
             arguments,
             return_type,
             blocks: Vec::new(),
@@ -668,18 +709,18 @@ impl Module {
 
 impl fmt::Display for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for func in self.functions.iter() {
-            if !func.external {
-                writeln!(f, "{}", func)?;
-            }
-        }
-
         for r#type in self.types.iter() {
             writeln!(f, "{}", r#type)?;
         }
 
         for data in self.data.iter() {
             writeln!(f, "{}", data)?;
+        }
+
+        for func in self.functions.iter() {
+            if !func.external {
+                writeln!(f, "{}", func)?;
+            }
         }
 
         Ok(())

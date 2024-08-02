@@ -1,4 +1,4 @@
-use crate::lexer::enums::TokenKind;
+use crate::lexer::enums::{TokenKind, ValueKind};
 
 use super::{enums::Primitive, parser::Parser};
 
@@ -11,19 +11,28 @@ impl<'a> Use<'a> {
         Use { parser }
     }
 
+    fn get_string(&self) -> String {
+        match self.parser.current_token().value {
+            ValueKind::String(val) => val,
+            _ => panic!(
+                "[{}] Token is not a string",
+                self.parser.current_token().location.display()
+            ),
+        }
+    }
+
     pub fn parse(&mut self) -> Primitive {
         self.parser.advance();
-
-        let library = self.parser.get_identifier();
-
+        let mut module = self.get_string();
+        let location = self.parser.current_token().location;
         self.parser.advance();
 
-        self.parser.expect_token(TokenKind::Colon);
-        self.parser.advance();
-
-        let module = self.parser.get_identifier();
-
-        self.parser.advance();
+        // Keep merging until the next token isn't a "/" anymore
+        while self.parser.current_token().kind == TokenKind::Divide {
+            self.parser.advance();
+            module.push_str(&format!("/{}", self.get_string()));
+            self.parser.advance();
+        }
 
         let mut functions = vec![];
 
@@ -52,9 +61,9 @@ impl<'a> Use<'a> {
         self.parser.advance();
 
         Primitive::Use {
-            library,
             module,
             functions,
+            location,
         }
     }
 }

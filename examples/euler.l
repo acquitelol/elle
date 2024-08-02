@@ -1,7 +1,4 @@
-// A basic example of recursion and for loops
-// to get `e` (Euler's number) using its
-// series (e = Summation<k = 0 -> inf>[1 / k!])
-external fn printf(string formatter, ...);
+use std/io;
 
 fn fact(long n) -> long {
     if n <= 1 {

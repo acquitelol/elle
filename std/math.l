@@ -1,0 +1,30 @@
+pub const long LONG_MAX = 9_223_372_036_854_775_807;
+pub const long LONG_MIN = -LONG_MAX - 1;
+pub const int INT_MAX = 2_147_483_647;
+pub const int INT_MIN = -INT_MAX - 1;
+
+pub const long PI = 3.141592653589793;
+
+pub external fn acos(double x) -> double;
+pub external fn asin(double x) -> double;
+pub external fn atan(double x) -> double;
+pub external fn atan2(double x, double y) -> double;
+pub external fn cos(double x) -> double;
+pub external fn cosh(double x) -> double;
+pub external fn sin(double x) -> double;
+pub external fn sinh(double x) -> double;
+pub external fn tan(double x) -> double;
+pub external fn tanh(double x) -> double;
+pub external fn exp(double x) -> double;
+pub external fn frexp(double x, int *exponent) -> double;
+pub external fn ldexp(double x, int exponent) -> double;
+pub external fn log(double x) -> double;
+pub external fn log10(double x) -> double;
+pub external fn modf(double x, double *integer) -> double;
+pub external fn pow(double x, double y) -> double;
+pub external fn sqrt(double x) -> double;
+pub external fn ceil(double x) -> double;
+pub external fn fabs(double x) -> double;
+pub external fn floor(double x) -> double;
+pub external fn fmod(double x, double y) -> double;
+pub external fn round(double x) -> double;

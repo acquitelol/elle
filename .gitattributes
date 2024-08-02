@@ -1,2 +1,3 @@
+*.l linguist-language=C++
 *.elle linguist-language=C++
 *.ssa linguist-language=TS

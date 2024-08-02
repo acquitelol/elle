@@ -1,6 +1,5 @@
-// An approximation of `sqrt(2)` using Newton's
-// approximation algorithm.
-external fn printf(string formatter, ...);
+use std/io;
+use std/math;
 
 fn main() {
     double x = 2;
@@ -11,4 +10,5 @@ fn main() {
     }
 
     printf("sqrt(%.0f) ≈ %.50f\n", x, a);
+    printf("precision: %.50f\n", sqrt(x) - a);
 }
