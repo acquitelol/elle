@@ -1,10 +1,10 @@
 use std/io;
 
-const int ITERATIONS = 60;
+const i32 ITERATIONS = 60;
 
-fn fibonacci_cached(int n, long* cache) -> long {
+fn fibonacci_cached(i32 n, i64* cache) -> i64 {
     if n <= 1 {
-        return (long)n;
+        return (i64)n;
     }
 
     if cache[n] == -1 {
@@ -15,16 +15,16 @@ fn fibonacci_cached(int n, long* cache) -> long {
     return cache[n];
 }
 
-fn fibonacci_iterative(int n) -> long {
+fn fibonacci_iterative(i32 n) -> i64 {
     if n <= 1 {
-        return (long)n;
+        return (i64)n;
     }
 
-    long previous = 0;
-    long current = 1;
+    i64 previous = 0;
+    i64 current = 1;
 
-    for int i = 1; i < n; i++ {
-        long next = previous + current;
+    for i32 i = 1; i < n; i++ {
+        i64 next = previous + current;
 
         previous = current;
         current = next;
@@ -34,7 +34,7 @@ fn fibonacci_iterative(int n) -> long {
 }
 
 fn main() {
-    long cache[ITERATIONS + 1];
+    i64 cache[ITERATIONS + 1];
     memset(cache, -1, #size(cache));
 
     printf(

@@ -1,7 +1,7 @@
 use std/io;
 
-fn direction(int *other) {
-    int x = 0;
+fn direction(i32 *other) {
+    i32 x = 0;
 
     if !other {
         return direction(&x);

@@ -1,7 +1,7 @@
 use std/io;
 
-fn loop(string str, function *callback) {
-    for (int i = 0; i < strlen(str); i++) {
+fn loop(string str, fun *callback) -> void {
+    for (i32 i = 0; i < strlen(str); i++) {
         callback(str[i]);
     }
 }

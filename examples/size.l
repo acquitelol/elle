@@ -1,11 +1,11 @@
 use std/io;
 
-fn other(int *buf) {
+fn other(i32 *buf) {
     printf("(fn other)\n\t#size(buf) = %d\n", #size(buf));
 }
 
 fn main() {
-    int buf[100];
+    i32 buf[100];
     buf[0] = 123;
 
     printf(

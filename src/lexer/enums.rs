@@ -175,50 +175,48 @@ impl TokenKind {
 
     pub fn is_comparative(&self) -> bool {
         match self {
-            TokenKind::GreaterThan
-            | TokenKind::GreaterThanEqual
-            | TokenKind::LessThan
-            | TokenKind::LessThanEqual
-            | TokenKind::EqualTo
-            | TokenKind::NotEqualTo => true,
+            Self::GreaterThan
+            | Self::GreaterThanEqual
+            | Self::LessThan
+            | Self::LessThanEqual
+            | Self::EqualTo
+            | Self::NotEqualTo => true,
             _ => false,
         }
     }
 
     pub fn is_unary_context(&self) -> bool {
         match self {
-            TokenKind::LeftParenthesis
-            | TokenKind::LeftCurlyBrace
-            | TokenKind::LeftBlockBrace
-            | TokenKind::Comma
-            | TokenKind::Colon
-            | TokenKind::Equal
-            | TokenKind::NotEqualTo
-            | TokenKind::LessThan
-            | TokenKind::LessThanEqual
-            | TokenKind::GreaterThan
-            | TokenKind::GreaterThanEqual
-            | TokenKind::Not
-            | TokenKind::Semicolon
-            | TokenKind::Return
-            | TokenKind::EqualTo => true,
+            Self::LeftParenthesis
+            | Self::LeftCurlyBrace
+            | Self::LeftBlockBrace
+            | Self::Comma
+            | Self::Colon
+            | Self::Not
+            | Self::Semicolon
+            | Self::Return
+            | Self::While
+            | Self::For
+            | Self::If
+            | Self::Equal => true,
             other if other.is_declarative() => true,
+            other if other.is_arithmetic() => true,
             _ => false,
         }
     }
 
     pub fn to_non_declarative(&self) -> TokenKind {
         match self {
-            TokenKind::AddEqual => TokenKind::Add,
-            TokenKind::SubtractEqual => TokenKind::Subtract,
-            TokenKind::MultiplyEqual => TokenKind::Multiply,
-            TokenKind::DivideEqual => TokenKind::Divide,
-            TokenKind::ModulusEqual => TokenKind::Modulus,
-            TokenKind::BitwiseXorEqual => TokenKind::BitwiseXor,
-            TokenKind::BitwiseAndEqual => TokenKind::BitwiseAnd,
-            TokenKind::BitwiseOrEqual => TokenKind::BitwiseOr,
-            TokenKind::ShiftLeftEqual => TokenKind::ShiftLeft,
-            TokenKind::ShiftRightEqual => TokenKind::ShiftRight,
+            Self::AddEqual => TokenKind::Add,
+            Self::SubtractEqual => TokenKind::Subtract,
+            Self::MultiplyEqual => TokenKind::Multiply,
+            Self::DivideEqual => TokenKind::Divide,
+            Self::ModulusEqual => TokenKind::Modulus,
+            Self::BitwiseXorEqual => TokenKind::BitwiseXor,
+            Self::BitwiseAndEqual => TokenKind::BitwiseAnd,
+            Self::BitwiseOrEqual => TokenKind::BitwiseOr,
+            Self::ShiftLeftEqual => TokenKind::ShiftLeft,
+            Self::ShiftRightEqual => TokenKind::ShiftRight,
             other => panic!("Invalid identifier operation {:?}", other),
         }
     }
@@ -250,14 +248,17 @@ impl ValueKind {
         match self.clone() {
             ValueKind::String(val) => match val.as_str() {
                 "string" => Some(Type::Pointer(Box::new(Type::Char))),
-                "function" => Some(Type::Byte),
-                "int" => Some(Type::Word),
-                "long" => Some(Type::Long),
-                "single" => Some(Type::Single),
-                "float" => Some(Type::Single),
-                "double" => Some(Type::Double),
+                "fun" => Some(Type::Byte), // Cannot be the same as fn
+                "i8" => Some(Type::Byte),
+                "i16" => Some(Type::Halfword),
+                "i32" => Some(Type::Word),
+                "i64" => Some(Type::Long),
+                "f32" => Some(Type::Single),
+                "f64" => Some(Type::Double),
                 "char" => Some(Type::Char),
-                "bool" => Some(Type::Word),
+                "bool" => Some(Type::Byte),
+                // Arbitrary because it will be turned into `long` anyway when used as void*`
+                "void" => Some(Type::Void),
                 "nil" => None,
                 _ => None,
             },

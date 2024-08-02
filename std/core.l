@@ -1,9 +1,9 @@
-pub external fn malloc(long size) -> long;
-pub external fn realloc(long ptr, long size) -> long;
-pub external fn free(long ptr);
-pub external fn atoi(string str) -> int;
-pub external fn atol(string str) -> long;
-pub external fn atof(string str) -> double;
+pub external fn malloc(i64 size) -> i64;
+pub external fn realloc(void *ptr, i64 size) -> i64;
+pub external fn free(void *ptr);
+pub external fn atoi(string str) -> i32;
+pub external fn atol(string str) -> i64;
+pub external fn atof(string str) -> f64;
 
 pub fn btos(bool value) -> string {
     if value {

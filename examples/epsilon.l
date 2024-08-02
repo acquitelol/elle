@@ -2,13 +2,13 @@ use std/io;
 use std/rand;
 use std/time;
 
-const int ITERATIONS = 100_000;
-const int ACCURACY = 1_000_000;
-const double EPSILON = 0.1305;
+const i32 ITERATIONS = 100_000;
+const i32 ACCURACY = 1_000_000;
+const f64 EPSILON = 0.1305;
 
-fn roll(int* results, int formattedEpsilon) {
-    int attempts = 0;
-    int roll = ACCURACY;
+fn roll(i32* results, i32 formattedEpsilon) {
+    i32 attempts = 0;
+    i32 roll = ACCURACY;
 
     while roll > formattedEpsilon {
         attempts++;
@@ -18,10 +18,10 @@ fn roll(int* results, int formattedEpsilon) {
     return attempts;
 }
 
-fn calculateAverage(int* results) {
-    int sum = 0;
+fn calculateAverage(i32* results) {
+    i32 sum = 0;
 
-    for int i = 0; i < ITERATIONS; i++ {
+    for i32 i = 0; i < ITERATIONS; i++ {
         sum += results[i];
     }
 
@@ -29,12 +29,12 @@ fn calculateAverage(int* results) {
 }
 
 fn main() {
-    int results[ITERATIONS];
-    int formattedEpsilon = EPSILON * (ACCURACY / 100);
+    i32 results[ITERATIONS];
+    i32 formattedEpsilon = EPSILON * (ACCURACY / 100);
 
     srand(time(NULL));
 
-    for int i = 0; i < ITERATIONS; i++ {
+    for i32 i = 0; i < ITERATIONS; i++ {
         results[i] = roll(results, formattedEpsilon);
     }
 

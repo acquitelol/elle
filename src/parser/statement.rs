@@ -149,7 +149,12 @@ impl<'a> Statement<'a> {
             }
         }
 
-        ty
+        // Essentially makes the compiler forget what type the pointer holds
+        if matches!(ty.clone(), Type::Pointer(inner) if matches!(*inner, Type::Void)) {
+            Type::Long
+        } else {
+            ty
+        }
     }
 
     fn parse_declare(&mut self, ty: Option<Option<Type>>) -> AstNode {

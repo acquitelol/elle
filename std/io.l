@@ -1,42 +1,43 @@
 use std/core@{malloc, free};
 use std/string@{strlen, strcpy};
 
-pub const long BUF_SIZE = 1024;
+pub const i64 BUF_SIZE = 1024;
 
-pub external fn fdopen(long descriptor, string mode) -> long;
+pub external fn fdopen(i64 descriptor, string mode) -> i64;
 
-pub const long stdin = (long)fdopen(0, "r");
-pub const long stdout = (long)fdopen(1, "w");
-pub const long stderr = (long)fdopen(2, "w");
+// FILE struct doesn't exist yet
+pub const void *stdin = (void *)fdopen(0, "r");
+pub const void *stdout = (void *)fdopen(1, "w");
+pub const void *stderr = (void *)fdopen(2, "w");
 
-pub external fn printf(string formatter, ...) -> int;
-pub external fn fprintf(long fd, string formatter, ...) -> int;
-pub external fn sprintf(string str, string formatter, ...) -> int;
-pub external fn snprintf(string str, int size, string formatter, ...);
+pub external fn printf(string formatter, ...) -> i32;
+pub external fn fprintf(void *fd, string formatter, ...) -> i32;
+pub external fn sprintf(string str, string formatter, ...) -> i32;
+pub external fn snprintf(string str, i32 size, string formatter, ...);
 
-pub external fn fscanf(long stream, string format, ...) -> int;
-pub external fn scanf(string format, ...) -> int;
-pub external fn sscanf(string str, string format, ...) -> int;
+pub external fn fscanf(void *stream, string format, ...) -> i32;
+pub external fn scanf(string format, ...) -> i32;
+pub external fn sscanf(string str, string format, ...) -> i32;
 
-pub external fn fgetc(long stream) -> int;
-pub external fn fgets(string str, int n, long stream) -> string;
-pub external fn fputc(char character, long stream) -> int;
-pub external fn fputs(string str, long stream) -> int;
+pub external fn fgetc(void *stream) -> i32;
+pub external fn fgets(string str, i32 n, i64 stream) -> string;
+pub external fn fputc(char character, i64 stream) -> i32;
+pub external fn fputs(string str, i64 stream) -> i32;
 
-pub external fn fflush(long stream) -> int;
+pub external fn fflush(void *stream) -> i32;
 
-pub external fn getc(long stream) -> int;
-pub external fn getchar() -> int;
+pub external fn getc(void *stream) -> i32;
+pub external fn getchar() -> i32;
 pub external fn gets(string str) -> string;
 
-pub external fn putc(char character, long stream) -> int;
-pub external fn putchar(char character) -> int;
-pub external fn puts(string str) -> int;
+pub external fn putc(char character, i64 stream) -> i32;
+pub external fn putchar(char character) -> i32;
+pub external fn puts(string str) -> i32;
 
-pub external fn fopen(string filename, string mode) -> long;
-pub external fn fclose(long stream) -> int;
-pub external fn fread(long ptr, long size, long nmemb, long stream) -> long;
-pub external fn fwrite(long ptr, long size, long nmemb, long stream) -> long;
+pub external fn fopen(string filename, string mode) -> i64;
+pub external fn fclose(void *stream) -> i32;
+pub external fn fread(void *ptr, i64 size, i64 nmemb, void *stream) -> i64;
+pub external fn fwrite(void *ptr, i64 size, i64 nmemb, void *stream) -> i64;
 
 pub fn input(string message) -> string {
     string buf = malloc(BUF_SIZE * #size(char));

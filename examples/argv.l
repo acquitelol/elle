@@ -1,7 +1,7 @@
 use std/io;
 
-fn main(int argc, string *argv) {
-    for (int i = 0; i < argc; i++) {
+fn main(i32 argc, string *argv) {
+    for (i32 i = 0; i < argc; i++) {
         printf("argv[%d] = %s\n", i, argv[i]);
     }
 }

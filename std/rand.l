@@ -1,6 +1,6 @@
-pub external fn srand(int seed);
-pub external fn rand() -> int;
+pub external fn srand(i32 seed);
+pub external fn rand() -> i32;
 
-pub fn random(int lower, int upper) {
+pub fn random(i32 lower, i32 upper) {
     return rand() % (upper - lower + 1) + lower;
 }

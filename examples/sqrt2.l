@@ -2,10 +2,10 @@ use std/io;
 use std/math;
 
 fn main() {
-    double x = 2;
-    double a = x;
+    f64 x = 2;
+    f64 a = x;
 
-    for int i = 0; i < 100; i++ {
+    for i32 i = 0; i < 100; i++ {
         a = a - (a * a - x) / (2 * a);
     }
 

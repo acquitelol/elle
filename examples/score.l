@@ -3,12 +3,12 @@ use std/string;
 use std/cast;
 
 fn main() {
-    int highestScore = 0;
+    i32 highestScore = 0;
     string winner = malloc(BUF_SIZE * #size(char));
     defer free(winner);
 
     while true {
-        string person = input("Enter a person's name: ");
+        string person = input("Enter a person's name (or 'stop'): ");
         defer free(person);
 
         if (streq(person, "stop")) {
@@ -16,7 +16,7 @@ fn main() {
         }
 
         printf("Enter %s's score: ", person);
-        int score = int_cast(input(""));
+        i32 score = int_cast(input(""));
 
         if score > highestScore {
             highestScore = score;

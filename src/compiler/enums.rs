@@ -85,7 +85,7 @@ impl fmt::Display for Instruction {
                             Comparison::NotEqual => "ne",
                         }
                     },
-                    ty,
+                    ty.clone().into_abi(),
                     lhs,
                     rhs,
                 )
@@ -130,7 +130,7 @@ impl fmt::Display for Instruction {
                 write!(
                     formatter,
                     "store{} {}, {}",
-                    r#type.clone().into_base(),
+                    r#type.clone().into_abi(),
                     value,
                     dest
                 )
@@ -140,9 +140,9 @@ impl fmt::Display for Instruction {
                     formatter,
                     "load{} {}",
                     if r#type.clone().into_abi() == Type::Word {
-                        format!("s{}", r#type.clone().into_base())
+                        format!("s{}", r#type.clone().into_abi())
                     } else {
-                        r#type.clone().into_base().to_string()
+                        r#type.clone().into_abi().to_string()
                     },
                     src
                 )
@@ -193,15 +193,16 @@ impl fmt::Display for Instruction {
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Type {
+    Halfword,
     Word,
     Long,
     Single,
     Double,
     Byte,
     Char,
+    Void,
     Null,
     Pointer(Box<Type>),
-    // name, size
     Aggregate(String),
 }
 
@@ -215,14 +216,7 @@ impl Type {
 
     pub fn into_abi(self) -> Self {
         match self {
-            Self::Byte | Self::Char => Self::Word,
-            other => other,
-        }
-    }
-
-    pub fn into_base(self) -> Self {
-        match self {
-            Self::Byte | Self::Char => Self::Word,
+            Self::Byte | Self::Halfword | Self::Char => Self::Word,
             other => other,
         }
     }
@@ -273,6 +267,7 @@ impl Type {
     pub fn size(&self) -> u64 {
         match self {
             Self::Byte | Self::Char => 1,
+            Self::Halfword => 2,
             Self::Word | Self::Single => 4,
             Self::Double => 8,
             // Returns 4 on 32-bit and 8 on 64-bit
@@ -287,11 +282,13 @@ impl fmt::Display for Type {
         match self {
             Self::Byte => write!(formatter, "b"),
             Self::Char => write!(formatter, "b"),
+            Self::Halfword => write!(formatter, "h"),
             Self::Word => write!(formatter, "w"),
             Self::Long => write!(formatter, "l"),
             Self::Pointer(..) => write!(formatter, "l"),
             Self::Single => write!(formatter, "s"),
             Self::Double => write!(formatter, "d"),
+            Self::Void => write!(formatter, "w"),
             Self::Null => write!(formatter, ""),
             Self::Aggregate(td) => write!(formatter, ":{}", td),
         }

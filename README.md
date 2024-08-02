@@ -52,7 +52,7 @@ data $main_1 = { b "Hello world!", b 0 }
 * The function is exported, as denoted with the `export` keyword. Even if you do not denote a function with `pub`, Elle will automatically make the `main` function public.
 * The function returns a `w` (`word`), is called `main`, and uses the `$` sigil to denote it is global.
 * The `@start` directive describes the beginning of the function
-* We then use the `call` operation and the global `puts` function with the `l` (`long`) data section we stored earlier.
+* We then use the `call` operation and the global `puts` function with the `l` (`i64`) data section we stored earlier.
 * The compiler falls back to returning the literal `0` if no specific return value is specified. Therefore, we `ret` at the end.
 
 * Simple enough! ♡
@@ -69,7 +69,7 @@ data $main_1 = { b "Hello world!", b 0 }
 * Example:
 
 ```cpp
-int a = 0; // Variables must be initialized.
+i32 a = 0; // Variables must be initialized.
 
 if expression {
     a++;
@@ -98,7 +98,7 @@ while expression {
 * You also have access to block scoped variables inside of this loop. This means you can create a pseudo `for loop` with the following code:
 
 ```cpp
-int i = 0;
+i32 i = 0;
 
 while (i < 10) {
     printf("%d\n", i);
@@ -124,7 +124,7 @@ Essentially, the loop creates the variable defined in (1), and evaluates the blo
 * Basic example of a for loop that prints the digits 0-9 to the stdout:
 
 ```cpp
-for (int i = 0; i < 10; i++) {
+for (i32 i = 0; i < 10; i++) {
     printf("%d\n", i);
 }
 ```
@@ -133,7 +133,7 @@ for (int i = 0; i < 10; i++) {
 ```cpp
 use std/io;
 
-fn fact(long n) -> long {
+fn fact(i64 n) -> i64 {
     if n <= 1 {
         return 1;
     }
@@ -142,9 +142,9 @@ fn fact(long n) -> long {
 }
 
 fn get_e() {
-    double res = 0.0;
+    f64 res = 0.0;
 
-    for long i = 0; i < 50; i++ {
+    for i64 i = 0; i < 50; i++ {
         res += 1.0 / fact(i);
     }
 
@@ -152,7 +152,7 @@ fn get_e() {
 }
 
 fn main() {
-    double e = get_e();
+    f64 e = get_e();
     printf("e = %.50f\n", e);
 }
 ```
@@ -169,7 +169,7 @@ Here's a simple example:
 
 ```cpp
 fn main() {
-    int a = 0;
+    i32 a = 0;
 
     {
         a++;
@@ -183,7 +183,7 @@ And it is relatively clear how this code is essentially equal to:
 
 ```cpp
 fn main() {
-    int a = 0;
+    i32 a = 0;
 
     if true {
         a++;
@@ -202,14 +202,14 @@ fn main() {
 Here's a basic example of a variadic function which takes in any amount of arguments and returns their sum:
 
 ```cpp
-fn add(int size, ...) {
-    // Note: `int` should be the same as the type
+fn add(i32 size, ...) {
+    // Note: `i32` should be the same as the type
     // you are yielding from later.
-    variadic args[size * #size(int)];
-    int res = 0;
+    variadic args[size * #size(i32)];
+    i32 res = 0;
 
-    for int i = 0; i < size; i++ {
-        res += args yield int;
+    for i32 i = 0; i < size; i++ {
+        res += args yield i32;
     }
 
     return res;
@@ -218,18 +218,18 @@ fn add(int size, ...) {
 
 Let's go through an explanation for how this works:
 
-* L1: Declare the function signature. We declare an `int size` as a static positional argument, then the `...` denotes that the function is variaidic.
+* L1: Declare the function signature. We declare an `i32 size` as a static positional argument, then the `...` denotes that the function is variaidic.
 * L2: Declare the `args` variable as a pointer to the start of the variadic arguments. This is denoted by `variadic name[size * #size(ty)]`. Ensure that whatever type you pass into `#size` is the type you're going to yield later. This call internally stack allocates memory of the size specified and then calls `vastart` on the returned pointer.
 * L3: Initialize the result at `0`.
 * L5: Declare a for loop with an unused iterator from 0 to the size - 1. This will allow you to loop through all of the arguments that will be provided by the user. This is necessary because you can yield arguments forever, however if you don't know how many there are then you will enter uninitialized memory. A method of passing the argument length will be shown later at the call site.
-* L6: Yield the next argument from the `args` pointer as an `Int` type, and add it to the result value
+* L6: Yield the next argument from the `args` pointer as an `i32` type, and add it to the result value
 * L9: Return the summed value. Right before this point, the `free` call that we deferred earlier would be called.
 
 At the call-site, using this function is easy due to the syntactic sugar provided by Elle. It can be done like this:
 
 ```cpp
 fn main() {
-    int res = add.(1, 2, 3, 4);
+    i32 res = add.(1, 2, 3, 4);
     printf("%d\n", res);
 }
 ```
@@ -251,19 +251,19 @@ You can create an "exact literal" by wrapping the inline IR with `$$` on both si
 
 You can also use the manual return directive, which states that Elle should **NOT** include an automatic return if the function does not return anything by default. You can do this by writing `$$__MANUAL_RETURN__$$` at any point in the top level of your function declaration (not in an inner block like an if statement or loop).
 
-Here is a basic example that dereferences an `int *` to the underlying `int`:
+Here is a basic example that dereferences an `i32 *` to the underlying `i32`:
 
 ```cpp
 use std/io;
 
-fn deref(int *ptr) -> int {
+fn deref(i32 *ptr) -> i32 {
     $$__MANUAL_RETURN__$$;
     $$%deref.val =w loadsb %ptr.1$$;
     $$ret %deref.val$$;
 }
 
 fn main() {
-    int some_buffer[1];
+    i32 some_buffer[1];
     some_buffer[0] = 123;
 
     // Print the value at the 0th index (pointer start + 0)
@@ -310,12 +310,12 @@ printf("%c", out[0]);
 A very simple example of this is declaring a variable and deferring printing its value, like this:
 
 ```cpp
-fn print_int(int num) {
+fn print_int(i32 num) {
     printf("%d\n", num);
 }
 
 fn main() {
-    int i = 0;
+    i32 i = 0;
 
     // If this were not in a defer statement, then this would print 0
     // However, it will print 25 instead.
@@ -330,12 +330,12 @@ You can see how this only calls `print_int` right before it returns 0, which is 
 
 This also means that if you, hypothetically, design a program like this
 ```cpp
-fn print_int(int num) {
+fn print_int(i32 num) {
     printf("%d\n", num);
 }
 
 fn main() {
-    int i = 0;
+    i32 i = 0;
     defer print_int(i);
 
     {
@@ -353,7 +353,7 @@ This is because it will call `print_int` once when the standalone block will lea
 You can also write something like this:
 ```cpp
 fn main() {
-    int i = 0;
+    i32 i = 0;
     defer print_int(i);
 
     {
@@ -378,13 +378,13 @@ Consider this code:
 use std/io;
 
 fn main() {
-    long size = 10;
-    long *numbers = malloc(size * #size(long));
+    i64 size = 10;
+    i64 *numbers = malloc(size * #size(i64));
     defer free(numbers);
 
-    for (long i = 0; i < size - 1; i++) {
+    for (i64 i = 0; i < size - 1; i++) {
         numbers[i] = i * 2;
-        long res = numbers[i];
+        i64 res = numbers[i];
         printf("numbers[%ld] = %ld\n", i, res);
     }
 
@@ -413,22 +413,24 @@ Elle's types are quite similar to C in terms of their definition. They can be a 
 These are the mappings of types in Elle:
 
 - `nil` - No type. Can be used to give a function that doesn't return anything an explicit return type. Keep in mind that this is purely semantic and cannot be used as a standalone type for variables.
-- `bool` - A mapping to `int`, and works purely as a semantic for boolean literals like `true` or `false` that expand to `1` or `0` respectively.
-- `char` - A mapping to `byte` representing a character in ASCII.
-- `int` - A "word", also known as a 32 bit signed integer.
-- `long` - A signed integer of the size specified by your computer's architecture. On x64 computers this is a 64-bit signed integer, while on x86 computers this is a 32-bit signed integer.
-- `single` - A 32-bit signed floating point number.
-- `float` - A mapping to a `single`.
-- `double` - A 64-bit signed floating point number, providing double the precision of a `single`.
-- `function` - A type that maps to a `byte`. This is intended to be used as a pointer to the first byte of a function definition.
-- `pointer` - Denoted by `<type> *` -> As pointers are just a number, an address in memory, a pointer in Elle is just a `long` that holds extra context by holding another type so that it can use its size to calculate an offset when indexing an array.
+- `void` - A mapping to `byte`, usually used for `void *` or function return signatures
+- `bool` - A mapping to `i8`, and works purely as a semantic for boolean literals like `true` or `false` that expand to `1` or `0` respectively.
+- `char` - A mapping to a `byte` representing a character in ASCII.
+- `i8` - A "byte", also known as an 8-bit integer.
+- `i16` - A "short", also known as a 16-bit signed integer, or half the size of an i32.
+- `i32` - A "word", also known as a 32-bit signed integer.
+- `i64` - A signed integer of the size specified by your computer's architecture, up to 64-bit.
+- `f32` - A 32-bit signed floating point number.
+- `f64` - A 64-bit signed floating point number, providing double the precision of `f32`.
+- `fun` - A type that maps to a `byte`. This is intended to be used as a pointer to the first byte of a function definition.
+- `pointer` - Denoted by `<type> *` -> As pointers are just a number, an address in memory, a pointer in Elle is just an `i64` that holds extra context by holding another type so that it can use its size to calculate an offset when indexing its memory.
 - `string` - A mapping to a `char *`, which is essentially an array of characters.
 
 <hr />
 
 ### ♡ **Type Conversion / Casting**
 
-* A type conversion consists of converting a variable from one type to another, usually compromising precision if converting to a type with a lower size (double -> single) or having more precision if promoting a type (int -> long).
+* A type conversion consists of converting a variable from one type to another, usually compromising precision if converting to a type with a lower size (f64 -> f32) or having more precision if promoting a type (i32 -> i64).
 
 You can cast a type in a similar manner to C.
 <br />
@@ -437,12 +439,12 @@ Here is an example that casts a float to an integer to add it to another integer
 
 ```cpp
 fn main() {
-    float a = 1.5;
-    int b = (int)a + 2;
+    f32 a = 1.5;
+    i32 b = (i32)a + 2;
 }
 ```
 
-Casting is not necessary here, because the Elle compiler is smart enough to automatically cast the `float` to an `int` when compiling the arithmetic operation, based on a [weight](https://github.com/acquitelol/elle/blob/rewrite/src/compiler/enums.rs#L233-L241) that each type is assigned.
+Casting is not necessary here, because the Elle compiler is smart enough to automatically cast the `f32` to an `i32` when compiling the arithmetic operation, based on a [weight](https://github.com/acquitelol/elle/blob/rewrite/src/compiler/enums.rs#L233-L241) that each type is assigned.
 
 <br />
 
@@ -451,7 +453,7 @@ You can also cast to pointer types, however note that, unlike C, casting to a po
 This means you can write:
 ```cpp
 fn main() {
-    double *a = malloc(1024 * #size(double));
+    f64 *a = malloc(1024 * #size(f64));
 }
 ```
 and Elle will not complain. You can, if you wish, cast it, however it will have no effect at the moment.
@@ -489,8 +491,8 @@ pub fn main() {
 This can also be used for negative or positive values:
 
 ```cpp
-const long MAX_SIGNED_LONG = 9_223_372_036_854_775_807;
-const long MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
+const i64 MAX_SIGNED_LONG = 9_223_372_036_854_775_807;
+const i64 MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
 ```
 
 Using unary `-` will multiply the expression by -1 while unary `+` will multiply the expression by 1.
@@ -500,18 +502,18 @@ The unary `&` operator is used to get the memory address of a local variable in 
 ```cpp
 use std/io;
 
-fn other(int *something) {
+fn other(i32 *something) {
     printf("%d\n", *something);
 }
 
 pub fn main() {
-    int a = 39;
+    i32 a = 39;
     other(&a);
     return 0;
 }
 ```
 
-Here we declare `a` as 39, then we pass the "address" of `a` to `other` as a pointer to an `int`, then this pointer is dereferenced. Keep in mind that you can only take the address of an identifier. A `&` operator must **ALWAYS** have an identifier following it.
+Here we declare `a` as 39, then we pass the "address" of `a` to `other` as a pointer to an `i32`, then this pointer is dereferenced. Keep in mind that you can only take the address of an identifier. A `&` operator must **ALWAYS** have an identifier following it.
 
 <hr />
 
@@ -520,13 +522,13 @@ The unary `*` operator is used to dereference a pointer to a value:
 ```cpp
 use std/io;
 
-fn other(int *a, string *str) {
+fn other(i32 *a, string *str) {
     printf("(fn other)\n\ta = %d\n\tstr = %s\n", *a, *str);
     *a = 542;
 }
 
 fn main() {
-    int a = 39;
+    i32 a = 39;
     string str = "Hello world!";
 
     other(&a, &str);
@@ -581,7 +583,7 @@ This means the following code is valid:
 use std/io;
 
 fn main() {
-    int a = 1;
+    i32 a = 1;
     a ^= 1; // a is now 0
     printf("%d", a);
 }
@@ -597,7 +599,7 @@ Example of a program that calculates the xor (`^`) and sum (`+`) of some values:
 use std/io;
 
 pub fn main() {
-    int a = 1 + (5 ^ 2); // Xor has a lower precedence than addition
+    i32 a = 1 + (5 ^ 2); // Xor has a lower precedence than addition
 
     // We're expecting this to be 8 because
     //  5 ^ 2 = 7 and 7 + 1 = 8, however
@@ -616,27 +618,27 @@ pub fn main() {
 * An array literal is a simple and intuitive syntax to automatically allocate stack memory for a buffer and assign values at each offset based on the literal definition. Essentially, an expression like this:
 
 ```cpp
-int *some_arr = [512, 1, -3];
+i32 *some_arr = [512, 1, -3];
 ```
 
-would first allocate memory to a buffer and store that in a variable called `some_arr` with the size of `3 * 4 = 12` (because there are 3 items and the size of an `int` is 4 bytes) and then it would offset the pointer returned and store each value specified at that address.
+would first allocate memory to a buffer and store that in a variable called `some_arr` with the size of `3 * 4 = 12` (because there are 3 items and the size of an `i32` is 4 bytes) and then it would offset the pointer returned and store each value specified at that address.
 
 So it would first store `512` at `some_arr + 0`, then it would store `1` at `some_arr + 4` (offset accounting the size of the array type), then finally would store `-3` at `some_arr + 8`.
 
 <br />
 
-Here is an example of an array that holds 3 `long`s:
+Here is an example of an array that holds 3 `i64`s:
 
 ```cpp
 use std/io;
 
-const long MAX_SIGNED_LONG = 9_223_372_036_854_775_807;
-const long MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
+const i64 MAX_SIGNED_LONG = 9_223_372_036_854_775_807;
+const i64 MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
 
 fn main() {
-    long *test = [MAX_SIGNED_LONG, MIN_SIGNED_LONG, -39];
+    i64 *test = [MAX_SIGNED_LONG, MIN_SIGNED_LONG, -39];
 
-    for int i = 0; i < #arrlen(test); i++ {
+    for i32 i = 0; i < #arrlen(test); i++ {
         printf("test[%d] = %ld\n", i, test[i]);
     }
 }
@@ -647,7 +649,7 @@ Array literals are not required to be assigned to a variable. Please look at thi
 ```c
 use std/io;
 
-fn other(long *arr, int val) {
+fn other(i64 *arr, i32 val) {
     printf("\narr[0] = %ld\nval = %ld\n", arr[0], val);
 }
 
@@ -678,7 +680,7 @@ For example, take this snippet:
 ```cpp
 use std/io;
 
-fn other(int *buf) {
+fn other(i32 *buf) {
     printf(
         "(fn other)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
         #size(buf),
@@ -687,7 +689,7 @@ fn other(int *buf) {
 }
 
 fn main() {
-    int buf[100];
+    i32 buf[100];
     buf[0] = 123;
 
     printf(
@@ -713,19 +715,19 @@ printf(
 
 Elle will throw a compilation error. The `buf` buffer was not defined in the function called `other`, so therefore the compiler does not have enough context to get its length, as arguments in Elle are not fat (they don't contain extra metadata).
 
-Essentially, contextually this means that the `buf` variable is just an `int *` to the compiler. As it no longer has context to the size of the `buf` allocation, it cannot evaluate the `#arrlen` directive, and throws an error.
+Essentially, contextually this means that the `buf` variable is just an `i32 *` to the compiler. As it no longer has context to the size of the `buf` allocation, it cannot evaluate the `#arrlen` directive, and throws an error.
 
 In this example:
 
 ```cpp
 use std/io;
 
-fn other(int *buf) {
+fn other(i32 *buf) {
     printf("(fn other)\n\t#size(buf) = %d\n", #size(buf));
 }
 
 fn main() {
-    int buf[100];
+    i32 buf[100];
     buf[0] = 123;
 
     printf(
@@ -750,7 +752,7 @@ use std/io;
 fn main() {
     char *some_array[] = {"abc", "meow", "test"};
 
-    for int i = 0; i < #arrlen(some_array); i++ {
+    for i32 i = 0; i < #arrlen(some_array); i++ {
         // Here typeof(some_array[i]) = char * = string
         printf("some_array[%d] = %s\n", i, some_array[i]);
     }
@@ -770,9 +772,9 @@ Consider this example that uses constants:
 ```cpp
 use std/io;
 
-const int WIDTH = 100;
-const int HEIGHT = 24;
-const int SIZE = WIDTH * HEIGHT;
+const i32 WIDTH = 100;
+const i32 HEIGHT = 24;
+const i32 SIZE = WIDTH * HEIGHT;
 
 pub fn main() {
     printf("%d\n", SIZE);
@@ -803,11 +805,11 @@ Basic example:
 use std/io;
 
 fn main() {
-    long a = 0xDEADBEEF;
-    int b = 0o273451456;
-    int c = 0b111010011011111010010100101;
-    long d = 1.2e9;
-    double e = 2.7182818e2;
+    i64 a = 0xDEADBEEF;
+    i32 b = 0o273451456;
+    i32 c = 0b111010011011111010010100101;
+    i64 d = 1.2e9;
+    f64 e = 2.7182818e2;
 
     printf(
         "a = %X\nb = %d\nc = %d\nd = %ld\ne = %f\n",
@@ -843,7 +845,7 @@ The syntax to export a symbol from your current file is as follows:
 
 ```c
 // ./module.l
-pub const int myFavouriteNumber = 7;
+pub const i32 myFavouriteNumber = 7;
 
 pub fn foo() {
     return 1;
@@ -864,8 +866,8 @@ Due to Elle's compilation to QBE which implements the C ABI, getting input from 
 Consider this function which accepts argv and prints them all to the console:
 
 ```cpp
-fn main(int argc, char **argv) {
-    for int i = 0; i < argc; i++ {
+fn main(i32 argc, char **argv) {
+    for i32 i = 0; i < argc; i++ {
         printf("argv[%d] = %s\n", i, argv[i]);
     }
 }
@@ -891,7 +893,7 @@ It essentially tells Elle where it should put the variadic argument starter. You
 
 You can also make these statements public:
 ```cpp
-pub external fn fprintf(long fd, char *formatter, ...);
+pub external fn fprintf(i64 fd, char *formatter, ...);
 ```
 In fact the order of prefixes before `fn` is not enforced, you can write `external pub fn` and achieve the same result.
 

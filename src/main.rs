@@ -52,6 +52,8 @@ fn lex_and_parse(input_path: String, root: bool) -> Vec<Primitive> {
         }
     }
 
+    // dbg!(&tokens);
+
     let mut parser = Parser::new(tokens.clone());
     let mut tree = parser.parse();
 
@@ -211,7 +213,7 @@ fn main() -> ExitCode {
 
     let tree = lex_and_parse(input_path, true);
 
-    dbg!(&tree);
+    // dbg!(&tree);
 
     Compiler::compile(tree, output_path);
     ExitCode::SUCCESS

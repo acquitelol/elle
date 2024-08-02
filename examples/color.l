@@ -1,12 +1,12 @@
 use std/io;
 
 fn main() {
-    int color = 0xFFABE9FF;
+    i32 color = 0xFFABE9FF;
 
-    int r = (color >> 24) & 0xFF;
-    int g = (color >> 16) & 0xFF;
-    int b = (color >> 8) & 0xFF;
-    int a = color & 0xFF;
+    i32 r = (color >> 24) & 0xFF;
+    i32 g = (color >> 16) & 0xFF;
+    i32 b = (color >> 8) & 0xFF;
+    i32 a = color & 0xFF;
 
     printf(
         "r = %u\ng = %u\nb = %u\na = %u\n",

@@ -286,15 +286,6 @@ impl Compiler {
             }
         }
 
-        if !func_ref.borrow_mut().returns() && !func_ref.borrow_mut().manual {
-            func_ref
-                .borrow_mut()
-                .add_instruction(Instruction::Return(Some((
-                    Type::Word,
-                    Value::Const(Type::Word, 0),
-                ))));
-        }
-
         let mut first_ty: Option<Type> = None;
         let ty_err_message = |first: Type, second: Type| {
             location.error(format!(
@@ -333,9 +324,25 @@ impl Compiler {
             }
         }
 
+        if !func_ref.borrow_mut().returns() && !func_ref.borrow_mut().manual {
+            func_ref
+                .borrow_mut()
+                .add_instruction(Instruction::Return(Some((
+                    Type::Word,
+                    Value::Const(Type::Word, 0),
+                ))));
+        }
+
         self.scopes.pop();
 
-        let func_new = func_ref.borrow_mut().to_owned();
+        let mut func_new = func_ref.borrow_mut().to_owned();
+
+        if func_new.return_type.is_none() {
+            func_new.return_type = Some(Type::Word)
+        }
+
+        func_new.return_type = func_new.return_type.clone().map(|ty| ty.into_abi());
+
         Ok(func_new)
     }
 
