@@ -11,11 +11,11 @@
 じしˍ,)ノ
 <br />
 
-### ✩ *If you like this project, consider giving it a star!* ✩
-
 ### ♡ **How is this better than C?**
 
 - It's not.
+
+### ✩ *If you like this project, consider giving it a star!* ✩
 
 ### ♡ **Hello, World!**
 

@@ -1,3 +1,3 @@
-*.l linguist-language=Dart
-*.elle linguist-language=Dart
+*.l linguist-language=C
+*.elle linguist-language=C
 *.ssa linguist-language=TS
