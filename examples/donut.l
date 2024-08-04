@@ -1,6 +1,6 @@
 use std/io@{printf, malloc};
-use std/string@{memset};
 use std/math@{sin, cos, PI};
+use std/string;
 
 const f32 THETA_SPACING = 0.07;
 const f32 PHI_SPACING = 0.02;
