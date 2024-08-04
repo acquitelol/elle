@@ -32,7 +32,7 @@ pub enum AstNode {
     },
     FunctionCall {
         name: String,
-        parameters: Vec<AstNode>,
+        parameters: Vec<(Location, AstNode)>,
         location: Location,
     },
     ArithmeticOperation {

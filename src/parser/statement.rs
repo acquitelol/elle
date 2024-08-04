@@ -489,6 +489,8 @@ impl<'a> Statement<'a> {
         let mut parameters = vec![];
 
         while self.current_token().kind != TokenKind::RightParenthesis && !self.is_eof() {
+            let location = self.current_token().location.clone();
+
             let mut tokens = vec![];
             let mut paren_nesting = 0;
             let mut block_nesting = 0;
@@ -562,7 +564,8 @@ impl<'a> Statement<'a> {
                 }
             }
 
-            parameters.push(
+            parameters.push((
+                location,
                 Statement::new(
                     tokens.clone(),
                     0,
@@ -572,7 +575,7 @@ impl<'a> Statement<'a> {
                 )
                 .parse()
                 .0,
-            );
+            ));
         }
 
         self.expect_token_with_message(
@@ -580,16 +583,20 @@ impl<'a> Statement<'a> {
             Some("Perhaps you forgot to close a nested expression?"),
         );
 
+        let location = self.current_token().location.clone();
         self.advance();
 
         if calculate_variadic_size {
             parameters.insert(
                 0,
-                AstNode::LiteralStatement {
-                    kind: TokenKind::IntegerLiteral,
-                    value: ValueKind::Number(parameters.len() as i128),
-                    location: self.current_token().location,
-                },
+                (
+                    location.clone(),
+                    AstNode::LiteralStatement {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number(parameters.len() as i128),
+                        location,
+                    },
+                ),
             );
         }
 

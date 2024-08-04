@@ -115,8 +115,8 @@ impl fmt::Display for Instruction {
             Self::Modulus(lhs, rhs) => write!(formatter, "rem {}, {}", lhs, rhs),
             Self::Compare(ty, comparison, lhs, rhs) => {
                 assert!(
-                    !matches!(ty, Type::Aggregate(_)),
-                    "Cannot compare aggregate types"
+                    !matches!(ty, Type::Struct(_)),
+                    "Cannot compare struct types"
                 );
 
                 write!(
@@ -267,7 +267,7 @@ pub enum Type {
     Void,
     Null,
     Pointer(Box<Type>),
-    Aggregate(String),
+    Struct(String),
 }
 
 impl Type {
@@ -300,7 +300,7 @@ impl Type {
             | Self::UnsignedWord
             | Self::Char => Self::Word,
             Self::UnsignedLong => Self::Long,
-            Self::Aggregate(_) => Self::Long,
+            Self::Struct(_) => Self::Long,
             other => other,
         }
     }
@@ -316,16 +316,16 @@ impl Type {
         !self.is_float()
     }
 
-    pub fn is_aggregate(&self) -> bool {
+    pub fn is_struct(&self) -> bool {
         match self {
-            Self::Aggregate(_) => true,
+            Self::Struct(_) => true,
             _ => false,
         }
     }
 
-    pub fn get_aggregate_inner(&self) -> Option<String> {
+    pub fn get_struct_inner(&self) -> Option<String> {
         match self.clone() {
-            Self::Aggregate(val) => Some(val),
+            Self::Struct(val) => Some(val),
             _ => None,
         }
     }
@@ -379,7 +379,7 @@ impl Type {
             Self::Double => 8,
             // Returns 4 on 32-bit and 8 on 64-bit
             Self::UnsignedLong | Self::Long | Self::Pointer(..) => mem::size_of::<usize>() as u64,
-            Self::Aggregate(val) => {
+            Self::Struct(val) => {
                 let size = module
                     .borrow()
                     .types
@@ -416,7 +416,7 @@ impl fmt::Display for Type {
             Self::Double => write!(formatter, "d"),
             Self::Void => write!(formatter, "w"),
             Self::Null => write!(formatter, ""),
-            Self::Aggregate(td) => write!(formatter, ":{}", td),
+            Self::Struct(td) => write!(formatter, ":{}", td),
         }
     }
 }
@@ -437,15 +437,15 @@ impl TypeDef {
         let mut size = 0;
 
         for (ty, _) in self.items.iter().cloned() {
-            if ty.is_aggregate() {
+            if ty.is_struct() {
                 let tmp_size = module
                     .borrow()
                     .types
                     .iter()
-                    .find(|td| td.name == ty.get_aggregate_inner().unwrap())
+                    .find(|td| td.name == ty.get_struct_inner().unwrap())
                     .expect(&format!(
-                        "Unable to find aggregate type named {}",
-                        ty.get_aggregate_inner().unwrap(),
+                        "Unable to find struct named '{}'",
+                        ty.get_struct_inner().unwrap(),
                     ))
                     .size(module);
 
@@ -478,7 +478,7 @@ impl fmt::Display for TypeDef {
                 .map(|(ty, count)| if *count > 1 {
                     format!(
                         "{} {}",
-                        if !ty.is_aggregate() {
+                        if !ty.is_struct() {
                             ty.clone().into_base()
                         } else {
                             ty.clone()
@@ -488,7 +488,7 @@ impl fmt::Display for TypeDef {
                 } else {
                     format!(
                         "{}",
-                        if !ty.is_aggregate() {
+                        if !ty.is_struct() {
                             ty.clone().into_base()
                         } else {
                             ty.clone()

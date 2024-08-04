@@ -265,7 +265,7 @@ impl ValueKind {
                 // Arbitrary because it will be turned into `long` anyway when used as void*`
                 "void" => Some(Type::Void),
                 "nil" => None,
-                other => Some(Type::Aggregate(other.to_string())),
+                other => Some(Type::Struct(other.to_string())),
             },
             _ => None,
         }
@@ -274,7 +274,7 @@ impl ValueKind {
     pub fn is_base_type(&self) -> bool {
         self.to_type_string().is_some()
             && match self.to_type_string().unwrap() {
-                Type::Aggregate(_) => false,
+                Type::Struct(_) => false,
                 _ => true,
             }
     }
@@ -303,16 +303,20 @@ impl Location {
 
     pub fn error(&self, message: String) -> String {
         let upper = format!("{}[{}]{}", "-".repeat(20), self.display(), "-".repeat(20));
+        let padding = 4;
+        let ident = self.column - (self.ctx.len() - self.ctx.trim_start().len());
 
         return format!(
-            "\n\n{}\n{}\n\n    {}\n{}{}\n{}\n\n",
+            "\n\n{}\n{}\n\n{}{}\n{}{}{}\n{}\n\n",
             upper,
             message,
+            " ".repeat(padding),
             self.ctx.trim_start(),
-            " ".repeat(if self.column >= self.length {
-                self.column - self.length
+            " ".repeat(padding),
+            " ".repeat(if ident >= self.length {
+                ident - self.length
             } else {
-                self.column
+                ident
             }),
             "^".repeat(self.length),
             "-".repeat(upper.len())

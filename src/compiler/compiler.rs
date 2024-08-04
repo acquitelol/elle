@@ -829,12 +829,12 @@ impl Compiler {
                     let (ty, val) = self.generate_statement(
                         func,
                         module,
-                        parameter.clone(),
+                        parameter.clone().1,
                         param_ty.clone(),
                         None,
                         false,
                     )
-                    .expect(&location.error(
+                    .expect(&parameter.0.error(
                         format!(
                             "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
                             name
@@ -849,7 +849,7 @@ impl Compiler {
                             ty,
                             param_ty.unwrap(),
                             val.clone(),
-                            location.clone(),
+                            parameter.0.clone(),
                         )
                     });
                 }
@@ -1673,7 +1673,7 @@ impl Compiler {
                     .types
                     .iter()
                     .find(|td| td.name == name)
-                    .expect(&format!("Unable to find aggregate type named '{}'", name));
+                    .expect(&format!("Unable to find struct named '{}'", name));
 
                 if !td.usable && !func.borrow_mut().imported {
                     panic!(
@@ -1708,7 +1708,7 @@ impl Compiler {
                     );
                 }
 
-                let ty = Type::Aggregate(name.clone());
+                let ty = Type::Struct(name.clone());
                 let size = ty.size(module);
 
                 let alloc_tmp = self.new_temporary(Some("struct"));
@@ -1905,7 +1905,7 @@ impl Compiler {
                 } if kind == TokenKind::Identifier => {
                     let field = value.get_string_inner().unwrap();
 
-                    if !ty.is_aggregate() {
+                    if !ty.is_struct() {
                         panic!(
                             "{}",
                             &location.error(format!(
@@ -1917,11 +1917,11 @@ impl Compiler {
                     }
 
                     let (member_ty, offset) = self
-                        .member_to_offset(module, ty.get_aggregate_inner().unwrap(), field.clone())
+                        .member_to_offset(module, ty.get_struct_inner().unwrap(), field.clone())
                         .expect(&location.error(format!(
                             "Could not find a field named '{}' for struct '{}'",
                             field,
-                            ty.get_aggregate_inner().unwrap()
+                            ty.get_struct_inner().unwrap()
                         )));
 
                     let offset_tmp = self.new_temporary(Some("offset"));
@@ -2098,7 +2098,7 @@ impl Compiler {
         val: Value,
         location: Location,
     ) -> (Type, Value) {
-        if first.is_aggregate() || second.is_aggregate() {
+        if first.is_struct() || second.is_struct() {
             if first == second {
                 return (second, val);
             }
@@ -2106,7 +2106,7 @@ impl Compiler {
             panic!(
                 "{}",
                 location.error(format!(
-                    "Cannot convert to or from a structured/aggregate type (trying to convert {:?} to {:?})",
+                    "Cannot convert to or from a struct type (trying to convert {:?} to {:?})",
                     first, second
                 ))
             )
