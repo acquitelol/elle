@@ -8,6 +8,7 @@ const i32 screenHeight = 600;
 
 const Color BLACK = GetColor(0x00000000);
 const Color PINK = GetColor(0xFF7DFBFF);
+const Color BERRY = GetColor(0x2E172DFF);
 const Color PURPLE = GetColor(0xE785FFFF);
 const Color YELLOW = GetColor(0xFFE2B8FF);
 const Color BLUE = GetColor(0xC6B5FFFF);
@@ -62,7 +63,7 @@ fn main() {
 
         BeginDrawing();
             velocity.y += gravity * deltaTime;
-            ClearBackground(BLACK);
+            ClearBackground(BERRY);
 
             f32 newX = position.x + velocity.x * deltaTime;
 

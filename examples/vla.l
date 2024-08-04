@@ -7,30 +7,30 @@ def DynamicArray {
 }
 
 fn initArray(DynamicArray *arr, i32 initialCapacity) {
-    (*arr).elements = (i32 *)malloc(initialCapacity * #size(i32));
-    (*arr).size = 0;
-    (*arr).capacity = initialCapacity;
+    arr.elements = (i32 *)malloc(initialCapacity * #size(i32));
+    arr.size = 0;
+    arr.capacity = initialCapacity;
 }
 
 fn resizeArray(DynamicArray *arr, i32 newCapacity) {
-    (*arr).elements = (i32 *)realloc((*arr).elements, newCapacity * #size(i32));
-    (*arr).capacity = newCapacity;
+    arr.elements = (i32 *)realloc(arr.elements, newCapacity * #size(i32));
+    arr.capacity = newCapacity;
 }
 
 fn addElement(DynamicArray *arr, i32 element) {
-    if ((*arr).size == (*arr).capacity) {
-        resizeArray(arr, (*arr).capacity * 2);
+    if (arr.size == arr.capacity) {
+        resizeArray(arr, arr.capacity * 2);
     }
 
-    (*arr).elements[(*arr).size] = element;
-    (*arr).size += 1;
+    arr.elements[arr.size] = element;
+    arr.size += 1;
 }
 
 fn freeArray(DynamicArray *arr) {
-    free((*arr).elements);
-    (*arr).elements = NULL;
-    (*arr).size = 0;
-    (*arr).capacity = 0;
+    free(arr.elements);
+    arr.elements = NULL;
+    arr.size = 0;
+    arr.capacity = 0;
 }
 
 fn main() {

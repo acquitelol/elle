@@ -1906,14 +1906,27 @@ impl Compiler {
                     let field = value.get_string_inner().unwrap();
 
                     if !ty.is_struct() {
-                        panic!(
-                            "{}",
-                            &location.error(format!(
-                                "Cannot access fields on a non-struct type '{}' (field '{}')",
-                                ty.to_string(),
-                                field
-                            ))
-                        );
+                        // Automatically deref 'Foo *' into 'Foo' when processing
+                        if ty.is_pointer() && ty.clone().unwrap().unwrap().is_struct() {
+                            let tmp = self.new_temporary(Some("load"));
+
+                            func.borrow_mut().assign_instruction(
+                                tmp.clone(),
+                                Type::Long,
+                                Instruction::Load(ty.clone().unwrap().unwrap(), left),
+                            );
+
+                            left = tmp;
+                            ty = ty.clone().unwrap().unwrap();
+                        } else {
+                            panic!(
+                                "{}",
+                                &location.error(format!(
+                                    "Cannot access fields on a non-struct type '{:?}' (field '{}')",
+                                    ty, field
+                                ))
+                            );
+                        }
                     }
 
                     let (member_ty, offset) = self
@@ -1949,8 +1962,7 @@ impl Compiler {
                 AstNode::FieldStatement {
                     left: nested_left,
                     right: nested_right,
-                    value: _,
-                    location,
+                    ..
                 } => {
                     let (nested_ty, nested_left_value) = self.process_field_access(
                         func,

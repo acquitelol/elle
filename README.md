@@ -907,7 +907,7 @@ fn main() {
         baz = 3.141592
     };
 
-    printf("%f", (f64)foo.bar.myFloat);
+    printf("%f\n", (f64)foo.bar.myFloat);
 }
 ```
 
@@ -915,8 +915,8 @@ If taking a pointer to them from another function, you can do so like this:
 
 ```c
 fn other(Foo *foo) {
-    (*foo).baz = 17.98;
-    printf("%d\n", (*foo).a);
+    foo.baz = 17.98;
+    printf("%d\n", foo.a);
 }
 
 fn main() {
@@ -925,7 +925,25 @@ fn main() {
 }
 ```
 
-Note that this means there is no `->` operator like in C to automatically dereference the pointer.
+> [!NOTE]
+> There is no equivalent of the `a->b` operator in Elle. Any pointer to a struct will automatically be dereferenced before processing any fields in the struct.
+> You can still manually dereference the struct pointer manually if you like, but it will have no difference compared to directly using dot notation.
+> This means that the following code will accurately update the value inside the struct Foo:
+```c
+def Foo {
+    i32 a;
+}
+
+fn other(Foo *foo) {
+    foo.a = 5;
+}
+
+fn main() {
+    Foo foo = Foo { a = 100 };
+    other(&foo);
+    printf("%d\n", foo.a); // foo.a is now 5 not 100
+}
+```
 
 <hr />
 
