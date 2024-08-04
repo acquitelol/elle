@@ -30,7 +30,17 @@ impl<'a> Function<'a> {
         let mut variadic = false;
         let mut manual = false;
 
-        if self.parser.match_token(TokenKind::Type, false) {
+        if self.parser.current_token().kind == TokenKind::Identifier
+            && (self.parser.current_token().value.is_base_type()
+                || self.parser.struct_pool.contains(
+                    &self
+                        .parser
+                        .current_token()
+                        .value
+                        .get_string_inner()
+                        .unwrap(),
+                ))
+        {
             while self.parser.current_token().kind != TokenKind::RightParenthesis {
                 if self.parser.current_token().kind == TokenKind::Ellipsis {
                     self.parser.advance();
@@ -107,6 +117,7 @@ impl<'a> Function<'a> {
                         self.parser.tokens.clone(),
                         self.parser.position.clone(),
                         &body,
+                        self.parser.struct_pool.clone(),
                         false,
                     )
                     .parse();

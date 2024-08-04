@@ -6,11 +6,11 @@ use examples/resources/raylib;
 const i32 screenWidth = 600;
 const i32 screenHeight = 600;
 
-const i64 BLACK = GetColor(0x00000000);
-const i64 PINK = GetColor(0xFF7DFBFF);
-const i64 PURPLE = GetColor(0xE785FFFF);
-const i64 YELLOW = GetColor(0xFFE2B8FF);
-const i64 BLUE = GetColor(0xC6B5FFFF);
+const Color BLACK = GetColor(0x00000000);
+const Color PINK = GetColor(0xFF7DFBFF);
+const Color PURPLE = GetColor(0xE785FFFF);
+const Color YELLOW = GetColor(0xFFE2B8FF);
+const Color BLUE = GetColor(0xC6B5FFFF);
 
 const f32 circleRadius = 50.0;
 const f32 gravity = 1000.0;
@@ -23,17 +23,27 @@ fn main() {
     InitWindow(screenWidth, screenHeight, title);
     defer CloseWindow();
 
+    InitAudioDevice();
+    defer CloseAudioDevice();
+
+    Sound sound = LoadSound("./examples/resources/hit.wav");
+    defer UnloadSound(sound);
+
     SetTargetFPS(60);
 
-    f32 positionX = screenWidth - circleRadius;
-    f32 positionY = 100;
+    Vector2 position = Vector2 {
+        x = screenWidth - circleRadius,
+        y = 100
+    };
 
     i32 fontSize = 40;
     i32 velocityUpdateFactor = 4;
     f32 velocityFactor = 2;
 
-    f32 velocityX = 120 * velocityFactor;
-    f32 velocityY = 100 * velocityFactor;
+    Vector2 velocity = Vector2 {
+        x = 120 * velocityFactor,
+        y = 100 * velocityFactor
+    };
 
     bool finished = false;
     i32 bounces = 0;
@@ -46,41 +56,42 @@ fn main() {
 
         if finished {
             finished = false;
-            velocityX *= -1;
-            velocityX *= velocityUpdateFactor;
-            velocityY = gravity * velocityUpdateFactor * 0.2;
+            velocity.x *= velocityUpdateFactor * -1;
+            velocity.y = gravity * velocityUpdateFactor * 0.2;
         }
 
         BeginDrawing();
-            velocityY += gravity * deltaTime;
+            velocity.y += gravity * deltaTime;
             ClearBackground(BLACK);
 
-            f32 newX = positionX + velocityX * deltaTime;
+            f32 newX = position.x + velocity.x * deltaTime;
 
             if newX < circleRadius || newX + circleRadius > GetScreenWidth() {
                 bounces++;
-                velocityX *= damping;
+                velocity.x *= damping;
+                PlaySound(sound);
             } else {
-                positionX = newX;
+                position.x = newX;
             }
 
-            f32 newY = positionY + velocityY * deltaTime;
+            f32 newY = position.y + velocity.y * deltaTime;
 
             if newY < circleRadius || newY + circleRadius > GetScreenHeight() {
                 bounces++;
-                velocityY *= damping;
+                velocity.y *= damping;
+                PlaySound(sound);
             } else {
-                positionY = newY;
+                position.y = newY;
             }
 
-            positionX += velocityX * deltaTime;
-            positionY += velocityY * deltaTime;
+            position.x += velocity.x * deltaTime;
+            position.y += velocity.y * deltaTime;
 
-            if (fabs(velocityY) < epsilon) && screenHeight - circleRadius - positionY < epsilon && !finished {
+            if (fabs(velocity.y) < epsilon) && screenHeight - circleRadius - position.y < epsilon && !finished {
                 finished = true;
             }
 
-            DrawCircleGradient((i32)positionX, (i32)positionY, circleRadius, PURPLE, PINK);
+            DrawCircle((i32)position.x, (i32)position.y, circleRadius, PINK);
             DrawText(title, (screenWidth - MeasureText(title, fontSize)) / 2, 40, fontSize, BLUE);
 
             sprintf(bouncesString, "Bounces: %d", bounces);
@@ -88,17 +99,17 @@ fn main() {
 
             printf(
                 concat.(
-                    "positionX = %f",
-                    "positionY = %f",
-                    "velocityX = %f",
-                    "velocityY = %f",
+                    "position.x = %f",
+                    "position.y = %f",
+                    "velocity.x = %f",
+                    "velocity.y = %f",
                     "deltaTime = %f",
                     "-----------------------"
                 ),
-                (f64)positionX,
-                (f64)positionY,
-                (f64)velocityX,
-                (f64)velocityY,
+                (f64)position.x,
+                (f64)position.y,
+                (f64)velocity.x,
+                (f64)velocity.y,
                 (f64)deltaTime
             );
         EndDrawing();

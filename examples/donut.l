@@ -38,7 +38,7 @@ fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output) {
             i32 offset = x + WIDTH * y;
             i32 illumination = 8 * ((sinTheta * sinRotX - sinPhi * cosTheta * cosRotX) * cosRotZ - sinPhi * cosTheta * sinRotX - sinTheta * cosRotX - cosPhi * cosTheta * sinRotZ);
 
-            if HEIGHT > y && y > 0 && x > 0 && WIDTH > x && depth > zBuffer[(i64)offset] {
+            if HEIGHT > y && y > 0 && x > 0 && WIDTH > x && depth > zBuffer[offset] {
                 zBuffer[offset] = depth;
 
                 if illumination > 0 {
@@ -52,7 +52,7 @@ fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output) {
 
     printf("\x1b[H");
 
-    for i64 character = 0; character < SIZE; character++ {
+    for i32 character = 0; character < SIZE; character++ {
         if character % WIDTH {
             printf("%c", output[character]);
         } else {

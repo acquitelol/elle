@@ -1,7 +1,7 @@
 use crate::{
     compiler::enums::Type,
     lexer::enums::{Token, TokenKind, ValueKind},
-    parser::{constant::Constant, function::Function},
+    parser::{constant::Constant, function::Function, r#struct::Struct},
 };
 
 use super::{enums::Primitive, r#use::Use};
@@ -10,14 +10,18 @@ pub struct Parser {
     pub tokens: Vec<Token>,
     pub position: usize,
     pub tree: Vec<Primitive>,
+    pub struct_pool: Vec<String>,
+    pub global_public: bool,
 }
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
+    pub fn new(tokens: Vec<Token>, struct_pool: Vec<String>) -> Self {
         Parser {
             tokens,
             position: 0,
             tree: vec![],
+            struct_pool,
+            global_public: false,
         }
     }
 
@@ -34,6 +38,7 @@ impl Parser {
 
     pub fn advance(&mut self) {
         if self.is_eof() {
+            #[cfg(debug_assertions)]
             println!("The position of {:?} is the last index of the token stack. Staying at the same position.", self.position);
         } else {
             self.position += 1;
@@ -102,9 +107,22 @@ impl Parser {
     }
 
     pub fn get_type(&mut self) -> Type {
-        let mut ty = ValueKind::String(self.get(TokenKind::Type))
-            .to_type_string()
-            .unwrap();
+        let name = self.get(TokenKind::Identifier);
+
+        let is_valid =
+            self.struct_pool.contains(&name) || ValueKind::String(name.clone()).is_base_type();
+
+        if !is_valid {
+            panic!(
+                "{}",
+                self.current_token().location.error(format!(
+                    "Type named {} could not be found. Are you sure you spelt it correctly?",
+                    name
+                ))
+            )
+        }
+
+        let mut ty = ValueKind::String(name).to_type_string().unwrap();
 
         loop {
             let tmp = self.next_token();
@@ -123,39 +141,142 @@ impl Parser {
         ty
     }
 
-    pub fn parse(&mut self) -> Vec<Primitive> {
+    pub fn parse(
+        &mut self,
+        imports_only: bool,
+        new_struct_pool: Option<Vec<String>>,
+    ) -> (Vec<Primitive>, Vec<String>) {
+        if new_struct_pool.is_some() {
+            self.struct_pool = new_struct_pool.unwrap();
+        }
+
         let mut public = false;
+        let mut local = false;
         let mut external = false;
+
+        let mut global_public = self.global_public;
 
         loop {
             match self.current_token().kind {
-                TokenKind::Public => {
+                TokenKind::Global => {
+                    self.advance();
+
+                    match self.current_token().kind {
+                        TokenKind::Public => {
+                            global_public = true;
+                        }
+                        _ => panic!(
+                            "{}",
+                            self.current_token().location.error(format!(
+                                "Invalid global specifier '{}'",
+                                self.current_token()
+                                    .value
+                                    .get_string_inner()
+                                    .unwrap_or(self.current_token().kind.to_string())
+                            ))
+                        ),
+                    }
+
+                    self.advance();
+                    self.expect_token(TokenKind::Semicolon);
+                    self.advance();
+                }
+                TokenKind::Public if !imports_only => {
                     public = true;
                     self.advance();
                 }
-                TokenKind::External => {
+                TokenKind::Local if !imports_only => {
+                    local = true;
+                    self.advance();
+                }
+                TokenKind::External if !imports_only => {
                     external = true;
                     self.advance();
                 }
-                TokenKind::Use => {
+                TokenKind::Use if imports_only => {
                     let mut r#use = Use::new(self);
                     let statement = r#use.parse();
                     self.tree.push(statement);
-                }
-                TokenKind::Function => {
-                    let mut function = Function::new(self);
-                    let statement = function.parse(public, external);
-                    self.tree.push(statement);
 
                     public = false;
+                    local = false;
                     external = false;
                 }
-                TokenKind::Constant => {
-                    let mut constant = Constant::new(self);
-                    let statement = constant.parse(public, external);
+                TokenKind::Function if !imports_only => {
+                    if local && public {
+                        panic!(
+                            "{}",
+                            self.current_token().location.error(
+                                "Cannot specify a function as both private and public".to_string()
+                            )
+                        );
+                    }
+
+                    let mut function = Function::new(self);
+                    let statement = function.parse(
+                        if local {
+                            false
+                        } else {
+                            global_public || public
+                        },
+                        external,
+                    );
                     self.tree.push(statement);
 
                     public = false;
+                    local = false;
+                    external = false;
+                }
+                TokenKind::Constant if !imports_only => {
+                    if external {
+                        panic!("{}", self.current_token().location.error("Cannot have an external constant. Please remove the `external` keyword.".to_string()))
+                    }
+
+                    if local && public {
+                        panic!(
+                            "{}",
+                            self.current_token().location.error(
+                                "Cannot specify a constant as both private and public".to_string()
+                            )
+                        );
+                    }
+
+                    let mut constant = Constant::new(self);
+                    let statement = constant.parse(if local {
+                        false
+                    } else {
+                        global_public || public
+                    });
+                    self.tree.push(statement);
+
+                    public = false;
+                    local = false;
+                    external = false;
+                }
+                TokenKind::Define if !imports_only => {
+                    if external {
+                        panic!("{}", self.current_token().location.error("Cannot have an external struct. Please remove the `external` keyword.".to_string()))
+                    }
+
+                    if local && public {
+                        panic!(
+                            "{}",
+                            self.current_token().location.error(
+                                "Cannot specify a struct as both private and public".to_string()
+                            )
+                        );
+                    }
+
+                    let mut r#struct = Struct::new(self); // For now all defines are structs
+                    let statement = r#struct.parse(if local {
+                        false
+                    } else {
+                        global_public || public
+                    });
+                    self.tree.push(statement);
+
+                    public = false;
+                    local = false;
                     external = false;
                 }
                 _ => {
@@ -164,6 +285,7 @@ impl Parser {
             }
         }
 
-        return self.tree.clone();
+        self.global_public = global_public;
+        return (self.tree.clone(), self.struct_pool.clone());
     }
 }

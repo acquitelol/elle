@@ -1,6 +1,7 @@
 // Roughly references https://github.com/garritfra/qbe-rs/blob/main/src/lib.rs
 // https://github.com/garritfra/qbe-rs/blob/main/LICENSE-MIT
 use std::{
+    cell::RefCell,
     fmt::{self, write, Write},
     mem,
 };
@@ -36,7 +37,7 @@ pub enum Instruction {
     VAStart(Value),
     // Alloc4(Type, Value),
     Alloc8(Type, Value),
-    Alloc16(u128),
+    // Alloc16(u128),
     Store(Type, Value, Value),
     Load(Type, Value),
     Literal(Value),
@@ -46,6 +47,62 @@ pub enum Instruction {
     ShiftLeft(Value, Value),
     ArithmeticShiftRight(Value, Value),
     LogicalShiftRight(Value, Value),
+    Comment(String),
+}
+
+impl Instruction {
+    fn is_global_used(&self, global_name: &str) -> bool {
+        match self {
+            Self::Add(v1, v2)
+            | Self::Subtract(v1, v2)
+            | Self::Multiply(v1, v2)
+            | Self::Divide(v1, v2)
+            | Self::Modulus(v1, v2)
+            | Self::BitwiseAnd(v1, v2)
+            | Self::BitwiseOr(v1, v2)
+            | Self::BitwiseXor(v1, v2)
+            | Self::Compare(_, _, v1, v2)
+            | Self::Store(_, v1, v2)
+            | Self::ShiftLeft(v1, v2)
+            | Self::ArithmeticShiftRight(v1, v2)
+            | Self::LogicalShiftRight(v1, v2) => {
+                matches!(v1, Value::Global(name) if name == global_name)
+                    || matches!(v2, Value::Global(name) if name == global_name)
+            }
+            Self::Load(_, v)
+            | Self::Conversion(_, _, v)
+            | Self::Extension(_, v)
+            | Self::Truncate(v)
+            | Self::Cast(v)
+            | Self::VAArg(v)
+            | Self::VAStart(v)
+            | Self::Literal(v)
+            | Self::Copy(v)
+            | Self::Return(Some((_, v)))
+            | Self::JumpNonZero(v, _, _)
+            | Self::Alloc8(_, v) => matches!(v, Value::Global(name) if name == global_name),
+            Self::Return(val) => match val {
+                Some((_, v)) => matches!(v, Value::Global(name) if name == global_name),
+                None => false,
+            },
+            Self::Call(v, args) => {
+                let found = matches!(v, Value::Global(name) if name == global_name);
+
+                if found {
+                    found
+                } else {
+                    for arg in args.iter().cloned() {
+                        if matches!(arg.1, Value::Global(name) if name == global_name) {
+                            return true;
+                        }
+                    }
+
+                    false
+                }
+            }
+            Self::Comment(_) | Self::Jump(_) => false,
+        }
+    }
 }
 
 impl fmt::Display for Instruction {
@@ -66,7 +123,7 @@ impl fmt::Display for Instruction {
                     formatter,
                     // All comparisons start with c
                     "c{}{} {}, {}",
-                    if ty.is_float() {
+                    if ty.is_float() || ty.is_unsigned() {
                         match comparison {
                             Comparison::LessThan => "lt",
                             Comparison::LessThanEqual => "le",
@@ -125,12 +182,12 @@ impl fmt::Display for Instruction {
             Self::Alloc8(ty, val) => {
                 write!(formatter, "alloc8 {}", val)
             }
-            Self::Alloc16(size) => write!(formatter, "alloc16 {}", size),
+            // Self::Alloc16(size) => write!(formatter, "alloc16 {}", size),
             Self::Store(r#type, dest, value) => {
                 write!(
                     formatter,
                     "store{} {}, {}",
-                    r#type.clone().into_abi(),
+                    r#type.clone().into_base(),
                     value,
                     dest
                 )
@@ -140,9 +197,9 @@ impl fmt::Display for Instruction {
                     formatter,
                     "load{} {}",
                     if r#type.clone().into_abi() == Type::Word {
-                        format!("s{}", r#type.clone().into_abi())
+                        format!("s{}", r#type.clone().into_base())
                     } else {
-                        r#type.clone().into_abi().to_string()
+                        r#type.clone().into_base().to_string()
                     },
                     src
                 )
@@ -187,18 +244,25 @@ impl fmt::Display for Instruction {
             Self::ArithmeticShiftRight(val, amount) => {
                 write!(formatter, "sar {}, {}", val, amount)
             }
+            Self::Comment(val) => {
+                write!(formatter, "# {}", val)
+            }
         }
     }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Type {
+    UnsignedByte,
+    UnsignedHalfword,
+    UnsignedWord,
+    UnsignedLong,
+    Byte,
     Halfword,
     Word,
     Long,
     Single,
     Double,
-    Byte,
     Char,
     Void,
     Null,
@@ -216,7 +280,27 @@ impl Type {
 
     pub fn into_abi(self) -> Self {
         match self {
-            Self::Byte | Self::Halfword | Self::Char => Self::Word,
+            Self::Byte
+            | Self::UnsignedByte
+            | Self::Halfword
+            | Self::UnsignedHalfword
+            | Self::UnsignedWord
+            | Self::Char => Self::Word,
+            Self::UnsignedLong => Self::Long,
+            other => other,
+        }
+    }
+
+    pub fn into_base(self) -> Self {
+        match self {
+            Self::Byte
+            | Self::UnsignedByte
+            | Self::Halfword
+            | Self::UnsignedHalfword
+            | Self::UnsignedWord
+            | Self::Char => Self::Word,
+            Self::UnsignedLong => Self::Long,
+            Self::Aggregate(_) => Self::Long,
             other => other,
         }
     }
@@ -253,25 +337,63 @@ impl Type {
         }
     }
 
+    pub fn is_map_to_int(&self) -> bool {
+        match self {
+            Self::Byte
+            | Self::UnsignedByte
+            | Self::Halfword
+            | Self::UnsignedHalfword
+            | Self::UnsignedWord
+            | Self::Char => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_unsigned(&self) -> bool {
+        match self {
+            Self::UnsignedByte
+            | Self::UnsignedHalfword
+            | Self::UnsignedWord
+            | Self::UnsignedLong => true,
+            _ => false,
+        }
+    }
+
     pub fn weight(&self) -> u8 {
         match self {
             Self::Double => 4,
             Self::Single => 3,
-            Self::Long | Self::Pointer(..) => 2,
+            Self::Long | Self::UnsignedLong | Self::Pointer(..) => 2,
             Self::Word => 1,
+            other if other.is_map_to_int() => 1,
             _ => 0,
         }
     }
 
     /// Returns number of bytes
-    pub fn size(&self) -> u64 {
+    pub fn size(&self, module: &RefCell<Module>) -> u64 {
         match self {
-            Self::Byte | Self::Char => 1,
-            Self::Halfword => 2,
-            Self::Word | Self::Single => 4,
+            Self::UnsignedByte | Self::Byte | Self::Char => 1,
+            Self::UnsignedHalfword | Self::Halfword => 2,
+            Self::UnsignedWord | Self::Word | Self::Single => 4,
             Self::Double => 8,
             // Returns 4 on 32-bit and 8 on 64-bit
-            Self::Long | Self::Pointer(..) => mem::size_of::<usize>() as u64,
+            Self::UnsignedLong | Self::Long | Self::Pointer(..) => mem::size_of::<usize>() as u64,
+            Self::Aggregate(val) => {
+                let size = module
+                    .borrow()
+                    .types
+                    .iter()
+                    .find(|td| td.name == val.clone())
+                    .expect(&format!("Unable to find aggregate type named '{}'", val))
+                    .size(module) as u64;
+
+                if size < mem::size_of::<usize>() as u64 {
+                    mem::size_of::<usize>() as u64
+                } else {
+                    size
+                }
+            }
             _ => 0,
         }
     }
@@ -281,10 +403,14 @@ impl fmt::Display for Type {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Byte => write!(formatter, "b"),
-            Self::Char => write!(formatter, "b"),
+            Self::UnsignedByte => write!(formatter, "ub"),
+            Self::Char => write!(formatter, "w"),
             Self::Halfword => write!(formatter, "h"),
+            Self::UnsignedHalfword => write!(formatter, "uh"),
             Self::Word => write!(formatter, "w"),
+            Self::UnsignedWord => write!(formatter, "uw"),
             Self::Long => write!(formatter, "l"),
+            Self::UnsignedLong => write!(formatter, "ul"),
             Self::Pointer(..) => write!(formatter, "l"),
             Self::Single => write!(formatter, "s"),
             Self::Double => write!(formatter, "d"),
@@ -301,6 +427,40 @@ pub struct TypeDef {
     pub name: String,
     pub align: Option<u64>,
     pub items: Vec<(Type, usize)>,
+    pub public: bool,
+    pub usable: bool,
+    pub imported: bool,
+}
+
+impl TypeDef {
+    pub fn size(&self, module: &RefCell<Module>) -> usize {
+        let mut size = 0;
+
+        for (ty, _) in self.items.iter().cloned() {
+            if ty.is_aggregate() {
+                let tmp_size = module
+                    .borrow()
+                    .types
+                    .iter()
+                    .find(|td| td.name == ty.get_aggregate_inner().unwrap())
+                    .expect(&format!(
+                        "Unable to find aggregate type named {}",
+                        ty.get_aggregate_inner().unwrap(),
+                    ))
+                    .size(module);
+
+                size += if tmp_size < mem::size_of::<usize>() {
+                    mem::size_of::<usize>()
+                } else {
+                    tmp_size
+                }
+            } else {
+                size += ty.size(module) as usize;
+            }
+        }
+
+        size
+    }
 }
 
 impl fmt::Display for TypeDef {
@@ -316,9 +476,24 @@ impl fmt::Display for TypeDef {
             self.items
                 .iter()
                 .map(|(ty, count)| if *count > 1 {
-                    format!("{} {}", ty, count)
+                    format!(
+                        "{} {}",
+                        if !ty.is_aggregate() {
+                            ty.clone().into_base()
+                        } else {
+                            ty.clone()
+                        },
+                        count
+                    )
                 } else {
-                    format!("{}", ty)
+                    format!(
+                        "{}",
+                        if !ty.is_aggregate() {
+                            ty.clone().into_base()
+                        } else {
+                            ty.clone()
+                        }
+                    )
                 })
                 .collect::<Vec<String>>()
                 .join(", "),
@@ -332,7 +507,7 @@ pub enum Value {
     Global(String),
 
     /// Const(prefix, literal)
-    Const(Type, i64),
+    Const(Type, i128),
     Literal(String),
 }
 
@@ -346,7 +521,7 @@ impl Value {
         }
     }
 
-    pub fn get_number_inner(&self) -> i64 {
+    pub fn get_number_inner(&self) -> i128 {
         match self.clone() {
             Self::Const(_, val) => val,
             _ => panic!("Invalid value type {}", self),
@@ -420,7 +595,7 @@ impl fmt::Display for Data {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum DataItem {
     String(String),
-    Const(i64),
+    Const(i128),
 }
 
 impl fmt::Display for DataItem {
@@ -490,6 +665,17 @@ impl fmt::Display for Block {
             "{}",
             self.statements
                 .iter()
+                .map(
+                    |instr| if let Statement::Assign(val, ty, ins) = instr.clone() {
+                        if matches!(ins, Instruction::Copy(_) | Instruction::Load(_, _)) {
+                            Statement::Assign(val, ty.into_base(), ins)
+                        } else {
+                            instr.clone()
+                        }
+                    } else {
+                        instr.clone()
+                    }
+                )
                 .map(|instr| format!("\t{}", instr))
                 .collect::<Vec<String>>()
                 .join("\n")
@@ -716,7 +902,35 @@ impl fmt::Display for Module {
 
         for func in self.functions.iter() {
             if !func.external {
-                writeln!(f, "{}", func)?;
+                let mut used = false;
+
+                for other in self.functions.iter().cloned().rev() {
+                    for block in other.blocks.iter().cloned() {
+                        for statement in block.statements.iter().cloned() {
+                            match statement {
+                                Statement::Assign(_, _, instr)
+                                    if instr.is_global_used(&func.name) =>
+                                {
+                                    used = true;
+                                }
+                                Statement::Volatile(instr) if instr.is_global_used(&func.name) => {
+                                    used = true;
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+
+                if used || &func.name == "main" {
+                    writeln!(f, "{}", func)?;
+                } else {
+                    #[cfg(debug_assertions)]
+                    println!(
+                        "Eliminating function '{}' due to not being called or referenced",
+                        func.name.clone()
+                    );
+                }
             }
         }
 

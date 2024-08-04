@@ -64,15 +64,22 @@ pub enum AstNode {
         values: Vec<AstNode>,
         location: Location,
     },
-    StoreStatement {
-        left: Box<AstNode>,
-        right: Box<AstNode>,
-        value: Box<AstNode>,
+    StructStatement {
+        name: String,
+        values: Vec<(String, Box<AstNode>)>,
         location: Location,
     },
-    LoadStatement {
+    // Ideally: FieldStatement<Foo, FieldStatement<Bar, Baz>>
+    FieldStatement {
         left: Box<AstNode>,
         right: Box<AstNode>,
+        value: Option<Box<AstNode>>,
+        location: Location,
+    },
+    MemoryStatement {
+        left: Box<AstNode>,
+        right: Box<AstNode>,
+        value: Option<Box<AstNode>>,
         location: Location,
     },
     DeferStatement {
@@ -119,6 +126,14 @@ pub enum Primitive {
     Use {
         module: String,
         functions: Vec<String>,
+        location: Location,
+    },
+    Struct {
+        name: String,
+        public: bool,
+        usable: bool,
+        imported: bool,
+        members: Vec<Argument>,
         location: Location,
     },
     Function {

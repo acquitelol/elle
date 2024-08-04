@@ -1,7 +1,6 @@
 use std::{
-    borrow::{Borrow, BorrowMut},
     cell::RefCell,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs::File,
     io::Write,
 };
@@ -23,6 +22,8 @@ pub struct Compiler {
     scopes: Vec<HashMap<String, (Type, Value)>>,
     data_sections: Vec<Data>,
     type_sections: Vec<TypeDef>,
+    // Struct Name => (Field Name, Field Type)[]
+    struct_pool: HashMap<String, Vec<Argument>>,
     loop_labels: Vec<String>,
     ret_types: HashMap<String, Type>,
     buf_metadata: HashMap<Value, (Type, Value)>,
@@ -77,7 +78,7 @@ impl Compiler {
             .rev()
             .filter_map(|s| s.get(name))
             .next()
-            .ok_or_else(|| format!("\nUndefined variable '{}'\n", name));
+            .ok_or_else(|| format!("\nUndefined variable '{}'", name));
 
         if var.is_err() {
             for item in self.tree.clone() {
@@ -94,18 +95,13 @@ impl Compiler {
                                 panic!(
                                     "{}",
                                     location.error(format!(
-                                        "Symbol named '{}' was not imported and can't be used",
+                                        "Constant named '{}' was not imported and can't be used",
                                         name
                                     ))
                                 )
                             }
 
-                            let temp = self
-                                .new_variable(ty.clone().unwrap(), "tmp", func, true)
-                                .expect(&location.error(format!(
-                                    "Unexpected error when creating a variable named {}",
-                                    name
-                                )));
+                            let temp = self.new_temporary(Some("constant"));
 
                             func.unwrap().borrow_mut().assign_instruction(
                                 temp.clone(),
@@ -127,7 +123,7 @@ impl Compiler {
                                 panic!(
                                     "{}",
                                     location.error(format!(
-                                        "Symbol named '{}' was not imported and can't be used",
+                                        "Function pointer named '{}' was not imported and can't be used",
                                         name
                                     ))
                                 )
@@ -154,7 +150,7 @@ impl Compiler {
                     return val.clone();
                 }
 
-                Value::Const(Type::Word, str.escape_debug().nth(0).unwrap() as i64)
+                Value::Const(Type::Word, str.escape_debug().nth(0).unwrap() as i128)
             }
             Value::Global(name) => {
                 let section = self
@@ -183,7 +179,7 @@ impl Compiler {
                             str.escape_debug()
                                 .nth(0)
                                 .expect(&location.error(format!("Unexpected error when trying to get the 0th character of the string {}", str)))
-                                as i64,
+                                as i128,
                         )
                     }
                 }
@@ -448,7 +444,7 @@ impl Compiler {
                         Type::Pointer(Box::new(final_ty.clone())),
                         Instruction::Alloc8(
                             Type::Long,
-                            Value::Const(Type::Word, final_ty.size() as i64),
+                            Value::Const(Type::Word, final_ty.size(module) as i128),
                         ),
                     );
 
@@ -460,7 +456,7 @@ impl Compiler {
 
                     func.borrow_mut().assign_instruction(
                         temp.clone(),
-                        ty.clone(),
+                        ty.clone().into_base(),
                         Instruction::Load(ty.clone(), addr_temp),
                     );
 
@@ -469,29 +465,13 @@ impl Compiler {
 
                 None
             }
-            AstNode::ReturnStatement { value, location } => {
+            AstNode::ReturnStatement { value, .. } => {
                 match self.generate_statement(func, module, *value.clone(), ty.clone(), None, true)
                 {
                     Some((ret_ty, value)) => {
-                        let tmp = self.new_variable(ret_ty.clone(), "tmp", Some(func), true);
-
-                        match tmp {
-                            Ok(val) => {
-                                if !func.borrow_mut().manual {
-                                    func.borrow_mut().assign_instruction(
-                                        val.clone(),
-                                        ret_ty.clone(),
-                                        Instruction::Copy(value),
-                                    );
-
-                                    func.borrow_mut()
-                                        .add_instruction(Instruction::Return(Some((ret_ty, val))))
-                                }
-                            }
-                            Err(msg) => panic!(
-                                "{}",
-                                location.error(format!("Variable should be in scope: {}", msg))
-                            ),
+                        if !func.borrow_mut().manual {
+                            func.borrow_mut()
+                                .add_instruction(Instruction::Return(Some((ret_ty, value))))
                         }
                     }
                     None => {
@@ -516,10 +496,6 @@ impl Compiler {
                     ));
                 }
 
-                // Recursively parse the left and right nodes of the binary tree
-                // This is why we cant do exponentiation if there isn't a built in instruction.
-                // We essentially would have to pseudo-run the code to get the number of
-                // multiplications that should occur (a ** b) can have a call on lhs or rhs
                 let (left_ty_unparsed, left_val_unparsed) = self
                     .generate_statement(func, module, *left.clone(), ty.clone(), None, is_return)
                     .expect(&location.error(
@@ -560,70 +536,54 @@ impl Compiler {
                 }
 
                 let instruction_ty = left_ty;
-                let left_temp = self.new_temporary(None);
-                let right_temp = self.new_temporary(None);
-
-                func.borrow_mut().assign_instruction(
-                    left_temp.clone(),
-                    instruction_ty.clone(),
-                    Instruction::Copy(left_val),
-                );
-
-                func.borrow_mut().assign_instruction(
-                    right_temp.clone(),
-                    instruction_ty.clone(),
-                    Instruction::Copy(right_val),
-                );
 
                 let res = match operator.clone() {
-                    TokenKind::Add => Instruction::Add(left_temp, right_temp),
-                    TokenKind::Subtract => Instruction::Subtract(left_temp, right_temp),
-                    TokenKind::Multiply => Instruction::Multiply(left_temp, right_temp),
-                    TokenKind::Divide => Instruction::Divide(left_temp, right_temp),
-                    TokenKind::Modulus => Instruction::Modulus(left_temp, right_temp),
+                    TokenKind::Add => Instruction::Add(left_val, right_val),
+                    TokenKind::Subtract => Instruction::Subtract(left_val, right_val),
+                    TokenKind::Multiply => Instruction::Multiply(left_val, right_val),
+                    TokenKind::Divide => Instruction::Divide(left_val, right_val),
+                    TokenKind::Modulus => Instruction::Modulus(left_val, right_val),
                     TokenKind::GreaterThan => Instruction::Compare(
                         instruction_ty.clone(),
                         Comparison::GreaterThan,
-                        left_temp,
-                        right_temp,
+                        left_val,
+                        right_val,
                     ),
                     TokenKind::GreaterThanEqual => Instruction::Compare(
                         instruction_ty.clone(),
                         Comparison::GreaterThanEqual,
-                        left_temp,
-                        right_temp,
+                        left_val,
+                        right_val,
                     ),
                     TokenKind::LessThan => Instruction::Compare(
                         instruction_ty.clone(),
                         Comparison::LessThan,
-                        left_temp,
-                        right_temp,
+                        left_val,
+                        right_val,
                     ),
                     TokenKind::LessThanEqual => Instruction::Compare(
                         instruction_ty.clone(),
                         Comparison::LessThanEqual,
-                        left_temp,
-                        right_temp,
+                        left_val,
+                        right_val,
                     ),
                     TokenKind::EqualTo => Instruction::Compare(
                         instruction_ty.clone(),
                         Comparison::Equal,
-                        left_temp,
-                        right_temp,
+                        left_val,
+                        right_val,
                     ),
                     TokenKind::NotEqualTo => Instruction::Compare(
                         instruction_ty.clone(),
                         Comparison::NotEqual,
-                        left_temp,
-                        right_temp,
+                        left_val,
+                        right_val,
                     ),
-                    TokenKind::BitwiseAnd => Instruction::BitwiseAnd(left_temp, right_temp),
-                    TokenKind::BitwiseOr => Instruction::BitwiseOr(left_temp, right_temp),
-                    TokenKind::BitwiseXor => Instruction::BitwiseXor(left_temp, right_temp),
-                    TokenKind::ShiftLeft => Instruction::ShiftLeft(left_temp, right_temp),
-                    TokenKind::ShiftRight => {
-                        Instruction::ArithmeticShiftRight(left_temp, right_temp)
-                    }
+                    TokenKind::BitwiseAnd => Instruction::BitwiseAnd(left_val, right_val),
+                    TokenKind::BitwiseOr => Instruction::BitwiseOr(left_val, right_val),
+                    TokenKind::BitwiseXor => Instruction::BitwiseXor(left_val, right_val),
+                    TokenKind::ShiftLeft => Instruction::ShiftLeft(left_val, right_val),
+                    TokenKind::ShiftRight => Instruction::ArithmeticShiftRight(left_val, right_val),
                     _ => panic!(
                         "{}",
                         location
@@ -663,14 +623,14 @@ impl Compiler {
 
                                     func.borrow_mut().assign_instruction(
                                         val.clone(),
-                                        ty.clone(),
-                                        Instruction::Load(ty.clone().into_abi(), addr_val),
+                                        ty.clone().into_base(),
+                                        Instruction::Load(ty.clone().into_base(), addr_val),
                                     );
 
-                                    return Some((ty.into_abi(), val));
+                                    return Some((ty, val));
                                 }
 
-                                Some((ty.into_abi(), val))
+                                Some((ty, val))
                             }
                             Err(msg) => {
                                 // If it fails to get the variable from the current scope
@@ -730,7 +690,6 @@ impl Compiler {
                     ValueKind::Number(val) => {
                         let num_ty = match kind {
                             TokenKind::IntegerLiteral => Type::Word,
-                            TokenKind::DoubleLiteral => Type::Double,
                             TokenKind::FloatLiteral => Type::Single,
                             TokenKind::LongLiteral => Type::Long,
                             _ => Type::Word,
@@ -780,7 +739,7 @@ impl Compiler {
                             Linkage::private(),
                             name.clone(),
                             None,
-                            vec![(Type::Byte, DataItem::Const(val as i64))],
+                            vec![(Type::Byte, DataItem::Const(val as i128))],
                         ));
 
                         Some((Type::Long, Value::Global(name)))
@@ -848,7 +807,7 @@ impl Compiler {
                     panic!(
                         "{}",
                         location.error(format!(
-                            "Symbol named '{}' was not imported and can't be used",
+                            "Function named '{}' was not imported and can't be used",
                             name
                         ))
                     )
@@ -919,12 +878,7 @@ impl Compiler {
                 }
 
                 self.tmp_counter += 1;
-                let temp = self
-                    .new_variable(ty.clone(), "tmp", Some(func), true)
-                    .expect(&location.error(format!(
-                        "Unexpected error when trying to create a variable called {}",
-                        format!("tmp.{}", self.tmp_counter)
-                    )));
+                let temp = self.new_temporary(Some(&format!("{}.res", func.borrow_mut().name)));
 
                 let (_, val) = self
                     .get_variable(&name, Some(func))
@@ -954,7 +908,7 @@ impl Compiler {
                                 left: size,
                                 right: Box::new(AstNode::LiteralStatement {
                                     kind: TokenKind::LongLiteral,
-                                    value: ValueKind::Number(ty.size() as i64),
+                                    value: ValueKind::Number(ty.size(module) as i128),
                                     location: location.clone(),
                                 }),
                                 operator: TokenKind::Multiply,
@@ -999,7 +953,7 @@ impl Compiler {
 
                 Some((Type::Pointer(Box::new(buf_ty)), tmp))
             }
-            AstNode::StoreStatement {
+            AstNode::MemoryStatement {
                 left,
                 right,
                 value,
@@ -1017,8 +971,11 @@ impl Compiler {
                     panic!(
                         "{}",
                         location.error(format!(
-                            "Cannot store data to non-pointer types ({:?} and {:?})",
-                            left_ty, right_ty
+                            "Cannot {} data {} non-pointer types ({:?} and {:?})",
+                            if value.is_some() { "store" } else { "load" },
+                            if value.is_some() { "to" } else { "from" },
+                            left_ty,
+                            right_ty
                         ))
                     );
                 }
@@ -1034,7 +991,7 @@ impl Compiler {
                     right: Box::new(AstNode::ArithmeticOperation {
                         left: Box::new(AstNode::LiteralStatement {
                             kind: TokenKind::LongLiteral,
-                            value: ValueKind::Number(inner.size() as i64),
+                            value: ValueKind::Number(inner.size(module) as i128),
                             location: location.clone(),
                         }),
                         right,
@@ -1049,90 +1006,32 @@ impl Compiler {
                     .generate_statement(func, module, node.clone(), None, None, false)
                     .expect(&location.error("Unexpected error when trying to compile the offset of a store statement".to_string()));
 
-                let (_, compiled) = self
-                    .generate_statement(func, module, *value.clone(), Some(inner.clone()), None, false)
-                    .expect(&location.error("Unexpected error when trying to compile the value of a store statement".to_string()));
+                if value.is_some() {
+                    let (_, compiled) = self
+                        .generate_statement(func, module, *value.unwrap().clone(), Some(inner.clone()), None, false)
+                        .expect(&location.error("Unexpected error when trying to compile the value of a store statement".to_string()));
 
-                let constant = self.compile_literal_to_ascii(compiled, location);
+                    let constant = self.compile_literal_to_ascii(compiled, location);
 
-                func.borrow_mut().add_instruction(Instruction::Store(
-                    inner.to_owned(),
-                    compiled_location,
-                    constant,
-                ));
-
-                None
-            }
-            AstNode::LoadStatement {
-                left,
-                right,
-                location,
-            } => {
-                let (left_ty, _) = self
-                    .generate_statement(func, module, *left.clone(), ty.clone(), None, false)
-                    .expect(&location.error(
-                        "Unexpected error when trying to compile the left side of a load statement".to_string(),
+                    func.borrow_mut().add_instruction(Instruction::Store(
+                        inner.to_owned(),
+                        compiled_location,
+                        constant,
                     ));
 
-                let (right_ty, _) = self
-                    .generate_statement(func, module, *right.clone(), ty.clone(), None, false)
-                    .expect(&location.error(
-                        "Unexpected error when trying to compile the right side of a load statement".to_string(),
-                    ));
-
-                if !(matches!(left_ty, Type::Pointer(_)) || matches!(right_ty, Type::Pointer(_))) {
-                    panic!(
-                        "{}",
-                        location.error(format!(
-                            "Cannot store data to non-pointer types ({:?} and {:?})",
-                            left_ty, right_ty
-                        ))
-                    );
+                    return None;
                 }
 
-                let existing_ty = if left_ty.is_pointer() {
-                    left_ty
-                } else {
-                    right_ty
-                };
-
-                let inner = existing_ty.clone().unwrap().unwrap();
-
-                let node = AstNode::ArithmeticOperation {
-                    left,
-                    right: Box::new(AstNode::ArithmeticOperation {
-                        left: Box::new(AstNode::LiteralStatement {
-                            kind: TokenKind::LongLiteral,
-                            value: ValueKind::Number(inner.size() as i64),
-                            location: location.clone(),
-                        }),
-                        right,
-                        operator: TokenKind::Multiply,
-                        location: location.clone(),
-                    }),
-                    operator: TokenKind::Add,
-                    location: location.clone(),
-                };
-
-                let (_, compiled_location) = self
-                    .generate_statement(func, module, node.clone(), ty, None, false)
-                    .expect(&location.error("Unexpected error when trying to compile the offset of a store statement".to_string()));
-
                 self.tmp_counter += 1;
-                let temp = self
-                    .new_variable(inner.clone().into_abi().clone(), "tmp", Some(func), true)
-                    .expect(&location.error(format!(
-                        "Unexpected error when trying to create a new variable named 'tmp.{}'",
-                        self.tmp_counter
-                    )));
+                let temp = self.new_temporary(Some("load"));
 
                 func.borrow_mut().assign_instruction(
                     temp.clone(),
-                    inner.clone().into_abi(),
-                    Instruction::Load(existing_ty.clone(), compiled_location.clone()),
+                    inner.clone(),
+                    Instruction::Load(inner.clone(), compiled_location.clone()),
                 );
 
-                Some((inner.clone().into_abi(), temp))
+                Some((inner.clone(), temp))
             }
             AstNode::IfStatement {
                 condition,
@@ -1420,7 +1319,7 @@ impl Compiler {
                     .clone();
 
                 let ty = r#type.unwrap_or(Type::Long);
-                let tmp = self.new_temporary(None);
+                let tmp = self.new_temporary(Some("next"));
 
                 func.borrow_mut().assign_instruction(
                     tmp.clone(),
@@ -1493,12 +1392,7 @@ impl Compiler {
                         ),
                     );
 
-                let temp = self
-                    .new_variable(ty.clone(), "tmp", Some(func), true)
-                    .expect(&location.error(format!(
-                        "Unexpected error when trying to create a new variable named 'tmp.{}",
-                        self.tmp_counter
-                    )));
+                let temp = self.new_temporary(Some("not"));
 
                 func.borrow_mut().assign_instruction(
                     temp.clone(),
@@ -1596,7 +1490,7 @@ impl Compiler {
                             AstNode::ArithmeticOperation {
                                 left: Box::new(AstNode::LiteralStatement {
                                     kind: TokenKind::LongLiteral,
-                                    value: ValueKind::Number(ty.size() as i64),
+                                    value: ValueKind::Number(ty.size(module) as i128),
                                     location: location.clone(),
                                 }),
                                 right: size,
@@ -1618,12 +1512,7 @@ impl Compiler {
                         "Unexpected error when trying to compile the size of an array"
                     )));
 
-                let tmp = self
-                    .new_variable(buf_ty.clone(), "tmp", Some(func), true)
-                    .expect(&location.error(format!(
-                        "Unexpected error when trying to create a new variable named 'tmp.{}'",
-                        self.tmp_counter
-                    )));
+                let tmp = self.new_temporary(Some("array"));
 
                 let (converted_ty, converted_val) =
                     self.convert_to_type(func, ty, Type::Long, val, location.clone());
@@ -1640,12 +1529,7 @@ impl Compiler {
                 );
 
                 for (i, value) in results.iter().enumerate() {
-                    let value_ptr = self
-                        .new_variable(Type::Long, "tmp", Some(func), true)
-                        .expect(&location.error(format!(
-                            "Unexpected error when trying to create a new variable named 'tmp.{}'",
-                            self.tmp_counter
-                        )));
+                    let value_ptr = self.new_temporary(Some("array.offset"));
 
                     func.borrow_mut().assign_instruction(
                         value_ptr.clone(),
@@ -1654,7 +1538,7 @@ impl Compiler {
                             tmp.clone(),
                             Value::Const(
                                 Type::Word,
-                                i as i64 * first_type.as_ref().unwrap().size() as i64,
+                                i as i128 * first_type.as_ref().unwrap().size(module) as i128,
                             ),
                         ),
                     );
@@ -1682,61 +1566,57 @@ impl Compiler {
                 value,
                 standalone,
                 location,
-            } => {
-                match value {
-                    Ok(ty) => {
-                        let tmp_ty = Type::Word;
-                        let temp = self
-                            .new_variable(tmp_ty.clone(), "tmp", Some(func), true)
-                            .expect(&location.error(format!(
-                            "Unexpected error when trying to create a new variable named 'tmp.{}'",
-                            self.tmp_counter)));
+            } => match value {
+                Ok(ty) => {
+                    let tmp_ty = Type::Word;
+                    let temp = self.new_temporary(Some("size"));
 
-                        func.borrow_mut().assign_instruction(
-                            temp.clone(),
-                            tmp_ty.clone(),
-                            Instruction::Copy(Value::Const(tmp_ty.clone(), ty.size() as i64)),
+                    func.borrow_mut().assign_instruction(
+                        temp.clone(),
+                        tmp_ty.clone(),
+                        Instruction::Copy(Value::Const(tmp_ty.clone(), ty.size(module) as i128)),
+                    );
+
+                    Some((tmp_ty, temp))
+                }
+
+                Err(value) => {
+                    let (ty, val) = self
+                        .generate_statement(func, module, *value.clone(), ty.clone(), None, false)
+                        .expect(
+                            &location.error(
+                                "Unexpected error when trying to compile the size of a statement"
+                                    .to_string(),
+                            ),
                         );
 
-                        Some((tmp_ty, temp))
-                    }
+                    let size = self.new_temporary(Some("size"));
 
-                    Err(value) => {
-                        let (ty, val) = self
-                            .generate_statement(func, module, *value.clone(), ty.clone(), None, false)
-                            .expect(&location.error("Unexpected error when trying to compile the size of a statement".to_string()));
+                    match ty.clone() {
+                        Type::Pointer(_) => {
+                            let ty = Type::Long;
 
-                        let size = self
-                            .new_variable(ty.clone(), "tmp", Some(func), true)
-                            .expect(&location.error(format!(
-                            "Unexpected error when trying to create a new variable named 'tmp.{}'",
-                            self.tmp_counter)));
+                            if let Some((buf_ty, buf_val)) =
+                                self.buf_metadata.get(&val).map(|item| item.to_owned())
+                            {
+                                func.borrow_mut().assign_instruction(
+                                    size.clone(),
+                                    ty.clone(),
+                                    if standalone {
+                                        Instruction::Copy(buf_val.clone())
+                                    } else {
+                                        Instruction::Divide(
+                                            buf_val,
+                                            Value::Const(Type::Word, buf_ty.size(module) as i128),
+                                        )
+                                    },
+                                );
 
-                        match ty.clone() {
-                            Type::Pointer(_) => {
-                                let ty = Type::Long;
+                                return Some((ty, size));
+                            }
 
-                                if let Some((buf_ty, buf_val)) =
-                                    self.buf_metadata.get(&val).map(|item| item.to_owned())
-                                {
-                                    func.borrow_mut().assign_instruction(
-                                        size.clone(),
-                                        ty.clone(),
-                                        if standalone {
-                                            Instruction::Copy(buf_val.clone())
-                                        } else {
-                                            Instruction::Divide(
-                                                buf_val,
-                                                Value::Const(Type::Word, buf_ty.size() as i64),
-                                            )
-                                        },
-                                    );
-
-                                    return Some((ty, size));
-                                }
-
-                                if !standalone {
-                                    panic!(
+                            if !standalone {
+                                panic!(
                                         "{}",
                                         location.error(
                                             format!(
@@ -1745,36 +1625,349 @@ impl Compiler {
                                             )
                                         )
                                     );
-                                }
-
-                                func.borrow_mut().assign_instruction(
-                                    size.clone(),
-                                    ty.clone(),
-                                    Instruction::Copy(Value::Const(Type::Word, ty.size() as i64)),
-                                );
-
-                                Some((ty, size))
                             }
-                            other => {
-                                func.borrow_mut().assign_instruction(
-                                    size.clone(),
+
+                            func.borrow_mut().assign_instruction(
+                                size.clone(),
+                                ty.clone(),
+                                Instruction::Copy(Value::Const(
+                                    Type::Word,
+                                    ty.size(module) as i128,
+                                )),
+                            );
+
+                            Some((ty, size))
+                        }
+                        other => {
+                            func.borrow_mut().assign_instruction(
+                                size.clone(),
+                                other.clone(),
+                                Instruction::Copy(Value::Const(
                                     other.clone(),
-                                    Instruction::Copy(Value::Const(
-                                        other.clone(),
-                                        ty.clone().size() as i64,
-                                    )),
-                                );
+                                    ty.clone().size(module) as i128,
+                                )),
+                            );
 
-                                Some((other, size))
-                            }
+                            Some((other, size))
                         }
                     }
                 }
+            },
+            AstNode::StructStatement {
+                name,
+                values,
+                location,
+            } => {
+                if !self.struct_pool.get(&name).is_some() {
+                    panic!(
+                        "{}",
+                        location.error(format!(
+                            "Could not find struct named '{}'. Did you spell it correctly?",
+                            name
+                        ))
+                    )
+                }
+
+                let mdl = module.borrow();
+                let td = mdl
+                    .types
+                    .iter()
+                    .find(|td| td.name == name)
+                    .expect(&format!("Unable to find aggregate type named '{}'", name));
+
+                if !td.usable && !func.borrow_mut().imported {
+                    panic!(
+                        "{}",
+                        location.error(format!(
+                            "Struct named '{}' was not imported and can't be used",
+                            name
+                        ))
+                    )
+                }
+
+                let struct_pool = self.struct_pool.clone();
+                let members = struct_pool.get(&name).unwrap();
+                let member_names = members
+                    .clone()
+                    .iter()
+                    .map(|member| member.name.clone())
+                    .collect::<Vec<String>>();
+
+                let member_set: HashSet<_> = member_names.iter().cloned().collect();
+                let value_set: HashSet<_> = values.iter().map(|value| value.0.clone()).collect();
+
+                let diff: Vec<_> = member_set.difference(&value_set).collect();
+
+                for member in diff.iter().cloned() {
+                    println!(
+                        "{}",
+                        location.error(format!(
+                            "WARNING: Declaring struct '{}' without field '{}'",
+                            name, member
+                        ))
+                    );
+                }
+
+                let ty = Type::Aggregate(name.clone());
+                let size = ty.size(module);
+
+                let alloc_tmp = self.new_temporary(Some("struct"));
+
+                #[cfg(debug_assertions)]
+                func.borrow_mut()
+                    .add_instruction(Instruction::Comment(format!("size of :{}", name)));
+
+                func.borrow_mut().assign_instruction(
+                    alloc_tmp.clone(),
+                    Type::Long,
+                    Instruction::Alloc8(Type::Long, Value::Const(Type::Word, size as i128)),
+                );
+
+                for (member_name, value) in values.iter().cloned() {
+                    if !member_names.contains(&member_name) {
+                        panic!(
+                            "{}",
+                            location.error(format!(
+                                "Struct named '{}' has no field named '{}'. Did you spell it correctly?",
+                                name, member_name
+                            ))
+                        );
+                    }
+
+                    let (_, offset) = self
+                        .member_to_offset(module, name.clone(), member_name.clone())
+                        .unwrap();
+
+                    let (ty, val) = self
+                        .generate_statement(
+                            func,
+                            module,
+                            *value.clone(),
+                            members
+                                .clone()
+                                .iter()
+                                .find(|member| member.name == member_name)
+                                .map(|arg| arg.r#type.clone()),
+                            None,
+                            false,
+                        )
+                        .expect(
+                            &location.error(
+                                format!("Unexpected error when trying to compile the value of a field '{}' in struct '{}'", member_name, name)
+                            ),
+                        );
+
+                    let offset_tmp = self.new_temporary(Some("offset"));
+
+                    func.borrow_mut().assign_instruction(
+                        offset_tmp.clone(),
+                        Type::Long,
+                        Instruction::Add(
+                            alloc_tmp.clone(),
+                            Value::Const(Type::Word, offset as i128),
+                        ),
+                    );
+
+                    func.borrow_mut()
+                        .add_instruction(Instruction::Store(ty, offset_tmp, val))
+                }
+
+                Some((ty, alloc_tmp))
+            }
+            AstNode::FieldStatement {
+                left,
+                right,
+                value,
+                location,
+            } => {
+                let (ty, left) = self
+                    .generate_statement(
+                        func,
+                        module,
+                        *left.clone(),
+                        ty.clone(),
+                        None,
+                        false,
+                    )
+                    .expect(
+                        &location.error(
+                            "Unexpected error when trying to compile the left side of a struct field access".to_string()
+                        ),
+                    );
+
+                let (field_ty, offset_tmp) =
+                    self.process_field_access(func, module, ty, left, *right, false);
+
+                if let Some(value) = value {
+                    let (_, compiled) = self
+                        .generate_statement(func, module, *value.clone(), Some(field_ty.clone()), None, false)
+                        .expect(&location.error("Unexpected error when trying to compile the value of a store statement".to_string()));
+
+                    let constant = self.compile_literal_to_ascii(compiled, location);
+
+                    func.borrow_mut().add_instruction(Instruction::Store(
+                        field_ty.to_owned(),
+                        offset_tmp,
+                        constant,
+                    ));
+
+                    return None;
+                }
+
+                self.tmp_counter += 1;
+                let temp = self.new_temporary(Some("field"));
+
+                func.borrow_mut().assign_instruction(
+                    temp.clone(),
+                    field_ty.clone().into_base(),
+                    Instruction::Load(field_ty.clone(), offset_tmp.clone()),
+                );
+
+                Some((field_ty.clone().into_base(), temp))
             }
             _ => todo!("statement: {:?}", stmt),
         };
 
         res
+    }
+
+    fn generate_struct(
+        &mut self,
+        name: String,
+        public: bool,
+        usable: bool,
+        imported: bool,
+        members: Vec<Argument>,
+    ) -> GeneratorResult<TypeDef> {
+        let mut items = vec![];
+
+        for member in members.iter().cloned() {
+            items.push((member.r#type, 1));
+        }
+
+        self.struct_pool.insert(name.clone(), members.clone());
+
+        Ok(TypeDef {
+            name,
+            align: None,
+            items,
+            public,
+            usable,
+            imported,
+        })
+    }
+
+    fn member_to_offset(
+        &self,
+        module: &RefCell<Module>,
+        struct_name: String,
+        member_name: String,
+    ) -> Option<(Option<Type>, u64)> {
+        match self.struct_pool.get(&struct_name) {
+            Some(members) => {
+                if !members.iter().any(|member| member.name == member_name) {
+                    return None;
+                }
+
+                let mut offset = 0_u64;
+                let mut ty = None;
+
+                for member in members.iter().cloned() {
+                    if member.name == member_name {
+                        ty = Some(member.r#type);
+                        break;
+                    }
+
+                    offset += member.r#type.size(module)
+                }
+
+                Some((ty, offset))
+            }
+            _ => None,
+        }
+    }
+
+    fn process_field_access(
+        &mut self,
+        func: &RefCell<Function>,
+        module: &RefCell<Module>,
+        mut ty: Type,
+        mut left: Value,
+        mut right: AstNode,
+        load: bool,
+    ) -> (Type, Value) {
+        loop {
+            match right {
+                AstNode::LiteralStatement {
+                    kind,
+                    value,
+                    location,
+                } if kind == TokenKind::Identifier => {
+                    let field = value.get_string_inner().unwrap();
+
+                    if !ty.is_aggregate() {
+                        panic!(
+                            "{}",
+                            &location.error(format!(
+                                "Cannot access fields on a non-struct type '{}' (field '{}')",
+                                ty.to_string(),
+                                field
+                            ))
+                        );
+                    }
+
+                    let (member_ty, offset) = self
+                        .member_to_offset(module, ty.get_aggregate_inner().unwrap(), field.clone())
+                        .expect(&location.error(format!(
+                            "Could not find a field named '{}' for struct '{}'",
+                            field,
+                            ty.get_aggregate_inner().unwrap()
+                        )));
+
+                    let offset_tmp = self.new_temporary(Some("offset"));
+
+                    func.borrow_mut().assign_instruction(
+                        offset_tmp.clone(),
+                        Type::Long,
+                        Instruction::Add(left.clone(), Value::Const(Type::Word, offset as i128)),
+                    );
+
+                    if load {
+                        let tmp = self.new_temporary(Some("load"));
+
+                        func.borrow_mut().assign_instruction(
+                            tmp.clone(),
+                            Type::Long,
+                            Instruction::Load(member_ty.clone().unwrap(), offset_tmp),
+                        );
+
+                        return (member_ty.unwrap(), tmp);
+                    } else {
+                        return (member_ty.unwrap(), offset_tmp);
+                    }
+                }
+                AstNode::FieldStatement {
+                    left: nested_left,
+                    right: nested_right,
+                    value: _,
+                    location,
+                } => {
+                    let (nested_ty, nested_left_value) = self.process_field_access(
+                        func,
+                        module,
+                        ty.clone(),
+                        left.clone(),
+                        *nested_left.clone(),
+                        true,
+                    );
+
+                    ty = nested_ty;
+                    left = nested_left_value;
+                    right = *nested_right;
+                }
+                _ => panic!("Unexpected AST node type for field access: {:?}", right),
+            }
+        }
     }
 
     fn handle_short_circuiting_operation(
@@ -1794,9 +1987,7 @@ impl Compiler {
         let end_label = format!("{}.end.{}", kind, self.tmp_counter);
         self.tmp_counter += 1;
 
-        let result_tmp = self
-            .new_variable(Type::Word.clone(), "tmp", Some(func), true)
-            .unwrap();
+        let result_tmp = self.new_temporary(Some(&kind.to_string()));
 
         // Keep it as false until we know it is true
         func.borrow_mut().assign_instruction(
@@ -1816,9 +2007,7 @@ impl Compiler {
                 ),
             );
 
-        let left_tmp = self
-            .new_variable(Type::Word, "tmp", Some(func), true)
-            .unwrap();
+        let left_tmp = self.new_temporary(Some(&format!("{}.left", kind.to_string())));
 
         func.borrow_mut().assign_instruction(
             left_tmp.clone(),
@@ -1866,9 +2055,7 @@ impl Compiler {
                 ),
             );
 
-        let right_tmp = self
-            .new_variable(Type::Word, "tmp", Some(func), true)
-            .unwrap();
+        let right_tmp = self.new_temporary(Some(&format!("{}.right", kind.to_string())));
 
         func.borrow_mut().assign_instruction(
             right_tmp.clone(),
@@ -1928,14 +2115,7 @@ impl Compiler {
         if first.weight() == second.weight() {
             return (second, val);
         } else if (first.is_int() && second.is_int()) || (first.is_float() && second.is_float()) {
-            let conv = self
-                .new_variable(second.clone(), "tmp", Some(func), true)
-                .expect(&location.error(format!(
-                    "Unexpected error when trying to create a new variable named 'tmp.{}'",
-                    self.tmp_counter
-                )));
-            self.tmp_counter += 1;
-
+            let conv = self.new_temporary(Some("conv"));
             let is_first_higher = first.weight() > second.weight();
 
             func.borrow_mut().assign_instruction(
@@ -1956,13 +2136,7 @@ impl Compiler {
 
             return (second, conv);
         } else {
-            let conv = self
-                .new_variable(second.clone(), "tmp", Some(func), true)
-                .expect(&location.error(format!(
-                    "Unexpected error when trying to create a new variable named 'tmp.{}'",
-                    self.tmp_counter
-                )));
-            self.tmp_counter += 1;
+            let conv = self.new_temporary(Some("conv"));
 
             func.borrow_mut().assign_instruction(
                 conv.clone(),
@@ -1980,6 +2154,7 @@ impl Compiler {
             scopes: Vec::new(),
             data_sections: Vec::new(),
             type_sections: Vec::new(),
+            struct_pool: HashMap::new(),
             loop_labels: Vec::new(),
             ret_types: HashMap::new(),
             buf_metadata: HashMap::new(),
@@ -2052,6 +2227,19 @@ impl Compiler {
                 ) {
                     Ok(function) => {
                         module_ref.borrow_mut().add_function(function);
+                    }
+                    Err(msg) => eprintln!("{}", msg),
+                },
+                Primitive::Struct {
+                    name,
+                    public,
+                    usable,
+                    imported,
+                    members,
+                    ..
+                } => match generator.generate_struct(name, public, usable, imported, members) {
+                    Ok(td) => {
+                        module_ref.borrow_mut().add_type(td);
                     }
                     Err(msg) => eprintln!("{}", msg),
                 },

@@ -7,6 +7,8 @@ pub struct Lexer {
     row: usize,
     bol: usize,
     prev_token: Option<Token>,
+    position_no_whitespace: usize,
+    prev_position_no_whitespace: usize,
 }
 
 impl Lexer {
@@ -18,10 +20,14 @@ impl Lexer {
             row: 0,
             bol: 0,
             prev_token: None,
+            position_no_whitespace: 0,
+            prev_position_no_whitespace: 0,
         }
     }
 
     pub fn next_token(&mut self) -> Option<Token> {
+        // For calculating length of token
+        self.prev_position_no_whitespace = self.position_no_whitespace;
         let token = self.internal_next_token();
         self.prev_token = token.clone();
 
@@ -222,6 +228,10 @@ impl Lexer {
                         self.advance();
                         (TokenKind::And, ValueKind::Nil)
                     }
+                    '=' => {
+                        self.advance();
+                        (TokenKind::BitwiseAndEqual, ValueKind::Nil)
+                    }
                     _ => {
                         if self.is_unary_context() {
                             (TokenKind::Address, ValueKind::Nil)
@@ -238,6 +248,10 @@ impl Lexer {
                     '|' => {
                         self.advance();
                         (TokenKind::Or, ValueKind::Nil)
+                    }
+                    '=' => {
+                        self.advance();
+                        (TokenKind::BitwiseOrEqual, ValueKind::Nil)
                     }
                     _ => {
                         if self.is_unary_context() {
@@ -385,6 +399,10 @@ impl Lexer {
             let current = self.current_char();
             self.position += 1;
 
+            if !current.is_whitespace() {
+                self.position_no_whitespace += 1;
+            }
+
             if current == '\n' {
                 self.bol = self.position;
                 self.row += 1;
@@ -403,7 +421,35 @@ impl Lexer {
             file: self.file.clone(),
             row: self.row,
             column: self.position - self.bol,
+            ctx: self.get_current_line().unwrap(),
+            length: self.position_no_whitespace - self.prev_position_no_whitespace,
         }
+    }
+
+    fn get_current_line(&self) -> Option<String> {
+        let mut current_row = 0;
+        let mut line_chars = Vec::new();
+
+        for &ch in self.input.iter() {
+            if ch == '\n' {
+                if current_row == self.row {
+                    return Some(line_chars.into_iter().collect());
+                }
+                current_row += 1;
+                line_chars.clear();
+            } else {
+                if current_row == self.row {
+                    line_chars.push(ch);
+                }
+            }
+        }
+
+        // row was the last row without a newline at the end
+        if current_row == self.row {
+            return Some(line_chars.into_iter().collect());
+        }
+
+        None
     }
 
     fn is_unary_context(&self) -> bool {
@@ -446,17 +492,20 @@ impl Lexer {
             "variadic" => TokenKind::Variadic,
             "defer" => TokenKind::Defer,
             "external" => TokenKind::External,
+            "def" => TokenKind::Define,
+            "global" => TokenKind::Global,
+            "local" => TokenKind::Local,
             _ => TokenKind::Identifier,
         };
 
         let val = ValueKind::String(identifier);
         (
-            if val.is_base_type() {
-                TokenKind::Type
-            } else {
-                kind
-            },
-            val,
+            // if val.is_base_type() {
+            //     TokenKind::Type
+            // } else {
+            //     kind
+            // },
+            kind, val,
         )
     }
 

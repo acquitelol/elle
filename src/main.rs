@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -16,7 +17,11 @@ use parser::enums::AstNode;
 use parser::enums::Primitive;
 use parser::parser::Parser;
 
-fn lex_and_parse(input_path: String, root: bool) -> Vec<Primitive> {
+fn lex_and_parse(
+    input_path: String,
+    struct_pool: &RefCell<Vec<String>>,
+    root: bool,
+) -> Vec<Primitive> {
     let with_elle = fs::metadata(format!("{}.elle", input_path)).is_ok();
     let base = fs::metadata(input_path.clone()).is_ok();
 
@@ -54,11 +59,21 @@ fn lex_and_parse(input_path: String, root: bool) -> Vec<Primitive> {
 
     // dbg!(&tokens);
 
-    let mut parser = Parser::new(tokens.clone());
-    let mut tree = parser.parse();
+    let mut parser = Parser::new(tokens.clone(), struct_pool.borrow().to_owned());
+    let (mut tree, new_struct_pool) = parser.parse(true, None);
+
+    struct_pool.replace_with(|_| new_struct_pool);
 
     for node in tree.clone().iter().cloned() {
-        handle_node(&mut tree, node);
+        handle_node(&mut tree, struct_pool, node);
+    }
+
+    let (mut tree, new_struct_pool) = parser.parse(false, Some(struct_pool.borrow().to_owned()));
+
+    struct_pool.replace_with(|_| new_struct_pool);
+
+    for node in tree.clone().iter().cloned() {
+        handle_node(&mut tree, struct_pool, node);
     }
 
     // Add global constants
@@ -103,12 +118,12 @@ fn lex_and_parse(input_path: String, root: bool) -> Vec<Primitive> {
     tree
 }
 
-fn handle_node(tree: &mut Vec<Primitive>, node: Primitive) {
+fn handle_node(tree: &mut Vec<Primitive>, struct_pool: &RefCell<Vec<String>>, node: Primitive) {
     match node {
         Primitive::Use {
             module, functions, ..
         } => {
-            let module_tree = lex_and_parse(module, false);
+            let module_tree = lex_and_parse(module, struct_pool, false);
             let allow_all = functions.len() == 0;
 
             for symbol in module_tree.iter().cloned().rev() {
@@ -168,6 +183,33 @@ fn handle_node(tree: &mut Vec<Primitive>, node: Primitive) {
 
                         tree.insert(0, new_symbol);
                     }
+                    Primitive::Struct { name, public, .. } => {
+                        match existing_definition(tree.clone(), name.clone()) {
+                            Some(index) => {
+                                tree.remove(index);
+                            }
+                            None => {}
+                        }
+
+                        let mut new_symbol = symbol.clone();
+                        if let Primitive::Struct {
+                            ref mut usable,
+                            ref mut imported,
+                            ..
+                        } = new_symbol
+                        {
+                            *usable = is_valid_insert_context(
+                                name.clone(),
+                                public,
+                                allow_all,
+                                functions.clone(),
+                            );
+
+                            *imported = true;
+                        }
+
+                        tree.insert(0, new_symbol);
+                    }
                 }
             }
         }
@@ -189,6 +231,7 @@ fn existing_definition(tree: Vec<Primitive>, node_name: String) -> Option<usize>
         Primitive::Use { .. } => false,
         Primitive::Constant { name, .. } => name == node_name,
         Primitive::Function { name, .. } => name == node_name,
+        Primitive::Struct { name, .. } => name == node_name,
     })
 }
 
@@ -211,9 +254,12 @@ fn main() -> ExitCode {
         tmp.to_str().unwrap().to_string()
     };
 
-    let tree = lex_and_parse(input_path, true);
+    let pool = vec![];
+    let struct_pool: RefCell<Vec<String>> = RefCell::new(pool);
+    let tree = lex_and_parse(input_path, &struct_pool, true);
 
-    // dbg!(&tree);
+    #[cfg(debug_assertions)]
+    dbg!(&tree);
 
     Compiler::compile(tree, output_path);
     ExitCode::SUCCESS

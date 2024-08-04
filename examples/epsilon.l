@@ -2,8 +2,8 @@ use std/io;
 use std/rand;
 use std/time;
 
-const i32 ITERATIONS = 100_000;
-const i32 ACCURACY = 1_000_000;
+const i32 ITERATIONS = 1e5;
+const i32 ACCURACY = 1e6;
 const f64 EPSILON = 0.1305;
 
 fn roll(i32* results, i32 formattedEpsilon) {

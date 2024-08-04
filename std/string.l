@@ -1,32 +1,35 @@
-pub external fn memchr(string str, char character, i64 n) -> i64;
-pub external fn memcmp(string str1, string str2, i64 n) -> i32;
-pub external fn memcpy(void *dest, void *src, i64 n) -> i64;
-pub external fn memmove(void *dest, void *src, i64 n) -> i64;
-pub external fn memset(string str, char character, i64 n) -> i64;
+global pub;
 
-pub external fn strcat(string dest, string src) -> string;
-pub external fn strncat(string dest, string src, i64 n) -> string;
-pub external fn strchr(string str, char character) -> string;
-pub external fn strcmp(string str1, string str2) -> i32;
-pub external fn strncmp(string str1, string str2, i64 n) -> i32;
-pub external fn strcoll(string str1, string str2) -> i32;
-pub external fn strcpy(string dest, string src) -> string;
-pub external fn strncpy(string dest, string src, i64 n) -> string;
-pub external fn strspn(string str1, string str2) -> i64;
-pub external fn strcspn(string str1, string str2) -> i64;
-pub external fn strerror(i32 errnum) -> string;
-pub external fn strlen(string str) -> i64;
-pub external fn strpbrk(string str1, string str2) -> string;
-pub external fn strrchr(string str, char character) -> string;
-pub external fn strstr(string haystack, string needle) -> string;
-pub external fn strtok(string str, string delim) -> string;
-pub external fn strxfrm(string dest, string src, i64 n) -> i64;
+external fn malloc(i64 size) -> i64;
+external fn memchr(string str, char character, i64 n) -> i64;
+external fn memcmp(string str1, string str2, i64 n) -> i32;
+external fn memcpy(void *dest, void *src, i64 n) -> i64;
+external fn memmove(void *dest, void *src, i64 n) -> i64;
+external fn memset(string str, char character, i64 n) -> i64;
 
-pub fn streq(string str1, string str2) {
+external fn strcat(string dest, string src) -> string;
+external fn strncat(string dest, string src, i64 n) -> string;
+external fn strchr(string str, char character) -> string;
+external fn strcmp(string str1, string str2) -> i32;
+external fn strncmp(string str1, string str2, i64 n) -> i32;
+external fn strcoll(string str1, string str2) -> i32;
+external fn strcpy(string dest, string src) -> string;
+external fn strncpy(string dest, string src, i64 n) -> string;
+external fn strspn(string str1, string str2) -> i64;
+external fn strcspn(string str1, string str2) -> i64;
+external fn strerror(i32 errnum) -> string;
+external fn strlen(string str) -> i64;
+external fn strpbrk(string str1, string str2) -> string;
+external fn strrchr(string str, char character) -> string;
+external fn strstr(string haystack, string needle) -> string;
+external fn strtok(string str, string delim) -> string;
+external fn strxfrm(string dest, string src, i64 n) -> i64;
+
+fn streq(string str1, string str2) {
     return strcmp(str1, str2) == 0;
 }
 
-pub fn concat(i32 size, ...) {
+fn concat(i32 size, ...) {
     variadic args[size * #size(string)];
     string strings[size];
     i32 sizes[size];

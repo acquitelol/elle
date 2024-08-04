@@ -48,7 +48,7 @@ impl<'a> Constant<'a> {
         tokens
     }
 
-    pub fn parse(&mut self, public: bool, _: bool) -> Primitive {
+    pub fn parse(&mut self, public: bool) -> Primitive {
         self.parser.advance();
 
         let ty = self.parser.get_type();
@@ -64,7 +64,9 @@ impl<'a> Constant<'a> {
         self.parser.advance();
 
         let body: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
-        let value = Statement::new(tokens, 0, &body, false).parse().0;
+        let value = Statement::new(tokens, 0, &body, self.parser.struct_pool.clone(), false)
+            .parse()
+            .0;
 
         Primitive::Constant {
             name,

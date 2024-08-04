@@ -2,7 +2,9 @@ use std/io@{printf, fprintf, stderr};
 use std/core@{atol, atof};
 use std/string@{strspn, strlen, streq};
 
-fn is_valid(string str, string type) -> bool {
+global pub;
+
+local fn is_valid(string str, string type) -> bool {
     string *valid_strspn = ["0123456789", "0123456789", "0123456789."];
     string *valid_types = ["i32", "i64", "f64"];
     i32 type_index = EOF;
@@ -32,7 +34,7 @@ fn is_valid(string str, string type) -> bool {
     return true;
 }
 
-pub fn int_cast(string str) -> i32 {
+fn i32_cast(string str) -> i32 {
     bool valid = is_valid(str, "i32");
 
     if valid {
@@ -42,7 +44,7 @@ pub fn int_cast(string str) -> i32 {
     }
 }
 
-pub fn long_cast(string str) -> i64 {
+fn i64_cast(string str) -> i64 {
     bool valid = is_valid(str, "i64");
 
     if valid {
@@ -52,7 +54,7 @@ pub fn long_cast(string str) -> i64 {
     }
 }
 
-pub fn double_cast(string str) -> f64 {
+fn f64_cast(string str) -> f64 {
     bool valid = is_valid(str, "f64");
 
     if valid {

@@ -13,7 +13,6 @@ pub enum TokenKind {
     LongLiteral,
     FloatingPoint,
     FloatLiteral,
-    DoubleLiteral,
     CharLiteral,
     StringLiteral,
     TrueLiteral,
@@ -85,10 +84,13 @@ pub enum TokenKind {
     ArrayLength,
     External,
     Address,
+    Define, // Used for both structs and enums
     ShiftRight,
     ShiftLeft,
     ShiftRightEqual,
     ShiftLeftEqual,
+    Global,
+    Local,
 }
 
 impl TokenKind {
@@ -144,7 +146,6 @@ impl TokenKind {
             | Self::CharLiteral
             | Self::FloatLiteral
             | Self::LongLiteral
-            | Self::DoubleLiteral
             | Self::ExactLiteral
             | Self::TrueLiteral
             | Self::FalseLiteral
@@ -238,7 +239,7 @@ impl fmt::Display for TokenKind {
 #[derive(Debug, Clone)]
 pub enum ValueKind {
     String(String),
-    Number(i64),
+    Number(i128),
     Character(char),
     Nil,
 }
@@ -250,17 +251,21 @@ impl ValueKind {
                 "string" => Some(Type::Pointer(Box::new(Type::Char))),
                 "fun" => Some(Type::Byte), // Cannot be the same as fn
                 "i8" => Some(Type::Byte),
+                "u8" => Some(Type::UnsignedByte),
                 "i16" => Some(Type::Halfword),
+                "u16" => Some(Type::UnsignedHalfword),
                 "i32" => Some(Type::Word),
+                "u32" => Some(Type::UnsignedWord),
                 "i64" => Some(Type::Long),
+                "u64" => Some(Type::UnsignedLong),
                 "f32" => Some(Type::Single),
                 "f64" => Some(Type::Double),
-                "char" => Some(Type::Char),
+                "char" => Some(Type::Word),
                 "bool" => Some(Type::Byte),
                 // Arbitrary because it will be turned into `long` anyway when used as void*`
                 "void" => Some(Type::Void),
                 "nil" => None,
-                _ => None,
+                other => Some(Type::Aggregate(other.to_string())),
             },
             _ => None,
         }
@@ -273,13 +278,22 @@ impl ValueKind {
                 _ => true,
             }
     }
+
+    pub fn get_string_inner(&self) -> Option<String> {
+        match self.clone() {
+            Self::String(val) => Some(val),
+            _ => None,
+        }
+    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Location {
     pub file: String,
     pub row: usize,
     pub column: usize,
+    pub ctx: String,
+    pub length: usize,
 }
 
 impl Location {
@@ -291,9 +305,16 @@ impl Location {
         let upper = format!("{}[{}]{}", "-".repeat(20), self.display(), "-".repeat(20));
 
         return format!(
-            "\n\n{}\n{}\n{}\n\n",
+            "\n\n{}\n{}\n\n    {}\n{}{}\n{}\n\n",
             upper,
             message,
+            self.ctx.trim_start(),
+            " ".repeat(if self.column >= self.length {
+                self.column - self.length
+            } else {
+                self.column
+            }),
+            "^".repeat(self.length),
             "-".repeat(upper.len())
         );
     }
@@ -303,11 +324,19 @@ impl Location {
             file,
             row: 0,
             column: 0,
+            ctx: "".to_string(),
+            length: 0,
         }
     }
 }
 
 impl fmt::Display for Location {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}:{}:{}", self.file, self.row + 1, self.column + 1)
+    }
+}
+
+impl fmt::Debug for Location {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}:{}:{}", self.file, self.row + 1, self.column + 1)
     }

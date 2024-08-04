@@ -13,9 +13,11 @@ EXEC_PATH = $(DIST_PATH)/build
 run: $(EXEC_PATH)
 
 $(EXEC_PATH): $(ASM_PATH)
-	# only enable if you want to run ball.l
-	# cc -lraylib -o $@ $<
+ifeq ("$(RUN_ARGS)","ball")
+	cc -lraylib -o $@ $<
+else
 	cc -o $@ $<
+endif
 
 $(ASM_PATH): $(TMP_PATH)/out.tmp3.s
 	mv $< $@

@@ -857,6 +857,78 @@ which you can then import
 use module@{myFavouriteNumber, foo};
 ```
 
+You can also add `global pub;` to your module to automatically make every symbol public in the module.
+If you want to make a symbol private after declaring them all public, use the `local` keyword.
+
+Example:
+
+```c
+global pub;
+
+const i32 a = 100; // Public
+const i32 b = 10; // Public
+local const i32 c = 5; // Private
+
+// Private
+local fn increment(i32 a) {
+    return a + 1;
+}
+```
+
+<hr />
+
+### ♡ **Structss**
+
+Structs are allocations in memory with a defined layout. In Elle, these are defined using the `def` keyword.
+
+Example:
+
+```c
+def Bar {
+    f32 myFloat;
+}
+
+def Foo {
+    i32 a;
+    Bar bar;
+    f64 baz;
+}
+```
+
+You can then create these structures like this:
+
+```c
+fn main() {
+    Foo foo = Foo {
+        a = 12,
+        bar = Bar {
+            myFloat = 10.2
+        },
+        baz = 3.141592
+    };
+
+    printf("%f", (f64)foo.bar.myFloat);
+}
+```
+
+If taking a pointer to them from another function, you can do so like this:
+
+```c
+fn other(Foo *foo) {
+    (*foo).baz = 17.98;
+    printf("%d\n", (*foo).a);
+}
+
+fn main() {
+    Foo foo = ; // create Foo
+    other(&foo);
+}
+```
+
+Note that this means there is no `->` operator like in C to automatically dereference the pointer.
+
+<hr />
+
 ### ♡ **Argc and argv**
 
 * These are variables that can be taken as arguments from the `main` function that allow you to pass extra data to the executable. Conventionally, the first argument, `argc`, is the number of arguments, and the second argument, `argv`, is an array of the arguments, or rather a pointer to them.
