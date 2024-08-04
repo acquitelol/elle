@@ -74,21 +74,15 @@ impl<'a> Statement<'a> {
 
     fn expect_token_with_message(&self, expected: TokenKind, message: Option<&str>) {
         if self.current_token().kind != expected {
-            let upper = format!(
-                "{}[{}]{}",
-                "-".repeat(20),
-                self.current_token().location.display(),
-                "-".repeat(20)
-            );
-
             panic!(
-                "\n\n{}\nExpected {:?}, found {:?}. {}\n{}\n\n",
-                upper,
-                expected,
-                self.current_token().kind,
-                message.unwrap_or(""),
-                "-".repeat(upper.len())
-            );
+                "{}",
+                self.current_token().location.error(format!(
+                    "Expected {:?}, got {:?}. {}",
+                    expected,
+                    self.current_token(),
+                    message.unwrap_or("")
+                )),
+            )
         }
     }
 
@@ -790,6 +784,7 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_array(&mut self) -> AstNode {
+        let position = self.position.clone();
         self.expect_token(TokenKind::LeftBlockBrace);
         self.advance();
 
@@ -829,7 +824,7 @@ impl<'a> Statement<'a> {
         };
 
         if self.current_token().kind == TokenKind::LeftBlockBrace {
-            return self.parse_offset_store(Some(array));
+            return self.parse_offset_store(Some((position, array)));
         }
 
         array
@@ -1026,6 +1021,7 @@ impl<'a> Statement<'a> {
     fn parse_wrapped_statement(&mut self) -> AstNode {
         let mut nesting = 0;
         let mut index = 0;
+        let position = self.position.clone();
 
         loop {
             let token = self.tokens[index].clone();
@@ -1098,26 +1094,39 @@ impl<'a> Statement<'a> {
         self.advance();
 
         match self.current_token().kind {
-            TokenKind::Dot => expression = self.parse_field_access(Some(expression)),
-            TokenKind::LeftBlockBrace => expression = self.parse_offset_store(Some(expression)),
+            TokenKind::Dot => expression = self.parse_field_access(Some((position, expression))),
+            TokenKind::LeftBlockBrace => {
+                expression = self.parse_offset_store(Some((position, expression)))
+            }
             _ => {}
         }
 
         expression
     }
 
-    fn parse_offset_store(&mut self, maybe_left: Option<AstNode>) -> AstNode {
-        let position = self.position.clone();
+    fn parse_offset_store(&mut self, lhs: Option<(usize, AstNode)>) -> AstNode {
+        let position = if lhs.is_some() {
+            lhs.clone().unwrap().0
+        } else {
+            self.position.clone()
+        };
+
+        let location = if lhs.is_some() {
+            self.tokens[lhs.clone().unwrap().0].location.clone()
+        } else {
+            self.current_token().location.clone()
+        };
+
         let mut value = None;
 
-        let left_tokens = if maybe_left.is_some() {
+        let left_tokens = if lhs.is_some() {
             vec![]
         } else {
             self.yield_tokens_with_delimiters(vec![TokenKind::LeftBlockBrace])
         };
 
-        let left = Box::new(if maybe_left.is_some() {
-            maybe_left.unwrap()
+        let left = Box::new(if lhs.is_some() {
+            lhs.unwrap().1
         } else {
             Statement::new(left_tokens, 0, &self.body, self.struct_pool.clone(), false)
                 .parse()
@@ -1169,7 +1178,7 @@ impl<'a> Statement<'a> {
             left,
             right,
             value,
-            location: self.current_token().location,
+            location,
         }
     }
 
@@ -1674,14 +1683,18 @@ impl<'a> Statement<'a> {
         }
     }
 
-    fn parse_field_access(&mut self, lhs: Option<AstNode>) -> AstNode {
+    fn parse_field_access(&mut self, lhs: Option<(usize, AstNode)>) -> AstNode {
         let location = self.current_token().location.clone();
-        let position = self.position.clone();
+        let position = if lhs.is_some() {
+            lhs.clone().unwrap().0
+        } else {
+            self.position.clone()
+        };
         let mut value = None;
 
         // Parse the initial left-hand side of the field access
         let left = if lhs.is_some() {
-            Box::new(lhs.unwrap())
+            Box::new(lhs.unwrap().1)
         } else {
             let left_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Dot]);
 
@@ -1748,12 +1761,15 @@ impl<'a> Statement<'a> {
                 ));
             }
             TokenKind::LeftBlockBrace => {
-                return self.parse_offset_store(Some(AstNode::FieldStatement {
-                    left: left.clone(),
-                    right: right.clone(),
-                    value,
-                    location: location.clone(),
-                }))
+                return self.parse_offset_store(Some((
+                    position,
+                    AstNode::FieldStatement {
+                        left: left.clone(),
+                        right: right.clone(),
+                        value,
+                        location: location.clone(),
+                    },
+                )))
             }
             other if other.is_declarative() => {
                 value = Some(Box::new(self.parse_declarative_node(
@@ -1771,6 +1787,8 @@ impl<'a> Statement<'a> {
             }
             _ => {}
         }
+
+        dbg!(6);
 
         AstNode::FieldStatement {
             left,
@@ -2117,19 +2135,22 @@ impl<'a> Statement<'a> {
                         self.parse_arithmetic()
                     } else {
                         panic!(
-                            "[{:?}] Expected left parenthesis or arithmetic, got {:?}\nStruct Pool: {:?}",
-                            self.current_token().location.display(),
-                            self.current_token().kind,
-                            self.struct_pool
-                        );
+                            "{}",
+                            self.current_token().location.error(format!(
+                                "Expected left parenthesis or arithmetic, got {:?}",
+                                self.current_token().kind
+                            )),
+                        )
                     }
                 }
             }
             other if other.is_one_operator() => self.parse_prefix_increment(),
             _ => panic!(
-                "[{:?}] Expected expression, got {:?}",
-                self.current_token().location.display(),
-                self.current_token().kind,
+                "{}",
+                self.current_token().location.error(format!(
+                    "Expected expression, got {:?}",
+                    self.current_token().kind
+                )),
             ),
         }
     }
