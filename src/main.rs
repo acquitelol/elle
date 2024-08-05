@@ -40,10 +40,20 @@ fn lex_and_parse(
     )) {
         Ok(content) => content,
         Err(err) => {
-            eprintln!("\nERROR: could not load module \"{input_path}\": {err}\n");
+            eprintln!("\nERROR: Could not load module \"{input_path}\": {err}\n");
             format!("")
         }
     };
+
+    if content.trim().is_empty() {
+        panic!(
+            "\n{}\nERROR: Could not load module \"{input_path}\"\n{}\n\n{}\n{}\n",
+            "-".repeat(40),
+            "Module is empty. To create an entry-point, write:",
+            "use std/io;\n\nfn main() {\n    puts(\"Hello world!\");\n}",
+            "-".repeat(40),
+        )
+    }
 
     let mut lexer = Lexer::new(input_path.clone(), content.as_str());
     let mut tokens = vec![];

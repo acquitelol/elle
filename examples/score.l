@@ -16,7 +16,7 @@ fn main() {
         }
 
         printf("Enter %s's score: ", person);
-        i32 score = int_cast(input(""));
+        i32 score = i32_cast(input(""));
 
         if score > highestScore {
             highestScore = score;

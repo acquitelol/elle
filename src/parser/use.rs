@@ -37,11 +37,11 @@ impl<'a> Use<'a> {
         let mut functions = vec![];
 
         if self.parser.match_token(TokenKind::AtMark, true) {
-            self.parser.expect_token(TokenKind::LeftCurlyBrace);
+            self.parser.expect_token(vec![TokenKind::LeftCurlyBrace]);
             self.parser.advance();
 
             while self.parser.current_token().kind != TokenKind::RightCurlyBrace {
-                self.parser.expect_token(TokenKind::Identifier);
+                self.parser.expect_token(vec![TokenKind::Identifier]);
 
                 let function = self.parser.get_identifier();
                 functions.push(function);
@@ -53,11 +53,11 @@ impl<'a> Use<'a> {
                 }
             }
 
-            self.parser.expect_token(TokenKind::RightCurlyBrace);
+            self.parser.expect_token(vec![TokenKind::RightCurlyBrace]);
             self.parser.advance();
         }
 
-        self.parser.expect_token(TokenKind::Semicolon);
+        self.parser.expect_token(vec![TokenKind::Semicolon]);
         self.parser.advance();
 
         Primitive::Use {

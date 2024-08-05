@@ -71,19 +71,25 @@ impl Parser {
         }
     }
 
-    pub fn expect_token(&self, expected: TokenKind) {
-        if self.current_token().kind != expected {
+    pub fn expect_token(&self, expected: Vec<TokenKind>) {
+        if !expected.contains(&self.current_token().kind) {
             panic!(
-                "[{}] Expected {:?}, found {:?}",
-                self.current_token().location.display(),
-                expected,
-                self.current_token().kind
-            );
+                "{}",
+                self.current_token().location.error(format!(
+                    "Expected one of [{}], got {:?}.",
+                    expected
+                        .iter()
+                        .map(|kind| kind.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", "),
+                    self.current_token(),
+                )),
+            )
         }
     }
 
     pub fn get(&mut self, expected: TokenKind) -> String {
-        self.expect_token(expected.clone());
+        self.expect_token(vec![expected.clone()]);
 
         let identifier = if let Token {
             value: ValueKind::String(identifier),
@@ -178,7 +184,7 @@ impl Parser {
                     }
 
                     self.advance();
-                    self.expect_token(TokenKind::Semicolon);
+                    self.expect_token(vec![TokenKind::Semicolon]);
                     self.advance();
                 }
                 TokenKind::Public if !imports_only => {

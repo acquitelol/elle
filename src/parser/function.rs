@@ -23,7 +23,7 @@ impl<'a> Function<'a> {
         let name = self.parser.get_identifier();
 
         self.parser.advance();
-        self.parser.expect_token(TokenKind::LeftParenthesis);
+        self.parser.expect_token(vec![TokenKind::LeftParenthesis]);
         self.parser.advance();
 
         let mut arguments = vec![];
@@ -69,7 +69,7 @@ impl<'a> Function<'a> {
             }
         }
 
-        self.parser.expect_token(TokenKind::RightParenthesis);
+        self.parser.expect_token(vec![TokenKind::RightParenthesis]);
         self.parser.advance();
 
         let mut r#return = None;
@@ -80,7 +80,7 @@ impl<'a> Function<'a> {
         }
 
         if external {
-            self.parser.expect_token(TokenKind::Semicolon);
+            self.parser.expect_token(vec![TokenKind::Semicolon]);
             self.parser.advance();
 
             return Primitive::Function {
@@ -98,7 +98,7 @@ impl<'a> Function<'a> {
             };
         }
 
-        self.parser.expect_token(TokenKind::LeftCurlyBrace);
+        self.parser.expect_token(vec![TokenKind::LeftCurlyBrace]);
 
         let body: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
 

@@ -72,13 +72,17 @@ impl<'a> Statement<'a> {
         self.position + 1 >= self.tokens.len()
     }
 
-    fn expect_token_with_message(&self, expected: TokenKind, message: Option<&str>) {
-        if self.current_token().kind != expected {
+    fn expect_token_with_message(&self, expected: Vec<TokenKind>, message: Option<&str>) {
+        if !expected.contains(&self.current_token().kind) {
             panic!(
                 "{}",
                 self.current_token().location.error(format!(
-                    "Expected {:?}, got {:?}. {}",
-                    expected,
+                    "Expected one of [{}], got {:?}. {}",
+                    expected
+                        .iter()
+                        .map(|kind| kind.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", "),
                     self.current_token(),
                     message.unwrap_or("")
                 )),
@@ -86,7 +90,7 @@ impl<'a> Statement<'a> {
         }
     }
 
-    fn expect_token(&self, expected: TokenKind) {
+    fn expect_token(&self, expected: Vec<TokenKind>) {
         self.expect_token_with_message(expected, None);
     }
 
@@ -207,7 +211,7 @@ impl<'a> Statement<'a> {
             };
         }
 
-        self.expect_token(TokenKind::Equal);
+        self.expect_token(vec![TokenKind::Equal]);
         self.advance();
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
@@ -427,7 +431,7 @@ impl<'a> Statement<'a> {
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
         if !self.is_eof() {
-            self.expect_token(TokenKind::Semicolon);
+            self.expect_token(vec![TokenKind::Semicolon]);
         }
 
         let res = if tokens.len() > 0 {
@@ -474,7 +478,7 @@ impl<'a> Statement<'a> {
                 self.advance();
                 calculate_variadic_size = true;
 
-                self.expect_token(TokenKind::LeftParenthesis);
+                self.expect_token(vec![TokenKind::LeftParenthesis]);
                 self.advance();
             }
             other => panic!("Expected left parethesis or exclamation mark (for variadic functions) but got {:?}", other)
@@ -573,7 +577,7 @@ impl<'a> Statement<'a> {
         }
 
         self.expect_token_with_message(
-            TokenKind::RightParenthesis,
+            vec![TokenKind::RightParenthesis],
             Some("Perhaps you forgot to close a nested expression?"),
         );
 
@@ -719,7 +723,7 @@ impl<'a> Statement<'a> {
 
         self.advance();
         self.expect_token_with_message(
-            TokenKind::Identifier,
+            vec![TokenKind::Identifier],
             Some("\nYou cannot increment or decrement anything that isn't an identifier."),
         );
 
@@ -757,7 +761,7 @@ impl<'a> Statement<'a> {
             tmp
         };
 
-        self.expect_token(TokenKind::LeftBlockBrace);
+        self.expect_token(vec![TokenKind::LeftBlockBrace]);
         self.advance();
 
         let mut size = None;
@@ -771,9 +775,9 @@ impl<'a> Statement<'a> {
             );
         }
 
-        self.expect_token(TokenKind::RightBlockBrace);
+        self.expect_token(vec![TokenKind::RightBlockBrace]);
         self.advance();
-        self.expect_token(TokenKind::Semicolon);
+        self.expect_token(vec![TokenKind::Semicolon]);
 
         AstNode::BufferStatement {
             name,
@@ -785,7 +789,7 @@ impl<'a> Statement<'a> {
 
     fn parse_array(&mut self) -> AstNode {
         let position = self.position.clone();
-        self.expect_token(TokenKind::LeftBlockBrace);
+        self.expect_token(vec![TokenKind::LeftBlockBrace]);
         self.advance();
 
         let mut values = vec![];
@@ -838,7 +842,7 @@ impl<'a> Statement<'a> {
             .parse()
             .0;
 
-        self.expect_token(TokenKind::LeftCurlyBrace);
+        self.expect_token(vec![TokenKind::LeftCurlyBrace]);
         self.advance();
 
         let body = self.yield_block();
@@ -846,7 +850,7 @@ impl<'a> Statement<'a> {
 
         if self.current_token().kind == TokenKind::Else {
             self.advance();
-            self.expect_token(TokenKind::LeftCurlyBrace);
+            self.expect_token(vec![TokenKind::LeftCurlyBrace]);
             self.advance();
 
             else_body = self.yield_block();
@@ -870,7 +874,7 @@ impl<'a> Statement<'a> {
             .parse()
             .0;
 
-        self.expect_token(TokenKind::LeftCurlyBrace);
+        self.expect_token(vec![TokenKind::LeftCurlyBrace]);
         self.advance();
 
         let body = self.yield_block();
@@ -918,7 +922,7 @@ impl<'a> Statement<'a> {
             }
         };
 
-        self.expect_token(TokenKind::Semicolon);
+        self.expect_token(vec![TokenKind::Semicolon]);
         self.advance();
 
         let condition_tokens = if self.current_token().kind != TokenKind::Semicolon {
@@ -945,7 +949,7 @@ impl<'a> Statement<'a> {
             }
         };
 
-        self.expect_token(TokenKind::Semicolon);
+        self.expect_token(vec![TokenKind::Semicolon]);
         self.advance();
 
         let mut step_tokens = vec![];
@@ -983,11 +987,11 @@ impl<'a> Statement<'a> {
         }
 
         if wrapped {
-            self.expect_token(TokenKind::RightParenthesis);
+            self.expect_token(vec![TokenKind::RightParenthesis]);
             self.advance();
         }
 
-        self.expect_token(TokenKind::LeftCurlyBrace);
+        self.expect_token(vec![TokenKind::LeftCurlyBrace]);
         self.advance();
 
         let step = if step_tokens.len() > 0 {
@@ -1090,7 +1094,7 @@ impl<'a> Statement<'a> {
             .parse()
             .0;
 
-        self.expect_token(TokenKind::RightParenthesis);
+        self.expect_token(vec![TokenKind::RightParenthesis]);
         self.advance();
 
         match self.current_token().kind {
@@ -1133,7 +1137,7 @@ impl<'a> Statement<'a> {
                 .0
         });
 
-        self.expect_token(TokenKind::LeftBlockBrace);
+        self.expect_token(vec![TokenKind::LeftBlockBrace]);
         self.advance();
 
         let right_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::RightBlockBrace]);
@@ -1143,7 +1147,7 @@ impl<'a> Statement<'a> {
                 .0,
         );
 
-        self.expect_token(TokenKind::RightBlockBrace);
+        self.expect_token(vec![TokenKind::RightBlockBrace]);
         self.advance();
 
         match self.current_token().kind {
@@ -1187,7 +1191,7 @@ impl<'a> Statement<'a> {
         let name = self.get_identifier();
 
         self.advance();
-        self.expect_token(TokenKind::LeftBlockBrace);
+        self.expect_token(vec![TokenKind::LeftBlockBrace]);
         self.advance();
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::RightBlockBrace]);
@@ -1202,7 +1206,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         if !self.is_eof() {
-            self.expect_token(TokenKind::Semicolon);
+            self.expect_token(vec![TokenKind::Semicolon]);
         }
 
         AstNode::VariadicStatement {
@@ -1216,14 +1220,14 @@ impl<'a> Statement<'a> {
         let name = self.get_identifier();
 
         self.advance();
-        self.expect_token(TokenKind::Yield);
+        self.expect_token(vec![TokenKind::Yield]);
         self.advance();
 
         let r#type = self.get_type();
         self.advance();
 
         if !self.is_eof() {
-            self.expect_token(TokenKind::Semicolon);
+            self.expect_token(vec![TokenKind::Semicolon]);
         }
 
         AstNode::NextStatement {
@@ -1254,7 +1258,7 @@ impl<'a> Statement<'a> {
         let r#type = self.get_type();
 
         self.advance();
-        self.expect_token(TokenKind::RightParenthesis);
+        self.expect_token(vec![TokenKind::RightParenthesis]);
         self.advance();
 
         let mut tokens = vec![];
@@ -1311,7 +1315,7 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_block(&mut self) -> AstNode {
-        self.expect_token(TokenKind::LeftCurlyBrace);
+        self.expect_token(vec![TokenKind::LeftCurlyBrace]);
         self.advance();
 
         let body = self.yield_block();
@@ -1323,10 +1327,10 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_size(&mut self) -> AstNode {
-        self.expect_token(TokenKind::Size);
+        self.expect_token(vec![TokenKind::Size]);
         self.advance();
 
-        self.expect_token(TokenKind::LeftParenthesis);
+        self.expect_token(vec![TokenKind::LeftParenthesis]);
         self.advance();
 
         let value = if self.current_token().kind == TokenKind::Identifier
@@ -1388,7 +1392,7 @@ impl<'a> Statement<'a> {
 
         self.advance();
 
-        self.expect_token(TokenKind::RightParenthesis);
+        self.expect_token(vec![TokenKind::RightParenthesis]);
         self.advance();
 
         AstNode::SizeStatement {
@@ -1399,10 +1403,10 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_array_length(&mut self) -> AstNode {
-        self.expect_token(TokenKind::ArrayLength);
+        self.expect_token(vec![TokenKind::ArrayLength]);
         self.advance();
 
-        self.expect_token(TokenKind::LeftParenthesis);
+        self.expect_token(vec![TokenKind::LeftParenthesis]);
         self.advance();
 
         let mut tokens = vec![];
@@ -1453,7 +1457,7 @@ impl<'a> Statement<'a> {
         );
         self.advance();
 
-        self.expect_token(TokenKind::RightParenthesis);
+        self.expect_token(vec![TokenKind::RightParenthesis]);
         self.advance();
 
         AstNode::SizeStatement {
@@ -1587,7 +1591,7 @@ impl<'a> Statement<'a> {
         }
 
         self.advance();
-        self.expect_token(TokenKind::LeftCurlyBrace);
+        self.expect_token(vec![TokenKind::LeftCurlyBrace]);
         self.advance();
 
         let mut values = vec![];
@@ -1606,7 +1610,7 @@ impl<'a> Statement<'a> {
             let name = self.get_identifier();
 
             self.advance();
-            self.expect_token(TokenKind::Equal);
+            self.expect_token(vec![TokenKind::Equal]);
             self.advance();
 
             let mut tokens = vec![];
@@ -1685,18 +1689,20 @@ impl<'a> Statement<'a> {
 
     fn parse_field_access(&mut self, lhs: Option<(usize, AstNode)>) -> AstNode {
         let location = self.current_token().location.clone();
+        let valid_tokens = vec![TokenKind::Dot];
+        let mut value = None;
+
         let position = if lhs.is_some() {
             lhs.clone().unwrap().0
         } else {
             self.position.clone()
         };
-        let mut value = None;
 
         // Parse the initial left-hand side of the field access
         let left = if lhs.is_some() {
             Box::new(lhs.unwrap().1)
         } else {
-            let left_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Dot]);
+            let left_tokens = self.yield_tokens_with_delimiters(valid_tokens.clone());
 
             Box::new(
                 Statement::new(left_tokens, 0, &self.body, self.struct_pool.clone(), false)
@@ -1705,18 +1711,18 @@ impl<'a> Statement<'a> {
             )
         };
 
-        self.expect_token(TokenKind::Dot);
+        self.expect_token(valid_tokens.clone());
         self.advance();
 
-        self.expect_token(TokenKind::Identifier);
+        self.expect_token(vec![TokenKind::Identifier]);
         let mut right = Box::new(AstNode::token_to_literal(self.current_token()));
         self.advance();
 
         // Parse the rest of the field accesses
-        while self.current_token().kind == TokenKind::Dot {
+        while valid_tokens.contains(&self.current_token().kind) {
             self.advance(); // Ignore the TokenKind::Dot
 
-            self.expect_token(TokenKind::Identifier);
+            self.expect_token(vec![TokenKind::Identifier]);
             let location = self.current_token().location.clone();
             let inner = Box::new(AstNode::token_to_literal(self.current_token()));
             self.advance();
@@ -1787,8 +1793,6 @@ impl<'a> Statement<'a> {
             }
             _ => {}
         }
-
-        dbg!(6);
 
         AstNode::FieldStatement {
             left,

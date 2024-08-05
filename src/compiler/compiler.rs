@@ -2179,6 +2179,24 @@ impl Compiler {
         // Each string data section needs to be added to the module
         let module_ref = RefCell::new(module);
 
+        if generator
+            .tree
+            .iter()
+            .find(|primitive| match primitive {
+                Primitive::Function { name, .. } if name.to_owned() == "main".to_string() => true,
+                _ => false,
+            })
+            .is_none()
+        {
+            panic!(
+                "\n{}\nERROR: Could not compile module \"{output_path}\"\n{}\n\n{}\n{}\n",
+                "-".repeat(40),
+                "Module has no entry-point. To create one, write:",
+                "fn main() {\n    puts(\"Hello world!\");\n}",
+                "-".repeat(40),
+            )
+        }
+
         for primitive in generator.tree.clone() {
             match primitive {
                 Primitive::Constant {
