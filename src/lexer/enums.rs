@@ -294,6 +294,7 @@ pub struct Location {
     pub row: usize,
     pub column: usize,
     pub ctx: String,
+    pub above: Option<String>,
     pub length: usize,
 }
 
@@ -336,22 +337,36 @@ impl Location {
         };
 
         let string = self.ctx.trim_start().split_at(left);
+        let fallback_char = format!("{}", string.1.chars().nth(0).unwrap());
+        let mut fallback_rest = string.1.to_string();
+        fallback_rest.remove(0);
+
         let lhs = string.0;
-        let warning_part = string.1.get(0..self.length).unwrap_or_default();
-        let rhs = string.1.get(self.length..).unwrap_or_default();
+        let issue = string.1.get(0..self.length).unwrap_or(&fallback_char);
+        let rhs = string.1.get(self.length..).unwrap_or(&fallback_rest);
 
         return format!(
-            "\n{}\n{}\n\n{}{}{BOLD}{fmt}{UNDERLINE}{}{RESET}{}\n{}{}{BOLD}{GREEN}^{}{RESET}\n{fmt}{}{RESET}\n",
-            upper,
-            message,
+            "\n{upper}\n{message}\n\n{above}{line_number}{}{lhs}{BOLD}{fmt}{UNDERLINE}{issue}{RESET}{rhs}\n{}{}{BOLD}{GREEN}^{}{RESET}\n{fmt}{}{RESET}\n",
             " ".repeat(padding),
-            lhs,
-            warning_part,
-            rhs,
-            " ".repeat(padding),
+            " ".repeat(padding + format!("{}", self.row + 1).len()),
             " ".repeat(left),
             "~".repeat(self.length.checked_sub(1).unwrap_or(0)),
             "-".repeat(upper_plain.len()),
+            above = if let Some(above) = self.above.clone() {
+                if !above.is_empty() {
+                    format!(
+                        "{}{}{}\n",
+                        self.row,
+                        " ".repeat(padding),
+                        above.trim_start()
+                    )
+                } else {
+                    "".to_string()
+                }
+            } else {
+                "".to_string()
+            },
+            line_number = self.row + 1,
             fmt = if is_warning { YELLOW } else { RED }
         );
     }
@@ -370,6 +385,7 @@ impl Location {
             row: 0,
             column: 0,
             ctx: "".to_string(),
+            above: None,
             length: 0,
         }
     }

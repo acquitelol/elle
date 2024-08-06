@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use super::enums::{Location, ParseResult, Token, TokenKind, ValueKind};
 
 pub struct Lexer {
@@ -326,11 +328,14 @@ impl Lexer {
                         let res = self.consume_exact_literal();
                         (TokenKind::ExactLiteral, ValueKind::String(res))
                     }
-                    _ => {
+                    other => {
+                        let mut location = self.get_location();
+                        location.column += 1;
+
                         panic!(
                             "{}",
-                            self.get_location().error(
-                                format!("Invalid token: expected \"$$\" for exact literal opening but got {}", self.current_char())
+                            location.error(
+                                format!("Invalid token: expected '$$' for exact literal opening but got '{}'", other)
                             )
                         )
                     }
@@ -380,11 +385,15 @@ impl Lexer {
                     _ => unreachable!(),
                 }
             }
-            _ => panic!(
-                "{}",
-                self.get_location()
-                    .error(format!("Unexpected character: '{}'", self.current_char()))
-            ),
+            _ => {
+                self.advance();
+
+                panic!(
+                    "{}",
+                    self.get_location()
+                        .error(format!("Unexpected character: '{}'", c))
+                )
+            }
         };
 
         if kind == TokenKind::None {
@@ -433,35 +442,24 @@ impl Lexer {
             file: self.file.clone(),
             row: self.row,
             column: self.position - self.bol,
-            ctx: self.get_current_line().unwrap(),
+            ctx: self.get_line(self.row).unwrap(),
+            above: if self.row == 0 {
+                None
+            } else {
+                self.get_line(self.row - 1)
+            },
             length: self.position_no_whitespace - self.prev_position_no_whitespace,
         }
     }
 
-    fn get_current_line(&self) -> Option<String> {
-        let mut current_row = 0;
-        let mut line_chars = Vec::new();
-
-        for &ch in self.input.iter() {
-            if ch == '\n' {
-                if current_row == self.row {
-                    return Some(line_chars.into_iter().collect());
-                }
-                current_row += 1;
-                line_chars.clear();
-            } else {
-                if current_row == self.row {
-                    line_chars.push(ch);
-                }
-            }
-        }
-
-        // row was the last row without a newline at the end
-        if current_row == self.row {
-            return Some(line_chars.into_iter().collect());
-        }
-
-        None
+    fn get_line(&self, at: usize) -> Option<String> {
+        self.input
+            .iter()
+            .collect::<String>()
+            .lines()
+            .enumerate()
+            .find(|l| l.0 == at)
+            .map(|i| i.1.to_string())
     }
 
     fn is_unary_context(&self) -> bool {

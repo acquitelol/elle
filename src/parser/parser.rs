@@ -122,7 +122,7 @@ impl Parser {
             panic!(
                 "{}",
                 self.current_token().location.error(format!(
-                    "Type named {} could not be found. Are you sure you spelt it correctly?",
+                    "Type or struct named '{}' could not be found. Are you sure you spelt it correctly?",
                     name
                 ))
             )
