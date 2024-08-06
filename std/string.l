@@ -1,6 +1,5 @@
 global pub;
 
-external fn malloc(i64 size) -> i64;
 external fn memchr(string str, char character, i64 n) -> i64;
 external fn memcmp(string str1, string str2, i64 n) -> i32;
 external fn memcpy(void *dest, void *src, i64 n) -> i64;
@@ -26,7 +25,7 @@ external fn strtok(string str, string delim) -> string;
 external fn strxfrm(string dest, string src, i64 n) -> i64;
 
 fn streq(string str1, string str2) {
-    return strcmp(str1, str2) == 0;
+    return str1 == str2 || strcmp(str1, str2) == 0;
 }
 
 fn concat(i32 size, ...) {

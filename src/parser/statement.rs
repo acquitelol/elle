@@ -5,6 +5,7 @@ use super::enums::AstNode;
 use crate::{
     compiler::enums::Type,
     lexer::enums::{Token, TokenKind, ValueKind},
+    token_to_node,
 };
 
 pub struct Statement<'a> {
@@ -107,7 +108,6 @@ impl<'a> Statement<'a> {
         let token = self.current_token();
 
         if !found {
-            dbg!(&self.body);
             panic!(
                 "{}",
                 token.location.error(format!(
@@ -124,11 +124,10 @@ impl<'a> Statement<'a> {
         {
             identifier.clone()
         } else {
-            panic!(
-                "Expected {:?}, got {:?}",
-                expected.clone(),
-                self.current_token()
-            );
+            token.location.error(format!(
+                "Expected one of {:?} but got {:?}",
+                expected, token.kind
+            ))
         };
 
         identifier
@@ -336,7 +335,7 @@ impl<'a> Statement<'a> {
         }
     }
 
-    fn parse_float(&mut self, token: Token) -> AstNode {
+    fn parse_float(&self, token: Token) -> AstNode {
         let value = match token.value {
             ValueKind::String(val) => val,
             _ => todo!(),
@@ -370,57 +369,27 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_literal(&mut self) -> AstNode {
-        if self.tokens.len() - self.position == 1 {
-            let current = self.current_token();
+        let position = self.position.clone();
 
-            match current.kind {
-                TokenKind::TrueLiteral => AstNode::LiteralStatement {
-                    kind: TokenKind::IntegerLiteral,
-                    value: ValueKind::Number(1),
-                    location: current.location,
-                },
-                TokenKind::FalseLiteral => AstNode::LiteralStatement {
-                    kind: TokenKind::IntegerLiteral,
-                    value: ValueKind::Number(0),
-                    location: current.location,
-                },
-                TokenKind::FloatingPoint => self.parse_float(current),
-                _ => AstNode::LiteralStatement {
-                    kind: current.kind,
-                    value: current.value,
-                    location: current.location,
-                },
-            }
+        if self.is_eof() {
+            let current = self.current_token();
+            token_to_node!(current, self)
         } else {
             match self.next_token() {
                 Some(token) => match token.kind {
                     TokenKind::Semicolon => {
                         let current = self.current_token();
-
                         self.advance();
-
-                        match current.kind {
-                            TokenKind::TrueLiteral => AstNode::LiteralStatement {
-                                kind: TokenKind::IntegerLiteral,
-                                value: ValueKind::Number(1),
-                                location: current.location,
-                            },
-                            TokenKind::FalseLiteral => AstNode::LiteralStatement {
-                                kind: TokenKind::IntegerLiteral,
-                                value: ValueKind::Number(0),
-                                location: current.location,
-                            },
-                            TokenKind::FloatingPoint => self.parse_float(current),
-                            _ => AstNode::LiteralStatement {
-                                kind: current.kind,
-                                value: current.value,
-                                location: current.location,
-                            },
-                        }
+                        token_to_node!(current, self)
+                    }
+                    TokenKind::LeftBlockBrace => {
+                        let current = self.current_token();
+                        self.advance();
+                        self.parse_offset_store(Some((position, token_to_node!(current, self))))
                     }
                     _ => self.parse_arithmetic(),
                 },
-                None => self.parse_arithmetic(),
+                None => unreachable!(),
             }
         }
     }
@@ -1529,6 +1498,7 @@ impl<'a> Statement<'a> {
         let mut value = None;
         let addr_tokens = self.yield_tokens_with_condition(|token, prev_token| {
             (token.kind.is_arithmetic() && prev_token.kind != TokenKind::Type)
+                || token.kind.is_declarative()
                 || token.kind == TokenKind::Semicolon
                 || token.kind == TokenKind::Equal
         });
@@ -1866,9 +1836,11 @@ impl<'a> Statement<'a> {
     fn yield_tokens_with_delimiters(&mut self, delimiters: Vec<TokenKind>) -> Vec<Token> {
         if delimiters.contains(&self.current_token().kind) {
             panic!(
-                "[{}] expected expression but got {:?}",
-                self.current_token().location.display(),
-                self.current_token().kind
+                "{}",
+                self.current_token().location.error(format!(
+                    "Expected expression but got {:?}",
+                    self.current_token().kind
+                ))
             );
         }
 

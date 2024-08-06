@@ -160,6 +160,30 @@ pub enum Primitive {
     },
 }
 
+#[macro_export]
+macro_rules! token_to_node {
+    ($token:expr, $self:expr) => {
+        match $token.kind {
+            TokenKind::TrueLiteral => AstNode::LiteralStatement {
+                kind: TokenKind::IntegerLiteral,
+                value: ValueKind::Number(1),
+                location: $token.location,
+            },
+            TokenKind::FalseLiteral => AstNode::LiteralStatement {
+                kind: TokenKind::IntegerLiteral,
+                value: ValueKind::Number(0),
+                location: $token.location,
+            },
+            TokenKind::FloatingPoint => $self.parse_float($token),
+            _ => AstNode::LiteralStatement {
+                kind: $token.kind,
+                value: $token.value,
+                location: $token.location,
+            },
+        }
+    };
+}
+
 #[derive(Debug, Clone)]
 pub struct Case {
     pub condition: Vec<AstNode>,

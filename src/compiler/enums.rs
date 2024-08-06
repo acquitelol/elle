@@ -36,7 +36,7 @@ pub enum Instruction {
     VAArg(Value),
     VAStart(Value),
     // Alloc4(Type, Value),
-    Alloc8(Type, Value),
+    Alloc8(Value),
     // Alloc16(u128),
     Store(Type, Value, Value),
     Load(Type, Value),
@@ -80,7 +80,7 @@ impl Instruction {
             | Self::Copy(v)
             | Self::Return(Some((_, v)))
             | Self::JumpNonZero(v, _, _)
-            | Self::Alloc8(_, v) => matches!(v, Value::Global(name) if name == global_name),
+            | Self::Alloc8(v) => matches!(v, Value::Global(name) if name == global_name),
             Self::Return(val) => match val {
                 Some((_, v)) => matches!(v, Value::Global(name) if name == global_name),
                 None => false,
@@ -179,7 +179,7 @@ impl fmt::Display for Instruction {
             // Self::Alloc4(ty, val) => {
             //     write!(formatter, "alloc4 {}", val)
             // }
-            Self::Alloc8(ty, val) => {
+            Self::Alloc8(val) => {
                 write!(formatter, "alloc8 {}", val)
             }
             // Self::Alloc16(size) => write!(formatter, "alloc16 {}", size),

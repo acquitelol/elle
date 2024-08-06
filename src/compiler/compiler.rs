@@ -143,51 +143,6 @@ impl Compiler {
         var.map(|item| item.to_owned())
     }
 
-    fn compile_literal_to_ascii(&self, val: Value, location: Location) -> Value {
-        match val.clone() {
-            Value::Literal(str) => {
-                if str.len() > 1 {
-                    return val.clone();
-                }
-
-                Value::Const(Type::Word, str.escape_debug().nth(0).unwrap() as i128)
-            }
-            Value::Global(name) => {
-                let section = self
-                    .data_sections
-                    .iter()
-                    .find(|section| section.name == name)
-                    .expect(&location.error(format!(
-                        "Unexpected error when trying to find a data section named {}",
-                        name,
-                    )));
-
-                let item = section.items.get(0).expect(&location.error(format!(
-                    "Unexpected error when trying to get the 0th item in a data section named {}",
-                    name
-                )));
-
-                match item.1.clone() {
-                    DataItem::Const(val) => Value::Const(Type::Word, val),
-                    DataItem::String(str) => {
-                        if str.len() > 1 {
-                            return val.clone();
-                        }
-
-                        Value::Const(
-                            Type::Word,
-                            str.escape_debug()
-                                .nth(0)
-                                .expect(&location.error(format!("Unexpected error when trying to get the 0th character of the string {}", str)))
-                                as i128,
-                        )
-                    }
-                }
-            }
-            other => other,
-        }
-    }
-
     fn generate_function(
         &mut self,
         name: String,
@@ -442,10 +397,10 @@ impl Compiler {
                     func.borrow_mut().assign_instruction(
                         addr_temp.clone(),
                         Type::Pointer(Box::new(final_ty.clone())),
-                        Instruction::Alloc8(
-                            Type::Long,
-                            Value::Const(Type::Word, final_ty.size(module) as i128),
-                        ),
+                        Instruction::Alloc8(Value::Const(
+                            Type::Word,
+                            final_ty.size(module) as i128,
+                        )),
                     );
 
                     func.borrow_mut().add_instruction(Instruction::Store(
@@ -724,25 +679,8 @@ impl Compiler {
 
                         Some((Type::Pointer(Box::new(Type::Char)), Value::Global(name)))
                     }
-                    // Characters are just strings enforced to be a single character
-                    // This is done at tokenization time
                     ValueKind::Character(val) => {
-                        self.tmp_counter += 1;
-
-                        let name = format!(
-                            "{}.{}",
-                            func.borrow_mut().name.to_string(),
-                            self.tmp_counter
-                        );
-
-                        self.data_sections.push(Data::new(
-                            Linkage::private(),
-                            name.clone(),
-                            None,
-                            vec![(Type::Byte, DataItem::Const(val as i128))],
-                        ));
-
-                        Some((Type::Long, Value::Global(name)))
+                        Some((Type::Char, Value::Const(Type::Word, val as i128)))
                     }
                     ValueKind::Nil => {
                         self.tmp_counter += 1;
@@ -943,7 +881,7 @@ impl Compiler {
                 func.borrow_mut().assign_instruction(
                     tmp.clone(),
                     buf_ty.clone(),
-                    Instruction::Alloc8(converted_ty, converted_val.clone()),
+                    Instruction::Alloc8(converted_val.clone()),
                 );
 
                 self.buf_metadata.insert(
@@ -1011,12 +949,10 @@ impl Compiler {
                         .generate_statement(func, module, *value.unwrap().clone(), Some(inner.clone()), None, false)
                         .expect(&location.error("Unexpected error when trying to compile the value of a store statement".to_string()));
 
-                    let constant = self.compile_literal_to_ascii(compiled, location);
-
                     func.borrow_mut().add_instruction(Instruction::Store(
                         inner.to_owned(),
                         compiled_location,
-                        constant,
+                        compiled,
                     ));
 
                     return None;
@@ -1298,7 +1234,7 @@ impl Compiler {
                 func.borrow_mut().assign_instruction(
                     var.clone(),
                     Type::Long,
-                    Instruction::Alloc8(final_ty, final_val),
+                    Instruction::Alloc8(final_val),
                 );
 
                 func.borrow_mut().add_instruction(Instruction::VAStart(var));
@@ -1520,7 +1456,7 @@ impl Compiler {
                 func.borrow_mut().assign_instruction(
                     tmp.clone(),
                     buf_ty.clone(),
-                    Instruction::Alloc8(converted_ty, converted_val.clone()),
+                    Instruction::Alloc8(converted_val.clone()),
                 );
 
                 self.buf_metadata.insert(
@@ -1720,7 +1656,7 @@ impl Compiler {
                 func.borrow_mut().assign_instruction(
                     alloc_tmp.clone(),
                     Type::Long,
-                    Instruction::Alloc8(Type::Long, Value::Const(Type::Word, size as i128)),
+                    Instruction::Alloc8(Value::Const(Type::Word, size as i128)),
                 );
 
                 for (member_name, value) in values.iter().cloned() {
@@ -1803,12 +1739,10 @@ impl Compiler {
                         .generate_statement(func, module, *value.clone(), Some(field_ty.clone()), None, false)
                         .expect(&location.error("Unexpected error when trying to compile the value of a store statement".to_string()));
 
-                    let constant = self.compile_literal_to_ascii(compiled, location);
-
                     func.borrow_mut().add_instruction(Instruction::Store(
                         field_ty.to_owned(),
                         offset_tmp,
-                        constant,
+                        compiled,
                     ));
 
                     return None;
