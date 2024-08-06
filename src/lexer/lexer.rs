@@ -380,7 +380,11 @@ impl Lexer {
                     _ => unreachable!(),
                 }
             }
-            _ => panic!("Unexpected character: {:?}", c),
+            _ => panic!(
+                "{}",
+                self.get_location()
+                    .error(format!("Unexpected character: '{}'", self.current_char()))
+            ),
         };
 
         if kind == TokenKind::None {

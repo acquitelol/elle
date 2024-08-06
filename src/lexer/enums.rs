@@ -337,11 +337,11 @@ impl Location {
 
         let string = self.ctx.trim_start().split_at(left);
         let lhs = string.0;
-        let warning_part = string.1.get(0..self.length).unwrap();
-        let rhs = string.1.get(self.length..).unwrap();
+        let warning_part = string.1.get(0..self.length).unwrap_or_default();
+        let rhs = string.1.get(self.length..).unwrap_or_default();
 
         return format!(
-            "\n\n{}\n{}\n\n{}{}{BOLD}{fmt}{UNDERLINE}{}{RESET}{}\n{}{}{BOLD}{GREEN}^{}{RESET}\n{fmt}{}{RESET}\n\n",
+            "\n{}\n{}\n\n{}{}{BOLD}{fmt}{UNDERLINE}{}{RESET}{}\n{}{}{BOLD}{GREEN}^{}{RESET}\n{fmt}{}{RESET}\n",
             upper,
             message,
             " ".repeat(padding),
@@ -350,7 +350,7 @@ impl Location {
             rhs,
             " ".repeat(padding),
             " ".repeat(left),
-            "~".repeat(self.length - 1),
+            "~".repeat(self.length.checked_sub(1).unwrap_or(0)),
             "-".repeat(upper_plain.len()),
             fmt = if is_warning { YELLOW } else { RED }
         );

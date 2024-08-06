@@ -927,7 +927,7 @@ impl fmt::Display for Module {
                 } else {
                     #[cfg(debug_assertions)]
                     println!(
-                        "Eliminating function '{}' due to not being called or referenced",
+                        "Eliminating function '{}' due to it not being called or referenced",
                         func.name.clone()
                     );
                 }
