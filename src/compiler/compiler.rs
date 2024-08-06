@@ -601,7 +601,7 @@ impl Compiler {
                                     panic!(
                                         "{}",
                                         location.error(
-                                            format!("Unexpected error when trying to get a variable called '{}': '{}'",
+                                            format!("Unexpected error when trying to get a variable called '{}': {}",
                                             name, msg
                                         ))
                                     );
