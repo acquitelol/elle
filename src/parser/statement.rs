@@ -2099,7 +2099,7 @@ impl<'a> Statement<'a> {
                         let current = self.current_token();
                         let name = current.value.get_string_inner().unwrap();
                         let unexpected_error = |msg: String| {
-                            current.location.error(format!("Expected a field access ({}.foo) or a function call ({}.(1)) but got {}", name, name, msg))
+                            current.location.error(format!("Expected a field access ({}.foo) or a function call ({}.(1, 2, 3)) but got {}", name, name, msg))
                         };
 
                         let tie = self
@@ -2109,7 +2109,7 @@ impl<'a> Statement<'a> {
                         match tie.kind {
                             TokenKind::Identifier => self.parse_field_access(None),
                             TokenKind::LeftParenthesis => self.parse_function(),
-                            other => panic!("{}", unexpected_error(format!("{}", other))),
+                            other => panic!("{}", unexpected_error(format!("{:?}", other))),
                         }
                     } else if next.kind == TokenKind::Equal {
                         self.parse_declare(Some(None))
