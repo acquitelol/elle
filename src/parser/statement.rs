@@ -436,6 +436,7 @@ impl<'a> Statement<'a> {
 
     fn parse_function(&mut self) -> AstNode {
         let name = self.get_identifier();
+        let location = self.current_token().location.clone();
         let mut calculate_variadic_size = false;
 
         self.advance();
@@ -509,8 +510,10 @@ impl<'a> Statement<'a> {
                         block_nesting -= 1;
                     } else {
                         panic!(
-                            "[{}] Invalid balance of block braces",
-                            self.current_token().location.display()
+                            "{}",
+                            self.current_token()
+                                .location
+                                .error("Invalid balance of block braces".to_string())
                         )
                     }
                 }
@@ -520,8 +523,10 @@ impl<'a> Statement<'a> {
                         curly_nesting -= 1;
                     } else {
                         panic!(
-                            "[{}] Invalid balance of curly braces",
-                            self.current_token().location.display()
+                            "{}",
+                            self.current_token()
+                                .location
+                                .error("Invalid balance of curly braces".to_string())
                         )
                     }
                 }
@@ -550,7 +555,6 @@ impl<'a> Statement<'a> {
             Some("Perhaps you forgot to close a nested expression?"),
         );
 
-        let location = self.current_token().location.clone();
         self.advance();
 
         if calculate_variadic_size {
@@ -561,7 +565,7 @@ impl<'a> Statement<'a> {
                     AstNode::LiteralStatement {
                         kind: TokenKind::IntegerLiteral,
                         value: ValueKind::Number(parameters.len() as i128),
-                        location,
+                        location: location.clone(),
                     },
                 ),
             );
@@ -570,7 +574,7 @@ impl<'a> Statement<'a> {
         AstNode::FunctionCall {
             name,
             parameters,
-            location: self.current_token().location,
+            location,
         }
     }
 
@@ -1235,9 +1239,11 @@ impl<'a> Statement<'a> {
 
         if self.current_token().kind == TokenKind::Semicolon {
             panic!(
-                "[{}] expected type conversion but got empty passthrough",
-                self.current_token().location.display()
-            );
+                "{}",
+                self.current_token()
+                    .location
+                    .error("Expected type conversion but got empty passthrough".to_string())
+            )
         }
 
         loop {
@@ -1315,9 +1321,11 @@ impl<'a> Statement<'a> {
 
             if self.current_token().kind == TokenKind::Semicolon {
                 panic!(
-                    "[{}] expected size directive but got empty passthrough",
-                    self.current_token().location.display()
-                );
+                    "{}",
+                    self.current_token()
+                        .location
+                        .error("Expected size directive but got empty passthrough".to_string())
+                )
             }
 
             loop {
@@ -1383,9 +1391,11 @@ impl<'a> Statement<'a> {
 
         if self.current_token().kind == TokenKind::Semicolon {
             panic!(
-                "[{}] expected type conversion but got empty passthrough",
-                self.current_token().location.display()
-            );
+                "{}",
+                self.current_token()
+                    .location
+                    .error("Expected type conversion but got empty passthrough".to_string())
+            )
         }
 
         loop {

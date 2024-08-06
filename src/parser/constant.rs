@@ -22,10 +22,12 @@ impl<'a> Constant<'a> {
 
         if delimiters.contains(&self.parser.current_token().kind) {
             panic!(
-                "[{}] expected expression but got {:?}",
-                self.parser.current_token().location.display(),
-                self.parser.current_token().kind
-            );
+                "{}",
+                self.parser.current_token().location.error(format!(
+                    "Expected expression but got {:?}",
+                    self.parser.current_token().kind
+                ))
+            )
         }
 
         loop {

@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::compiler::enums::Type;
+use crate::lexer::colors::*;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {
@@ -297,30 +298,70 @@ pub struct Location {
 }
 
 impl Location {
-    pub fn display(&self) -> String {
+    pub fn display(&self, is_warning: bool) -> String {
+        return format!(
+            "{BOLD}{UNDERLINE}{GREEN}{}{RESET}:{UNDERLINE}{fmt}{}{RESET}:{UNDERLINE}{YELLOW}{}{RESET}",
+            self.file,
+            self.row + 1,
+            self.column + 1,
+            fmt = if is_warning { YELLOW } else { RED }
+        );
+    }
+
+    pub fn display_plain(&self) -> String {
         return format!("{}:{}:{}", self.file, self.row + 1, self.column + 1);
     }
 
-    pub fn error(&self, message: String) -> String {
-        let upper = format!("{}[{}]{}", "-".repeat(20), self.display(), "-".repeat(20));
+    pub fn display_pretty(&self, message: String, is_warning: bool) -> String {
+        let upper = format!(
+            "{fmt}{}{RESET}[{}]{fmt}{}{RESET}",
+            "-".repeat(20),
+            self.display(is_warning),
+            "-".repeat(20),
+            fmt = if is_warning { YELLOW } else { RED }
+        );
+        let upper_plain = format!(
+            "{}[{}]{}",
+            "-".repeat(20),
+            self.display_plain(),
+            "-".repeat(20)
+        );
         let padding = 4;
         let ident = self.column - (self.ctx.len() - self.ctx.trim_start().len());
 
+        let left = if ident >= self.length {
+            ident - self.length
+        } else {
+            ident
+        };
+
+        let string = self.ctx.trim_start().split_at(left);
+        let lhs = string.0;
+        let warning_part = string.1.get(0..self.length).unwrap();
+        let rhs = string.1.get(self.length..).unwrap();
+
         return format!(
-            "\n\n{}\n{}\n\n{}{}\n{}{}{}\n{}\n\n",
+            "\n\n{}\n{}\n\n{}{}{BOLD}{fmt}{UNDERLINE}{}{RESET}{}\n{}{}{BOLD}{GREEN}^{}{RESET}\n{fmt}{}{RESET}\n\n",
             upper,
             message,
             " ".repeat(padding),
-            self.ctx.trim_start(),
+            lhs,
+            warning_part,
+            rhs,
             " ".repeat(padding),
-            " ".repeat(if ident >= self.length {
-                ident - self.length
-            } else {
-                ident
-            }),
-            "^".repeat(self.length),
-            "-".repeat(upper.len())
+            " ".repeat(left),
+            "~".repeat(self.length - 1),
+            "-".repeat(upper_plain.len()),
+            fmt = if is_warning { YELLOW } else { RED }
         );
+    }
+
+    pub fn warning(&self, message: String) -> String {
+        self.display_pretty(message, true)
+    }
+
+    pub fn error(&self, message: String) -> String {
+        self.display_pretty(message, false)
     }
 
     pub fn default(file: String) -> Location {

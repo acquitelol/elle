@@ -15,8 +15,11 @@ impl<'a> Use<'a> {
         match self.parser.current_token().value {
             ValueKind::String(val) => val,
             _ => panic!(
-                "[{}] Token is not a string",
-                self.parser.current_token().location.display()
+                "{}",
+                self.parser
+                    .current_token()
+                    .location
+                    .error("Token is not a string".to_string())
             ),
         }
     }

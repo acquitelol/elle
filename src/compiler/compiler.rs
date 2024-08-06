@@ -721,8 +721,8 @@ impl Compiler {
                 if tmp_function_option.is_none() {
                     println!(
                         "{}",
-                        location.error(format!(
-                            "WARNING: '{}' is implicitly defined.",
+                        location.warning(format!(
+                            "Function '{}' is called but it is implicitly defined.",
                             name.clone()
                         ))
                     );
@@ -1637,8 +1637,8 @@ impl Compiler {
                 for member in diff.iter().cloned() {
                     println!(
                         "{}",
-                        location.error(format!(
-                            "WARNING: Declaring struct '{}' without field '{}'",
+                        location.warning(format!(
+                            "Declaring struct '{}' without field '{}'",
                             name, member
                         ))
                     );

@@ -326,11 +326,14 @@ impl Lexer {
                         let res = self.consume_exact_literal();
                         (TokenKind::ExactLiteral, ValueKind::String(res))
                     }
-                    _ => panic!(
-                        "[{}] Invalid token: expected \"$$\" for exact literal opening but got {}",
-                        self.get_location().display(),
-                        self.current_char()
-                    ),
+                    _ => {
+                        panic!(
+                            "{}",
+                            self.get_location().error(
+                                format!("Invalid token: expected \"$$\" for exact literal opening but got {}", self.current_char())
+                            )
+                        )
+                    }
                 }
             }
             '.' => {
@@ -345,10 +348,15 @@ impl Lexer {
                                 self.advance();
                                 (TokenKind::Ellipsis, ValueKind::Nil)
                             }
-                            _ => panic!(
-                                "[{}] Invalid token: expected \".\" or \"...\" but got \"..\".",
-                                self.get_location().display()
-                            ),
+                            _ => {
+                                panic!(
+                                    "{}",
+                                    self.get_location().error(
+                                        "Invalid token: expected \".\" or \"...\" but got \"..\"."
+                                            .to_string()
+                                    )
+                                )
+                            }
                         }
                     }
                     _ => (TokenKind::Dot, ValueKind::Nil),
@@ -364,9 +372,9 @@ impl Lexer {
                         "size" => (TokenKind::Size, ValueKind::Nil),
                         "arrlen" => (TokenKind::ArrayLength, ValueKind::Nil),
                         other => panic!(
-                            "[{}] Unimplemented directive \"{}\"",
-                            self.get_location().display(),
-                            other
+                            "{}",
+                            self.get_location()
+                                .error(format!("Unimplemented directive: '{}'", other))
                         ),
                     },
                     _ => unreachable!(),

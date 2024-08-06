@@ -56,9 +56,11 @@ impl<'a> Function<'a> {
                     TokenKind::Identifier => self.parser.get_identifier(),
                     TokenKind::ExactLiteral => self.parser.get(TokenKind::ExactLiteral),
                     other => panic!(
-                        "[{}] Invalid token type {:?}",
-                        self.parser.current_token().location.display(),
-                        other
+                        "{}",
+                        self.parser
+                            .current_token()
+                            .location
+                            .error(format!("Invalid token type: {:?}", other))
                     ),
                 };
 
