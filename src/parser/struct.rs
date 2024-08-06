@@ -21,7 +21,7 @@ impl<'a> Struct<'a> {
         let location = self.parser.current_token().location.clone();
         self.parser.advance();
 
-        self.parser.expect_token(vec![TokenKind::LeftCurlyBrace]);
+        self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
         self.parser.advance();
 
         let mut members = vec![];
@@ -37,13 +37,13 @@ impl<'a> Struct<'a> {
             let name = self.parser.get_identifier();
             self.parser.advance();
 
-            self.parser.expect_token(vec![TokenKind::Semicolon]);
+            self.parser.expect_tokens(vec![TokenKind::Semicolon]);
             self.parser.advance();
 
             members.push(Argument { name, r#type: ty })
         }
 
-        self.parser.expect_token(vec![TokenKind::RightCurlyBrace]);
+        self.parser.expect_tokens(vec![TokenKind::RightCurlyBrace]);
         self.parser.advance();
 
         self.parser.struct_pool.push(name.clone());

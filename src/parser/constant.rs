@@ -59,7 +59,7 @@ impl<'a> Constant<'a> {
         let name = self.parser.get_identifier();
         self.parser.advance();
 
-        self.parser.expect_token(vec![TokenKind::Equal]);
+        self.parser.expect_tokens(vec![TokenKind::Equal]);
         self.parser.advance();
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
