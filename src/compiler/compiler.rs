@@ -123,7 +123,7 @@ impl Compiler {
                                 panic!(
                                     "{}",
                                     location.error(format!(
-                                        "Function pointer named '{}' was not imported and can't be used",
+                                        "Function named '{}' was not imported and can't be used",
                                         name
                                     ))
                                 )
@@ -328,7 +328,7 @@ impl Compiler {
                 let temp = self
                     .new_variable(ty.clone(), &name, Some(func), false)
                     .expect(&location.error(format!(
-                        "Unexpected error when trying to make a new variable called {}",
+                        "Unexpected error when trying to make a new variable called '{}'",
                         name
                     )));
 
@@ -361,7 +361,7 @@ impl Compiler {
                         let tmp = self
                             .new_variable(addr_ty.clone(), &name, Some(func), true)
                             .expect(&location.error(format!(
-                                "Unexpected error when trying to make a new variable called {}",
+                                "Unexpected error when trying to make a new variable called '{}'",
                                 name
                             )));
 
@@ -392,7 +392,7 @@ impl Compiler {
 
                     let addr_temp = self
                         .new_variable(ty.clone(), &format!("{}.addr", name), Some(func), false)
-                        .expect(&location.error(format!("Unexpected error when trying to create a variable to store the stack address of a local variable named {}", name)));
+                        .expect(&location.error(format!("Unexpected error when trying to create a variable to store the stack address of a local variable named '{}'", name)));
 
                     func.borrow_mut().assign_instruction(
                         addr_temp.clone(),
@@ -454,13 +454,13 @@ impl Compiler {
                 let (left_ty_unparsed, left_val_unparsed) = self
                     .generate_statement(func, module, *left.clone(), ty.clone(), None, is_return)
                     .expect(&location.error(
-                        "Unexpected error when trying to parse left side of arithmetic operation".to_string()
+                        "Unexpected error when trying to parse left side of an arithmetic operation".to_string()
                     ));
 
                 let (right_ty_unparsed, right_val_unparsed) = self
                     .generate_statement(func, module, *right.clone(), ty.clone(), None, is_return)
                     .expect(&location.error(
-                        "Unexpected error when trying to parse right side of arithmetic operation".to_string()
+                        "Unexpected error when trying to parse right side of an arithmetic operation".to_string()
                     ));
 
                 let mut left_ty = left_ty_unparsed.clone();
@@ -601,7 +601,7 @@ impl Compiler {
                                     panic!(
                                         "{}",
                                         location.error(
-                                            format!("Unexpected error when trying to get a variable called {}: {}",
+                                            format!("Unexpected error when trying to get a variable called '{}': '{}'",
                                             name, msg
                                         ))
                                     );
@@ -899,11 +899,17 @@ impl Compiler {
             } => {
                 let (left_ty, _) = self
                     .generate_statement(func, module, *left.clone(), ty.clone(), None, false)
-                    .expect(&location.error("Unexpected error when trying to compile the left side of a store statement".to_string()));
+                    .expect(&location.error(format!(
+                        "Unexpected error when trying to compile the left side of a {} statement",
+                        if value.is_some() { "store" } else { "load" }
+                    )));
 
                 let (right_ty, _) = self
                     .generate_statement(func, module, *right.clone(), ty.clone(), None, false)
-                    .expect(&location.error("Unexpected error when trying to compile the right side of a store statement".to_string()));
+                    .expect(&location.error(format!(
+                        "Unexpected error when trying to compile the right side of a {} statement",
+                        if value.is_some() { "store" } else { "load" }
+                    )));
 
                 if !(matches!(left_ty, Type::Pointer(_)) || matches!(right_ty, Type::Pointer(_))) {
                     panic!(
@@ -942,12 +948,25 @@ impl Compiler {
 
                 let (_, compiled_location) = self
                     .generate_statement(func, module, node.clone(), None, None, false)
-                    .expect(&location.error("Unexpected error when trying to compile the offset of a store statement".to_string()));
+                    .expect(&location.error(format!(
+                        "Unexpected error when trying to compile the offset of a {} statement",
+                        if value.is_some() { "store" } else { "load" }
+                    )));
 
                 if value.is_some() {
                     let (_, compiled) = self
-                        .generate_statement(func, module, *value.unwrap().clone(), Some(inner.clone()), None, false)
-                        .expect(&location.error("Unexpected error when trying to compile the value of a store statement".to_string()));
+                        .generate_statement(
+                            func,
+                            module,
+                            *value.clone().unwrap().clone(),
+                            Some(inner.clone()),
+                            None,
+                            false,
+                        )
+                        .expect(&location.error(format!(
+                            "Unexpected error when trying to compile the value of a {} statement",
+                            if value.is_some() { "store" } else { "load" }
+                        )));
 
                     func.borrow_mut().add_instruction(Instruction::Store(
                         inner.to_owned(),
@@ -1353,12 +1372,13 @@ impl Compiler {
 
                 // value.is_some() because we don't want to do this to
                 // arrays that aren't assigned to a variable
+                // dbg!(&value, &ty);
                 if value.is_some() && ty.is_some() && !ty.clone().unwrap().is_pointer() {
                     panic!(
                         "{}",
                         location.error(
-                            format!("The type of array '{:?}' must be a pointer to the inner type of the array (it is {:?})",
-                                values.clone(), ty.clone()
+                            format!("The type of array '{:?}' must be a pointer to the inner type of the array (it is {})",
+                                values.clone(), ty.clone().unwrap().display()
                             )
                         )
                     );
@@ -1370,7 +1390,7 @@ impl Compiler {
                     None
                 };
 
-                for (i, value) in values.iter().enumerate() {
+                for (i, (location, value)) in values.iter().enumerate() {
                     let (ty, val) = self
                         .generate_statement(
                             func,
@@ -1397,8 +1417,9 @@ impl Compiler {
                             panic!(
                                 "{}",
                                 location.error(format!(
-                                    "Inconsistent array types {:?} and {:?} (possibly more)",
-                                    first_type, ty
+                                    "Inconsistent array types '{}' and '{}' (possibly more)",
+                                    first_type.display(),
+                                    ty.display()
                                 ))
                             );
                         }
@@ -1407,13 +1428,23 @@ impl Compiler {
                             panic!(
                                 "{}",
                                 location.error(format!(
-                                    "Inconsistent array type definition {:?} and type of value in array {:?}",
-                                    inner_ty, first_type
+                                    "Invalid type of element in array '{}' when the array type is '{}'",
+                                    ty.display(), inner_ty.unwrap().display(),
                                 ))
                             )
                         }
                     } else {
-                        first_type = Some(ty);
+                        first_type = Some(ty.clone());
+
+                        if inner_ty.is_some() && inner_ty.clone().unwrap() != ty {
+                            panic!(
+                                "{}",
+                                location.error(format!(
+                                    "Invalid type of element in array '{}' when the array type is '{}'",
+                                    ty.display(), inner_ty.unwrap().display(),
+                                ))
+                            )
+                        }
                     }
                 }
 
@@ -1856,8 +1887,9 @@ impl Compiler {
                             panic!(
                                 "{}",
                                 &location.error(format!(
-                                    "Cannot access fields on a non-struct type '{:?}' (field '{}')",
-                                    ty, field
+                                    "Cannot access fields on a non-struct type '{}' (field '{}')",
+                                    ty.display(),
+                                    field
                                 ))
                             );
                         }
@@ -1948,7 +1980,7 @@ impl Compiler {
             .generate_statement(func, module, *left.clone(), ty.clone(), None, is_return)
             .expect(
                 &location.error(
-                    "Unexpected error when trying to parse left side of arithmetic operation"
+                    "Unexpected error when trying to parse left side of an arithmetic operation"
                         .to_string(),
                 ),
             );
@@ -1984,7 +2016,7 @@ impl Compiler {
             other => panic!(
                 "{}",
                 &location.error(format!(
-                    "Invalid operator token for conditional short circuiting {:?}",
+                    "Invalid operator token for conditional short circuiting '{}'",
                     other
                 ))
             ),
@@ -1996,7 +2028,7 @@ impl Compiler {
             .generate_statement(func, module, *right.clone(), ty.clone(), None, is_return)
             .expect(
                 &location.error(
-                    "Unexpected error when trying to parse right side of arithmetic operation"
+                    "Unexpected error when trying to parse right side of an arithmetic operation"
                         .to_string(),
                 ),
             );
@@ -2052,8 +2084,9 @@ impl Compiler {
             panic!(
                 "{}",
                 location.error(format!(
-                    "Cannot convert to or from a struct type (trying to convert {:?} to {:?})",
-                    first, second
+                    "Cannot convert to or from a struct type (trying to convert '{}' to '{}')",
+                    first.display(),
+                    second.display()
                 ))
             )
         }

@@ -147,7 +147,7 @@ impl<'a> Statement<'a> {
             panic!(
                 "{}",
                 self.current_token().location.error(format!(
-                    "Type named {} could not be found. Are you sure you spelt it correctly?",
+                    "Type or struct named '{}' could not be found. Are you sure you spelt it correctly?",
                     name
                 ))
             )
@@ -190,6 +190,7 @@ impl<'a> Statement<'a> {
         };
 
         let name = self.get_identifier();
+        let location = self.current_token().location.clone();
 
         self.advance();
 
@@ -206,7 +207,7 @@ impl<'a> Statement<'a> {
                     value: ValueKind::Number(0),
                     location: self.current_token().location,
                 }),
-                location: self.current_token().location,
+                location,
             };
         }
 
@@ -226,7 +227,7 @@ impl<'a> Statement<'a> {
                 AstNode::LiteralStatement {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
-                    location: self.current_token().location,
+                    location: location.clone(),
                 }
             }
             _ => res,
@@ -236,7 +237,7 @@ impl<'a> Statement<'a> {
             name,
             r#type,
             value: Box::new(parsed_res),
-            location: self.current_token().location,
+            location,
         }
     }
 
@@ -768,6 +769,7 @@ impl<'a> Statement<'a> {
         let mut values = vec![];
 
         while self.current_token().kind != TokenKind::RightBlockBrace && !self.is_eof() {
+            let location = self.current_token().location.clone();
             let tmp_tokens = self
                 .yield_tokens_with_delimiters(vec![TokenKind::Comma, TokenKind::RightBlockBrace]);
 
@@ -775,7 +777,8 @@ impl<'a> Statement<'a> {
                 self.advance();
             }
 
-            values.push(
+            values.push((
+                location,
                 Statement::new(
                     tmp_tokens.clone(),
                     0,
@@ -785,7 +788,7 @@ impl<'a> Statement<'a> {
                 )
                 .parse()
                 .0,
-            );
+            ));
         }
 
         self.advance();
@@ -1228,6 +1231,7 @@ impl<'a> Statement<'a> {
     fn parse_type_conversion(&mut self) -> AstNode {
         self.advance();
 
+        let location = self.current_token().location.clone();
         let r#type = self.get_type();
 
         self.advance();
@@ -1282,10 +1286,11 @@ impl<'a> Statement<'a> {
                 .parse()
                 .0,
         );
+
         AstNode::ConversionStatement {
             r#type: Some(r#type),
             value,
-            location: self.current_token().location,
+            location,
         }
     }
 
@@ -2098,18 +2103,18 @@ impl<'a> Statement<'a> {
                     } else if next.kind == TokenKind::Dot {
                         let current = self.current_token();
                         let name = current.value.get_string_inner().unwrap();
-                        let unexpected_error = |msg: String| {
-                            current.location.error(format!("Expected a field access ({}.foo) or a function call ({}.(1, 2, 3)) but got {}", name, name, msg))
+                        let unexpected_error = |token: Token, msg: String| {
+                            token.location.error(format!("Expected a field access ({}.foo) or a function call ({}.(1, 2, 3)) but got {}", name, name, msg))
                         };
 
                         let tie = self
                             .next_token_seek(2)
-                            .expect(&unexpected_error("EOF".to_string()));
+                            .expect(&unexpected_error(next, "EOF".to_string()));
 
-                        match tie.kind {
+                        match tie.clone().kind {
                             TokenKind::Identifier => self.parse_field_access(None),
                             TokenKind::LeftParenthesis => self.parse_function(),
-                            other => panic!("{}", unexpected_error(format!("{:?}", other))),
+                            other => panic!("{}", unexpected_error(tie, format!("{:?}", other))),
                         }
                     } else if next.kind == TokenKind::Equal {
                         self.parse_declare(Some(None))
@@ -2122,7 +2127,7 @@ impl<'a> Statement<'a> {
                     } else {
                         panic!(
                             "{}",
-                            self.current_token().location.error(format!(
+                            next.location.error(format!(
                                 "Expected left parenthesis or arithmetic, got {:?}",
                                 self.current_token().kind
                             )),

@@ -61,7 +61,7 @@ pub enum AstNode {
     },
     ArrayStatement {
         size: Box<AstNode>,
-        values: Vec<AstNode>,
+        values: Vec<(Location, AstNode)>,
         location: Location,
     },
     StructStatement {

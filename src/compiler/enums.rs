@@ -271,6 +271,26 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn display(&self) -> String {
+        match self {
+            Self::Byte => "byte".to_string(),
+            Self::UnsignedByte => "unsigned byte".to_string(),
+            Self::Char => "char".to_string(),
+            Self::Halfword => "short".to_string(),
+            Self::UnsignedHalfword => "unsigned short".to_string(),
+            Self::Word => "integer".to_string(),
+            Self::UnsignedWord => "unsigned integer".to_string(),
+            Self::Long => "long".to_string(),
+            Self::UnsignedLong => "unsigned long".to_string(),
+            Self::Pointer(inner) => format!("{} *", inner.display()),
+            Self::Single => "float".to_string(),
+            Self::Double => "double".to_string(),
+            Self::Void => "void".to_string(),
+            Self::Null => "null".to_string(),
+            Self::Struct(td) => td.to_string(),
+        }
+    }
+
     pub fn unwrap(self) -> Option<Type> {
         match self {
             Self::Pointer(ty) => Some(*ty),
