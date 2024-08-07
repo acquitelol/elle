@@ -49,13 +49,13 @@ fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 lightDirectio
                 z = surfacePos.z,
             };
 
-            f32 normalLengthSquared = lengthSquared(normal);
+            f32 normalLengthSquared = v3_length_sq(normal);
 
             if normalLengthSquared > 0 {
-                normal = scale(normal, 1.0 / normalLengthSquared);
+                normal = v3_scale(normal, 1.0 / normalLengthSquared);
             }
 
-            f32 illumination = dot(normal, lightDirection);
+            f32 illumination = v3_dot(normal, lightDirection);
             i32 lightingIndex = (i32)(fabs(illumination) * (strlen(LIGHTING) - 1));
 
             if HEIGHT > y && y > 0 && x > 0 && WIDTH > x && depth > zBuffer[offset] {

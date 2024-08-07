@@ -590,7 +590,7 @@ impl Compiler {
                             Err(msg) => {
                                 // If it fails to get the variable from the current scope
                                 // then attempt to get it from a global instead
-                                let tmp_module = module.borrow_mut();
+                                let tmp_module = module.borrow();
                                 let global = tmp_module.data.iter().find(|item| item.name == name);
 
                                 if global.is_some() {
