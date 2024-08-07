@@ -7,7 +7,7 @@ const f32 THETA_SPACING = 0.07;
 const f32 PHI_SPACING = 0.02;
 const string LIGHTING = ".,-~:;=!*#$@";
 
-const i32 WIDTH = 100;
+const i32 WIDTH = 60;
 const i32 HEIGHT = 24;
 const i32 SIZE = WIDTH * HEIGHT;
 
