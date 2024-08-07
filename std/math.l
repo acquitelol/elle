@@ -34,6 +34,8 @@ external fn ceil(f64 x) -> f64;
 external fn fabs(f64 x) -> f64;
 external fn floor(f64 x) -> f64;
 external fn fmod(f64 x, f64 y) -> f64;
+external fn fmin(f64 x, f64 y) -> f64;
+external fn fmax(f64 x, f64 y) -> f64;
 external fn round(f64 x) -> f64;
 
 fn fact(i64 n) -> i64 {

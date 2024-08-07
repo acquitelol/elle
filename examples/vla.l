@@ -18,7 +18,7 @@ fn resizeArray(DynamicArray *arr, i32 newCapacity) {
 }
 
 fn addElement(DynamicArray *arr, i32 element) {
-    if (arr.size == arr.capacity) {
+    if arr.size == arr.capacity {
         resizeArray(arr, arr.capacity * 2);
     }
 
