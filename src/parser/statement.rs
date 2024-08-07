@@ -243,6 +243,7 @@ impl<'a> Statement<'a> {
 
     fn parse_declarative_like(&mut self) -> AstNode {
         let name = self.get_identifier();
+        let location = self.current_token().location.clone();
 
         self.advance();
         let operation = self.current_token();
@@ -275,14 +276,14 @@ impl<'a> Statement<'a> {
                         operator: mapping,
                         location: self.current_token().location,
                     }),
-                    location: self.current_token().location,
+                    location,
                 };
             }
 
             self.body.borrow_mut().push(AstNode::LiteralStatement {
                 kind: TokenKind::ExactLiteral,
                 value: ValueKind::String("__<#insert#>__".to_owned()),
-                location: self.current_token().location,
+                location: location.clone(),
             });
 
             self.body.borrow_mut().push(AstNode::DeclareStatement {
@@ -302,7 +303,7 @@ impl<'a> Statement<'a> {
                     operator: mapping,
                     location: self.current_token().location,
                 }),
-                location: self.current_token().location,
+                location,
             });
 
             return AstNode::LiteralStatement {
@@ -322,7 +323,7 @@ impl<'a> Statement<'a> {
                 left: Box::new(AstNode::LiteralStatement {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
-                    location: self.current_token().location,
+                    location: location.clone(),
                 }),
                 right: Box::new(
                     Statement::new(tokens, 0, &self.body, self.struct_pool.clone(), false)
@@ -330,9 +331,9 @@ impl<'a> Statement<'a> {
                         .0,
                 ),
                 operator: mapping,
-                location: self.current_token().location,
+                location: location.clone(),
             }),
-            location: self.current_token().location,
+            location,
         }
     }
 
