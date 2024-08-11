@@ -56,6 +56,10 @@ compile:
 	mkdir -p dist
 	rustc -o dist/ellec src/main.rs
 
+compile-release:
+	mkdir -p dist
+	rustc -o dist/ellec -O src/main.rs
+
 clean:
 	rm -rf dist
 	@make compile

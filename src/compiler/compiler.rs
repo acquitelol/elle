@@ -31,9 +31,24 @@ pub struct Compiler {
 }
 
 impl Compiler {
+    fn tmp_name_with_debug_assertions(&self, name: &str) -> String {
+        if cfg!(debug_assertions) {
+            format!(
+                "{}.{}",
+                name,
+                self.tmp_counter
+            )
+        } else {
+            format!(
+                ".{}",
+                self.tmp_counter
+            )
+        }
+    }
+
     fn new_temporary(&mut self, name: Option<&str>) -> Value {
         self.tmp_counter += 1;
-        Value::Temporary(format!("{}.{}", name.unwrap_or("tmp"), self.tmp_counter))
+        Value::Temporary(self.tmp_name_with_debug_assertions(name.unwrap_or("tmp")))
     }
 
     fn new_variable(
@@ -660,12 +675,7 @@ impl Compiler {
                     }
                     ValueKind::String(val) => {
                         self.tmp_counter += 1;
-
-                        let name = format!(
-                            "{}.{}",
-                            func.borrow_mut().name.to_string(),
-                            self.tmp_counter
-                        );
+                        let name = self.tmp_name_with_debug_assertions(&func.borrow_mut().name.to_string());
 
                         self.data_sections.push(Data::new(
                             Linkage::private(),
@@ -684,12 +694,7 @@ impl Compiler {
                     }
                     ValueKind::Nil => {
                         self.tmp_counter += 1;
-
-                        let name = format!(
-                            "{}.{}",
-                            func.borrow_mut().name.to_string(),
-                            self.tmp_counter
-                        );
+                        let name = self.tmp_name_with_debug_assertions(&func.borrow_mut().name.to_string());
 
                         self.data_sections.push(Data::new(
                             Linkage::private(),
@@ -815,7 +820,6 @@ impl Compiler {
                     params.insert(tmp_function.variadic_index, res);
                 }
 
-                self.tmp_counter += 1;
                 let temp = self.new_temporary(Some(&format!("{}.res", func.borrow_mut().name)));
 
                 let (_, val) = self
@@ -977,7 +981,6 @@ impl Compiler {
                     return None;
                 }
 
-                self.tmp_counter += 1;
                 let temp = self.new_temporary(Some("load"));
 
                 func.borrow_mut().assign_instruction(
@@ -1001,6 +1004,7 @@ impl Compiler {
                     ));
 
                 self.tmp_counter += 1;
+
                 let true_label = format!("ift.{}", self.tmp_counter);
                 let false_label = format!("iff.{}", self.tmp_counter);
                 let end_label = format!("end.{}", self.tmp_counter);
@@ -1286,6 +1290,7 @@ impl Compiler {
             }
             AstNode::BlockStatement { body, location: _ } => {
                 self.tmp_counter += 1;
+
                 let body_label = format!("block.start.{}", self.tmp_counter);
                 let end_label = format!("block.end.{}", self.tmp_counter);
                 func.borrow_mut().add_block(body_label.clone());
@@ -1779,7 +1784,6 @@ impl Compiler {
                     return None;
                 }
 
-                self.tmp_counter += 1;
                 let temp = self.new_temporary(Some("field"));
 
                 func.borrow_mut().assign_instruction(
@@ -1959,11 +1963,12 @@ impl Compiler {
         location: Location,
         kind: TokenKind,
     ) -> (Type, Value) {
+        self.tmp_counter += 1;
+
         let left_label = format!("{}.left.{}", kind, self.tmp_counter);
         let right_label = format!("{}.right.{}", kind, self.tmp_counter);
         let true_label = format!("{}.true.{}", kind, self.tmp_counter);
         let end_label = format!("{}.end.{}", kind, self.tmp_counter);
-        self.tmp_counter += 1;
 
         let result_tmp = self.new_temporary(Some(&kind.to_string()));
 

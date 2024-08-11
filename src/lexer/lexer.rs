@@ -1,5 +1,3 @@
-use std::f32::consts::PI;
-
 use super::enums::{Location, ParseResult, Token, TokenKind, ValueKind};
 
 pub struct Lexer {
