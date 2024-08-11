@@ -2,7 +2,7 @@ use std/io;
 
 const i32 ITERATIONS = 60;
 
-fn fibonacci_cached(i32 n, i64* cache) -> i64 {
+fn fibonacci_cached(i32 n, i64 *cache) -> i64 {
     if n <= 1 {
         return (i64)n;
     }
@@ -37,11 +37,8 @@ fn main() {
     i64 cache[ITERATIONS + 1];
     memset(cache, -1, #size(cache));
 
-    printf(
-        "fibonacci_cached(%d) = %ld\nfibonacci_iterative(%d) = %ld\n",
-        ITERATIONS,
+    dbg(
         fibonacci_cached(ITERATIONS, cache),
-        ITERATIONS,
         fibonacci_iterative(ITERATIONS)
     );
 }

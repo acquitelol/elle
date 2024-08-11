@@ -1,5 +1,5 @@
-use std/core@{malloc, free};
-use std/string@{strlen, strcpy};
+use std/core;
+use std/string;
 
 global pub;
 
@@ -60,4 +60,55 @@ fn input(string message) -> string {
     string result = malloc(strlen(buf) + 1);
     strcpy(result, buf);
     return result;
+}
+
+fn dbg(ElleMeta meta, ...) {
+    variadic args[meta.arity]; // Arity does NOT include meta
+
+    for i32 i = 0; i < meta.arity; ++i {
+        string ty = meta.types[i];
+        string expr = meta.exprs[i];
+
+        if strstr(ty, "*") {
+            if strprefix(ty, "char") {
+                printf("%s = \"%s\"\n", expr, args yield string);
+                continue;
+            }
+
+            printf("%s = %p\n", expr, args yield i64);
+            continue;
+        }
+
+        if strprefix(ty, "i32") {
+            printf("%s = %d\n", expr, args yield i32);
+            continue;
+        }
+
+        if strprefix(ty, "i64") {
+            printf("%s = %ld\n", expr, args yield i64);
+            continue;
+        }
+
+        if strprefix(ty, "f32") {
+            printf("%s = %f\n", expr, (f64)(args yield f32));
+            continue;
+        }
+
+        if strprefix(ty, "f64") {
+            printf("%s = %f\n", expr, args yield f64);
+            continue;
+        }
+
+        if strprefix(ty, "char") {
+            printf("%s = '%c'\n", expr, args yield char);
+            continue;
+        }
+
+        if strprefix(ty, "bool") {
+            printf("%s = %s\n", expr, btos(args yield bool));
+            continue;
+        }
+
+        printf("Invalid expression type '%s'", ty);
+    }
 }

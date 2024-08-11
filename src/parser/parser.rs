@@ -212,9 +212,9 @@ impl Parser {
                     if local && public {
                         panic!(
                             "{}",
-                            self.current_token().location.error(
-                                "Cannot specify a function as both private and public".to_string()
-                            )
+                            self.current_token()
+                                .location
+                                .error("Cannot specify a function as both private and public")
                         );
                     }
 
@@ -235,15 +235,15 @@ impl Parser {
                 }
                 TokenKind::Constant if !imports_only => {
                     if external {
-                        panic!("{}", self.current_token().location.error("Cannot have an external constant. Please remove the `external` keyword.".to_string()))
+                        panic!("{}", self.current_token().location.error("Cannot have an external constant. Please remove the `external` keyword."))
                     }
 
                     if local && public {
                         panic!(
                             "{}",
-                            self.current_token().location.error(
-                                "Cannot specify a constant as both private and public".to_string()
-                            )
+                            self.current_token()
+                                .location
+                                .error("Cannot specify a constant as both private and public")
                         );
                     }
 
@@ -261,15 +261,15 @@ impl Parser {
                 }
                 TokenKind::Define if !imports_only => {
                     if external {
-                        panic!("{}", self.current_token().location.error("Cannot have an external struct. Please remove the `external` keyword.".to_string()))
+                        panic!("{}", self.current_token().location.error("Cannot have an external struct. Please remove the `external` keyword."))
                     }
 
                     if local && public {
                         panic!(
                             "{}",
-                            self.current_token().location.error(
-                                "Cannot specify a struct as both private and public".to_string()
-                            )
+                            self.current_token()
+                                .location
+                                .error("Cannot specify a struct as both private and public")
                         );
                     }
 

@@ -1,7 +1,7 @@
 use std/io;
 
 fn main() {
-    string res = concat.(
+    string res = concat(
         "‎ ‎╱|、",
         "(˚ˎ 。7",
         "|、˜〵",

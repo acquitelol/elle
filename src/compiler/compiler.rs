@@ -8,6 +8,7 @@ use std::{
 use crate::{
     lexer::enums::{Location, TokenKind, ValueKind},
     parser::enums::{Argument, AstNode, Primitive},
+    META_STRUCT_NAME,
 };
 
 type GeneratorResult<T> = Result<T, String>;
@@ -33,16 +34,9 @@ pub struct Compiler {
 impl Compiler {
     fn tmp_name_with_debug_assertions(&self, name: &str) -> String {
         if cfg!(debug_assertions) {
-            format!(
-                "{}.{}",
-                name,
-                self.tmp_counter
-            )
+            format!("{}.{}", name, self.tmp_counter)
         } else {
-            format!(
-                ".{}",
-                self.tmp_counter
-            )
+            format!(".{}", self.tmp_counter)
         }
     }
 
@@ -121,7 +115,7 @@ impl Compiler {
                             func.unwrap().borrow_mut().assign_instruction(
                                 temp.clone(),
                                 ty.clone().unwrap(),
-                                Instruction::Call(Value::Global(name.to_string()), vec![]),
+                                Instruction::Call(Value::Global(name.into()), vec![]),
                             );
 
                             return Ok((ty.unwrap(), temp));
@@ -146,7 +140,7 @@ impl Compiler {
 
                             return Ok((
                                 Type::Pointer(Box::new(Type::Byte)),
-                                Value::Global(name.to_string()),
+                                Value::Global(name.into()),
                             ));
                         }
                     }
@@ -212,7 +206,7 @@ impl Compiler {
                 .insert(name.clone(), func.clone().return_type.unwrap());
         }
 
-        func.add_block("start".to_string());
+        func.add_block("start");
 
         let func_ref = RefCell::new(func.clone());
 
@@ -469,13 +463,13 @@ impl Compiler {
                 let (left_ty_unparsed, left_val_unparsed) = self
                     .generate_statement(func, module, *left.clone(), ty.clone(), None, is_return)
                     .expect(&location.error(
-                        "Unexpected error when trying to parse left side of an arithmetic operation".to_string()
+                        "Unexpected error when trying to parse left side of an arithmetic operation"
                     ));
 
                 let (right_ty_unparsed, right_val_unparsed) = self
                     .generate_statement(func, module, *right.clone(), ty.clone(), None, is_return)
                     .expect(&location.error(
-                        "Unexpected error when trying to parse right side of an arithmetic operation".to_string()
+                        "Unexpected error when trying to parse right side of an arithmetic operation"
                     ));
 
                 let mut left_ty = left_ty_unparsed.clone();
@@ -635,10 +629,7 @@ impl Compiler {
                         func.borrow_mut()
                             .add_instruction(Instruction::Jump(format!("{}.end", label)));
                     } else {
-                        panic!(
-                            "{}",
-                            location.error("Break can only be used in a loop".to_string())
-                        );
+                        panic!("{}", location.error("Break can only be used in a loop"));
                     }
 
                     None
@@ -648,10 +639,7 @@ impl Compiler {
                         func.borrow_mut()
                             .add_instruction(Instruction::Jump(format!("{}.step", label)));
                     } else {
-                        panic!(
-                            "{}",
-                            location.error("Continue can only be used in a loop".to_string())
-                        );
+                        panic!("{}", location.error("Continue can only be used in a loop"));
                     }
 
                     None
@@ -659,6 +647,7 @@ impl Compiler {
                 _ => match value {
                     ValueKind::Number(val) => {
                         let num_ty = match kind {
+                            TokenKind::BoolLiteral => Type::Boolean,
                             TokenKind::IntegerLiteral => Type::Word,
                             TokenKind::FloatLiteral => Type::Single,
                             TokenKind::LongLiteral => Type::Long,
@@ -675,7 +664,8 @@ impl Compiler {
                     }
                     ValueKind::String(val) => {
                         self.tmp_counter += 1;
-                        let name = self.tmp_name_with_debug_assertions(&func.borrow_mut().name.to_string());
+                        let name = self
+                            .tmp_name_with_debug_assertions(&func.borrow_mut().name.to_string());
 
                         self.data_sections.push(Data::new(
                             Linkage::private(),
@@ -694,7 +684,8 @@ impl Compiler {
                     }
                     ValueKind::Nil => {
                         self.tmp_counter += 1;
-                        let name = self.tmp_name_with_debug_assertions(&func.borrow_mut().name.to_string());
+                        let name = self
+                            .tmp_name_with_debug_assertions(&func.borrow_mut().name.to_string());
 
                         self.data_sections.push(Data::new(
                             Linkage::private(),
@@ -758,9 +749,21 @@ impl Compiler {
 
                 let mut params = vec![];
 
+                let mut add_meta = false;
+
+                if let Some(inner) = tmp_function.arguments.get(0) {
+                    if inner.0.is_struct() {
+                        let name = inner.0.get_struct_inner().unwrap();
+
+                        if name == META_STRUCT_NAME.to_string() {
+                            add_meta = true;
+                        }
+                    }
+                }
+
                 for (i, parameter) in parameters.clone().iter().enumerate() {
                     let param_ty = {
-                        let tmp = tmp_function.arguments.get(i);
+                        let tmp = tmp_function.arguments.get(i + add_meta as usize);
 
                         if tmp.is_some() {
                             tmp.map(|item| item.0.clone())
@@ -799,14 +802,179 @@ impl Compiler {
 
                 let ty = tmp_function.return_type.clone().unwrap_or(declarative_ty);
 
-                if tmp_function.variadic {
+                if add_meta {
                     let res = self
                         .generate_statement(
                             func,
                             module,
-                            AstNode::LiteralStatement {
-                                kind: TokenKind::ExactLiteral,
-                                value: ValueKind::String("...".to_string()),
+                            AstNode::StructStatement {
+                                name: META_STRUCT_NAME.into(),
+                                values: vec![
+                                    (
+                                        "exprs".into(),
+                                        Box::new(AstNode::ArrayStatement {
+                                            size: Box::new(AstNode::LiteralStatement {
+                                                kind: TokenKind::IntegerLiteral,
+                                                value: ValueKind::Number(params.len() as i128),
+                                                location: location.clone(),
+                                            }),
+                                            values: params
+                                                .iter()
+                                                .cloned()
+                                                .enumerate()
+                                                .map(|(i, _)| {
+                                                    let location =
+                                                        parameters.get(i).unwrap().0.clone();
+                                                    let ctx =
+                                                        format!("{},", location.get_expr_lead());
+                                                    let mut res = String::new();
+
+                                                    let mut paren_nesting = 0;
+                                                    let mut block_nesting = 0;
+                                                    let mut curly_nesting = 0;
+
+                                                    let tokens = ctx
+                                                        .clone()
+                                                        .as_bytes()
+                                                        .iter()
+                                                        .map(|x| x.to_owned() as char)
+                                                        .collect::<Vec<char>>();
+                                                    let mut i = 0;
+
+                                                    macro_rules! current_char {
+                                                        () => {
+                                                            tokens[i]
+                                                        };
+                                                    }
+
+                                                    macro_rules! advance {
+                                                        () => {
+                                                            if i + 1 < tokens.len() {
+                                                                i += 1;
+                                                            }
+                                                        };
+                                                    }
+
+                                                    loop {
+                                                        if i + 1 >= tokens.len() {
+                                                            if paren_nesting > 0
+                                                                || block_nesting > 0
+                                                                || curly_nesting > 0
+                                                            {
+                                                                res.pop();
+                                                            }
+
+                                                            break;
+                                                        }
+
+                                                        // Wrapped statement, deref, nested function call
+                                                        if current_char!() == '(' {
+                                                            paren_nesting += 1;
+                                                        }
+
+                                                        // Inline array
+                                                        if current_char!() == '[' {
+                                                            block_nesting += 1;
+                                                        }
+
+                                                        // Struct init
+                                                        if current_char!() == '{' {
+                                                            curly_nesting += 1;
+                                                        }
+
+                                                        res.push(current_char!());
+                                                        advance!();
+
+                                                        if current_char!() == ',' {
+                                                            if paren_nesting > 0
+                                                                || block_nesting > 0
+                                                                || curly_nesting > 0
+                                                            {
+                                                                res.push(current_char!());
+                                                                advance!();
+                                                                continue;
+                                                            } else {
+                                                                break;
+                                                            }
+                                                        }
+
+                                                        if current_char!() == ')' {
+                                                            if paren_nesting > 0 {
+                                                                paren_nesting -= 1;
+                                                            } else {
+                                                                break;
+                                                            }
+                                                        }
+
+                                                        if current_char!() == ']' {
+                                                            if block_nesting > 0 {
+                                                                block_nesting -= 1;
+                                                            } else {
+                                                                break;
+                                                            }
+                                                        }
+
+                                                        if current_char!() == '}' {
+                                                            if curly_nesting > 0 {
+                                                                curly_nesting -= 1;
+                                                            } else {
+                                                                break;
+                                                            }
+                                                        }
+                                                    }
+
+                                                    (
+                                                        location.clone(),
+                                                        AstNode::LiteralStatement {
+                                                            kind: TokenKind::StringLiteral,
+                                                            value: ValueKind::String(
+                                                                res.replace("\\", "\\\\")
+                                                                    .replace("\"", "\\\""),
+                                                            ),
+                                                            location: location.clone(),
+                                                        },
+                                                    )
+                                                })
+                                                .collect(),
+                                            location: location.clone(),
+                                        }),
+                                    ),
+                                    (
+                                        "types".into(),
+                                        Box::new(AstNode::ArrayStatement {
+                                            size: Box::new(AstNode::LiteralStatement {
+                                                kind: TokenKind::IntegerLiteral,
+                                                value: ValueKind::Number(params.len() as i128),
+                                                location: location.clone(),
+                                            }),
+                                            values: params
+                                                .iter()
+                                                .cloned()
+                                                .map(|param| {
+                                                    let inner = param.0.id();
+
+                                                    (
+                                                        location.clone(),
+                                                        AstNode::LiteralStatement {
+                                                            kind: TokenKind::StringLiteral,
+                                                            value: ValueKind::String(inner),
+                                                            location: location.clone(),
+                                                        },
+                                                    )
+                                                })
+                                                .collect(),
+                                            location: location.clone(),
+                                        }),
+                                    ),
+                                    (
+                                        "arity".into(),
+                                        Box::new(AstNode::LiteralStatement {
+                                            kind: TokenKind::IntegerLiteral,
+                                            value: ValueKind::Number(params.len() as i128),
+                                            location: location.clone(),
+                                        }),
+                                    ),
+                                ],
                                 location: location.clone(),
                             },
                             Some(ty.clone()),
@@ -814,7 +982,28 @@ impl Compiler {
                             false,
                         )
                         .expect(&location.error(
-                            "Unexpected error when trying to compile the variadic literal '...'".to_string()
+                            "Unexpected error when trying to compile the Elle metadata struct",
+                        ));
+
+                    params.insert(0, res);
+                }
+
+                if tmp_function.variadic {
+                    let res = self
+                        .generate_statement(
+                            func,
+                            module,
+                            AstNode::LiteralStatement {
+                                kind: TokenKind::ExactLiteral,
+                                value: ValueKind::String("...".into()),
+                                location: location.clone(),
+                            },
+                            Some(ty.clone()),
+                            None,
+                            false,
+                        )
+                        .expect(&location.error(
+                            "Unexpected error when trying to compile the variadic literal '...'",
                         ));
 
                     params.insert(tmp_function.variadic_index, res);
@@ -1000,7 +1189,7 @@ impl Compiler {
                 let (_, value) = self
                     .generate_statement(func, module, *condition.clone(), ty, None, false)
                     .expect(&location.error(
-                        "Unexpected error when trying to compile the condition of an if statement".to_string(),
+                        "Unexpected error when trying to compile the condition of an if statement",
                     ));
 
                 self.tmp_counter += 1;
@@ -1046,10 +1235,9 @@ impl Compiler {
                                                 .borrow_mut()
                                                 .add_instruction(Instruction::Literal(value)),
                                         },
-                                        _ => panic!(
-                                            "{}",
-                                            location.error("Unexpected error".to_string())
-                                        ),
+                                        _ => {
+                                            panic!("{}", location.error("Unexpected error"))
+                                        }
                                     },
                                     _ => {}
                                 }
@@ -1153,12 +1341,9 @@ impl Compiler {
 
                 let (_, value) = self
                     .generate_statement(func, module, *condition.clone(), ty.clone(), None, false)
-                    .expect(
-                        &location.error(
-                            "Unexpected error when trying to compile the condition of a while loop"
-                                .to_string(),
-                        ),
-                    );
+                    .expect(&location.error(
+                        "Unexpected error when trying to compile the condition of a while loop",
+                    ));
 
                 func.borrow_mut().add_instruction(Instruction::JumpNonZero(
                     value,
@@ -1179,8 +1364,7 @@ impl Compiler {
                     )
                     .expect(
                         &location.error(
-                            "Unexpected error when trying to compile the step of a while loop"
-                                .to_string(),
+                            "Unexpected error when trying to compile the step of a while loop",
                         ),
                     );
                 }
@@ -1338,19 +1522,16 @@ impl Compiler {
             } => {
                 let (first, val) = self
                     .generate_statement(func, module, *value.clone(), ty, None, false)
-                    .expect(&location.error("Unexpected error when trying to compile the value of a conversion statement".to_string()));
+                    .expect(&location.error("Unexpected error when trying to compile the value of a conversion statement"));
 
                 Some(self.convert_to_type(func, first, second.unwrap(), val, location))
             }
             AstNode::NotStatement { value, location } => {
                 let (ty, val) = self
                     .generate_statement(func, module, *value.clone(), ty, None, false)
-                    .expect(
-                        &location.error(
-                            "Unexpected error when trying to compile the value of a not statement"
-                                .to_string(),
-                        ),
-                    );
+                    .expect(&location.error(
+                        "Unexpected error when trying to compile the value of a not statement",
+                    ));
 
                 let temp = self.new_temporary(Some("not"));
 
@@ -1377,7 +1558,6 @@ impl Compiler {
 
                 // value.is_some() because we don't want to do this to
                 // arrays that aren't assigned to a variable
-                // dbg!(&value, &ty);
                 if value.is_some() && ty.is_some() && !ty.clone().unwrap().is_pointer() {
                     panic!(
                         "{}",
@@ -1555,12 +1735,9 @@ impl Compiler {
                 Err(value) => {
                     let (ty, val) = self
                         .generate_statement(func, module, *value.clone(), ty.clone(), None, false)
-                        .expect(
-                            &location.error(
-                                "Unexpected error when trying to compile the size of a statement"
-                                    .to_string(),
-                            ),
-                        );
+                        .expect(&location.error(
+                            "Unexpected error when trying to compile the size of a statement",
+                        ));
 
                     let size = self.new_temporary(Some("size"));
 
@@ -1763,7 +1940,7 @@ impl Compiler {
                     )
                     .expect(
                         &location.error(
-                            "Unexpected error when trying to compile the left side of a struct field access".to_string()
+                            "Unexpected error when trying to compile the left side of a struct field access"
                         ),
                     );
 
@@ -1773,7 +1950,7 @@ impl Compiler {
                 if let Some(value) = value {
                     let (_, compiled) = self
                         .generate_statement(func, module, *value.clone(), Some(field_ty.clone()), None, false)
-                        .expect(&location.error("Unexpected error when trying to compile the value of a store statement".to_string()));
+                        .expect(&location.error("Unexpected error when trying to compile the value of a store statement"));
 
                     func.borrow_mut().add_instruction(Instruction::Store(
                         field_ty.to_owned(),
@@ -1983,12 +2160,9 @@ impl Compiler {
 
         let (_, left_val) = self
             .generate_statement(func, module, *left.clone(), ty.clone(), None, is_return)
-            .expect(
-                &location.error(
-                    "Unexpected error when trying to parse left side of an arithmetic operation"
-                        .to_string(),
-                ),
-            );
+            .expect(&location.error(
+                "Unexpected error when trying to parse left side of an arithmetic operation",
+            ));
 
         let left_tmp = self.new_temporary(Some(&format!("{}.left", kind.to_string())));
 
@@ -2031,12 +2205,9 @@ impl Compiler {
 
         let (_, right_val) = self
             .generate_statement(func, module, *right.clone(), ty.clone(), None, is_return)
-            .expect(
-                &location.error(
-                    "Unexpected error when trying to parse right side of an arithmetic operation"
-                        .to_string(),
-                ),
-            );
+            .expect(&location.error(
+                "Unexpected error when trying to parse right side of an arithmetic operation",
+            ));
 
         let right_tmp = self.new_temporary(Some(&format!("{}.right", kind.to_string())));
 
@@ -2094,6 +2265,12 @@ impl Compiler {
                     second.display()
                 ))
             )
+        }
+
+        if (first.is_pointer() && first.clone().unwrap().unwrap().is_void())
+            || (second.is_pointer() && second.clone().unwrap().unwrap().is_void())
+        {
+            return (first, val);
         }
 
         if first.weight() == second.weight() {
@@ -2155,7 +2332,7 @@ impl Compiler {
             .tree
             .iter()
             .find(|primitive| match primitive {
-                Primitive::Function { name, .. } if name.to_owned() == "main".to_string() => true,
+                Primitive::Function { name, .. } if &(name.to_owned()) == "main" => true,
                 _ => false,
             })
             .is_none()

@@ -29,14 +29,18 @@ fn streq(string str1, string str2) {
     return str1 == str2 || strcmp(str1, str2) == 0;
 }
 
-fn concat(i32 size, ...) {
-    variadic args[size * #size(string)];
-    string strings[size];
-    i32 sizes[size];
+fn strprefix(string str, string pre) {
+    return strncmp(pre, str, strlen(pre)) == 0;
+}
+
+fn concat(ElleMeta meta, ...) {
+    variadic args[meta.arity * #size(string)];
+    string strings[meta.arity];
+    i32 sizes[meta.arity];
     i64 length = 0;
 
     // Collect the strings and the final string length
-    for i32 i = 0; i < size; i++ {
+    for i32 i = 0; i < meta.arity; i++ {
         strings[i] = args yield string;
         sizes[i] = strlen(strings[i]);
         length += sizes[i] + 1;
@@ -46,7 +50,7 @@ fn concat(i32 size, ...) {
     i32 index = 0;
 
     // Construct the final string
-    for i32 i = 0; i < size; i++ {
+    for i32 i = 0; i < meta.arity; i++ {
         string current = strings[i];
 
         for i32 j = 0; j < sizes[i]; j++ {

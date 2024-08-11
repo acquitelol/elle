@@ -10,6 +10,7 @@ pub enum TokenKind {
     Function,
     Type,
     Identifier,
+    BoolLiteral,
     IntegerLiteral,
     LongLiteral,
     FloatingPoint,
@@ -262,11 +263,11 @@ impl ValueKind {
                 "f32" => Some(Type::Single),
                 "f64" => Some(Type::Double),
                 "char" => Some(Type::Word),
-                "bool" => Some(Type::Byte),
+                "bool" => Some(Type::Boolean),
                 // Arbitrary because it will be turned into `long` anyway when used as void*`
                 "void" => Some(Type::Void),
                 "nil" => None,
-                other => Some(Type::Struct(other.to_string())),
+                other => Some(Type::Struct(other.into())),
             },
             _ => None,
         }
@@ -313,20 +314,35 @@ impl Location {
         return format!("{}:{}:{}", self.file, self.row + 1, self.column + 1);
     }
 
-    pub fn display_pretty(&self, message: String, is_warning: bool) -> String {
+    pub fn get_expr_lead(&self) -> String {
+        let ident = self.column - (self.ctx.len() - self.ctx.trim_start().len());
+
+        let left = if ident >= self.length {
+            ident - self.length
+        } else {
+            ident
+        };
+
+        self.ctx.trim_start().split_at(left).1.into()
+    }
+
+    pub fn display_pretty(&self, message: impl Into<String>, is_warning: bool) -> String {
         let upper = format!(
             "{fmt}{}{RESET}[{}]{fmt}{}{RESET}",
-            "-".repeat(20),
+            "―".repeat(20),
             self.display(is_warning),
-            "-".repeat(20),
+            "―".repeat(20),
             fmt = if is_warning { YELLOW } else { RED }
         );
+
+        // Used for calculations to determine the bottom width
         let upper_plain = format!(
             "{}[{}]{}",
             "-".repeat(20),
             self.display_plain(),
             "-".repeat(20)
         );
+
         let padding = 4;
         let ident = self.column - (self.ctx.len() - self.ctx.trim_start().len());
 
@@ -346,12 +362,12 @@ impl Location {
         let rhs = string.1.get(self.length..).unwrap_or(&fallback_rest);
 
         return format!(
-            "\n{upper}\n{message}\n\n{above}{line_number}{}{lhs}{BOLD}{fmt}{UNDERLINE}{issue}{RESET}{rhs}\n{}{}{BOLD}{GREEN}^{}{RESET}\n{fmt}{}{RESET}\n",
+            "\n{upper}\n{user_mesage}\n\n{above}{line_number}{}{lhs}{BOLD}{fmt}{UNDERLINE}{issue}{RESET}{rhs}\n{}{}{BOLD}{GREEN}^{}{RESET}\n{fmt}{}{RESET}\n",
             " ".repeat(padding),
             " ".repeat(padding + format!("{}", self.row + 1).len()),
             " ".repeat(left),
             "~".repeat(self.length.checked_sub(1).unwrap_or(0)),
-            "-".repeat(upper_plain.len()),
+            "―".repeat(upper_plain.len()),
             above = if let Some(above) = self.above.clone() {
                 if !above.is_empty() {
                     format!(
@@ -361,21 +377,22 @@ impl Location {
                         above.trim_start()
                     )
                 } else {
-                    "".to_string()
+                    "".into()
                 }
             } else {
-                "".to_string()
+                "".into()
             },
+            user_mesage = message.into(),
             line_number = self.row + 1,
             fmt = if is_warning { YELLOW } else { RED }
         );
     }
 
-    pub fn warning(&self, message: String) -> String {
+    pub fn warning(&self, message: impl Into<String>) -> String {
         self.display_pretty(message, true)
     }
 
-    pub fn error(&self, message: String) -> String {
+    pub fn error(&self, message: impl Into<String>) -> String {
         self.display_pretty(message, false)
     }
 
@@ -384,7 +401,7 @@ impl Location {
             file,
             row: 0,
             column: 0,
-            ctx: "".to_string(),
+            ctx: "".into(),
             above: None,
             length: 0,
         }

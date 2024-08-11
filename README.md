@@ -195,6 +195,58 @@ fn main() {
 
 <hr />
 
+### ♡ **Function Metadata**
+
+* Elle can provide you with extra metadata using the `ElleMeta` struct.
+
+This is done by ensuring the 0th argument of your function is typed to use the ElleMeta struct.
+<br />
+The compiler will automatically supply the struct to you when the function is called, you do not need to manually call it.
+
+This struct is not defined in Elle code, however its equivalent structure may look like:
+```cpp
+def ElleMeta {
+    string *exprs; // An array of every argument's expression passed to the function as a string
+    string *types; // An array of the type of every argument supplied to the function
+    i32 arity; // The number of arguments supplied to the function. This does NOT include the metadata parameter.
+}
+```
+
+> [!IMPORTANT]
+> You do not need to supply the structure yourself. This is automatically managed by the compiler.
+
+> The compiler automatically passes the structure to any functions that define `ElleMeta` as their 0th parameter.
+
+This means that here:
+
+```c
+fn square(i32 a) {
+    return a * 2;
+}
+
+fn main() {
+    i32 res = square(5);
+}
+```
+
+`square` will not be passed `ElleMeta`.
+
+However, here:
+
+```c
+fn square(Ellemeta meta, i32 a) {
+    return a * 2 + meta.arity;
+}
+
+fn main() {
+    i32 res = square(5);
+}
+```
+
+`square` will be passed `ElleMeta`. Please notice how it is NOT passed by the caller. It is automatically passed by the compiler if it is required.
+
+<hr />
+
 ### ♡ **Variadic Functions**
 
 * A variadic function is a function that can take in a variable amount of arguments. This works similar to C except that there are macros which allow you to get the argument size.
@@ -202,13 +254,13 @@ fn main() {
 Here's a basic example of a variadic function which takes in any amount of arguments and returns their sum:
 
 ```cpp
-fn add(i32 size, ...) {
+fn add(ElleMeta meta, ...) {
     // Note: `i32` should be the same as the type
     // you are yielding from later.
-    variadic args[size * #size(i32)];
+    variadic args[meta.arity * #size(i32)];
     i32 res = 0;
 
-    for i32 i = 0; i < size; i++ {
+    for i32 i = 0; i < meta.arity; i++ {
         res += args yield i32;
     }
 
@@ -225,16 +277,14 @@ Let's go through an explanation for how this works:
 * L6: Yield the next argument from the `args` pointer as an `i32` type, and add it to the result value
 * L9: Return the summed value. Right before this point, the `free` call that we deferred earlier would be called.
 
-At the call-site, using this function is easy due to the syntactic sugar provided by Elle. It can be done like this:
+At the call-site, using this function is easy. It can be done like this:
 
 ```cpp
 fn main() {
-    i32 res = add.(1, 2, 3, 4);
+    i32 res = add(1, 2, 3, 4);
     printf("%d\n", res);
 }
 ```
-
-Notice the `add.(a, b)` syntax. This is a compile time macro which automatically adds the argument length as the 0th argument of the function, substituting it for the size of the variadic function. This means that calling `add.(a, b, c)` is actually identical to calling `add(3, a, b, c)`, you simply no longer need to pass the argument length manually, like in C.
 
 Examples that contain variadic functions include [`concat.elle`](https://github.com/acquitelol/elle/blob/rewrite/examples/concat.elle) and [`variadic.elle`](https://github.com/acquitelol/elle/blob/rewrite/examples/variadic.elle).
 
@@ -275,15 +325,6 @@ fn main() {
 * These expressions will expand into the exact characters you type into the intermediate language code.
 * Typing `$$storeb 0, %tmp_12$$` will write exactly `storeb 0, %tmp_12` into the intermediate language, completely ignoring types, sigils, etc.
 * Only use this for basic operations, it is not intended as a replacement for writing Elle code as block-scoped variables are written with a temporary counter and cannot be referenced directly from exact literals.
-
-* The function syntax `func.(a, b, c)` works as follows:
-  * `func(a, b, c)` expands to `func(a, b, c)`
-  * `func.(a, b, c, d)` expands to `func(4, a, b, c, d)`
-  * `func.(a, b, c)` expands to `func(3, a, b, c)`
-  * `func.(a, b)` expands to `func(2, a, b)`
-
-> [!TIP]
-> The number placed at the 0th argument is the number of arguments. This is a simple way to allow to get the number of arguments that were passed into the function without needing to manually specify them.
 
 <hr />
 
@@ -877,7 +918,7 @@ local fn increment(i32 a) {
 
 <hr />
 
-### ♡ **Structss**
+### ♡ **Structs**
 
 Structs are allocations in memory with a defined layout. In Elle, these are defined using the `def` keyword.
 

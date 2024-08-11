@@ -439,18 +439,10 @@ impl<'a> Statement<'a> {
     fn parse_function(&mut self) -> AstNode {
         let name = self.get_identifier();
         let location = self.current_token().location.clone();
-        let mut calculate_variadic_size = false;
 
         self.advance();
         match self.current_token().kind {
             TokenKind::LeftParenthesis => {
-                self.advance();
-            }
-            TokenKind::Dot => {
-                self.advance();
-                calculate_variadic_size = true;
-
-                self.expect_tokens(vec![TokenKind::LeftParenthesis]);
                 self.advance();
             }
             other => panic!("Expected left parethesis or exclamation mark (for variadic functions) but got {:?}", other)
@@ -515,7 +507,7 @@ impl<'a> Statement<'a> {
                             "{}",
                             self.current_token()
                                 .location
-                                .error("Invalid balance of block braces".to_string())
+                                .error("Invalid balance of block braces")
                         )
                     }
                 }
@@ -528,7 +520,7 @@ impl<'a> Statement<'a> {
                             "{}",
                             self.current_token()
                                 .location
-                                .error("Invalid balance of curly braces".to_string())
+                                .error("Invalid balance of curly braces")
                         )
                     }
                 }
@@ -558,20 +550,6 @@ impl<'a> Statement<'a> {
         );
 
         self.advance();
-
-        if calculate_variadic_size {
-            parameters.insert(
-                0,
-                (
-                    location.clone(),
-                    AstNode::LiteralStatement {
-                        kind: TokenKind::IntegerLiteral,
-                        value: ValueKind::Number(parameters.len() as i128),
-                        location: location.clone(),
-                    },
-                ),
-            );
-        }
 
         AstNode::FunctionCall {
             name,
@@ -1247,7 +1225,7 @@ impl<'a> Statement<'a> {
                 "{}",
                 self.current_token()
                     .location
-                    .error("Expected type conversion but got empty passthrough".to_string())
+                    .error("Expected type conversion but got empty passthrough")
             )
         }
 
@@ -1330,7 +1308,7 @@ impl<'a> Statement<'a> {
                     "{}",
                     self.current_token()
                         .location
-                        .error("Expected size directive but got empty passthrough".to_string())
+                        .error("Expected size directive but got empty passthrough")
                 )
             }
 
@@ -1400,7 +1378,7 @@ impl<'a> Statement<'a> {
                 "{}",
                 self.current_token()
                     .location
-                    .error("Expected type conversion but got empty passthrough".to_string())
+                    .error("Expected type conversion but got empty passthrough")
             )
         }
 
@@ -2092,7 +2070,7 @@ impl<'a> Statement<'a> {
                         &self
                             .current_token()
                             .location
-                            .error("Unexpected EOF when parsing an identifier".to_string()),
+                            .error("Unexpected EOF when parsing an identifier"),
                     );
 
                     if next.kind == TokenKind::LeftParenthesis {
@@ -2105,16 +2083,18 @@ impl<'a> Statement<'a> {
                         let current = self.current_token();
                         let name = current.value.get_string_inner().unwrap();
                         let unexpected_error = |token: Token, msg: String| {
-                            token.location.error(format!("Expected a field access ({}.foo) or a function call ({}.(1, 2, 3)) but got {}", name, name, msg))
+                            token.location.error(format!(
+                                "Expected a field access ({}.foo) but got {}",
+                                name, msg
+                            ))
                         };
 
                         let tie = self
                             .next_token_seek(2)
-                            .expect(&unexpected_error(next, "EOF".to_string()));
+                            .expect(&unexpected_error(next, "EOF".into()));
 
                         match tie.clone().kind {
                             TokenKind::Identifier => self.parse_field_access(None),
-                            TokenKind::LeftParenthesis => self.parse_function(),
                             other => panic!("{}", unexpected_error(tie, format!("{:?}", other))),
                         }
                     } else if next.kind == TokenKind::Equal {

@@ -1,6 +1,6 @@
-use std/io@{printf, sprintf};
-use std/string@{concat, strlen};
-use std/math@{fabs};
+use std/io;
+use std/string;
+use std/math;
 use examples/resources/raylib;
 
 const i32 screenWidth = 600;
@@ -98,21 +98,8 @@ fn main() {
             sprintf(bouncesString, "Bounces: %d", bounces);
             DrawText(bouncesString, (screenWidth - MeasureText(bouncesString, fontSize)) / 2, 100, fontSize, YELLOW);
 
-            printf(
-                concat.(
-                    "position.x = %f",
-                    "position.y = %f",
-                    "velocity.x = %f",
-                    "velocity.y = %f",
-                    "deltaTime = %f",
-                    "-----------------------"
-                ),
-                (f64)position.x,
-                (f64)position.y,
-                (f64)velocity.x,
-                (f64)velocity.y,
-                (f64)deltaTime
-            );
+            dbg(position.x, position.y, velocity.x, velocity.y, deltaTime);
+            printf("-----------------------\n");
         EndDrawing();
     }
 }

@@ -18,8 +18,7 @@ fn other(Foo *a) {
     a.bar.meow = 50001;
     a.ptr.nya = 10;
 
-    printf("a.ptr.nya = %d\n", a.ptr.nya);
-    printf("a.b[0] = %f\n", a.b[0]);
+    dbg(a.ptr.nya, a.b[0]);
 }
 
 fn main() {
@@ -42,7 +41,5 @@ fn main() {
     foo.c = 14;
 
     other(&foo);
-    printf("foo.c = %d\n", foo.c); // 14
-    printf("foo.bar.meow = %d\n", foo.bar.meow); // 100
-    printf("foo.barptr.nya = %d\n", foo.ptr.nya);
+    dbg(foo.c, foo.bar.meow, foo.ptr.nya);
 }

@@ -13,12 +13,7 @@ fn main() {
     // Result: (-0, 1, 0)
     //
     // Great!
-    printf(
-        "(%f, %f, %f)\n",
-        (f64)rotated.x,
-        (f64)rotated.y,
-        (f64)rotated.z
-    );
+    dbg(rotated.x, rotated.y, rotated.z);
 
     Vector3 v1 = Vector3 { x = 1, y = 0, z = 0 };
     Vector3 v2 = Vector3 { x = 0, y = 1, z = 0 };
@@ -27,5 +22,5 @@ fn main() {
     // Result: 1.5707963705
     //
     // Close enough!
-    printf("%.10f\n", (f64)v3_angle(v1, v2));
+    dbg(v3_angle(v1, v2));
 }

@@ -165,12 +165,12 @@ macro_rules! token_to_node {
     ($token:expr, $self:expr) => {
         match $token.kind {
             TokenKind::TrueLiteral => AstNode::LiteralStatement {
-                kind: TokenKind::IntegerLiteral,
+                kind: TokenKind::BoolLiteral,
                 value: ValueKind::Number(1),
                 location: $token.location,
             },
             TokenKind::FalseLiteral => AstNode::LiteralStatement {
-                kind: TokenKind::IntegerLiteral,
+                kind: TokenKind::BoolLiteral,
                 value: ValueKind::Number(0),
                 location: $token.location,
             },

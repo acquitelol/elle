@@ -19,7 +19,7 @@ impl<'a> Use<'a> {
                 self.parser
                     .current_token()
                     .location
-                    .error("Token is not a string".to_string())
+                    .error("Token is not a string")
             ),
         }
     }

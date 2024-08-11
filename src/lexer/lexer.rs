@@ -356,7 +356,6 @@ impl Lexer {
                                     "{}",
                                     self.get_location().error(
                                         "Invalid token: expected \".\" or \"...\" but got \"..\"."
-                                            .to_string()
                                     )
                                 )
                             }
@@ -409,6 +408,10 @@ impl Lexer {
         self.position >= self.input.len()
     }
 
+    fn previous_char(&self) -> Option<char> {
+        self.input.get(self.position - 1).map(|x| x.to_owned())
+    }
+
     fn current_char(&self) -> char {
         self.input[self.position]
     }
@@ -440,7 +443,7 @@ impl Lexer {
             file: self.file.clone(),
             row: self.row,
             column: self.position - self.bol,
-            ctx: self.get_line(self.row).unwrap(),
+            ctx: self.get_line(self.row).unwrap_or("".into()),
             above: if self.row == 0 {
                 None
             } else {
@@ -676,7 +679,14 @@ impl Lexer {
         let mut string = String::new();
         self.advance();
 
-        while !self.is_eof() && self.current_char() != '"' {
+        while !self.is_eof() {
+            if self.current_char() == '"'
+                && self.previous_char().is_some()
+                && self.previous_char().unwrap() != '\\'
+            {
+                break;
+            }
+
             string.push(self.current_char());
             self.advance();
         }

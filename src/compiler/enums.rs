@@ -259,6 +259,7 @@ pub enum Type {
     UnsignedLong,
     Byte,
     Halfword,
+    Boolean,
     Word,
     Long,
     Single,
@@ -273,21 +274,36 @@ pub enum Type {
 impl Type {
     pub fn display(&self) -> String {
         match self {
-            Self::Byte => "byte".to_string(),
-            Self::UnsignedByte => "unsigned byte".to_string(),
-            Self::Char => "char".to_string(),
-            Self::Halfword => "short".to_string(),
-            Self::UnsignedHalfword => "unsigned short".to_string(),
-            Self::Word => "integer".to_string(),
-            Self::UnsignedWord => "unsigned integer".to_string(),
-            Self::Long => "long".to_string(),
-            Self::UnsignedLong => "unsigned long".to_string(),
+            Self::Byte => "byte".into(),
+            Self::UnsignedByte => "unsigned byte".into(),
+            Self::Char => "char".into(),
+            Self::Halfword => "short".into(),
+            Self::UnsignedHalfword => "unsigned short".into(),
+            Self::Boolean => "boolean".into(),
+            Self::Word => "integer".into(),
+            Self::UnsignedWord => "unsigned integer".into(),
+            Self::Long => "long".into(),
+            Self::UnsignedLong => "unsigned long".into(),
             Self::Pointer(inner) => format!("{} *", inner.display()),
-            Self::Single => "float".to_string(),
-            Self::Double => "double".to_string(),
-            Self::Void => "void".to_string(),
-            Self::Null => "null".to_string(),
-            Self::Struct(td) => td.to_string(),
+            Self::Single => "float".into(),
+            Self::Double => "double".into(),
+            Self::Void => "void".into(),
+            Self::Null => "null".into(),
+            Self::Struct(td) => td.into(),
+        }
+    }
+
+    pub fn id(&self) -> String {
+        match self {
+            Self::Char => "char".into(),
+            Self::Boolean => "bool".into(),
+            Self::Word => "i32".into(),
+            Self::Long => "i64".into(),
+            Self::Pointer(inner) => format!("{}*", (*inner).clone().id()),
+            Self::Single => "f32".into(),
+            Self::Double => "f64".into(),
+            Self::Struct(td) => td.into(),
+            _ => "".into(),
         }
     }
 
@@ -328,6 +344,13 @@ impl Type {
     pub fn is_float(&self) -> bool {
         match self {
             Self::Single | Self::Double => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_void(&self) -> bool {
+        match self {
+            Self::Void => true,
             _ => false,
         }
     }
@@ -427,6 +450,7 @@ impl fmt::Display for Type {
             Self::Char => write!(formatter, "w"),
             Self::Halfword => write!(formatter, "h"),
             Self::UnsignedHalfword => write!(formatter, "uh"),
+            Self::Boolean => write!(formatter, "w"),
             Self::Word => write!(formatter, "w"),
             Self::UnsignedWord => write!(formatter, "uw"),
             Self::Long => write!(formatter, "l"),

@@ -8,8 +8,5 @@ fn main() {
     i32 b = (color >> 8) & 0xFF;
     i32 a = color & 0xFF;
 
-    printf(
-        "r = %u\ng = %u\nb = %u\na = %u\n",
-        r, g, b, a
-    );
+    dbg(r, g, b, a);
 }

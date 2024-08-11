@@ -13,9 +13,12 @@ use compiler::enums::Type;
 use lexer::enums::Location;
 use lexer::enums::ValueKind;
 use lexer::{enums::TokenKind, lexer::Lexer};
+use parser::enums::Argument;
 use parser::enums::AstNode;
 use parser::enums::Primitive;
 use parser::parser::Parser;
+
+static META_STRUCT_NAME: &str = "ElleMeta";
 
 fn lex_and_parse(
     input_path: String,
@@ -93,7 +96,7 @@ fn lex_and_parse(
         tree.insert(
             0,
             Primitive::Constant {
-                name: "EOF".to_string(),
+                name: "EOF".into(),
                 public: false,
                 usable: true,
                 imported: false,
@@ -110,7 +113,7 @@ fn lex_and_parse(
         tree.insert(
             0,
             Primitive::Constant {
-                name: "NULL".to_string(),
+                name: "NULL".into(),
                 public: false,
                 usable: true,
                 imported: false,
@@ -120,6 +123,31 @@ fn lex_and_parse(
                     value: ValueKind::Number(0),
                     location: Location::default(input_path.clone()),
                 }),
+                location: Location::default(input_path.clone()),
+            },
+        );
+
+        tree.insert(
+            0,
+            Primitive::Struct {
+                name: META_STRUCT_NAME.into(),
+                public: false,
+                usable: true,
+                imported: false,
+                members: vec![
+                    Argument {
+                        name: "exprs".into(),
+                        r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
+                    },
+                    Argument {
+                        name: "types".into(),
+                        r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
+                    },
+                    Argument {
+                        name: "arity".into(),
+                        r#type: Type::Word,
+                    },
+                ],
                 location: Location::default(input_path.clone()),
             },
         );
@@ -261,10 +289,10 @@ fn main() -> ExitCode {
         output
     } else {
         let tmp = Path::new(&input_path).with_extension("ssa");
-        tmp.to_str().unwrap().to_string()
+        tmp.to_str().unwrap().into()
     };
 
-    let pool = vec![];
+    let pool = vec![META_STRUCT_NAME.into()];
     let struct_pool: RefCell<Vec<String>> = RefCell::new(pool);
     let tree = lex_and_parse(input_path, &struct_pool, true);
 
