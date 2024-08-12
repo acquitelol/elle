@@ -234,7 +234,7 @@ fn main() {
 However, here:
 
 ```c
-fn square(Ellemeta meta, i32 a) {
+fn square(ElleMeta meta, i32 a) {
     return a * 2 + meta.arity;
 }
 
@@ -485,11 +485,11 @@ fn main() {
 }
 ```
 
-Casting is not necessary here, because the Elle compiler is smart enough to automatically cast the `f32` to an `i32` when compiling the arithmetic operation, based on a [weight](https://github.com/acquitelol/elle/blob/rewrite/src/compiler/enums.rs#L233-L241) that each type is assigned.
+Casting is not necessary here, because the Elle compiler is smart enough to automatically cast the `f32` to an `i32` when compiling the arithmetic operation, based on a [weight](https://github.com/acquitelol/elle/blob/rewrite/src/compiler/enums.rs#L405-L414) that each type is assigned.
 
 <br />
 
-You can also cast to pointer types, however note that, unlike C, casting to a pointer type when using `malloc` is *not* necessary (yet) because malloc is not interfaced in the Elle internals with `external fn`.
+You can also cast to pointer types, however note that, unlike C, casting to a pointer type when using `malloc` is *not* necessary because the Elle compiler automatically casts the `void *` into the type of the variable.
 
 This means you can write:
 ```cpp
@@ -497,7 +497,7 @@ fn main() {
     f64 *a = malloc(1024 * #size(f64));
 }
 ```
-and Elle will not complain. You can, if you wish, cast it, however it will have no effect at the moment.
+and Elle will not complain. You can, if you wish, cast it, however it will have no effect.
 
 <hr />
 
@@ -632,7 +632,7 @@ fn main() {
 
 And of course, this works for every arithmetic operator, not just `^`.
 
-Elle follows the standard [order of operations](https://github.com/acquitelol/elle/blob/rewrite/src/lexer/enums.rs#L90-L102) described by mathematics (typically defined as BIDMAS or PEMDAS), which means you can also wrap expressions in `()` to evaluate them before other expressions that may have a higher precedence.
+Elle follows the standard [order of operations](https://github.com/acquitelol/elle/blob/rewrite/src/lexer/enums.rs#L104-L117) described by mathematics (typically defined as BIDMAS or PEMDAS), which means you can also wrap expressions in `()` to evaluate them before other expressions that may have a higher precedence.
 
 Example of a program that calculates the xor (`^`) and sum (`+`) of some values:
 

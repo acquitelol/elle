@@ -807,176 +807,11 @@ impl Compiler {
                         .generate_statement(
                             func,
                             module,
-                            AstNode::StructStatement {
-                                name: META_STRUCT_NAME.into(),
-                                values: vec![
-                                    (
-                                        "exprs".into(),
-                                        Box::new(AstNode::ArrayStatement {
-                                            size: Box::new(AstNode::LiteralStatement {
-                                                kind: TokenKind::IntegerLiteral,
-                                                value: ValueKind::Number(params.len() as i128),
-                                                location: location.clone(),
-                                            }),
-                                            values: params
-                                                .iter()
-                                                .cloned()
-                                                .enumerate()
-                                                .map(|(i, _)| {
-                                                    let location =
-                                                        parameters.get(i).unwrap().0.clone();
-                                                    let ctx =
-                                                        format!("{},", location.get_expr_lead());
-                                                    let mut res = String::new();
-
-                                                    let mut paren_nesting = 0;
-                                                    let mut block_nesting = 0;
-                                                    let mut curly_nesting = 0;
-
-                                                    let tokens = ctx
-                                                        .clone()
-                                                        .as_bytes()
-                                                        .iter()
-                                                        .map(|x| x.to_owned() as char)
-                                                        .collect::<Vec<char>>();
-                                                    let mut i = 0;
-
-                                                    macro_rules! current_char {
-                                                        () => {
-                                                            tokens[i]
-                                                        };
-                                                    }
-
-                                                    macro_rules! advance {
-                                                        () => {
-                                                            if i + 1 < tokens.len() {
-                                                                i += 1;
-                                                            }
-                                                        };
-                                                    }
-
-                                                    loop {
-                                                        if i + 1 >= tokens.len() {
-                                                            if paren_nesting > 0
-                                                                || block_nesting > 0
-                                                                || curly_nesting > 0
-                                                            {
-                                                                res.pop();
-                                                            }
-
-                                                            break;
-                                                        }
-
-                                                        // Wrapped statement, deref, nested function call
-                                                        if current_char!() == '(' {
-                                                            paren_nesting += 1;
-                                                        }
-
-                                                        // Inline array
-                                                        if current_char!() == '[' {
-                                                            block_nesting += 1;
-                                                        }
-
-                                                        // Struct init
-                                                        if current_char!() == '{' {
-                                                            curly_nesting += 1;
-                                                        }
-
-                                                        res.push(current_char!());
-                                                        advance!();
-
-                                                        if current_char!() == ',' {
-                                                            if paren_nesting > 0
-                                                                || block_nesting > 0
-                                                                || curly_nesting > 0
-                                                            {
-                                                                res.push(current_char!());
-                                                                advance!();
-                                                                continue;
-                                                            } else {
-                                                                break;
-                                                            }
-                                                        }
-
-                                                        if current_char!() == ')' {
-                                                            if paren_nesting > 0 {
-                                                                paren_nesting -= 1;
-                                                            } else {
-                                                                break;
-                                                            }
-                                                        }
-
-                                                        if current_char!() == ']' {
-                                                            if block_nesting > 0 {
-                                                                block_nesting -= 1;
-                                                            } else {
-                                                                break;
-                                                            }
-                                                        }
-
-                                                        if current_char!() == '}' {
-                                                            if curly_nesting > 0 {
-                                                                curly_nesting -= 1;
-                                                            } else {
-                                                                break;
-                                                            }
-                                                        }
-                                                    }
-
-                                                    (
-                                                        location.clone(),
-                                                        AstNode::LiteralStatement {
-                                                            kind: TokenKind::StringLiteral,
-                                                            value: ValueKind::String(
-                                                                res.replace("\\", "\\\\")
-                                                                    .replace("\"", "\\\""),
-                                                            ),
-                                                            location: location.clone(),
-                                                        },
-                                                    )
-                                                })
-                                                .collect(),
-                                            location: location.clone(),
-                                        }),
-                                    ),
-                                    (
-                                        "types".into(),
-                                        Box::new(AstNode::ArrayStatement {
-                                            size: Box::new(AstNode::LiteralStatement {
-                                                kind: TokenKind::IntegerLiteral,
-                                                value: ValueKind::Number(params.len() as i128),
-                                                location: location.clone(),
-                                            }),
-                                            values: params
-                                                .iter()
-                                                .cloned()
-                                                .map(|param| {
-                                                    let inner = param.0.id();
-
-                                                    (
-                                                        location.clone(),
-                                                        AstNode::LiteralStatement {
-                                                            kind: TokenKind::StringLiteral,
-                                                            value: ValueKind::String(inner),
-                                                            location: location.clone(),
-                                                        },
-                                                    )
-                                                })
-                                                .collect(),
-                                            location: location.clone(),
-                                        }),
-                                    ),
-                                    (
-                                        "arity".into(),
-                                        Box::new(AstNode::LiteralStatement {
-                                            kind: TokenKind::IntegerLiteral,
-                                            value: ValueKind::Number(params.len() as i128),
-                                            location: location.clone(),
-                                        }),
-                                    ),
-                                ],
-                                location: location.clone(),
-                            },
+                            Compiler::generate_meta_struct(
+                                params.clone(),
+                                parameters,
+                                location.clone(),
+                            ),
                             Some(ty.clone()),
                             None,
                             false,
@@ -1068,8 +903,7 @@ impl Compiler {
                         name
                     )));
 
-                let (converted_ty, converted_val) =
-                    self.convert_to_type(func, ty, Type::Long, val, location);
+                let (_, converted_val) = self.convert_to_type(func, ty, Type::Long, val, location);
 
                 func.borrow_mut().assign_instruction(
                     tmp.clone(),
@@ -1428,7 +1262,7 @@ impl Compiler {
                         format!("Unexpected error when trying to compile the size of a variadic statement named '{}'", name)
                     ));
 
-                let (final_ty, final_val) =
+                let (_, final_val) =
                     self.convert_to_type(func, ty, Type::Long, size, location.clone());
 
                 let var = self
@@ -1666,7 +1500,7 @@ impl Compiler {
 
                 let tmp = self.new_temporary(Some("array"));
 
-                let (converted_ty, converted_val) =
+                let (_, converted_val) =
                     self.convert_to_type(func, ty, Type::Long, val, location.clone());
 
                 func.borrow_mut().assign_instruction(
@@ -2001,6 +1835,174 @@ impl Compiler {
             usable,
             imported,
         })
+    }
+
+    fn generate_meta_struct(
+        params: Vec<(Type, Value)>,
+        parameters: Vec<(Location, AstNode)>,
+        location: Location,
+    ) -> AstNode {
+        AstNode::StructStatement {
+            name: META_STRUCT_NAME.into(),
+            values: vec![
+                (
+                    "exprs".into(),
+                    Box::new(AstNode::ArrayStatement {
+                        size: Box::new(AstNode::LiteralStatement {
+                            kind: TokenKind::IntegerLiteral,
+                            value: ValueKind::Number(params.len() as i128),
+                            location: location.clone(),
+                        }),
+                        values: params
+                            .iter()
+                            .cloned()
+                            .enumerate()
+                            .map(|(i, _)| {
+                                let location = parameters.get(i).unwrap().0.clone();
+                                let ctx = format!("{},", location.get_expr_lead());
+                                let mut res = String::new();
+
+                                let mut paren_nesting = 0;
+                                let mut block_nesting = 0;
+                                let mut curly_nesting = 0;
+
+                                let chars = ctx
+                                    .clone()
+                                    .as_bytes()
+                                    .iter()
+                                    .map(|x| x.to_owned() as char)
+                                    .collect::<Vec<char>>();
+                                let mut i = 0;
+
+                                macro_rules! advance {
+                                    () => {
+                                        if i + 1 < chars.len() {
+                                            i += 1;
+                                        }
+                                    };
+                                }
+
+                                loop {
+                                    if i + 1 >= chars.len() {
+                                        if paren_nesting > 0
+                                            || block_nesting > 0
+                                            || curly_nesting > 0
+                                        {
+                                            res.pop();
+                                        }
+
+                                        break;
+                                    }
+
+                                    // Wrapped statement, deref, nested function call
+                                    if chars[i] == '(' {
+                                        paren_nesting += 1;
+                                    }
+
+                                    // Inline array
+                                    if chars[i] == '[' {
+                                        block_nesting += 1;
+                                    }
+
+                                    // Struct init
+                                    if chars[i] == '{' {
+                                        curly_nesting += 1;
+                                    }
+
+                                    res.push(chars[i]);
+                                    advance!();
+
+                                    if chars[i] == ',' {
+                                        if paren_nesting > 0
+                                            || block_nesting > 0
+                                            || curly_nesting > 0
+                                        {
+                                            res.push(chars[i]);
+                                            advance!();
+                                            continue;
+                                        } else {
+                                            break;
+                                        }
+                                    }
+
+                                    if chars[i] == ')' {
+                                        if paren_nesting > 0 {
+                                            paren_nesting -= 1;
+                                        } else {
+                                            break;
+                                        }
+                                    }
+
+                                    if chars[i] == ']' {
+                                        if block_nesting > 0 {
+                                            block_nesting -= 1;
+                                        } else {
+                                            break;
+                                        }
+                                    }
+
+                                    if chars[i] == '}' {
+                                        if curly_nesting > 0 {
+                                            curly_nesting -= 1;
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                (
+                                    location.clone(),
+                                    AstNode::LiteralStatement {
+                                        kind: TokenKind::StringLiteral,
+                                        value: ValueKind::String(
+                                            res.replace("\\", "\\\\").replace("\"", "\\\""),
+                                        ),
+                                        location: location.clone(),
+                                    },
+                                )
+                            })
+                            .collect(),
+                        location: location.clone(),
+                    }),
+                ),
+                (
+                    "types".into(),
+                    Box::new(AstNode::ArrayStatement {
+                        size: Box::new(AstNode::LiteralStatement {
+                            kind: TokenKind::IntegerLiteral,
+                            value: ValueKind::Number(params.len() as i128),
+                            location: location.clone(),
+                        }),
+                        values: params
+                            .iter()
+                            .cloned()
+                            .map(|param| {
+                                let inner = param.0.id();
+
+                                (
+                                    location.clone(),
+                                    AstNode::LiteralStatement {
+                                        kind: TokenKind::StringLiteral,
+                                        value: ValueKind::String(inner),
+                                        location: location.clone(),
+                                    },
+                                )
+                            })
+                            .collect(),
+                        location: location.clone(),
+                    }),
+                ),
+                (
+                    "arity".into(),
+                    Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number(params.len() as i128),
+                        location: location.clone(),
+                    }),
+                ),
+            ],
+            location: location.clone(),
+        }
     }
 
     fn member_to_offset(

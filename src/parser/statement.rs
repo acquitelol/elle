@@ -1378,7 +1378,7 @@ impl<'a> Statement<'a> {
                 "{}",
                 self.current_token()
                     .location
-                    .error("Expected type conversion but got empty passthrough")
+                    .error("Expected array length directive but got empty passthrough")
             )
         }
 

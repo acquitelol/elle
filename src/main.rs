@@ -20,6 +20,32 @@ use parser::parser::Parser;
 
 static META_STRUCT_NAME: &str = "ElleMeta";
 
+macro_rules! override_and_add_node {
+    ($val:path, $tree:expr, $name:expr, $symbol:expr, $public:expr, $allow_all:expr, $functions:expr $(,)?) => {
+        match existing_definition($tree.clone(), $name.clone()) {
+            Some(index) => {
+                $tree.remove(index);
+            }
+            None => {}
+        }
+
+        let mut new_symbol = $symbol.clone();
+        if let $val {
+            ref mut usable,
+            ref mut imported,
+            ..
+        } = new_symbol
+        {
+            *usable =
+                is_valid_insert_context($name.clone(), $public, $allow_all, $functions.clone());
+
+            *imported = true;
+        }
+
+        $tree.insert(0, new_symbol);
+    };
+}
+
 fn lex_and_parse(
     input_path: String,
     struct_pool: &RefCell<Vec<String>>,
@@ -135,16 +161,22 @@ fn lex_and_parse(
                 usable: true,
                 imported: false,
                 members: vec![
+                    // Holds an array of expressions passed into the function in plain text
                     Argument {
                         name: "exprs".into(),
+                        // string[]
                         r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
                     },
+                    // Holds an array of the type of arguments passed into the function as strings
                     Argument {
                         name: "types".into(),
+                        // string[]
                         r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
                     },
+                    // Holds the number of arguments that were passed into a function
                     Argument {
                         name: "arity".into(),
+                        // i32
                         r#type: Type::Word,
                     },
                 ],
@@ -168,85 +200,37 @@ fn handle_node(tree: &mut Vec<Primitive>, struct_pool: &RefCell<Vec<String>>, no
                 match symbol.clone() {
                     Primitive::Use { .. } => {}
                     Primitive::Constant { name, public, .. } => {
-                        match existing_definition(tree.clone(), name.clone()) {
-                            Some(index) => {
-                                tree.remove(index);
-                            }
-                            None => {}
-                        }
-
-                        let mut new_symbol = symbol.clone();
-                        if let Primitive::Constant {
-                            ref mut usable,
-                            ref mut imported,
-                            ..
-                        } = new_symbol
-                        {
-                            *usable = is_valid_insert_context(
-                                name.clone(),
-                                public,
-                                allow_all,
-                                functions.clone(),
-                            );
-
-                            *imported = true;
-                        }
-
-                        tree.insert(0, new_symbol);
+                        override_and_add_node!(
+                            Primitive::Constant,
+                            tree,
+                            name,
+                            symbol,
+                            public,
+                            allow_all,
+                            functions
+                        );
                     }
                     Primitive::Function { name, public, .. } => {
-                        match existing_definition(tree.clone(), name.clone()) {
-                            Some(index) => {
-                                tree.remove(index);
-                            }
-                            None => {}
-                        }
-
-                        let mut new_symbol = symbol.clone();
-                        if let Primitive::Function {
-                            ref mut usable,
-                            ref mut imported,
-                            ..
-                        } = new_symbol
-                        {
-                            *usable = is_valid_insert_context(
-                                name.clone(),
-                                public,
-                                allow_all,
-                                functions.clone(),
-                            );
-
-                            *imported = true;
-                        }
-
-                        tree.insert(0, new_symbol);
+                        override_and_add_node!(
+                            Primitive::Function,
+                            tree,
+                            name,
+                            symbol,
+                            public,
+                            allow_all,
+                            functions
+                        );
                     }
                     Primitive::Struct { name, public, .. } => {
-                        match existing_definition(tree.clone(), name.clone()) {
-                            Some(index) => {
-                                tree.remove(index);
-                            }
-                            None => {}
-                        }
-
-                        let mut new_symbol = symbol.clone();
-                        if let Primitive::Struct {
-                            ref mut usable,
-                            ref mut imported,
-                            ..
-                        } = new_symbol
-                        {
-                            *usable = is_valid_insert_context(
-                                name.clone(),
-                                public,
-                                allow_all,
-                                functions.clone(),
-                            );
-
-                            *imported = true;
-                        }
-
-                        tree.insert(0, new_symbol);
+                        override_and_add_node!(
+                            Primitive::Struct,
+                            tree,
+                            name,
+                            symbol,
+                            public,
+                            allow_all,
+                            functions
+                        );
                     }
                 }
             }
