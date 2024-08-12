@@ -1,6 +1,6 @@
 # ₊˚ Elle ♡︎
 
-### An experimental, purely functional language built in Rust using QBE as its backend
+### An experimental, functional language built in Rust using QBE as its backend
 
 ‎ ‎ ╱|、
 <br />
