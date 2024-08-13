@@ -209,6 +209,7 @@ def ElleMeta {
     string *exprs; // An array of every argument's expression passed to the function as a string
     string *types; // An array of the type of every argument supplied to the function
     i32 arity; // The number of arguments supplied to the function. This does NOT include the metadata parameter.
+    string caller; // The caller of the function as a string
 }
 ```
 

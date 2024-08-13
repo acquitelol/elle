@@ -808,6 +808,7 @@ impl Compiler {
                             func,
                             module,
                             Compiler::generate_meta_struct(
+                                func,
                                 params.clone(),
                                 parameters,
                                 location.clone(),
@@ -1838,6 +1839,7 @@ impl Compiler {
     }
 
     fn generate_meta_struct(
+        func: &RefCell<Function>,
         params: Vec<(Type, Value)>,
         parameters: Vec<(Location, AstNode)>,
         location: Location,
@@ -1997,6 +1999,14 @@ impl Compiler {
                     Box::new(AstNode::LiteralStatement {
                         kind: TokenKind::IntegerLiteral,
                         value: ValueKind::Number(params.len() as i128),
+                        location: location.clone(),
+                    }),
+                ),
+                (
+                    "caller".into(),
+                    Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::StringLiteral,
+                        value: ValueKind::String(func.borrow_mut().name.clone()),
                         location: location.clone(),
                     }),
                 ),

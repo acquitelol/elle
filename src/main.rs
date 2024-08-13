@@ -179,6 +179,12 @@ fn lex_and_parse(
                         // i32
                         r#type: Type::Word,
                     },
+                    // Holds the name of the caller method as a string
+                    Argument {
+                        name: "caller".into(),
+                        // string
+                        r#type: Type::Pointer(Box::new(Type::Char)),
+                    },
                 ],
                 location: Location::default(input_path.clone()),
             },
