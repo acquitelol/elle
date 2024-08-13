@@ -258,7 +258,7 @@ Here's a basic example of a variadic function which takes in any amount of argum
 fn add(ElleMeta meta, ...) {
     // Note: `i32` should be the same as the type
     // you are yielding from later.
-    variadic args[meta.arity * #size(i32)];
+    variadic args[meta.arity];
     i32 res = 0;
 
     for i32 i = 0; i < meta.arity; i++ {

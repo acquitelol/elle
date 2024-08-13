@@ -34,7 +34,7 @@ fn strprefix(string str, string pre) {
 }
 
 fn concat(ElleMeta meta, ...) {
-    variadic args[meta.arity * #size(string)];
+    variadic args[meta.arity];
     string strings[meta.arity];
     i32 sizes[meta.arity];
     i64 length = 0;
