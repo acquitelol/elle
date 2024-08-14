@@ -20,6 +20,7 @@ const f32 epsilon = 5;
 
 fn main() {
     string title = "Using raylib in Elle! <3";
+    string subtitle = "Try controlling the ball with W, A, S, D!";
 
     InitWindow(screenWidth, screenHeight, title);
     defer CloseWindow();
@@ -65,6 +66,22 @@ fn main() {
             velocity.y += gravity * deltaTime;
             ClearBackground(BERRY);
 
+            if IsKeyDown('W') {
+                velocity.y = -200;
+            }
+
+            if IsKeyDown('S') {
+                velocity.y = 200;
+            }
+
+            if IsKeyDown('A') {
+                velocity.x = -200;
+            }
+
+            if IsKeyDown('D') {
+                velocity.x = 200;
+            }
+
             f32 newX = position.x + velocity.x * deltaTime;
 
             if newX < circleRadius || newX + circleRadius > GetScreenWidth() {
@@ -93,10 +110,16 @@ fn main() {
             }
 
             DrawCircle((i32)position.x, (i32)position.y, circleRadius, PINK);
+
+            // Title
             DrawText(title, (screenWidth - MeasureText(title, fontSize)) / 2, 40, fontSize, BLUE);
 
+            // Bounces
             sprintf(bouncesString, "Bounces: %d", bounces);
             DrawText(bouncesString, (screenWidth - MeasureText(bouncesString, fontSize)) / 2, 100, fontSize, YELLOW);
+
+            // Subtitle
+            DrawText(subtitle, (screenWidth - MeasureText(subtitle, fontSize / 2)) / 2, 160, fontSize / 2, PURPLE);
 
             dbg(position.x, position.y, velocity.x, velocity.y, deltaTime);
             printf("-----------------------\n");

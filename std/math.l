@@ -69,3 +69,13 @@ fn clamp(i64 value, i64 min_value, i64 max_value) -> i64 {
 fn fclamp(f64 value, f64 min_value, f64 max_value) -> f64 {
     return fmax(min_value, fmin(value, max_value));
 }
+
+fn next_power_of_2(i64 x) {
+	i64 y = 1;
+
+	while y < x {
+	   y += y;
+	}
+
+	return y;
+}

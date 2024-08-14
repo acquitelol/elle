@@ -8,7 +8,6 @@ pub enum TokenKind {
     Use,
     Public,
     Function,
-    Type,
     Identifier,
     BoolLiteral,
     IntegerLiteral,

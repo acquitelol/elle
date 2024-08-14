@@ -135,7 +135,7 @@ impl Parser {
 
             if tmp.is_some() {
                 match tmp.unwrap().kind {
-                    TokenKind::Multiply => {
+                    TokenKind::Multiply | TokenKind::Deref => {
                         ty = Type::Pointer(Box::new(ty));
                         self.advance();
                     }

@@ -47,3 +47,4 @@ external fn UnloadSound(Sound sound);
 external fn PlaySound(Sound sound);
 external fn InitAudioDevice();
 external fn CloseAudioDevice();
+external fn IsKeyDown(i32 key) -> bool;

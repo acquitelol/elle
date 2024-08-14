@@ -160,7 +160,7 @@ impl<'a> Statement<'a> {
 
             if tmp.is_some() {
                 match tmp.unwrap().kind {
-                    TokenKind::Multiply => {
+                    TokenKind::Multiply | TokenKind::Deref => {
                         ty = Type::Pointer(Box::new(ty));
                         self.advance();
                     }
@@ -1333,9 +1333,12 @@ impl<'a> Statement<'a> {
         let token = self.current_token();
         self.advance();
 
+        let pool = self.struct_pool.clone();
         let tokens = self.yield_tokens_with_condition(|token, prev_token| {
-            (token.kind.is_arithmetic() && prev_token.kind != TokenKind::Type)
+            (token.kind.is_arithmetic() && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into())) || prev_token.value.is_base_type()))
+                || token.kind.is_declarative()
                 || token.kind == TokenKind::Semicolon
+                || token.kind == TokenKind::Equal
         });
 
         let parsed = Box::new(
@@ -1355,9 +1358,12 @@ impl<'a> Statement<'a> {
     fn parse_not(&mut self) -> AstNode {
         self.advance();
 
+        let pool = self.struct_pool.clone();
         let tokens = self.yield_tokens_with_condition(|token, prev_token| {
-            (token.kind.is_arithmetic() && prev_token.kind != TokenKind::Type)
+            (token.kind.is_arithmetic() && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into())) || prev_token.value.is_base_type()))
+                || token.kind.is_declarative()
                 || token.kind == TokenKind::Semicolon
+                || token.kind == TokenKind::Equal
         });
 
         let value = Box::new(
@@ -1389,8 +1395,9 @@ impl<'a> Statement<'a> {
         let location = self.current_token().location.clone();
 
         let mut value = None;
+        let pool = self.struct_pool.clone();
         let addr_tokens = self.yield_tokens_with_condition(|token, prev_token| {
-            (token.kind.is_arithmetic() && prev_token.kind != TokenKind::Type)
+            (token.kind.is_arithmetic() && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into())) || prev_token.value.is_base_type()))
                 || token.kind.is_declarative()
                 || token.kind == TokenKind::Semicolon
                 || token.kind == TokenKind::Equal
