@@ -239,7 +239,6 @@ impl ValueKind {
         match self.clone() {
             ValueKind::String(val) => match val.as_str() {
                 "string" => Some(Type::Pointer(Box::new(Type::Char))),
-                "fun" => Some(Type::Byte), // Cannot be the same as fn
                 "i8" => Some(Type::Byte),
                 "u8" => Some(Type::UnsignedByte),
                 "i16" => Some(Type::Halfword),

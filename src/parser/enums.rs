@@ -206,6 +206,20 @@ macro_rules! token_to_node {
     };
 }
 
+#[macro_export]
+macro_rules! ensure_fn_pointer {
+    ($self:expr, $is_fn_pointer:expr, $found_ptr:expr $(,)?) => {
+        if $is_fn_pointer && !$found_ptr {
+            panic!(
+                "{}",
+                $self.current_token().location.error("Expected function pointer, got just 'fn'.\nTry 'fn *' instead of 'fn'.")
+            );
+        } else {
+            break;
+        }
+    };
+}
+
 #[derive(Debug, Clone)]
 pub struct Case {
     pub condition: Vec<AstNode>,

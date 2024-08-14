@@ -1,6 +1,6 @@
 use std/io;
 
-fn loop(string str, fun *callback) -> void {
+fn loop(string str, fn *callback) -> void {
     for i32 i = 0; i < strlen(str); i += 1 {
         callback(str[i]);
     }

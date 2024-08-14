@@ -2,6 +2,7 @@ use std::{cell::RefCell, thread::current};
 use std::iter::FromIterator;
 
 use super::enums::AstNode;
+use crate::ensure_fn_pointer;
 use crate::{
     compiler::enums::Type,
     lexer::enums::{Token, TokenKind, ValueKind},
@@ -132,10 +133,11 @@ impl<'a> Statement<'a> {
     }
 
     pub fn get_type(&mut self) -> Type {
-        let name = self.get(vec![TokenKind::Identifier]);
+        let is_fn_pointer = self.current_token().kind == TokenKind::Function;
+        let name = if is_fn_pointer { self.current_token().value.get_string_inner().unwrap() } else { self.get(vec![TokenKind::Identifier]) };
 
         let is_valid =
-            self.struct_pool.contains(&name) || ValueKind::String(name.clone()).is_base_type();
+            is_fn_pointer || self.struct_pool.contains(&name) || ValueKind::String(name.clone()).is_base_type();
 
         if !is_valid {
             panic!(
@@ -148,6 +150,7 @@ impl<'a> Statement<'a> {
         }
 
         let mut ty = ValueKind::String(name).to_type_string().unwrap();
+        let mut found_ptr = false;
 
         loop {
             let tmp = self.next_token();
@@ -155,15 +158,20 @@ impl<'a> Statement<'a> {
             if tmp.is_some() {
                 match tmp.unwrap().kind {
                     TokenKind::Multiply | TokenKind::Deref => {
+                        found_ptr = true;
                         ty = Type::Pointer(Box::new(ty));
                         self.advance();
                     }
-                    _ => break,
+                    // Crashes if it hasn't got at least 1 nested pointer for
+                    // function pointers, ie `fn main(fn a)` is invalid
+                    // you must have `fn main(fn *a)` instead.
+                    _ => ensure_fn_pointer!(self, is_fn_pointer, found_ptr),
                 }
             } else {
-                break;
+                ensure_fn_pointer!(self, is_fn_pointer, found_ptr)
             }
         }
+
 
         // Essentially makes the compiler forget what type the pointer holds
         if matches!(ty.clone(), Type::Pointer(inner) if matches!(*inner, Type::Void)) {

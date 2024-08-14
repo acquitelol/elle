@@ -72,9 +72,9 @@ data $main_1 = { b "Hello world!", b 0 }
 i32 a = 0; // Variables must be initialized.
 
 if expression {
-    a++;
+    a += 1;
 } else {
-    a--;
+    a -= 1;
 }
 ```
 
@@ -102,7 +102,7 @@ i32 i = 0;
 
 while (i < 10) {
     printf("%d\n", i);
-    i++;
+    i += 1;
 }
 ```
 
@@ -124,7 +124,7 @@ Essentially, the loop creates the variable defined in (1), and evaluates the blo
 * Basic example of a for loop that prints the digits 0-9 to the stdout:
 
 ```cpp
-for (i32 i = 0; i < 10; i++) {
+for i32 i = 0; i < 10; i += 1 {
     printf("%d\n", i);
 }
 ```
@@ -144,7 +144,7 @@ fn fact(i64 n) -> i64 {
 fn get_e() {
     f64 res = 0.0;
 
-    for i64 i = 0; i < 50; i++ {
+    for i64 i = 0; i < 50; i += 1 {
         res += 1.0 / fact(i);
     }
 
@@ -172,7 +172,7 @@ fn main() {
     i32 a = 0;
 
     {
-        a++;
+        a += 1;
         // If we do *something* here like calling defer then
         // the defer would run when this block leaves its scope
     }
@@ -186,7 +186,7 @@ fn main() {
     i32 a = 0;
 
     if true {
-        a++;
+        a += 1;
         // If we do *something* here like calling defer then
         // the defer would run when this block leaves its scope
     }
@@ -261,7 +261,7 @@ fn add(ElleMeta meta, ...) {
     variadic args[meta.arity];
     i32 res = 0;
 
-    for i32 i = 0; i < meta.arity; i++ {
+    for i32 i = 0; i < meta.arity; i += 1 {
         res += args yield i32;
     }
 
@@ -424,7 +424,7 @@ fn main() {
     i64 *numbers = malloc(size * #size(i64));
     defer free(numbers);
 
-    for (i64 i = 0; i < size - 1; i++) {
+    for i64 i = 0; i < size - 1; i += 1 {
         numbers[i] = i * 2;
         i64 res = numbers[i];
         printf("numbers[%ld] = %ld\n", i, res);
@@ -450,7 +450,7 @@ Of course for a function like the above, you are able to determine what path the
 
 * A type definition is used to differentiate between the scope and size of different variables. You must define a type when declaring variables, taking variables as arguments in a function, and yielding the next value from a variadic argument pointer.
 
-Elle's types are quite similar to C in terms of their definition. They can be a recursive pointer type too such as `char **` (An array of strings). Although C has a limit on the number of pointers that a type can have (it is 2 in the C spec), Elle does **not** because a type is an Option<T> internally and as such, the concept of a `void *` or `nil *` does not exist.
+Elle's types are quite similar to C in terms of their definition. They can be a recursive pointer type too such as `char **` (An array of strings). Although C has a limit on the number of pointers that a type can have (it is 2 in the C spec), Elle does **not**.
 
 These are the mappings of types in Elle:
 
@@ -464,9 +464,9 @@ These are the mappings of types in Elle:
 - `i64` - A signed integer of the size specified by your computer's architecture, up to 64-bit.
 - `f32` - A 32-bit signed floating point number.
 - `f64` - A 64-bit signed floating point number, providing double the precision of `f32`.
-- `fun` - A type that maps to a `byte`. This is intended to be used as a pointer to the first byte of a function definition.
+- `fn` - A type that maps to a `byte`. This is intended to be used as a pointer to the first byte of a function definition.
 - `pointer` - Denoted by `<type> *` -> As pointers are just a number, an address in memory, a pointer in Elle is just an `i64` that holds extra context by holding another type so that it can use its size to calculate an offset when indexing its memory.
-- `string` - A mapping to a `char *`, which is essentially an array of characters.
+- `string` - A mapping to a `char *`, which is essentially an array of characters, or a "c-string".
 
 <hr />
 
@@ -680,7 +680,7 @@ const i64 MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
 fn main() {
     i64 *test = [MAX_SIGNED_LONG, MIN_SIGNED_LONG, -39];
 
-    for i32 i = 0; i < #arrlen(test); i++ {
+    for i32 i = 0; i < #arrlen(test); i += 1 {
         printf("test[%d] = %ld\n", i, test[i]);
     }
 }
@@ -792,10 +792,9 @@ Finally, here is a basic example of using `#arrlen` to loop through an array of 
 use std/io;
 
 fn main() {
-    char *some_array[] = {"abc", "meow", "test"};
+    string *some_array = ["abc", "meow", "test"]";
 
-    for i32 i = 0; i < #arrlen(some_array); i++ {
-        // Here typeof(some_array[i]) = char * = string
+    for i32 i = 0; i < #arrlen(some_array); i += 1 {
         printf("some_array[%d] = %s\n", i, some_array[i]);
     }
 }
@@ -998,16 +997,16 @@ Due to Elle's compilation to QBE which implements the C ABI, getting input from 
 Consider this function which accepts argv and prints them all to the console:
 
 ```cpp
-fn main(i32 argc, char **argv) {
-    for i32 i = 0; i < argc; i++ {
+fn main(i32 argc, string *argv) {
+    for i32 i = 0; i < argc; i += 1 {
         printf("argv[%d] = %s\n", i, argv[i]);
     }
 }
 ```
 
-It accepts `argc` as a signed 32-bit integer and `argv` as an array of `char *` (denoted by `char **`, basically an array of strings). These arguments are optional, as you may have noticed from code examples above, where some `main` functions did not take an `argc` or `argv`.
+It accepts `argc` as a signed 32-bit integer and `argv` as an array of `string` (denoted by `string *`, basically an array of strings). These arguments are optional, as you may have noticed from code examples above, where some `main` functions did not take an `argc` or `argv`.
 
-You can also accept `char **envp` (and `char **apple` on MacOS/Darwin platforms, which provides arbitrary OS information, such as the path to the executing binary).
+You can also accept `string *envp` (and `string *apple` on MacOS/Darwin platforms, which provides arbitrary OS information, such as the path to the executing binary).
 
 <hr />
 
@@ -1018,14 +1017,14 @@ You can also accept `char **envp` (and `char **apple` on MacOS/Darwin platforms,
 
 You can do this with the following example:
 ```cpp
-external fn printf(char *formatter, ...);
+external fn printf(string formatter, ...);
 ```
 
 It essentially tells Elle where it should put the variadic argument starter. You could exclude this, if you like, but you will have to explicitly declare where the variadic arguments begin, because Elle no longer has this context.
 
 You can also make these statements public:
 ```cpp
-pub external fn fprintf(i64 fd, char *formatter, ...);
+pub external fn fprintf(i64 fd, string formatter, ...);
 ```
 In fact the order of prefixes before `fn` is not enforced, you can write `external pub fn` and achieve the same result.
 
@@ -1067,9 +1066,15 @@ All contributions to this project are welcome and I love talking about this stuf
       $ make compile
     ```
 
+    **OR**
+
+    ```console
+      $ make compile-release
+    ```
+
   * **You're done!**
 
-> You can now `make compile` to compile the compiler into an executable, then run `make run <name>` to run a file from the `/examples` directory. For example, you can run `make run donut` and it will run `/examples/donut.elle`.
+> You can now run `make run <name>` to run a file from the `/examples` directory. For example, you can run `make run donut` and it will run `/examples/donut.elle`.
 
 <hr />
 
