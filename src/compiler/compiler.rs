@@ -914,7 +914,7 @@ impl Compiler {
 
                 self.buf_metadata.insert(
                     tmp.clone(),
-                    (buf_ty.clone().unwrap().unwrap(), converted_val),
+                    (buf_ty.clone().get_pointer_inner().unwrap(), converted_val),
                 );
 
                 Some((Type::Pointer(Box::new(buf_ty)), tmp))
@@ -955,9 +955,9 @@ impl Compiler {
                 }
 
                 let inner = if left_ty.is_pointer() {
-                    left_ty.unwrap().unwrap()
+                    left_ty.get_pointer_inner().unwrap()
                 } else {
-                    right_ty.unwrap().unwrap()
+                    right_ty.get_pointer_inner().unwrap()
                 };
 
                 let node = AstNode::ArithmeticOperation {
@@ -1407,7 +1407,7 @@ impl Compiler {
                 }
 
                 let inner_ty = if let Some(ty) = ty {
-                    ty.clone().unwrap()
+                    ty.clone().get_pointer_inner()
                 } else {
                     None
                 };
@@ -1514,7 +1514,7 @@ impl Compiler {
 
                 self.buf_metadata.insert(
                     value.clone().unwrap_or(tmp.clone()),
-                    (buf_ty.clone().unwrap().unwrap(), converted_val),
+                    (buf_ty.clone().get_pointer_inner().unwrap(), converted_val),
                 );
 
                 for (i, value) in results.iter().enumerate() {
@@ -2067,17 +2067,17 @@ impl Compiler {
 
                     if !ty.is_struct() {
                         // Automatically deref 'Foo *' into 'Foo' when processing
-                        if ty.is_pointer() && ty.clone().unwrap().unwrap().is_struct() {
+                        if ty.is_pointer() && ty.clone().get_pointer_inner().unwrap().is_struct() {
                             let tmp = self.new_temporary(Some("load"));
 
                             func.borrow_mut().assign_instruction(
                                 tmp.clone(),
                                 Type::Long,
-                                Instruction::Load(ty.clone().unwrap().unwrap(), left),
+                                Instruction::Load(ty.clone().get_pointer_inner().unwrap(), left),
                             );
 
                             left = tmp;
-                            ty = ty.clone().unwrap().unwrap();
+                            ty = ty.clone().get_pointer_inner().unwrap();
                         } else {
                             panic!(
                                 "{}",
@@ -2282,8 +2282,8 @@ impl Compiler {
             )
         }
 
-        if (first.is_pointer() && first.clone().unwrap().unwrap().is_void())
-            || (second.is_pointer() && second.clone().unwrap().unwrap().is_void())
+        if (first.is_pointer() && first.clone().get_pointer_inner().unwrap().is_void())
+            || (second.is_pointer() && second.clone().get_pointer_inner().unwrap().is_void())
         {
             return (first, val);
         }

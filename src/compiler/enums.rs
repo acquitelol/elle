@@ -307,9 +307,16 @@ impl Type {
         }
     }
 
-    pub fn unwrap(self) -> Option<Type> {
+    pub fn get_pointer_inner(self) -> Option<Type> {
         match self {
             Self::Pointer(ty) => Some(*ty),
+            _ => None,
+        }
+    }
+
+    pub fn get_struct_inner(&self) -> Option<String> {
+        match self.clone() {
+            Self::Struct(val) => Some(val),
             _ => None,
         }
     }
@@ -363,13 +370,6 @@ impl Type {
         match self {
             Self::Struct(_) => true,
             _ => false,
-        }
-    }
-
-    pub fn get_struct_inner(&self) -> Option<String> {
-        match self.clone() {
-            Self::Struct(val) => Some(val),
-            _ => None,
         }
     }
 
