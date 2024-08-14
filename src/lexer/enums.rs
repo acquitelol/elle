@@ -314,7 +314,43 @@ impl Location {
         self.ctx.trim_start().split_at(left).1.into()
     }
 
+    fn trim_indentation(&self, ctx: String, above: String) -> (String, String) {
+        let lines: Vec<&str> = ctx.lines().chain(above.lines()).collect();
+
+        let min_indent = lines
+            .iter()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| line.chars().take_while(|c| c.is_whitespace()).count())
+            .min()
+            .unwrap_or(0);
+
+        let trim_string = |input: String| {
+            input
+                .lines()
+                .map(|line| {
+                    if line.trim().is_empty() {
+                        String::from(line)
+                    } else {
+                        String::from(&line[min_indent..])
+                    }
+                })
+                .collect::<Vec<String>>()
+                .join("\n")
+        };
+
+        let trimmed_ctx = trim_string(ctx);
+        let trimmed_above = trim_string(above);
+
+        (trimmed_ctx, trimmed_above)
+    }
+
     pub fn display_pretty(&self, message: impl Into<String>, is_warning: bool) -> String {
+        let (ctx, above) = if let Some(above) = self.above.clone() {
+            self.trim_indentation(self.ctx.clone(), above)
+        } else {
+            (self.ctx.trim_start().to_string(), "".into())
+        };
+
         let upper = format!(
             "{fmt}{}{RESET}[{}]{fmt}{}{RESET}",
             "―".repeat(20),
@@ -323,7 +359,7 @@ impl Location {
             fmt = if is_warning { YELLOW } else { RED }
         );
 
-        // Used for calculations to determine the bottom width
+        // Used for calculating the bottom width
         let upper_plain = format!(
             "{}[{}]{}",
             "-".repeat(20),
@@ -331,8 +367,8 @@ impl Location {
             "-".repeat(20)
         );
 
-        let padding = 4;
-        let ident = self.column - (self.ctx.len() - self.ctx.trim_start().len());
+        let padding = 2;
+        let ident = self.column - (self.ctx.len() - ctx.len());
 
         let left = if ident >= self.length {
             ident - self.length
@@ -340,7 +376,7 @@ impl Location {
             ident
         };
 
-        let string = self.ctx.trim_start().split_at(left);
+        let string = ctx.split_at(left);
         let fallback_char = format!("{}", string.1.chars().nth(0).unwrap());
         let mut fallback_rest = string.1.to_string();
         fallback_rest.remove(0);
@@ -358,17 +394,13 @@ impl Location {
             " ".repeat(left),
             "~".repeat(self.length.checked_sub(1).unwrap_or(0)),
             "―".repeat(upper_plain.len()),
-            above = if let Some(above) = self.above.clone() {
-                if !above.is_empty() {
-                    format!(
-                        "{} | {}{}\n",
-                        self.row,
-                        " ".repeat(padding),
-                        above.trim_start()
-                    )
-                } else {
-                    "".into()
-                }
+            above = if !above.is_empty() {
+                format!(
+                    "{} | {}{}\n",
+                    self.row,
+                    " ".repeat(padding),
+                    above
+                )
             } else {
                 "".into()
             },

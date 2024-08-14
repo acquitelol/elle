@@ -119,8 +119,7 @@ impl<'a> Function<'a> {
                         self.parser.tokens.clone(),
                         self.parser.position.clone(),
                         &body,
-                        self.parser.struct_pool.clone(),
-                        false,
+                        self.parser.struct_pool.clone()
                     )
                     .parse();
 

@@ -320,7 +320,7 @@ impl Compiler {
                 name,
                 r#type,
                 value,
-                location,
+                location
             } => {
                 let existing = match self.get_variable(name.as_str(), Some(func)) {
                     Ok((ty, _)) => ty.clone(),
@@ -350,8 +350,6 @@ impl Compiler {
                     false,
                 );
 
-                dbg!(&parsed);
-
                 if let Some((ret_ty, value)) = parsed {
                     let (final_ty, final_val) = if ret_ty != ty {
                         self.convert_to_type(
@@ -360,6 +358,7 @@ impl Compiler {
                             ty.clone(),
                             value.clone(),
                             location.clone(),
+                            false,
                         )
                     } else {
                         (ty.clone(), value.clone())
@@ -483,6 +482,7 @@ impl Compiler {
                         left_ty_unparsed,
                         right_val_unparsed,
                         location.clone(),
+                        false
                     );
 
                     right_val = val;
@@ -493,6 +493,7 @@ impl Compiler {
                         right_ty_unparsed,
                         left_val_unparsed,
                         location.clone(),
+                        false,
                     );
 
                     left_ty = ty;
@@ -794,6 +795,7 @@ impl Compiler {
                             param_ty.unwrap(),
                             val.clone(),
                             parameter.0.clone(),
+                            false,
                         )
                     });
                 }
@@ -902,7 +904,7 @@ impl Compiler {
                         name
                     )));
 
-                let (_, converted_val) = self.convert_to_type(func, ty, Type::Long, val, location);
+                let (_, converted_val) = self.convert_to_type(func, ty, Type::Long, val, location, false);
 
                 func.borrow_mut().assign_instruction(
                     tmp.clone(),
@@ -921,18 +923,20 @@ impl Compiler {
                 left,
                 right,
                 value,
-                location,
+                left_location,
+                right_location,
+                value_location
             } => {
                 let (left_ty, _) = self
                     .generate_statement(func, module, *left.clone(), ty.clone(), None, false)
-                    .expect(&location.error(format!(
+                    .expect(&left_location.error(format!(
                         "Unexpected error when trying to compile the left side of a {} statement",
                         if value.is_some() { "store" } else { "load" }
                     )));
 
                 let (right_ty, _) = self
                     .generate_statement(func, module, *right.clone(), ty.clone(), None, false)
-                    .expect(&location.error(format!(
+                    .expect(&right_location.error(format!(
                         "Unexpected error when trying to compile the right side of a {} statement",
                         if value.is_some() { "store" } else { "load" }
                     )));
@@ -940,7 +944,7 @@ impl Compiler {
                 if !(matches!(left_ty, Type::Pointer(_)) || matches!(right_ty, Type::Pointer(_))) {
                     panic!(
                         "{}",
-                        location.error(format!(
+                        left_location.error(format!(
                             "Cannot {} data {} non-pointer types ({:?} and {:?})",
                             if value.is_some() { "store" } else { "load" },
                             if value.is_some() { "to" } else { "from" },
@@ -962,19 +966,19 @@ impl Compiler {
                         left: Box::new(AstNode::LiteralStatement {
                             kind: TokenKind::LongLiteral,
                             value: ValueKind::Number(inner.size(module) as i128),
-                            location: location.clone(),
+                            location: right_location.clone(),
                         }),
                         right,
                         operator: TokenKind::Multiply,
-                        location: location.clone(),
+                        location: right_location.clone(),
                     }),
                     operator: TokenKind::Add,
-                    location: location.clone(),
+                    location: right_location.clone(),
                 };
 
                 let (_, compiled_location) = self
                     .generate_statement(func, module, node.clone(), None, None, false)
-                    .expect(&location.error(format!(
+                    .expect(&right_location.error(format!(
                         "Unexpected error when trying to compile the offset of a {} statement",
                         if value.is_some() { "store" } else { "load" }
                     )));
@@ -989,7 +993,7 @@ impl Compiler {
                             None,
                             false,
                         )
-                        .expect(&location.error(format!(
+                        .expect(&value_location.error(format!(
                             "Unexpected error when trying to compile the value of a {} statement",
                             if value.is_some() { "store" } else { "load" }
                         )));
@@ -1262,7 +1266,7 @@ impl Compiler {
                     ));
 
                 let (_, final_val) =
-                    self.convert_to_type(func, ty, Type::Long, size, location.clone());
+                    self.convert_to_type(func, ty, Type::Long, size, location.clone(), false);
 
                 let var = self
                     .new_variable(Type::Long, &name, Some(func), false)
@@ -1357,7 +1361,7 @@ impl Compiler {
                     .generate_statement(func, module, *value.clone(), ty, None, false)
                     .expect(&location.error("Unexpected error when trying to compile the value of a conversion statement"));
 
-                Some(self.convert_to_type(func, first, second.unwrap(), val, location))
+                Some(self.convert_to_type(func, first, second.unwrap(), val, location, true))
             }
             AstNode::NotStatement { value, location } => {
                 let (ty, val) = self
@@ -1500,7 +1504,7 @@ impl Compiler {
                 let tmp = self.new_temporary(Some("array"));
 
                 let (_, converted_val) =
-                    self.convert_to_type(func, ty, Type::Long, val, location.clone());
+                    self.convert_to_type(func, ty, Type::Long, val, location.clone(), false);
 
                 func.borrow_mut().assign_instruction(
                     tmp.clone(),
@@ -1553,7 +1557,7 @@ impl Compiler {
                 location,
             } => match value {
                 Ok(ty) => {
-                    let tmp_ty = Type::Word;
+                    let tmp_ty = Type::Long;
                     let temp = self.new_temporary(Some("size"));
 
                     func.borrow_mut().assign_instruction(
@@ -1760,7 +1764,7 @@ impl Compiler {
                 left,
                 right,
                 value,
-                location,
+                location
             } => {
                 let (ty, left) = self
                     .generate_statement(
@@ -2261,6 +2265,7 @@ impl Compiler {
         second: Type,
         val: Value,
         location: Location,
+        explicit: bool
     ) -> (Type, Value) {
         if first.is_struct() || second.is_struct() {
             if first == second {
@@ -2283,9 +2288,19 @@ impl Compiler {
             return (first, val);
         }
 
+        macro_rules! cast_warning {
+            () => {
+                if !explicit {
+                    println!("{}", location.warning(format!("Implicit casting from {} to {}", first.display(), second.display())));
+                }
+            };
+        }
+
         if first.weight() == second.weight() {
             return (second, val);
         } else if (first.is_int() && second.is_int()) || (first.is_float() && second.is_float()) {
+            cast_warning!();
+
             let conv = self.new_temporary(Some("conv"));
             let is_first_higher = first.weight() > second.weight();
 
@@ -2307,6 +2322,8 @@ impl Compiler {
 
             return (second, conv);
         } else {
+            cast_warning!();
+
             let conv = self.new_temporary(Some("conv"));
 
             func.borrow_mut().assign_instruction(

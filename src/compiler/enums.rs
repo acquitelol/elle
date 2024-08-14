@@ -2,7 +2,7 @@
 // https://github.com/garritfra/qbe-rs/blob/main/LICENSE-MIT
 use std::{
     cell::RefCell,
-    fmt::{self, write, Write},
+    fmt::{self},
     mem,
 };
 
@@ -580,13 +580,15 @@ impl fmt::Display for Value {
             Self::Temporary(name) => write!(formatter, "%{}", name),
             Self::Global(name) => write!(formatter, "${}", name),
             Self::Const(ty, value) => {
-                if ty.clone() == Type::Double {
-                    write!(formatter, "d_");
+                let prefix = if ty.clone() == Type::Double {
+                    "d_"
                 } else if ty.clone() == Type::Single {
-                    write!(formatter, "s_");
-                }
+                    "s_"
+                } else {
+                    ""
+                };
 
-                write!(formatter, "{}", value)
+                write!(formatter, "{}", format!("{}{}", prefix, value))
             }
             Self::Literal(value) => write!(formatter, "{}", value),
         }

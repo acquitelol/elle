@@ -66,7 +66,7 @@ impl<'a> Constant<'a> {
         self.parser.advance();
 
         let body: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
-        let value = Statement::new(tokens, 0, &body, self.parser.struct_pool.clone(), false)
+        let value = Statement::new(tokens, 0, &body, self.parser.struct_pool.clone())
             .parse()
             .0;
 
