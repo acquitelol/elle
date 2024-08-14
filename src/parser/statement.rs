@@ -249,70 +249,6 @@ impl<'a> Statement<'a> {
         let operation = self.current_token();
         self.advance();
 
-        let res = match operation.kind {
-            TokenKind::AddOne => Some(TokenKind::Add),
-            TokenKind::SubtractOne => Some(TokenKind::Subtract),
-            _ => None,
-        };
-
-        if res.is_some() {
-            let mapping = res.unwrap();
-
-            if self.standalone {
-                return AstNode::DeclareStatement {
-                    name: name.clone(),
-                    r#type: None,
-                    value: Box::new(AstNode::ArithmeticOperation {
-                        left: Box::new(AstNode::LiteralStatement {
-                            kind: TokenKind::Identifier,
-                            value: ValueKind::String(name.clone()),
-                            location: self.current_token().location,
-                        }),
-                        right: Box::new(AstNode::LiteralStatement {
-                            kind: TokenKind::IntegerLiteral,
-                            value: ValueKind::Number(1),
-                            location: self.current_token().location,
-                        }),
-                        operator: mapping,
-                        location: self.current_token().location,
-                    }),
-                    location,
-                };
-            }
-
-            self.body.borrow_mut().push(AstNode::LiteralStatement {
-                kind: TokenKind::ExactLiteral,
-                value: ValueKind::String("__<#insert#>__".to_owned()),
-                location: location.clone(),
-            });
-
-            self.body.borrow_mut().push(AstNode::DeclareStatement {
-                name: name.clone(),
-                r#type: None,
-                value: Box::new(AstNode::ArithmeticOperation {
-                    left: Box::new(AstNode::LiteralStatement {
-                        kind: TokenKind::Identifier,
-                        value: ValueKind::String(name.clone()),
-                        location: self.current_token().location,
-                    }),
-                    right: Box::new(AstNode::LiteralStatement {
-                        kind: TokenKind::IntegerLiteral,
-                        value: ValueKind::Number(1),
-                        location: self.current_token().location,
-                    }),
-                    operator: mapping,
-                    location: self.current_token().location,
-                }),
-                location,
-            });
-
-            return AstNode::LiteralStatement {
-                kind: TokenKind::Identifier,
-                value: ValueKind::String(name.clone()),
-                location: self.current_token().location,
-            };
-        }
-
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
         let mapping = operation.kind.to_non_declarative();
 
@@ -665,43 +601,6 @@ impl<'a> Statement<'a> {
         }
 
         node
-    }
-
-    fn parse_prefix_increment(&mut self) -> AstNode {
-        let mapping = match self.current_token().kind {
-            TokenKind::AddOne => TokenKind::Add,
-            TokenKind::SubtractOne => TokenKind::Subtract,
-            other => panic!("Expected increment token (++ or --) but got {:?}", other),
-        };
-
-        self.advance();
-        self.expect_tokens_with_message(
-            vec![TokenKind::Identifier],
-            Some("\nYou cannot increment or decrement anything that isn't an identifier."),
-        );
-
-        let name = self.get_identifier();
-        self.advance();
-
-        AstNode::DeclareStatement {
-            name: name.clone(),
-            r#type: None,
-            value: Box::new(AstNode::ArithmeticOperation {
-                left: Box::new(AstNode::LiteralStatement {
-                    kind: TokenKind::Identifier,
-                    value: ValueKind::String(name.clone()),
-                    location: self.current_token().location,
-                }),
-                right: Box::new(AstNode::LiteralStatement {
-                    kind: TokenKind::IntegerLiteral,
-                    value: ValueKind::Number(1),
-                    location: self.current_token().location,
-                }),
-                operator: mapping,
-                location: self.current_token().location,
-            }),
-            location: self.current_token().location,
-        }
     }
 
     fn parse_buffer(&mut self, name: Option<String>, ty: Option<Type>) -> AstNode {
@@ -1770,48 +1669,6 @@ impl<'a> Statement<'a> {
         let operation = self.current_token();
         self.advance();
 
-        let res = match operation.kind {
-            TokenKind::AddOne => Some(TokenKind::Add),
-            TokenKind::SubtractOne => Some(TokenKind::Subtract),
-            _ => None,
-        };
-
-        if res.is_some() {
-            let mapping = res.unwrap();
-
-            if self.standalone {
-                return AstNode::ArithmeticOperation {
-                    left: Box::new(node),
-                    right: Box::new(AstNode::LiteralStatement {
-                        kind: TokenKind::IntegerLiteral,
-                        value: ValueKind::Number(1),
-                        location: self.current_token().location,
-                    }),
-                    operator: mapping,
-                    location: self.current_token().location,
-                };
-            }
-
-            self.body.borrow_mut().push(AstNode::LiteralStatement {
-                kind: TokenKind::ExactLiteral,
-                value: ValueKind::String("__<#insert#>__".to_owned()),
-                location: self.current_token().location,
-            });
-
-            self.body.borrow_mut().push(AstNode::ArithmeticOperation {
-                left: Box::new(node.clone()),
-                right: Box::new(AstNode::LiteralStatement {
-                    kind: TokenKind::IntegerLiteral,
-                    value: ValueKind::Number(1),
-                    location: self.current_token().location,
-                }),
-                operator: mapping,
-                location: self.current_token().location,
-            });
-
-            return node;
-        }
-
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
         let mapping = operation.kind.to_non_declarative();
 
@@ -1891,39 +1748,7 @@ impl<'a> Statement<'a> {
                     )
                     .parse();
 
-                    let mut body_ref = cell.borrow_mut();
-                    let res = body_ref.iter().position(|item| match item.clone() {
-                        AstNode::LiteralStatement { kind, value, .. } => {
-                            if kind.clone() == TokenKind::ExactLiteral {
-                                match value.clone() {
-                                    ValueKind::String(val) => {
-                                        if val == "__<#insert#>__".to_owned() {
-                                            true
-                                        } else {
-                                            false
-                                        }
-                                    }
-                                    _ => false,
-                                }
-                            } else {
-                                false
-                            }
-                        }
-                        _ => false,
-                    });
-
-                    if res.is_some() {
-                        match node {
-                            AstNode::DeclareStatement { .. } => body_ref[res.unwrap()] = node,
-                            _ => {
-                                body_ref.remove(res.unwrap());
-                                body_ref.push(node);
-                            }
-                        }
-                    } else {
-                        body_ref.push(node);
-                    }
-
+                    cell.borrow_mut().push(node);
                     self.position = position;
                     self.tokens = tokens;
                 }
@@ -1939,22 +1764,6 @@ impl<'a> Statement<'a> {
             AstNode::DeferStatement { value, .. } => {
                 deferred.push(*value.clone());
                 false
-            }
-            AstNode::LiteralStatement { kind, value, .. } => {
-                if kind.clone() == TokenKind::ExactLiteral {
-                    match value.clone() {
-                        ValueKind::String(val) => {
-                            if val == "__<#insert#>__".to_owned() {
-                                false
-                            } else {
-                                true
-                            }
-                        }
-                        _ => true,
-                    }
-                } else {
-                    true
-                }
             }
             _ => true,
         });
@@ -2116,7 +1925,6 @@ impl<'a> Statement<'a> {
                     }
                 }
             }
-            other if other.is_one_operator() => self.parse_prefix_increment(),
             _ => panic!(
                 "{}",
                 self.current_token().location.error(format!(

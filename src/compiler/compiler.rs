@@ -201,9 +201,9 @@ impl Compiler {
             return Ok(func);
         }
 
-        if func.return_type.is_some() {
+        if let Some(ty) = func.return_type.clone() {
             self.ret_types
-                .insert(name.clone(), func.clone().return_type.unwrap());
+                .insert(name.clone(), ty);
         }
 
         func.add_block("start");
@@ -257,14 +257,14 @@ impl Compiler {
         for block in func_ref.borrow_mut().blocks.iter().cloned() {
             for statement in block.statements {
                 if let Statement::Volatile(Instruction::Return(val)) = statement.clone() {
-                    if val.is_some() {
+                    if let Some(val) = val {
                         if first_ty.is_none() {
-                            first_ty = Some(val.unwrap().0)
+                            first_ty = Some(val.0)
                         } else {
-                            if val.clone().unwrap().0 != first_ty.clone().unwrap()
-                                && !matches!(val.clone().unwrap().1, Value::Const(_, _))
+                            if val.0 != first_ty.clone().unwrap()
+                                && !matches!(val.1, Value::Const(_, _))
                             {
-                                panic!("{}", ty_err_message(val.unwrap().0, first_ty.unwrap()))
+                                panic!("{}", ty_err_message(val.0, first_ty.unwrap()))
                             }
                         }
                     }
@@ -350,9 +350,9 @@ impl Compiler {
                     false,
                 );
 
-                if parsed.is_some() {
-                    let (ret_ty, value) = parsed.unwrap();
+                dbg!(&parsed);
 
+                if let Some((ret_ty, value)) = parsed {
                     let (final_ty, final_val) = if ret_ty != ty {
                         self.convert_to_type(
                             func,
@@ -602,9 +602,7 @@ impl Compiler {
                                 let tmp_module = module.borrow();
                                 let global = tmp_module.data.iter().find(|item| item.name == name);
 
-                                if global.is_some() {
-                                    let item = global.unwrap();
-
+                                if let Some(item) = global {
                                     Some((Type::Long, Value::Global(item.name.clone())))
                                 } else {
                                     panic!(
@@ -981,12 +979,12 @@ impl Compiler {
                         if value.is_some() { "store" } else { "load" }
                     )));
 
-                if value.is_some() {
+                if let Some(val) = value.clone() {
                     let (_, compiled) = self
                         .generate_statement(
                             func,
                             module,
-                            *value.clone().unwrap().clone(),
+                            *val.clone(),
                             Some(inner.clone()),
                             None,
                             false,
@@ -998,11 +996,11 @@ impl Compiler {
 
                     func.borrow_mut().add_instruction(Instruction::Store(
                         inner.to_owned(),
-                        compiled_location,
+                        compiled_location.clone(),
                         compiled,
                     ));
 
-                    return None;
+                    return Some((inner, compiled_location));
                 }
 
                 let temp = self.new_temporary(Some("load"));
@@ -1188,11 +1186,11 @@ impl Compiler {
 
                 func.borrow_mut().add_block(step_label.clone());
 
-                if step.is_some() {
+                if let Some(step) = step {
                     self.generate_statement(
                         func,
                         module,
-                        *step.clone().unwrap(),
+                        *step,
                         ty.clone(),
                         None,
                         false,
@@ -1404,8 +1402,8 @@ impl Compiler {
                     );
                 }
 
-                let inner_ty = if ty.is_some() {
-                    ty.clone().unwrap().unwrap()
+                let inner_ty = if let Some(ty) = ty {
+                    ty.clone().unwrap()
                 } else {
                     None
                 };
@@ -1789,11 +1787,11 @@ impl Compiler {
 
                     func.borrow_mut().add_instruction(Instruction::Store(
                         field_ty.to_owned(),
-                        offset_tmp,
+                        offset_tmp.clone(),
                         compiled,
                     ));
 
-                    return None;
+                    return Some((field_ty, offset_tmp));
                 }
 
                 let temp = self.new_temporary(Some("field"));

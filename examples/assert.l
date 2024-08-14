@@ -1,5 +1,5 @@
 use std/assert;
 
 fn main() {
-    assert(0 && "unreachable");
+    assert(0 && "assert test");
 }

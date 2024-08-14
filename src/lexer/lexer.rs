@@ -133,7 +133,13 @@ impl Lexer {
                     (TokenKind::SubtractEqual, ValueKind::Nil)
                 } else if self.current_char() == '-' {
                     self.advance();
-                    (TokenKind::SubtractOne, ValueKind::Nil)
+
+                    panic!(
+                        "{}",
+                        self.get_location().error(
+                            format!("Invalid token: Elle does not support '--' incrementing.\nPlease use '-= 1' for incrementing instead.")
+                        )
+                    )
                 } else {
                     if self.is_unary_context() {
                         (TokenKind::Unary, ValueKind::Number(-1))
@@ -201,7 +207,13 @@ impl Lexer {
                     (TokenKind::AddEqual, ValueKind::Nil)
                 } else if self.current_char() == '+' {
                     self.advance();
-                    (TokenKind::AddOne, ValueKind::Nil)
+
+                    panic!(
+                        "{}",
+                        self.get_location().error(
+                            format!("Invalid token: Elle does not support '++' incrementing.\nPlease use '+= 1' for incrementing instead.")
+                        )
+                    )
                 } else {
                     if self.is_unary_context() {
                         (TokenKind::Unary, ValueKind::Number(1))

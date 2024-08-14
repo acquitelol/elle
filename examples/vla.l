@@ -42,7 +42,7 @@ fn main() {
     addElement(&arr, 0);
     addElement(&arr, 172);
 
-    for i32 i = 0; i < arr.size; i++ {
+    for i32 i = 0; i < arr.size; i += 1 {
         printf("arr[%d] = %d\n", i, arr.elements[i]);
     }
 

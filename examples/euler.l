@@ -4,7 +4,7 @@ use std/math;
 fn get_e() -> f64 {
     f64 res = 0.0;
 
-    for i32 i = 0; i < 21; i++ {
+    for i32 i = 0; i < 21; i += 1 {
         res += 1.0 / fact(i);
     }
 

@@ -9,7 +9,7 @@ local fn is_valid(string str, string type) -> bool {
     string *valid_types = ["i32", "i64", "f64"];
     i32 type_index = EOF;
 
-    for i32 i = 0; i < #arrlen(valid_types); i++ {
+    for i32 i = 0; i < #arrlen(valid_types); i += 1 {
         if streq(valid_types[i], type) {
             type_index = i;
         }
@@ -19,7 +19,7 @@ local fn is_valid(string str, string type) -> bool {
         printf("'%s' is not a valid type for casting. Falling back to 0\n", type);
         printf("Valid types:\n");
 
-        for (i32 i = 0; i < #arrlen(valid_types); i++) {
+        for (i32 i = 0; i < #arrlen(valid_types); i += 1) {
             printf("-\t%s\n", valid_types[i]);
         }
 

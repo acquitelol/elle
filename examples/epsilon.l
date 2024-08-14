@@ -11,7 +11,7 @@ fn roll(i32* results, i32 formattedEpsilon) {
     i32 roll = ACCURACY;
 
     while roll > formattedEpsilon {
-        attempts++;
+        attempts += 1;
         roll = random(0, ACCURACY);
     }
 
@@ -21,7 +21,7 @@ fn roll(i32* results, i32 formattedEpsilon) {
 fn calculateAverage(i32* results) {
     i32 sum = 0;
 
-    for i32 i = 0; i < ITERATIONS; i++ {
+    for i32 i = 0; i < ITERATIONS; i += 1 {
         sum += results[i];
     }
 
@@ -34,7 +34,7 @@ fn main() {
 
     srand(time(NULL));
 
-    for i32 i = 0; i < ITERATIONS; i++ {
+    for i32 i = 0; i < ITERATIONS; i += 1 {
         results[i] = roll(results, formattedEpsilon);
     }
 

@@ -65,7 +65,7 @@ fn input(string message) -> string {
 fn dbg(ElleMeta meta, ...) {
     variadic args[meta.arity]; // Arity does NOT include meta
 
-    for i32 i = 0; i < meta.arity; ++i {
+    for i32 i = 0; i < meta.arity; i += 1 {
         string ty = meta.types[i];
         string expr = meta.exprs[i];
 

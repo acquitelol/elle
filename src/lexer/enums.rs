@@ -40,8 +40,6 @@ pub enum TokenKind {
     BitwiseXorEqual,
     BitwiseOrEqual,
     BitwiseAndEqual,
-    AddOne,
-    SubtractOne,
     // Exponent,
     RightArrow,
     LeftArrow,
@@ -169,9 +167,7 @@ impl TokenKind {
             | Self::BitwiseOrEqual
             | Self::BitwiseAndEqual
             | Self::ShiftLeftEqual
-            | Self::ShiftRightEqual
-            | Self::AddOne
-            | Self::SubtractOne => true,
+            | Self::ShiftRightEqual => true,
             _ => false,
         }
     }
@@ -221,13 +217,6 @@ impl TokenKind {
             Self::ShiftLeftEqual => TokenKind::ShiftLeft,
             Self::ShiftRightEqual => TokenKind::ShiftRight,
             other => panic!("Invalid identifier operation {:?}", other),
-        }
-    }
-
-    pub fn is_one_operator(&self) -> bool {
-        match self.to_owned() {
-            Self::AddOne | Self::SubtractOne => true,
-            _ => false,
         }
     }
 }
@@ -361,17 +350,19 @@ impl Location {
         let issue = string.1.get(0..self.length).unwrap_or(&fallback_char);
         let rhs = string.1.get(self.length..).unwrap_or(&fallback_rest);
 
+        let line = format!("{} | ", self.row + 1);
+
         return format!(
             "\n{upper}\n{user_mesage}\n\n{above}{line_number}{}{lhs}{BOLD}{fmt}{UNDERLINE}{issue}{RESET}{rhs}\n{}{}{BOLD}{GREEN}^{}{RESET}\n{fmt}{}{RESET}\n",
             " ".repeat(padding),
-            " ".repeat(padding + format!("{}", self.row + 1).len()),
+            " ".repeat(padding + format!("{} | ", self.row + 1).len()),
             " ".repeat(left),
             "~".repeat(self.length.checked_sub(1).unwrap_or(0)),
             "―".repeat(upper_plain.len()),
             above = if let Some(above) = self.above.clone() {
                 if !above.is_empty() {
                     format!(
-                        "{}{}{}\n",
+                        "{} | {}{}\n",
                         self.row,
                         " ".repeat(padding),
                         above.trim_start()
@@ -383,7 +374,7 @@ impl Location {
                 "".into()
             },
             user_mesage = message.into(),
-            line_number = self.row + 1,
+            line_number = line,
             fmt = if is_warning { YELLOW } else { RED }
         );
     }

@@ -4,7 +4,7 @@ fn add(ElleMeta meta, ...) {
     variadic args[meta.arity];
     i32 res = 0;
 
-    for i32 i = 0; i < meta.arity; i++ {
+    for i32 i = 0; i < meta.arity; i += 1 {
         res += args yield i32;
     }
 

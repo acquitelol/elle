@@ -68,7 +68,7 @@ fn main() {
             f32 newX = position.x + velocity.x * deltaTime;
 
             if newX < circleRadius || newX + circleRadius > GetScreenWidth() {
-                bounces++;
+                bounces += 1;
                 velocity.x *= damping;
                 PlaySound(sound);
             } else {
@@ -78,7 +78,7 @@ fn main() {
             f32 newY = position.y + velocity.y * deltaTime;
 
             if newY < circleRadius || newY + circleRadius > GetScreenHeight() {
-                bounces++;
+                bounces += 1;
                 velocity.y *= damping;
                 PlaySound(sound);
             } else {

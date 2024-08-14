@@ -79,7 +79,7 @@ fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 lightDirectio
 
     printf("\x1b[H");
 
-    for i32 character = 0; character < SIZE; character++ {
+    for i32 character = 0; character < SIZE; character += 1 {
         if character % WIDTH {
             putchar(output[character]);
         } else {

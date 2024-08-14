@@ -23,7 +23,7 @@ fn fibonacci_iterative(i32 n) -> i64 {
     i64 previous = 0;
     i64 current = 1;
 
-    for i32 i = 1; i < n; i++ {
+    for i32 i = 1; i < n; i += 1 {
         i64 next = previous + current;
 
         previous = current;

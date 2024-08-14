@@ -124,36 +124,7 @@ impl<'a> Function<'a> {
                     )
                     .parse();
 
-                    let mut body_ref = body.borrow_mut();
-                    let res = body_ref.iter().position(|item| match item.clone() {
-                        AstNode::LiteralStatement { kind, value, .. } => {
-                            if kind.clone() == TokenKind::ExactLiteral {
-                                match value.clone() {
-                                    ValueKind::String(val) => {
-                                        if val == "__<#insert#>__".to_owned() {
-                                            true
-                                        } else {
-                                            false
-                                        }
-                                    }
-                                    _ => false,
-                                }
-                            } else {
-                                false
-                            }
-                        }
-                        _ => false,
-                    });
-
-                    if res.is_some() {
-                        match node {
-                            AstNode::DeclareStatement { .. } => body_ref[res.unwrap()] = node,
-                            _ => body_ref.push(node),
-                        }
-                    } else {
-                        body_ref.push(node);
-                    }
-
+                    body.borrow_mut().push(node);
                     self.parser.position = position;
                     self.parser.tokens = tokens;
                 }
@@ -167,22 +138,6 @@ impl<'a> Function<'a> {
             AstNode::DeferStatement { value, .. } => {
                 deferred.push(*value.clone());
                 false
-            }
-            AstNode::LiteralStatement { kind, value, .. } => {
-                if kind.clone() == TokenKind::ExactLiteral {
-                    match value.clone() {
-                        ValueKind::String(val) => {
-                            if val == "__<#insert#>__".to_owned() {
-                                false
-                            } else {
-                                true
-                            }
-                        }
-                        _ => true,
-                    }
-                } else {
-                    true
-                }
             }
             _ => true,
         });

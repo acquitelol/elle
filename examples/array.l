@@ -11,7 +11,7 @@ fn other(i64 *arr, i32 val, i32 size) {
 fn main() {
     i64 *test = [I64_MAX, I64_MIN, -39];
 
-    for (i32 i = 0; i < #arrlen(test); i++) {
+    for i32 i = 0; i < #arrlen(test); i += 1 {
         printf("test[%d] = %ld\n", i, test[i]);
     }
 
