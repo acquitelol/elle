@@ -37,10 +37,7 @@ impl Parser {
     }
 
     pub fn advance(&mut self) {
-        if self.is_eof() {
-            #[cfg(debug_assertions)]
-            println!("The position of {:?} is the last index of the token stack. Staying at the same position.", self.position);
-        } else {
+        if !self.is_eof() {
             self.position += 1;
         }
     }
