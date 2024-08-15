@@ -42,7 +42,7 @@ fn concat(ElleMeta meta, ...) {
 
     // Collect the strings and the final string length
     for i32 i = 0; i < meta.arity; i += 1 {
-        strings[i] = args yield string;
+        strings[i] = args.yield(string);
         sizes[i] = strlen(strings[i]);
         length += sizes[i] + 1;
     }
@@ -68,36 +68,6 @@ fn concat(ElleMeta meta, ...) {
     return result;
 }
 
-def String {
-    string data;
-    i32 length;
-    i32 capacity;
-}
-
-fn string_init(String *str, i32 initialCapacity) {
-    str.data = (string)malloc(initialCapacity * #size(char));
-    str.data[0] = '\0';
-    str.length = 0;
-    str.capacity = initialCapacity;
-}
-
-fn string_resize(String *str, i32 newCapacity) {
-    str.data = (string)realloc(str.data, newCapacity * #size(char));
-    str.capacity = newCapacity;
-}
-
-fn string_push(String *str, string to_append) {
-    i64 append_length = strlen(to_append);
-    i64 new_length = str.length + append_length;
-
-    if (new_length >= str.capacity) {
-        resize_string(str, new_length + 1);
-    }
-
-    strcat(str.data, to_append);
-    str.length = new_length;
-}
-
 fn to_string(string ty, i64 args, bool wrap) {
     string res = nil;
     string fmt = nil;
@@ -108,7 +78,7 @@ fn to_string(string ty, i64 args, bool wrap) {
         // Any variation (`char ***`) will also match
         // so `**` is all that's necessary
         if strprefix(ty, "char") && !strstr(ty, "**") {
-            string arg_string = args yield string;
+            string arg_string = args.yield(string);
 
             if wrap {
                 fmt = "\"%s\"";
@@ -122,7 +92,7 @@ fn to_string(string ty, i64 args, bool wrap) {
             return res;
         }
 
-        i64 arg_ptr = args yield i64;
+        i64 arg_ptr = args.yield(i64);
         fmt = "%p";
 
         length = snprintf(nil, 0, fmt, arg_ptr);
@@ -132,7 +102,7 @@ fn to_string(string ty, i64 args, bool wrap) {
     }
 
     if strprefix(ty, "i32") {
-        i32 arg_i32 = args yield i32;
+        i32 arg_i32 = args.yield(i32);
         fmt = "%d";
 
         length = snprintf(nil, 0, fmt, arg_i32);
@@ -141,7 +111,7 @@ fn to_string(string ty, i64 args, bool wrap) {
     }
 
     if strprefix(ty, "i64") {
-        i64 arg_i64 = args yield i64;
+        i64 arg_i64 = args.yield(i64);
         fmt = "%ld";
 
         length = snprintf(nil, 0, fmt, arg_i64);
@@ -154,9 +124,9 @@ fn to_string(string ty, i64 args, bool wrap) {
         fmt = "%f";
 
         if strprefix(ty, "f32") {
-            arg_f64 = (f64)args yield f32;
+            arg_f64 = (f64)args.yield(f32);
         } else {
-            arg_f64 = args yield f64;
+            arg_f64 = args.yield(f64);
         }
 
         length = snprintf(nil, 0, fmt, arg_f64);
@@ -165,7 +135,7 @@ fn to_string(string ty, i64 args, bool wrap) {
     }
 
     if strprefix(ty, "char") {
-        char arg_char = args yield char;
+        char arg_char = args.yield(char);
 
         if wrap {
             fmt = "'%c'";
@@ -179,7 +149,7 @@ fn to_string(string ty, i64 args, bool wrap) {
     }
 
     if strprefix(ty, "bool") {
-        string arg_bool = btos(args yield bool);
+        string arg_bool = args.yield(bool).to_string();
         fmt = "%s";
 
         length = snprintf(nil, 0, fmt, arg_bool);
@@ -194,7 +164,7 @@ fn to_string(string ty, i64 args, bool wrap) {
     // to ElleMeta at each index then we can return [%s, %s...]
     // and to_string() each member of the array if it an array
     if res == nil {
-        fprintf(stderr, "Unimplemented expression type '%s'", ty);
+        fprintf(stderr, "Unimplemented expression type '%s'\n", ty);
     }
 
     return res;

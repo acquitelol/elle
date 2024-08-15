@@ -16,7 +16,7 @@ pub enum AstNode {
         name: String,
         r#type: Option<Type>,
         value: Box<AstNode>,
-        location: Location
+        location: Location,
     },
     /// Allocates stack memory of size `size`, assigns it to `name`, and calls `vastart` on it
     VariadicStatement {
@@ -39,6 +39,7 @@ pub enum AstNode {
     FunctionCall {
         name: String,
         parameters: Vec<(Location, AstNode)>,
+        from_struct: bool,
         location: Location,
     },
     /// Performs an arithmetic operation with `operator` using `left` and `right
@@ -46,7 +47,7 @@ pub enum AstNode {
         left: Box<AstNode>,
         right: Box<AstNode>,
         operator: TokenKind,
-        location: Location
+        location: Location,
     },
     /// Runs `body` if condition `condition` is true, otherwise runs `else_body`
     IfStatement {
@@ -87,7 +88,7 @@ pub enum AstNode {
         left: Box<AstNode>,
         right: Box<AstNode>,
         value: Option<Box<AstNode>>,
-        location: Location
+        location: Location,
     },
     /// Loads or stores information from a pointer through pointer arithmetic
     /// In an expression like a[10], left is `a` and right is `10`
@@ -116,8 +117,11 @@ pub enum AstNode {
         value: Box<AstNode>,
         location: Location,
     },
-    /// Returns the address of a stack allocated variable named `name`
-    AddressStatement { name: String, location: Location },
+    /// Returns the address of a some `value`
+    AddressStatement {
+        value: Box<AstNode>,
+        location: Location,
+    },
     /// Performs an explicit conversion of value `value` to type `r#type`
     ConversionStatement {
         r#type: Option<Type>,
@@ -212,7 +216,9 @@ macro_rules! ensure_fn_pointer {
         if $is_fn_pointer && !$found_ptr {
             panic!(
                 "{}",
-                $self.current_token().location.error("Expected function pointer, got just 'fn'.\nTry 'fn *' instead of 'fn'.")
+                $self.current_token().location.error(
+                    "Expected function pointer, got just 'fn'.\nTry 'fn *' instead of 'fn'."
+                )
             );
         } else {
             break;

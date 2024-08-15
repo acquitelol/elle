@@ -380,6 +380,13 @@ impl Type {
         }
     }
 
+    pub fn is_pointer_like(&self) -> bool {
+        match self {
+            Self::Pointer(_) | Self::Long => true,
+            _ => false,
+        }
+    }
+
     pub fn is_map_to_int(&self) -> bool {
         match self {
             Self::Byte

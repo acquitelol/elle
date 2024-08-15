@@ -249,7 +249,7 @@ impl ValueKind {
                 "u64" => Some(Type::UnsignedLong),
                 "f32" => Some(Type::Single),
                 "f64" => Some(Type::Double),
-                "char" => Some(Type::Word),
+                "char" => Some(Type::Byte),
                 "bool" => Some(Type::Boolean),
                 // Arbitrary because it will be turned into `long` anyway when used as void*`
                 "void" => Some(Type::Void),
@@ -271,6 +271,17 @@ impl ValueKind {
         match self.clone() {
             Self::String(val) => Some(val),
             _ => None,
+        }
+    }
+}
+
+impl fmt::Display for ValueKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::String(val) => write!(f, "{}", val),
+            Self::Number(val) => write!(f, "{}", val),
+            Self::Character(val) => write!(f, "{}", val),
+            Self::Nil => write!(f, ""),
         }
     }
 }

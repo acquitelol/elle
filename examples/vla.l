@@ -1,50 +1,53 @@
 use std/io;
 
-def DynamicArray {
+def Array {
     i32 size;
     i32 capacity;
     i32 *elements;
 }
 
-fn initArray(DynamicArray *arr, i32 initialCapacity) {
-    arr.elements = (i32 *)malloc(initialCapacity * #size(i32));
-    arr.size = 0;
-    arr.capacity = initialCapacity;
+fn Array.init(Array *self, i32 initialCapacity) -> Array * {
+    self.elements = (i32 *)malloc(initialCapacity * #size(i32));
+    self.size = 0;
+    self.capacity = initialCapacity;
+
+    return self;
 }
 
-fn resizeArray(DynamicArray *arr, i32 newCapacity) {
-    arr.elements = (i32 *)realloc(arr.elements, newCapacity * #size(i32));
-    arr.capacity = newCapacity;
+fn Array.resize(Array *self, i32 newCapacity) {
+    self.elements = (i32 *)realloc(self.elements, newCapacity * #size(i32));
+    self.capacity = newCapacity;
 }
 
-fn addElement(DynamicArray *arr, i32 element) {
-    if arr.size == arr.capacity {
-        resizeArray(arr, arr.capacity * 2);
+fn Array.push(Array *self, i32 element) {
+    if self.size >= self.capacity {
+        self.resize(self.capacity * 2);
     }
 
-    arr.elements[arr.size] = element;
-    arr.size += 1;
+    self.elements[self.size] = element;
+    self.size += 1;
 }
 
-fn freeArray(DynamicArray *arr) {
-    free(arr.elements);
-    arr.elements = nil;
-    arr.size = 0;
-    arr.capacity = 0;
+fn Array.free(Array *self) {
+    free(self.elements);
+    self.elements = nil;
+    self.size = 0;
+    self.capacity = 0;
 }
 
 fn main() {
-    DynamicArray arr = DynamicArray {};
-    initArray(&arr, 2);
+    Array arr = Array {};
+    arr.init(2);
 
-    addElement(&arr, 39);
-    addElement(&arr, 16);
-    addElement(&arr, 0);
-    addElement(&arr, 172);
+    arr.push(39);
+    arr.push(16);
+    arr.push(0);
+    arr.push(172);
+    arr.push(53);
 
     for i32 i = 0; i < arr.size; i += 1 {
         printf("arr[%d] = %d\n", i, arr.elements[i]);
     }
 
-    freeArray(&arr);
+    arr.free();
 }

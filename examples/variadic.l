@@ -5,7 +5,7 @@ fn add(ElleMeta meta, ...) {
     i32 res = 0;
 
     for i32 i = 0; i < meta.arity; i += 1 {
-        res += args yield i32;
+        res += args.yield(i32);
     }
 
     return res;

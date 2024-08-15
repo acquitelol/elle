@@ -20,9 +20,29 @@ impl<'a> Function<'a> {
     pub fn parse(&mut self, public: bool, external: bool) -> Primitive {
         self.parser.advance();
 
-        let name = self.parser.get_identifier();
+        let mut name = self.parser.get_identifier();
 
         self.parser.advance();
+
+        if self.parser.current_token().kind == TokenKind::Dot {
+            if !(self.parser.struct_pool.contains(&name)
+                || ValueKind::String(name.clone()).is_base_type())
+            {
+                panic!(
+                    "{}",
+                    self.parser.current_token().location.error(format!(
+                        "Attempted to create a method for {} but it is not in the struct pool and isn't a primitive type",
+                        name
+                    ))
+                )
+            }
+
+            self.parser.advance();
+            let identifier = self.parser.get_identifier();
+            name = format!("{}.{}", name, identifier);
+            self.parser.advance();
+        }
+
         self.parser.expect_tokens(vec![TokenKind::LeftParenthesis]);
         self.parser.advance();
 
@@ -119,7 +139,7 @@ impl<'a> Function<'a> {
                         self.parser.tokens.clone(),
                         self.parser.position.clone(),
                         &body,
-                        self.parser.struct_pool.clone()
+                        self.parser.struct_pool.clone(),
                     )
                     .parse();
 

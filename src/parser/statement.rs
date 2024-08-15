@@ -1,8 +1,9 @@
+use std::cell::RefCell;
 use std::iter::FromIterator;
-use std::{cell::RefCell, thread::current};
 
 use super::enums::AstNode;
 use crate::ensure_fn_pointer;
+use crate::lexer::enums::Location;
 use crate::{
     compiler::enums::Type,
     lexer::enums::{Token, TokenKind, ValueKind},
@@ -378,19 +379,27 @@ impl<'a> Statement<'a> {
         }
     }
 
-    fn parse_function(&mut self) -> AstNode {
-        let name = self.get_identifier();
-        let location = self.current_token().location.clone();
+    fn parse_function(
+        &mut self,
+        maybe_name: Option<(Location, String)>,
+        maybe_params: Option<Vec<(Location, AstNode)>>,
+        from_struct: bool,
+    ) -> AstNode {
+        let position = self.position.clone();
+        let (location, name) = if let Some((location, name)) = maybe_name {
+            (location, name)
+        } else {
+            let tmp = self.get_identifier();
+            let location = self.current_token().location.clone();
+            self.advance();
 
+            (location, tmp)
+        };
+
+        self.expect_tokens(vec![TokenKind::LeftParenthesis]);
         self.advance();
-        match self.current_token().kind {
-            TokenKind::LeftParenthesis => {
-                self.advance();
-            }
-            other => panic!("Expected left parethesis or exclamation mark (for variadic functions) but got {:?}", other)
-        }
 
-        let mut parameters = vec![];
+        let mut parameters = maybe_params.unwrap_or(vec![]);
 
         while self.current_token().kind != TokenKind::RightParenthesis && !self.is_eof() {
             let location = self.current_token().location.clone();
@@ -487,11 +496,24 @@ impl<'a> Statement<'a> {
 
         self.advance();
 
-        AstNode::FunctionCall {
+        let mut expression = AstNode::FunctionCall {
             name,
             parameters,
-            location,
+            from_struct,
+            location: location.clone(),
+        };
+
+        match self.current_token().kind {
+            TokenKind::Dot => {
+                expression = self.parse_field_access(Some((position, expression, location)))
+            }
+            TokenKind::LeftBlockBrace => {
+                expression = self.parse_offset_store(Some((position, expression)))
+            }
+            _ => {}
         }
+
+        expression
     }
 
     fn find_lowest_precedence(&mut self) -> usize {
@@ -879,6 +901,7 @@ impl<'a> Statement<'a> {
         let mut nesting = 0;
         let mut index = 0;
         let position = self.position.clone();
+        let location = self.current_token().location.clone();
 
         loop {
             let token = self.tokens[index].clone();
@@ -951,7 +974,9 @@ impl<'a> Statement<'a> {
         self.advance();
 
         match self.current_token().kind {
-            TokenKind::Dot => expression = self.parse_field_access(Some((position, expression))),
+            TokenKind::Dot => {
+                expression = self.parse_field_access(Some((position, expression, location)))
+            }
             TokenKind::LeftBlockBrace => {
                 expression = self.parse_offset_store(Some((position, expression)))
             }
@@ -1099,24 +1124,45 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_yield_variadic(&mut self) -> AstNode {
+        let position = self.position.clone();
         let name = self.get_identifier();
 
         self.advance();
+        self.expect_tokens(vec![TokenKind::Dot]);
+        self.advance();
         self.expect_tokens(vec![TokenKind::Yield]);
         self.advance();
+        self.expect_tokens(vec![TokenKind::LeftParenthesis]);
+        self.advance();
 
+        let location = self.current_token().location;
         let r#type = self.get_type();
         self.advance();
+
+        self.expect_tokens(vec![TokenKind::RightParenthesis]);
+        self.advance();
+
+        let mut expression = AstNode::NextStatement {
+            name,
+            r#type: Some(r#type),
+            location: location.clone(),
+        };
+
+        match self.current_token().kind {
+            TokenKind::Dot => {
+                expression = self.parse_field_access(Some((position, expression, location)))
+            }
+            TokenKind::LeftBlockBrace => {
+                expression = self.parse_offset_store(Some((position, expression)))
+            }
+            _ => {}
+        }
 
         if !self.is_eof() {
             self.expect_tokens(vec![TokenKind::Semicolon]);
         }
 
-        AstNode::NextStatement {
-            name,
-            r#type: Some(r#type),
-            location: self.current_token().location,
-        }
+        expression
     }
 
     fn parse_defer(&mut self) -> AstNode {
@@ -1429,12 +1475,25 @@ impl<'a> Statement<'a> {
 
     fn parse_address(&mut self) -> AstNode {
         self.advance();
-
-        let name = self.get_identifier();
+        let pool = self.struct_pool.clone();
         let location = self.current_token().location.clone();
-        self.advance();
 
-        AstNode::AddressStatement { name, location }
+        let tokens = self.yield_tokens_with_condition(|token, prev_token| {
+            token.kind.is_arithmetic()
+                && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into()))
+                    || prev_token.value.is_base_type())
+                || token.kind.is_declarative()
+                || token.kind == TokenKind::Semicolon
+                || token.kind == TokenKind::Equal
+        });
+
+        let value = Box::new(
+            Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
+                .parse()
+                .0,
+        );
+
+        AstNode::AddressStatement { value, location }
     }
 
     fn parse_deref(&mut self) -> AstNode {
@@ -1616,8 +1675,13 @@ impl<'a> Statement<'a> {
         }
     }
 
-    fn parse_field_access(&mut self, lhs: Option<(usize, AstNode)>) -> AstNode {
-        let location = self.current_token().location.clone();
+    fn parse_field_access(&mut self, lhs: Option<(usize, AstNode, Location)>) -> AstNode {
+        let location = if lhs.is_some() {
+            lhs.clone().unwrap().2
+        } else {
+            self.current_token().location.clone()
+        };
+
         let valid_tokens = vec![TokenKind::Dot];
         let mut value = None;
 
@@ -1644,19 +1708,46 @@ impl<'a> Statement<'a> {
         self.advance();
 
         self.expect_tokens(vec![TokenKind::Identifier]);
+        let inner_location = self.current_token().location.clone();
+        let name = self.get_identifier();
         let mut right = Box::new(AstNode::token_to_literal(self.current_token()));
         self.advance();
+
+        if self.current_token().kind == TokenKind::LeftParenthesis {
+            return self.parse_function(
+                Some((location.clone(), name)),
+                Some(vec![(location.clone(), *left)]),
+                true,
+            );
+        }
 
         // Parse the rest of the field accesses
         while valid_tokens.contains(&self.current_token().kind) {
             self.advance(); // Ignore the TokenKind::Dot
 
             self.expect_tokens(vec![TokenKind::Identifier]);
-            let location = self.current_token().location.clone();
+            let inner_location = self.current_token().location.clone();
 
+            let name = self.get_identifier();
             let inner = Box::new(AstNode::token_to_literal(self.current_token()));
 
             self.advance();
+
+            if self.current_token().kind == TokenKind::LeftParenthesis {
+                return self.parse_function(
+                    Some((inner_location, name)),
+                    Some(vec![(
+                        location.clone(),
+                        AstNode::FieldStatement {
+                            left,
+                            right,
+                            value,
+                            location,
+                        },
+                    )]),
+                    true,
+                );
+            }
 
             if let AstNode::FieldStatement {
                 left,
@@ -1697,6 +1788,8 @@ impl<'a> Statement<'a> {
                         .0,
                 ));
             }
+            // foo.a.meow() = meow(foo.a)
+            TokenKind::LeftParenthesis => {}
             TokenKind::LeftBlockBrace => {
                 return self.parse_offset_store(Some((
                     position,
@@ -1951,7 +2044,7 @@ impl<'a> Statement<'a> {
                     );
 
                     if next.kind == TokenKind::LeftParenthesis {
-                        self.parse_function()
+                        self.parse_function(None, None, false)
                     } else if next.kind == TokenKind::LeftBlockBrace {
                         self.parse_offset_store(None)
                     } else if next.kind == TokenKind::LeftCurlyBrace {
@@ -1971,6 +2064,7 @@ impl<'a> Statement<'a> {
                             .expect(&unexpected_error(next, "EOF".into()));
 
                         match tie.clone().kind {
+                            TokenKind::Yield => self.parse_yield_variadic(),
                             TokenKind::Identifier => self.parse_field_access(None),
                             other => panic!("{}", unexpected_error(tie, format!("{:?}", other))),
                         }
@@ -1978,8 +2072,6 @@ impl<'a> Statement<'a> {
                         self.parse_declare(Some(None))
                     } else if next.kind.is_declarative() {
                         self.parse_declarative_like()
-                    } else if next.kind == TokenKind::Yield {
-                        self.parse_yield_variadic()
                     } else if next.kind.is_arithmetic() {
                         self.parse_arithmetic()
                     } else {
@@ -2021,6 +2113,46 @@ impl<'a> Statement<'a> {
                 if let Some(token) = self.next_token() {
                     if token.kind == TokenKind::LeftCurlyBrace {
                         self.parse_struct_init()
+                    } else if token.kind == TokenKind::Dot {
+                        let ty = self.current_token().clone();
+                        let method =
+                            self.next_token_seek(2)
+                                .expect(&self.current_token().location.error(format!(
+                                    "Expected method name after '{}.'",
+                                    ty.value.get_string_inner().unwrap()
+                                )));
+
+                        if method.kind != TokenKind::Identifier {
+                            panic!(
+                                "{}",
+                                method.location.error(format!(
+                                    "Expected method name in '{}.{}', but got '{:?}' instead.",
+                                    ty.value.get_string_inner().unwrap(),
+                                    method
+                                        .value
+                                        .get_string_inner()
+                                        .unwrap_or(format!("{}", method.value)),
+                                    method.kind
+                                ))
+                            );
+                        }
+
+                        self.advance(); // Skip type
+                        self.advance(); // Skip dot
+                        self.advance(); // Skip func name
+
+                        self.parse_function(
+                            Some((
+                                self.current_token().location,
+                                format!(
+                                    "{}.{}",
+                                    ty.value.get_string_inner().unwrap(),
+                                    method.value.get_string_inner().unwrap()
+                                ),
+                            )),
+                            None,
+                            false,
+                        )
                     } else {
                         self.parse_declare(None)
                     }

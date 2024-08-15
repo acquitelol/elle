@@ -697,13 +697,51 @@ impl Compiler {
                 },
             },
             AstNode::FunctionCall {
-                name,
+                mut name,
                 parameters,
+                from_struct,
                 location,
             } => {
                 // Get the type of the functions based on the ones currently imported into this module
                 let cached_ty = self.ret_types.get(&name).unwrap_or(&Type::Word).to_owned();
                 let declarative_ty = ty.clone().unwrap_or(cached_ty);
+                let mut should_get_address = false;
+
+                if from_struct {
+                    let parameter =
+                        parameters.get(0).expect(&location.error(
+                            "Tried to get the 0th parameter to parse struct call but failed",
+                        ));
+
+                    let (ty, _) = self.generate_statement(
+                        func,
+                        module,
+                        parameter.1.clone(),
+                        None,
+                        None,
+                        false,
+                    )
+                    .expect(&parameter.0.error(
+                        format!(
+                            "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
+                            name
+                        ))
+                    );
+
+                    if ty.is_struct() {
+                        should_get_address = true;
+                        name = format!("{}.{}", ty.get_struct_inner().unwrap(), name)
+                    } else if ty.is_pointer() && ty.clone().get_pointer_inner().unwrap().is_struct()
+                    {
+                        name = format!(
+                            "{}.{}",
+                            ty.get_pointer_inner().unwrap().get_struct_inner().unwrap(),
+                            name
+                        )
+                    } else {
+                        name = format!("{}.{}", ty.id(), name)
+                    }
+                }
 
                 let tmp_function_option = module
                     .borrow_mut()
@@ -759,7 +797,7 @@ impl Compiler {
                     }
                 }
 
-                for (i, parameter) in parameters.clone().iter().enumerate() {
+                for (i, mut parameter) in parameters.clone().iter().cloned().enumerate() {
                     let param_ty = {
                         let tmp = tmp_function.arguments.get(i + add_meta as usize);
 
@@ -770,10 +808,26 @@ impl Compiler {
                         }
                     };
 
+                    let first_arg = tmp_function.arguments.get(0 + add_meta as usize);
+
+                    if let Some(first_arg) = first_arg {
+                        if i == 0
+                            && from_struct
+                            && should_get_address
+                            && first_arg.0.is_pointer()
+                            && first_arg.0.clone().get_pointer_inner().unwrap().is_struct()
+                        {
+                            parameter.1 = AstNode::AddressStatement {
+                                value: Box::new(parameter.1),
+                                location: location.clone(),
+                            }
+                        }
+                    }
+
                     let (ty, val) = self.generate_statement(
                         func,
                         module,
-                        parameter.clone().1,
+                        parameter.1,
                         param_ty.clone(),
                         None,
                         false,
@@ -786,11 +840,11 @@ impl Compiler {
                     );
 
                     params.push(if param_ty.is_none() || ty == param_ty.clone().unwrap() {
-                        (ty.clone(), val.clone())
+                        (ty.clone().into_abi(), val.clone())
                     } else {
                         self.convert_to_type(
                             func,
-                            ty,
+                            ty.into_abi(),
                             param_ty.unwrap(),
                             val.clone(),
                             parameter.0.clone(),
@@ -1532,13 +1586,30 @@ impl Compiler {
 
                 Some((Type::Pointer(Box::new(buf_ty)), tmp))
             }
-            AstNode::AddressStatement { name, location } => {
+            AstNode::AddressStatement { value, location } => {
                 let (ty, val) = self
-                    .get_variable(&format!("{}.addr", name), Some(func))
-                    .expect(&location.error(format!(
-                        "Unexpected error when trying to get a variable named '{}.addr'",
-                        name
-                    )));
+                    .generate_statement(func, module, *value.clone(), ty.clone(), None, false)
+                    .expect(&location.error(
+                        "Unexpected error when trying to compile the value of an address statement",
+                    ));
+
+                let mut parts = val
+                    .get_string_inner()
+                    .split('.')
+                    .collect::<Vec<&str>>()
+                    .iter()
+                    .map(|item| item.to_string())
+                    .collect::<Vec<String>>();
+
+                parts.pop();
+                let name = format!("{}.addr", parts.join("."));
+
+                let (ty, val) =
+                    self.get_variable(&name, Some(func))
+                        .expect(&location.error(format!(
+                            "Unexpected error when trying to get a variable named '{}'",
+                            name
+                        )));
 
                 Some((Type::Pointer(Box::new(ty)), val))
             }
@@ -2261,6 +2332,12 @@ impl Compiler {
         if first.is_struct() || second.is_struct() {
             if first == second {
                 return (second, val);
+            }
+
+            if (first.is_struct() && second.is_pointer_like())
+                || (second.is_struct() && first.is_pointer_like())
+            {
+                return (if first.is_struct() { first } else { second }, val);
             }
 
             panic!(

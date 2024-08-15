@@ -1,16 +1,23 @@
 global pub;
 
-const i64 I64_MAX = 9_223_372_036_854_775_807;
-const i64 I64_MIN = -I64_MAX - 1;
-const i32 I32_MAX = 2_147_483_647;
-const i32 I32_MIN = -I32_MAX - 1;
+fn i64.max() {
+    return 9_223_372_036_854_775_807;
+}
 
-const u64 U64_MAX = 18_446_744_073_709_551_615;
-const u64 U64_MIN = 0;
-const u32 U32_MAX = 4_294_967_295;
-const u32 U32_MIN = 0;
+fn i64.min() {
+    return -i64.max() - 1;
+}
 
-const f64 PI = 3.141592653589793;
+fn i32.max() {
+    return 2_147_483_647;
+}
+
+fn i32.min() {
+    return -i32.max() - 1;
+}
+
+const f64 E = 2.7182818284590455348848081484902650117;
+const f64 PI = 3.1415926535897932384626433832795028841;
 
 external fn acos(f64 x) -> f64;
 external fn asin(f64 x) -> f64;

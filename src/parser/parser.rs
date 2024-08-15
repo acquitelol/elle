@@ -1,5 +1,8 @@
 use crate::{
-    compiler::enums::Type, ensure_fn_pointer, lexer::enums::{Token, TokenKind, ValueKind}, parser::{constant::Constant, function::Function, r#struct::Struct}
+    compiler::enums::Type,
+    ensure_fn_pointer,
+    lexer::enums::{Token, TokenKind, ValueKind},
+    parser::{constant::Constant, function::Function, r#struct::Struct},
 };
 
 use super::{enums::Primitive, r#use::Use};
@@ -109,10 +112,15 @@ impl Parser {
 
     pub fn get_type(&mut self) -> Type {
         let is_fn_pointer = self.current_token().kind == TokenKind::Function;
-        let name = if is_fn_pointer { self.current_token().value.get_string_inner().unwrap() } else { self.get(TokenKind::Identifier) };
+        let name = if is_fn_pointer {
+            self.current_token().value.get_string_inner().unwrap()
+        } else {
+            self.get(TokenKind::Identifier)
+        };
 
-        let is_valid =
-            is_fn_pointer || self.struct_pool.contains(&name) || ValueKind::String(name.clone()).is_base_type();
+        let is_valid = is_fn_pointer
+            || self.struct_pool.contains(&name)
+            || ValueKind::String(name.clone()).is_base_type();
 
         if !is_valid {
             panic!(

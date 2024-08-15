@@ -262,7 +262,7 @@ fn add(ElleMeta meta, ...) {
     i32 res = 0;
 
     for i32 i = 0; i < meta.arity; i += 1 {
-        res += args yield i32;
+        res += args.yield(i32);
     }
 
     return res;
@@ -271,10 +271,10 @@ fn add(ElleMeta meta, ...) {
 
 Let's go through an explanation for how this works:
 
-* L1: Declare the function signature. We declare an `i32 size` as a static positional argument, then the `...` denotes that the function is variaidic.
-* L2: Declare the `args` variable as a pointer to the start of the variadic arguments. This is denoted by `variadic name[size * #size(ty)]`. Ensure that whatever type you pass into `#size` is the type you're going to yield later. This call internally stack allocates memory of the size specified and then calls `vastart` on the returned pointer.
+* L1: Declare the function signature.
+* L2: Declare the `args` variable as a pointer to the start of the variadic arguments. This is denoted by `variadic name[length]`. This call internally stack allocates memory of the size specified and then calls `vastart` on the returned pointer.
 * L3: Initialize the result at `0`.
-* L5: Declare a for loop with an unused iterator from 0 to the size - 1. This will allow you to loop through all of the arguments that will be provided by the user. This is necessary because you can yield arguments forever, however if you don't know how many there are then you will enter uninitialized memory. A method of passing the argument length will be shown later at the call site.
+* L5: Declare a for loop with an unused iterator from 0 to the length. This will allow you to loop through all of the arguments that will be provided by the user. This is necessary because you can yield arguments forever, however if you don't know how many there are then you will enter uninitialized memory.
 * L6: Yield the next argument from the `args` pointer as an `i32` type, and add it to the result value
 * L9: Return the summed value. Right before this point, the `free` call that we deferred earlier would be called.
 
@@ -287,7 +287,7 @@ fn main() {
 }
 ```
 
-Examples that contain variadic functions include [`concat.elle`](https://github.com/acquitelol/elle/blob/rewrite/examples/concat.elle) and [`variadic.elle`](https://github.com/acquitelol/elle/blob/rewrite/examples/variadic.elle).
+Examples that contain variadic functions include [`concat.l`](https://github.com/acquitelol/elle/blob/rewrite/examples/concat.l) and [`variadic.l`](https://github.com/acquitelol/elle/blob/rewrite/examples/variadic.l).
 
 <hr />
 
@@ -985,6 +985,35 @@ fn main() {
 }
 ```
 
+You can also define methods on structs (and primitive types):
+
+```c
+use std/io;
+
+def Foo {
+    i32 a;
+}
+
+fn Foo.add(Foo self, Foo other) {
+    return Foo { a = self.a + other.a };
+}
+
+fn main() {
+    Foo foo1 = Foo { a = 10 };
+    Foo foo2 = Foo { a = 30 };
+
+    Foo res1 = foo1.add(foo2);
+    Foo res2 = Foo.add(foo1, foo2);
+
+    dbg(res1.a, res2.a);
+}
+```
+
+You can define `fn <Struct name>.<method name>(<Struct name> self, <args>)` to create instance methods.
+<br />
+You can then either call them through `instance.<method name>()` or `<Struct name>.<method name>(instance)`.
+For more examples, please view [vectors.l](https://github.com/acquitelol/elle/blob/rewrite/std/vectors.l)
+
 <hr />
 
 ### ♡ **Argc and argv**
@@ -1073,7 +1102,7 @@ All contributions to this project are welcome and I love talking about this stuf
 
   * **You're done!**
 
-> You can now run `make run <name>` to run a file from the `/examples` directory. For example, you can run `make run donut` and it will run `/examples/donut.elle`.
+> You can now run `make run <name>` to run a file from the `/examples` directory. For example, you can run `make run donut` and it will run `/examples/donut.l`.
 
 <hr />
 
