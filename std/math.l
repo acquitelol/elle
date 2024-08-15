@@ -14,8 +14,13 @@ const f64 PI = 3.141592653589793;
 
 external fn acos(f64 x) -> f64;
 external fn asin(f64 x) -> f64;
-external fn atan(f64 x) -> f64;
-external fn atan2(f64 x, f64 y) -> f64;
+external fn atan(f64 slope) -> f64;
+external fn atan2(f64 y, f64 x) -> f64;
+
+fn atan3(f64 x, f64 y) {
+    return atan2(y, x);
+}
+
 external fn cos(f64 x) -> f64;
 external fn cosh(f64 x) -> f64;
 external fn sin(f64 x) -> f64;
