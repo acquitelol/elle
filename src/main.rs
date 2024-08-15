@@ -116,30 +116,13 @@ fn lex_and_parse(
     }
 
     // Add global constants
-    // - EOF => -1
-    // - NULL => 0 (nullptr)
+    // - nil => 0 (nullptr)
+    // - ElleMeta => Utility struct
     if root {
         tree.insert(
             0,
             Primitive::Constant {
-                name: "EOF".into(),
-                public: false,
-                usable: true,
-                imported: false,
-                r#type: Some(Type::Long),
-                value: Box::new(AstNode::LiteralStatement {
-                    kind: TokenKind::LongLiteral,
-                    value: ValueKind::Number(-1),
-                    location: Location::default(input_path.clone()),
-                }),
-                location: Location::default(input_path.clone()),
-            },
-        );
-
-        tree.insert(
-            0,
-            Primitive::Constant {
-                name: "NULL".into(),
+                name: "nil".into(),
                 public: false,
                 usable: true,
                 imported: false,

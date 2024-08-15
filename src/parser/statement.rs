@@ -1,5 +1,5 @@
-use std::{cell::RefCell, thread::current};
 use std::iter::FromIterator;
+use std::{cell::RefCell, thread::current};
 
 use super::enums::AstNode;
 use crate::ensure_fn_pointer;
@@ -134,10 +134,15 @@ impl<'a> Statement<'a> {
 
     pub fn get_type(&mut self) -> Type {
         let is_fn_pointer = self.current_token().kind == TokenKind::Function;
-        let name = if is_fn_pointer { self.current_token().value.get_string_inner().unwrap() } else { self.get(vec![TokenKind::Identifier]) };
+        let name = if is_fn_pointer {
+            self.current_token().value.get_string_inner().unwrap()
+        } else {
+            self.get(vec![TokenKind::Identifier])
+        };
 
-        let is_valid =
-            is_fn_pointer || self.struct_pool.contains(&name) || ValueKind::String(name.clone()).is_base_type();
+        let is_valid = is_fn_pointer
+            || self.struct_pool.contains(&name)
+            || ValueKind::String(name.clone()).is_base_type();
 
         if !is_valid {
             panic!(
@@ -171,7 +176,6 @@ impl<'a> Statement<'a> {
                 ensure_fn_pointer!(self, is_fn_pointer, found_ptr)
             }
         }
-
 
         // Essentially makes the compiler forget what type the pointer holds
         if matches!(ty.clone(), Type::Pointer(inner) if matches!(*inner, Type::Void)) {
@@ -470,14 +474,9 @@ impl<'a> Statement<'a> {
 
             parameters.push((
                 location,
-                Statement::new(
-                    tokens.clone(),
-                    0,
-                    &self.body,
-                    self.struct_pool.clone()
-                )
-                .parse()
-                .0,
+                Statement::new(tokens.clone(), 0, &self.body, self.struct_pool.clone())
+                    .parse()
+                    .0,
             ));
         }
 
@@ -621,7 +620,6 @@ impl<'a> Statement<'a> {
         let mut size = None;
         let mut location = self.current_token().location.clone();
 
-
         if self.current_token().kind != TokenKind::RightBlockBrace {
             let tokens = self.yield_tokens_with_condition(|token, _| {
                 if token.kind == TokenKind::RightBlockBrace {
@@ -671,14 +669,9 @@ impl<'a> Statement<'a> {
 
             values.push((
                 location,
-                Statement::new(
-                    tmp_tokens.clone(),
-                    0,
-                    &self.body,
-                    self.struct_pool.clone()
-                )
-                .parse()
-                .0,
+                Statement::new(tmp_tokens.clone(), 0, &self.body, self.struct_pool.clone())
+                    .parse()
+                    .0,
             ));
         }
 
@@ -776,7 +769,7 @@ impl<'a> Statement<'a> {
                 declare_tokens.clone(),
                 0,
                 &self.body,
-                self.struct_pool.clone()
+                self.struct_pool.clone(),
             )
             .parse()
             .0
@@ -798,14 +791,9 @@ impl<'a> Statement<'a> {
         };
 
         let condition = if condition_tokens.len() > 0 {
-            Statement::new(
-                condition_tokens,
-                0,
-                &self.body,
-                self.struct_pool.clone()
-            )
-            .parse()
-            .0
+            Statement::new(condition_tokens, 0, &self.body, self.struct_pool.clone())
+                .parse()
+                .0
         } else {
             AstNode::LiteralStatement {
                 kind: TokenKind::IntegerLiteral,
@@ -1048,7 +1036,7 @@ impl<'a> Statement<'a> {
                         value,
                         left_location: left_location.clone(),
                         right_location: right_location.clone(),
-                        value_location: value_location.clone()
+                        value_location: value_location.clone(),
                     },
                 )));
             }
@@ -1065,7 +1053,7 @@ impl<'a> Statement<'a> {
             value,
             left_location,
             right_location,
-            value_location
+            value_location,
         }
     }
 
@@ -1394,7 +1382,9 @@ impl<'a> Statement<'a> {
 
         let pool = self.struct_pool.clone();
         let tokens = self.yield_tokens_with_condition(|token, prev_token| {
-            token.kind.is_arithmetic() && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into())) || prev_token.value.is_base_type())
+            token.kind.is_arithmetic()
+                && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into()))
+                    || prev_token.value.is_base_type())
                 || token.kind.is_declarative()
                 || token.kind == TokenKind::Semicolon
                 || token.kind == TokenKind::Equal
@@ -1410,7 +1400,7 @@ impl<'a> Statement<'a> {
             left: parsed,
             right: Box::new(AstNode::token_to_literal(token)),
             operator: TokenKind::Multiply,
-            location
+            location,
         }
     }
 
@@ -1420,7 +1410,9 @@ impl<'a> Statement<'a> {
         let location = self.current_token().location.clone();
 
         let tokens = self.yield_tokens_with_condition(|token, prev_token| {
-            token.kind.is_arithmetic() && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into())) || prev_token.value.is_base_type())
+            token.kind.is_arithmetic()
+                && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into()))
+                    || prev_token.value.is_base_type())
                 || token.kind.is_declarative()
                 || token.kind == TokenKind::Semicolon
                 || token.kind == TokenKind::Equal
@@ -1432,10 +1424,7 @@ impl<'a> Statement<'a> {
                 .0,
         );
 
-        AstNode::NotStatement {
-            value,
-            location,
-        }
+        AstNode::NotStatement { value, location }
     }
 
     fn parse_address(&mut self) -> AstNode {
@@ -1445,10 +1434,7 @@ impl<'a> Statement<'a> {
         let location = self.current_token().location.clone();
         self.advance();
 
-        AstNode::AddressStatement {
-            name,
-            location,
-        }
+        AstNode::AddressStatement { name, location }
     }
 
     fn parse_deref(&mut self) -> AstNode {
@@ -1459,7 +1445,9 @@ impl<'a> Statement<'a> {
 
         let pool = self.struct_pool.clone();
         let addr_tokens = self.yield_tokens_with_condition(|token, prev_token| {
-            token.kind.is_arithmetic() && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into())) || prev_token.value.is_base_type())
+            token.kind.is_arithmetic()
+                && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into()))
+                    || prev_token.value.is_base_type())
                 || token.kind.is_declarative()
                 || token.kind == TokenKind::Semicolon
                 || token.kind == TokenKind::Equal
@@ -1513,7 +1501,7 @@ impl<'a> Statement<'a> {
             value,
             left_location,
             right_location,
-            value_location
+            value_location,
         }
     }
 
@@ -1686,14 +1674,14 @@ impl<'a> Statement<'a> {
                         location: location.clone(),
                     }),
                     value: None,
-                    location
+                    location,
                 })
             } else {
                 right = Box::new(AstNode::FieldStatement {
                     left: right,
                     right: inner,
                     value: None, // Only the root may have a value
-                    location: location.clone()
+                    location: location.clone(),
                 });
             }
         }
@@ -1716,7 +1704,7 @@ impl<'a> Statement<'a> {
                         left: left.clone(),
                         right: right.clone(),
                         value,
-                        location: location.clone()
+                        location: location.clone(),
                     },
                 )))
             }
@@ -1726,7 +1714,7 @@ impl<'a> Statement<'a> {
                         left: left.clone(),
                         right: right.clone(),
                         value: None,
-                        location: location.clone()
+                        location: location.clone(),
                     },
                 )));
             }
@@ -1741,7 +1729,7 @@ impl<'a> Statement<'a> {
             left,
             right,
             value,
-            location
+            location,
         }
     }
 
@@ -1761,7 +1749,7 @@ impl<'a> Statement<'a> {
                     .0,
             ),
             operator: mapping,
-            location
+            location,
         }
     }
 
@@ -1824,7 +1812,7 @@ impl<'a> Statement<'a> {
                         self.tokens.clone(),
                         self.position.clone(),
                         &cell,
-                        self.struct_pool.clone()
+                        self.struct_pool.clone(),
                     )
                     .parse();
 

@@ -68,47 +68,24 @@ fn dbg(ElleMeta meta, ...) {
     for i32 i = 0; i < meta.arity; i += 1 {
         string ty = meta.types[i];
         string expr = meta.exprs[i];
+        string res = to_string(ty, args, true);
 
-        if strstr(ty, "*") {
-            if strprefix(ty, "char") {
-                printf("%s = \"%s\"\n", expr, args yield string);
-                continue;
-            }
+        printf("%s = %s\n", expr, res);
+    }
+}
 
-            printf("%s = %p\n", expr, args yield i64);
-            continue;
+fn print(ElleMeta meta, ...) {
+    variadic args[meta.arity]; // Arity does NOT include meta
+
+    for i32 i = 0; i < meta.arity; i += 1 {
+        string ty = meta.types[i];
+        string expr = meta.exprs[i];
+        string res = to_string(ty, args, false);
+
+        if i == meta.arity - 1 {
+            puts(res);
+        } else {
+            printf("%s ", res);
         }
-
-        if strprefix(ty, "i32") {
-            printf("%s = %d\n", expr, args yield i32);
-            continue;
-        }
-
-        if strprefix(ty, "i64") {
-            printf("%s = %ld\n", expr, args yield i64);
-            continue;
-        }
-
-        if strprefix(ty, "f32") {
-            printf("%s = %f\n", expr, (f64)(args yield f32));
-            continue;
-        }
-
-        if strprefix(ty, "f64") {
-            printf("%s = %f\n", expr, args yield f64);
-            continue;
-        }
-
-        if strprefix(ty, "char") {
-            printf("%s = '%c'\n", expr, args yield char);
-            continue;
-        }
-
-        if strprefix(ty, "bool") {
-            printf("%s = %s\n", expr, btos(args yield bool));
-            continue;
-        }
-
-        printf("Invalid expression type '%s'", ty);
     }
 }

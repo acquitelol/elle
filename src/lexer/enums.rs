@@ -253,7 +253,6 @@ impl ValueKind {
                 "bool" => Some(Type::Boolean),
                 // Arbitrary because it will be turned into `long` anyway when used as void*`
                 "void" => Some(Type::Void),
-                "nil" => None,
                 other => Some(Type::Struct(other.into())),
             },
             _ => None,

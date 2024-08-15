@@ -454,8 +454,7 @@ Elle's types are quite similar to C in terms of their definition. They can be a 
 
 These are the mappings of types in Elle:
 
-- `nil` - No type. Can be used to give a function that doesn't return anything an explicit return type. Keep in mind that this is purely semantic and cannot be used as a standalone type for variables.
-- `void` - A mapping to `byte`, usually used for `void *` or function return signatures
+- `void` - A mapping to `word`, usually used for `void *` or function return signatures
 - `bool` - A mapping to `i8`, and works purely as a semantic for boolean literals like `true` or `false` that expand to `1` or `0` respectively.
 - `char` - A mapping to a `byte` representing a character in ASCII.
 - `i8` - A "byte", also known as an 8-bit integer.

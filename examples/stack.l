@@ -11,7 +11,7 @@ fn direction(i32 *other) {
 }
 
 fn formattedDirection() -> string {
-    if direction(NULL) {
+    if direction(nil) {
         return "up";
     } else {
         return "down";

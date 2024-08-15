@@ -7,7 +7,7 @@ global pub;
 local fn is_valid(string str, string type) -> bool {
     string *valid_strspn = ["0123456789", "0123456789", "0123456789."];
     string *valid_types = ["i32", "i64", "f64"];
-    i32 type_index = EOF;
+    i32 type_index = -1;
 
     for i32 i = 0; i < #arrlen(valid_types); i += 1 {
         if streq(valid_types[i], type) {
@@ -15,7 +15,7 @@ local fn is_valid(string str, string type) -> bool {
         }
     }
 
-    if type_index == EOF {
+    if type_index == -1 {
         printf("'%s' is not a valid type for casting. Falling back to 0\n", type);
         printf("Valid types:\n");
 

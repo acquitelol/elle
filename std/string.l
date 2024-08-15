@@ -1,6 +1,7 @@
 global pub;
 
 external fn malloc(i64 size) -> i64;
+external fn snprintf(string str, i32 size, string formatter, ...);
 external fn memchr(string str, char character, i64 n) -> i64;
 external fn memcmp(string str1, string str2, i64 n) -> i32;
 external fn memcpy(void *dest, void *src, i64 n) -> i64;
@@ -65,4 +66,136 @@ fn concat(ElleMeta meta, ...) {
     // Include null terminator
     result[index] = '\0';
     return result;
+}
+
+def String {
+    string data;
+    i32 length;
+    i32 capacity;
+}
+
+fn string_init(String *str, i32 initialCapacity) {
+    str.data = (string)malloc(initialCapacity * #size(char));
+    str.data[0] = '\0';
+    str.length = 0;
+    str.capacity = initialCapacity;
+}
+
+fn string_resize(String *str, i32 newCapacity) {
+    str.data = (string)realloc(str.data, newCapacity * #size(char));
+    str.capacity = newCapacity;
+}
+
+fn string_push(String *str, string to_append) {
+    i64 append_length = strlen(to_append);
+    i64 new_length = str.length + append_length;
+
+    if (new_length >= str.capacity) {
+        resize_string(str, new_length + 1);
+    }
+
+    strcat(str.data, to_append);
+    str.length = new_length;
+}
+
+fn to_string(string ty, i64 args, bool wrap) {
+    string res = nil;
+    string fmt = nil;
+    i32 length = 0;
+
+    if strstr(ty, "*") {
+        // Ensure the ty is `char *` but isn't `char **`
+        // Any variation (`char ***`) will also match
+        // so `**` is all that's necessary
+        if strprefix(ty, "char") && !strstr(ty, "**") {
+            string arg_string = args yield string;
+
+            if wrap {
+                fmt = "\"%s\"";
+            } else {
+                fmt = "%s";
+            }
+
+            length = snprintf(nil, 0, fmt, arg_string);
+            res = malloc(length);
+            sprintf(res, fmt, arg_string);
+            return res;
+        }
+
+        i64 arg_ptr = args yield i64;
+        fmt = "%p";
+
+        length = snprintf(nil, 0, fmt, arg_ptr);
+        res = malloc(length);
+        sprintf(res, fmt, arg_ptr);
+        return res;
+    }
+
+    if strprefix(ty, "i32") {
+        i32 arg_i32 = args yield i32;
+        fmt = "%d";
+
+        length = snprintf(nil, 0, fmt, arg_i32);
+        res = malloc(length);
+        sprintf(res, fmt, arg_i32);
+    }
+
+    if strprefix(ty, "i64") {
+        i64 arg_i64 = args yield i64;
+        fmt = "%ld";
+
+        length = snprintf(nil, 0, fmt, arg_i64);
+        res = malloc(length);
+        sprintf(res, fmt, arg_i64);
+    }
+
+    if strprefix(ty, "f32") || strprefix(ty, "f64") {
+        f64 arg_f64 = 0;
+        fmt = "%f";
+
+        if strprefix(ty, "f32") {
+            arg_f64 = (f64)args yield f32;
+        } else {
+            arg_f64 = args yield f64;
+        }
+
+        length = snprintf(nil, 0, fmt, arg_f64);
+        res = malloc(length);
+        sprintf(res, fmt, arg_f64);
+    }
+
+    if strprefix(ty, "char") {
+        char arg_char = args yield char;
+
+        if wrap {
+            fmt = "'%c'";
+        } else {
+            fmt = "%c";
+        }
+
+        length = snprintf(nil, 0, fmt, arg_char);
+        res = malloc(length);
+        sprintf(res, fmt, arg_char);
+    }
+
+    if strprefix(ty, "bool") {
+        string arg_bool = btos(args yield bool);
+        fmt = "%s";
+
+        length = snprintf(nil, 0, fmt, arg_bool);
+        res = malloc(length);
+        sprintf(res, fmt, arg_bool);
+    }
+
+    // We never yielded any string, ie the caller passed a struct
+    // TODO: Arrays would just print the pointer %p for now, however
+    // there is a way to print the array properly, for example
+    // we can pass the array's length (or nil if it isn't an array)
+    // to ElleMeta at each index then we can return [%s, %s...]
+    // and to_string() each member of the array if it an array
+    if res == nil {
+        fprintf(stderr, "Unimplemented expression type '%s'", ty);
+    }
+
+    return res;
 }

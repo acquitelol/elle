@@ -202,8 +202,7 @@ impl Compiler {
         }
 
         if let Some(ty) = func.return_type.clone() {
-            self.ret_types
-                .insert(name.clone(), ty);
+            self.ret_types.insert(name.clone(), ty);
         }
 
         func.add_block("start");
@@ -320,7 +319,7 @@ impl Compiler {
                 name,
                 r#type,
                 value,
-                location
+                location,
             } => {
                 let existing = match self.get_variable(name.as_str(), Some(func)) {
                     Ok((ty, _)) => ty.clone(),
@@ -482,7 +481,7 @@ impl Compiler {
                         left_ty_unparsed,
                         right_val_unparsed,
                         location.clone(),
-                        false
+                        false,
                     );
 
                     right_val = val;
@@ -653,7 +652,7 @@ impl Compiler {
                             _ => Type::Word,
                         };
 
-                        let mut final_ty = ty.unwrap_or(num_ty);
+                        let mut final_ty = ty.clone().unwrap_or(num_ty);
 
                         if is_return {
                             final_ty = func.borrow_mut().return_type.clone().unwrap_or(final_ty);
@@ -904,7 +903,8 @@ impl Compiler {
                         name
                     )));
 
-                let (_, converted_val) = self.convert_to_type(func, ty, Type::Long, val, location, false);
+                let (_, converted_val) =
+                    self.convert_to_type(func, ty, Type::Long, val, location, false);
 
                 func.borrow_mut().assign_instruction(
                     tmp.clone(),
@@ -925,7 +925,7 @@ impl Compiler {
                 value,
                 left_location,
                 right_location,
-                value_location
+                value_location,
             } => {
                 let (left_ty, _) = self
                     .generate_statement(func, module, *left.clone(), ty.clone(), None, false)
@@ -1191,19 +1191,10 @@ impl Compiler {
                 func.borrow_mut().add_block(step_label.clone());
 
                 if let Some(step) = step {
-                    self.generate_statement(
-                        func,
-                        module,
-                        *step,
-                        ty.clone(),
-                        None,
-                        false,
-                    )
-                    .expect(
-                        &location.error(
+                    self.generate_statement(func, module, *step, ty.clone(), None, false)
+                        .expect(&location.error(
                             "Unexpected error when trying to compile the step of a while loop",
-                        ),
-                    );
+                        ));
                 }
 
                 func.borrow_mut()
@@ -1593,7 +1584,7 @@ impl Compiler {
                                     } else {
                                         Instruction::Divide(
                                             buf_val,
-                                            Value::Const(Type::Word, buf_ty.size(module) as i128),
+                                            Value::Const(Type::Long, buf_ty.size(module) as i128),
                                         )
                                     },
                                 );
@@ -1603,21 +1594,21 @@ impl Compiler {
 
                             if !standalone {
                                 panic!(
-                                        "{}",
-                                        location.error(
-                                            format!(
-                                                "Cannot find the length of an array '{}' that isn't defined in the current function",
-                                                val.get_string_inner()
-                                            )
+                                    "{}",
+                                    location.error(
+                                        format!(
+                                            "Cannot find the length of an array '{}' that isn't defined in the current function",
+                                            val.get_string_inner()
                                         )
-                                    );
+                                    )
+                                );
                             }
 
                             func.borrow_mut().assign_instruction(
                                 size.clone(),
                                 ty.clone(),
                                 Instruction::Copy(Value::Const(
-                                    Type::Word,
+                                    Type::Long,
                                     ty.size(module) as i128,
                                 )),
                             );
@@ -1764,7 +1755,7 @@ impl Compiler {
                 left,
                 right,
                 value,
-                location
+                location,
             } => {
                 let (ty, left) = self
                     .generate_statement(
@@ -2265,7 +2256,7 @@ impl Compiler {
         second: Type,
         val: Value,
         location: Location,
-        explicit: bool
+        explicit: bool,
     ) -> (Type, Value) {
         if first.is_struct() || second.is_struct() {
             if first == second {
@@ -2291,7 +2282,14 @@ impl Compiler {
         macro_rules! cast_warning {
             () => {
                 if !explicit {
-                    println!("{}", location.warning(format!("Implicit casting from {} to {}", first.display(), second.display())));
+                    println!(
+                        "{}",
+                        location.warning(format!(
+                            "Implicit casting from {} to {}",
+                            first.display(),
+                            second.display()
+                        ))
+                    );
                 }
             };
         }

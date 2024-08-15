@@ -28,7 +28,7 @@ fn addElement(DynamicArray *arr, i32 element) {
 
 fn freeArray(DynamicArray *arr) {
     free(arr.elements);
-    arr.elements = NULL;
+    arr.elements = nil;
     arr.size = 0;
     arr.capacity = 0;
 }

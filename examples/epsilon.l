@@ -32,7 +32,7 @@ fn main() {
     i32 results[ITERATIONS];
     i32 formattedEpsilon = EPSILON * (ACCURACY / 100);
 
-    srand(time(NULL));
+    srand(time(nil));
 
     for i32 i = 0; i < ITERATIONS; i += 1 {
         results[i] = roll(results, formattedEpsilon);
