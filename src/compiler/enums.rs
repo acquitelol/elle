@@ -2,6 +2,7 @@
 // https://github.com/garritfra/qbe-rs/blob/main/LICENSE-MIT
 use std::{
     cell::RefCell,
+    collections::HashSet,
     fmt::{self},
     mem,
 };
@@ -941,6 +942,81 @@ impl Module {
         self.data.push(data);
         self.data.last_mut().unwrap()
     }
+
+    pub fn remove_unused_functions(&mut self) {
+        let mut passes = 5; // should be enough to remove most if not all unused functions
+
+        while passes > 0 {
+            passes -= 1;
+
+            let mut used_functions: HashSet<String> = HashSet::new();
+
+            for func in self.functions.iter() {
+                for block in func.blocks.iter() {
+                    for statement in block.statements.iter() {
+                        match statement {
+                            Statement::Assign(_, _, instr) | Statement::Volatile(instr) => {
+                                for other in self.functions.iter() {
+                                    if instr.is_global_used(&other.name) {
+                                        used_functions.insert(other.name.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            used_functions.insert("main".to_string());
+
+            self.functions.retain(|func| {
+                if !used_functions.contains(&func.name) {
+                    #[cfg(debug_assertions)]
+                    println!(
+                        "Eliminating function '{}' due to it not being called or referenced",
+                        func.name.clone()
+                    );
+                    false
+                } else {
+                    true
+                }
+            });
+        }
+    }
+
+    // doesn't need multiple passes because will run after functions
+    pub fn remove_unused_data(&mut self) {
+        let mut used_data_sections: HashSet<String> = HashSet::new();
+
+        for func in self.functions.iter() {
+            for block in func.blocks.iter() {
+                for statement in block.statements.iter() {
+                    match statement {
+                        Statement::Assign(_, _, instr) | Statement::Volatile(instr) => {
+                            for data in self.data.iter() {
+                                if instr.is_global_used(&data.name) {
+                                    used_data_sections.insert(data.name.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        self.data.retain(|data| {
+            if !used_data_sections.contains(&data.name) {
+                #[cfg(debug_assertions)]
+                println!(
+                    "Eliminating data section '{}' due to it not being referenced",
+                    data.name.clone()
+                );
+                false
+            } else {
+                true
+            }
+        });
+    }
 }
 
 impl fmt::Display for Module {
@@ -954,36 +1030,11 @@ impl fmt::Display for Module {
         }
 
         for func in self.functions.iter() {
+            // ensure we retain external functions until this point
+            // because some data sections may rely on these functions
+            // if we remove them the data sections will also be removed
             if !func.external {
-                let mut used = false;
-
-                for other in self.functions.iter().cloned().rev() {
-                    for block in other.blocks.iter().cloned() {
-                        for statement in block.statements.iter().cloned() {
-                            match statement {
-                                Statement::Assign(_, _, instr)
-                                    if instr.is_global_used(&func.name) =>
-                                {
-                                    used = true;
-                                }
-                                Statement::Volatile(instr) if instr.is_global_used(&func.name) => {
-                                    used = true;
-                                }
-                                _ => {}
-                            }
-                        }
-                    }
-                }
-
-                if used || &func.name == "main" {
-                    writeln!(f, "{}", func)?;
-                } else {
-                    #[cfg(debug_assertions)]
-                    println!(
-                        "Eliminating function '{}' due to it not being called or referenced",
-                        func.name.clone()
-                    );
-                }
+                writeln!(f, "{}", func)?;
             }
         }
 

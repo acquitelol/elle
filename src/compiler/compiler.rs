@@ -32,17 +32,17 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    fn tmp_name_with_debug_assertions(&self, name: &str) -> String {
-        if cfg!(debug_assertions) {
+    fn tmp_name_with_debug_assertions(&self, name: &str, minify: bool) -> String {
+        if cfg!(debug_assertions) || !minify {
             format!("{}.{}", name, self.tmp_counter)
         } else {
             format!(".{}", self.tmp_counter)
         }
     }
 
-    fn new_temporary(&mut self, name: Option<&str>) -> Value {
+    fn new_temporary(&mut self, name: Option<&str>, minify: bool) -> Value {
         self.tmp_counter += 1;
-        Value::Temporary(self.tmp_name_with_debug_assertions(name.unwrap_or("tmp")))
+        Value::Temporary(self.tmp_name_with_debug_assertions(name.unwrap_or("tmp"), minify))
     }
 
     fn new_variable(
@@ -51,18 +51,19 @@ impl Compiler {
         name: &str,
         func: Option<&RefCell<Function>>,
         new: bool,
+        minify: bool,
     ) -> GeneratorResult<Value> {
         let tmp = if new {
-            self.new_temporary(Some(name))
+            self.new_temporary(Some(name), minify)
         } else {
             let existing_var = self.get_variable(name, func);
 
             match existing_var {
                 Ok((_, val)) => match val.clone() {
                     Value::Temporary(_) => val.clone(),
-                    _ => self.new_temporary(Some(name)),
+                    _ => self.new_temporary(Some(name), minify),
                 },
-                Err(_) => self.new_temporary(Some(name)),
+                Err(_) => self.new_temporary(Some(name), minify),
             }
         };
 
@@ -110,7 +111,7 @@ impl Compiler {
                                 )
                             }
 
-                            let temp = self.new_temporary(Some("constant"));
+                            let temp = self.new_temporary(Some("constant"), true);
 
                             func.unwrap().borrow_mut().assign_instruction(
                                 temp.clone(),
@@ -173,7 +174,7 @@ impl Compiler {
 
         for argument in arguments.clone() {
             let ty = argument.r#type.clone();
-            let tmp = self.new_variable(ty.clone(), &argument.name, None, false)?;
+            let tmp = self.new_variable(ty.clone(), &argument.name, None, false, false)?;
 
             args.push((ty.into_abi(), tmp));
         }
@@ -334,7 +335,7 @@ impl Compiler {
                 let ty = r#type.unwrap_or(existing.clone());
 
                 let temp = self
-                    .new_variable(ty.clone(), &name, Some(func), false)
+                    .new_variable(ty.clone(), &name, Some(func), false, false)
                     .expect(&location.error(format!(
                         "Unexpected error when trying to make a new variable called '{}'",
                         name
@@ -366,7 +367,7 @@ impl Compiler {
                     if res.is_ok() {
                         let (addr_ty, addr_val) = res.unwrap();
                         let tmp = self
-                            .new_variable(addr_ty.clone(), &name, Some(func), true)
+                            .new_variable(addr_ty.clone(), &name, Some(func), true, false)
                             .expect(&location.error(format!(
                                 "Unexpected error when trying to make a new variable called '{}'",
                                 name
@@ -398,7 +399,7 @@ impl Compiler {
                     }
 
                     let addr_temp = self
-                        .new_variable(ty.clone(), &format!("{}.addr", name), Some(func), false)
+                        .new_variable(ty.clone(), &format!("{}.addr", name), Some(func), false, false)
                         .expect(&location.error(format!("Unexpected error when trying to create a variable to store the stack address of a local variable named '{}'", name)));
 
                     func.borrow_mut().assign_instruction(
@@ -556,7 +557,7 @@ impl Compiler {
                     ),
                 };
 
-                let op_temp = self.new_temporary(None);
+                let op_temp = self.new_temporary(None, true);
 
                 let final_ty = if operator.is_comparative() {
                     Type::Word
@@ -662,8 +663,10 @@ impl Compiler {
                     }
                     ValueKind::String(val) => {
                         self.tmp_counter += 1;
-                        let name = self
-                            .tmp_name_with_debug_assertions(&func.borrow_mut().name.to_string());
+                        let name = self.tmp_name_with_debug_assertions(
+                            &func.borrow_mut().name.to_string(),
+                            true,
+                        );
 
                         self.data_sections.push(Data::new(
                             Linkage::private(),
@@ -682,8 +685,10 @@ impl Compiler {
                     }
                     ValueKind::Nil => {
                         self.tmp_counter += 1;
-                        let name = self
-                            .tmp_name_with_debug_assertions(&func.borrow_mut().name.to_string());
+                        let name = self.tmp_name_with_debug_assertions(
+                            &func.borrow_mut().name.to_string(),
+                            true,
+                        );
 
                         self.data_sections.push(Data::new(
                             Linkage::private(),
@@ -898,7 +903,8 @@ impl Compiler {
                     params.insert(tmp_function.variadic_index, res);
                 }
 
-                let temp = self.new_temporary(Some(&format!("{}.res", func.borrow_mut().name)));
+                let temp =
+                    self.new_temporary(Some(&format!("{}.res", func.borrow_mut().name)), true);
 
                 let (_, val) = self
                     .get_variable(&name, Some(func))
@@ -951,7 +957,7 @@ impl Compiler {
                     )));
 
                 let tmp = self
-                    .new_variable(buf_ty.clone(), &name.clone(), Some(func), true)
+                    .new_variable(buf_ty.clone(), &name.clone(), Some(func), true, false)
                     .expect(&location.error(format!(
                         "Unexpected error when trying to create a variable named '{}'",
                         name
@@ -1061,7 +1067,7 @@ impl Compiler {
                     return Some((inner, compiled_location));
                 }
 
-                let temp = self.new_temporary(Some("load"));
+                let temp = self.new_temporary(Some("load"), true);
 
                 func.borrow_mut().assign_instruction(
                     temp.clone(),
@@ -1077,6 +1083,8 @@ impl Compiler {
                 else_body,
                 location,
             } => {
+                self.scopes.push(HashMap::new());
+
                 let (_, value) = self
                     .generate_statement(func, module, *condition.clone(), ty, None, false)
                     .expect(&location.error(
@@ -1211,6 +1219,8 @@ impl Compiler {
                 }
 
                 func.borrow_mut().add_block(end_label);
+                self.scopes.pop();
+
                 None
             }
             AstNode::WhileLoop {
@@ -1219,6 +1229,8 @@ impl Compiler {
                 body,
                 location,
             } => {
+                self.scopes.push(HashMap::new());
+
                 self.tmp_counter += 1;
 
                 let cond_label = format!("loop.{}.cond", self.tmp_counter);
@@ -1296,6 +1308,7 @@ impl Compiler {
 
                 func.borrow_mut().add_block(end_label);
                 self.loop_labels.pop();
+                self.scopes.pop();
 
                 None
             }
@@ -1314,7 +1327,7 @@ impl Compiler {
                     self.convert_to_type(func, ty, Type::Long, size, location.clone(), false);
 
                 let var = self
-                    .new_variable(Type::Long, &name, Some(func), false)
+                    .new_variable(Type::Long, &name, Some(func), false, false)
                     .expect(&location.error(format!(
                         "Unexpected error when trying to create a new variable named '{}'",
                         name
@@ -1344,7 +1357,7 @@ impl Compiler {
                     .clone();
 
                 let ty = r#type.unwrap_or(Type::Long);
-                let tmp = self.new_temporary(Some("next"));
+                let tmp = self.new_temporary(Some("next"), true);
 
                 func.borrow_mut().assign_instruction(
                     tmp.clone(),
@@ -1355,6 +1368,7 @@ impl Compiler {
                 Some((ty, tmp))
             }
             AstNode::BlockStatement { body, location: _ } => {
+                self.scopes.push(HashMap::new());
                 self.tmp_counter += 1;
 
                 let body_label = format!("block.start.{}", self.tmp_counter);
@@ -1395,6 +1409,7 @@ impl Compiler {
                 }
 
                 func.borrow_mut().add_block(end_label);
+                self.scopes.pop();
                 None
             }
             AstNode::ConversionStatement {
@@ -1415,7 +1430,7 @@ impl Compiler {
                         "Unexpected error when trying to compile the value of a not statement",
                     ));
 
-                let temp = self.new_temporary(Some("not"));
+                let temp = self.new_temporary(Some("not"), true);
 
                 func.borrow_mut().assign_instruction(
                     temp.clone(),
@@ -1546,7 +1561,7 @@ impl Compiler {
                         "Unexpected error when trying to compile the size of an array"
                     )));
 
-                let tmp = self.new_temporary(Some("array"));
+                let tmp = self.new_temporary(Some("array"), true);
 
                 let (_, converted_val) =
                     self.convert_to_type(func, ty, Type::Long, val, location.clone(), false);
@@ -1563,7 +1578,7 @@ impl Compiler {
                 );
 
                 for (i, value) in results.iter().enumerate() {
-                    let value_ptr = self.new_temporary(Some("array.offset"));
+                    let value_ptr = self.new_temporary(Some("array.offset"), true);
 
                     func.borrow_mut().assign_instruction(
                         value_ptr.clone(),
@@ -1620,7 +1635,7 @@ impl Compiler {
             } => match value {
                 Ok(ty) => {
                     let tmp_ty = Type::Long;
-                    let temp = self.new_temporary(Some("size"));
+                    let temp = self.new_temporary(Some("size"), true);
 
                     func.borrow_mut().assign_instruction(
                         temp.clone(),
@@ -1638,7 +1653,7 @@ impl Compiler {
                             "Unexpected error when trying to compile the size of a statement",
                         ));
 
-                    let size = self.new_temporary(Some("size"));
+                    let size = self.new_temporary(Some("size"), true);
 
                     match ty.clone() {
                         Type::Pointer(_) => {
@@ -1759,7 +1774,7 @@ impl Compiler {
                 let ty = Type::Struct(name.clone());
                 let size = ty.size(module);
 
-                let alloc_tmp = self.new_temporary(Some("struct"));
+                let alloc_tmp = self.new_temporary(Some("struct"), true);
 
                 #[cfg(debug_assertions)]
                 func.borrow_mut()
@@ -1805,7 +1820,7 @@ impl Compiler {
                             ),
                         );
 
-                    let offset_tmp = self.new_temporary(Some("offset"));
+                    let offset_tmp = self.new_temporary(Some("offset"), true);
 
                     func.borrow_mut().assign_instruction(
                         offset_tmp.clone(),
@@ -1860,7 +1875,7 @@ impl Compiler {
                     return Some((field_ty, offset_tmp));
                 }
 
-                let temp = self.new_temporary(Some("field"));
+                let temp = self.new_temporary(Some("field"), true);
 
                 func.borrow_mut().assign_instruction(
                     temp.clone(),
@@ -2130,7 +2145,7 @@ impl Compiler {
                     if !ty.is_struct() {
                         // Automatically deref 'Foo *' into 'Foo' when processing
                         if ty.is_pointer() && ty.clone().get_pointer_inner().unwrap().is_struct() {
-                            let tmp = self.new_temporary(Some("load"));
+                            let tmp = self.new_temporary(Some("load"), true);
 
                             func.borrow_mut().assign_instruction(
                                 tmp.clone(),
@@ -2160,7 +2175,7 @@ impl Compiler {
                             ty.get_struct_inner().unwrap()
                         )));
 
-                    let offset_tmp = self.new_temporary(Some("offset"));
+                    let offset_tmp = self.new_temporary(Some("offset"), true);
 
                     func.borrow_mut().assign_instruction(
                         offset_tmp.clone(),
@@ -2169,7 +2184,7 @@ impl Compiler {
                     );
 
                     if load {
-                        let tmp = self.new_temporary(Some("load"));
+                        let tmp = self.new_temporary(Some("load"), true);
 
                         func.borrow_mut().assign_instruction(
                             tmp.clone(),
@@ -2223,7 +2238,7 @@ impl Compiler {
         let true_label = format!("{}.true.{}", kind, self.tmp_counter);
         let end_label = format!("{}.end.{}", kind, self.tmp_counter);
 
-        let result_tmp = self.new_temporary(Some(&kind.to_string()));
+        let result_tmp = self.new_temporary(Some(&kind.to_string()), true);
 
         // Keep it as false until we know it is true
         func.borrow_mut().assign_instruction(
@@ -2240,7 +2255,7 @@ impl Compiler {
                 "Unexpected error when trying to parse left side of an arithmetic operation",
             ));
 
-        let left_tmp = self.new_temporary(Some(&format!("{}.left", kind.to_string())));
+        let left_tmp = self.new_temporary(Some(&format!("{}.left", kind.to_string())), true);
 
         func.borrow_mut().assign_instruction(
             left_tmp.clone(),
@@ -2285,7 +2300,7 @@ impl Compiler {
                 "Unexpected error when trying to parse right side of an arithmetic operation",
             ));
 
-        let right_tmp = self.new_temporary(Some(&format!("{}.right", kind.to_string())));
+        let right_tmp = self.new_temporary(Some(&format!("{}.right", kind.to_string())), true);
 
         func.borrow_mut().assign_instruction(
             right_tmp.clone(),
@@ -2376,7 +2391,7 @@ impl Compiler {
         } else if (first.is_int() && second.is_int()) || (first.is_float() && second.is_float()) {
             cast_warning!();
 
-            let conv = self.new_temporary(Some("conv"));
+            let conv = self.new_temporary(Some("conv"), true);
             let is_first_higher = first.weight() > second.weight();
 
             func.borrow_mut().assign_instruction(
@@ -2399,7 +2414,7 @@ impl Compiler {
         } else {
             cast_warning!();
 
-            let conv = self.new_temporary(Some("conv"));
+            let conv = self.new_temporary(Some("conv"), true);
 
             func.borrow_mut().assign_instruction(
                 conv.clone(),
@@ -2535,6 +2550,9 @@ impl Compiler {
         for def in generator.type_sections {
             module_ref.borrow_mut().add_type(def);
         }
+
+        module_ref.borrow_mut().remove_unused_functions();
+        module_ref.borrow_mut().remove_unused_data();
 
         let mut file = File::create(output_path).expect("Failed to create the file.");
         file.write_all(module_ref.borrow().to_string().as_bytes())

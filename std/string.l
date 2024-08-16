@@ -78,7 +78,7 @@ fn to_string(string ty, i64 args, bool wrap) {
         // Any variation (`char ***`) will also match
         // so `**` is all that's necessary
         if strprefix(ty, "char") && !strstr(ty, "**") {
-            string arg_string = args.yield(string);
+            string arg = args.yield(string);
 
             if wrap {
                 fmt = "\"%s\"";
@@ -86,56 +86,56 @@ fn to_string(string ty, i64 args, bool wrap) {
                 fmt = "%s";
             }
 
-            length = snprintf(nil, 0, fmt, arg_string);
+            length = snprintf(nil, 0, fmt, arg);
             res = malloc(length);
-            sprintf(res, fmt, arg_string);
+            sprintf(res, fmt, arg);
             return res;
         }
 
-        i64 arg_ptr = args.yield(i64);
+        i64 arg = args.yield(i64);
         fmt = "%p";
 
-        length = snprintf(nil, 0, fmt, arg_ptr);
+        length = snprintf(nil, 0, fmt, arg);
         res = malloc(length);
-        sprintf(res, fmt, arg_ptr);
+        sprintf(res, fmt, arg);
         return res;
     }
 
     if strprefix(ty, "i32") {
-        i32 arg_i32 = args.yield(i32);
+        i32 arg = args.yield(i32);
         fmt = "%d";
 
-        length = snprintf(nil, 0, fmt, arg_i32);
+        length = snprintf(nil, 0, fmt, arg);
         res = malloc(length);
-        sprintf(res, fmt, arg_i32);
+        sprintf(res, fmt, arg);
     }
 
     if strprefix(ty, "i64") {
-        i64 arg_i64 = args.yield(i64);
+        i64 arg = args.yield(i64);
         fmt = "%ld";
 
-        length = snprintf(nil, 0, fmt, arg_i64);
+        length = snprintf(nil, 0, fmt, arg);
         res = malloc(length);
-        sprintf(res, fmt, arg_i64);
+        sprintf(res, fmt, arg);
     }
 
     if strprefix(ty, "f32") || strprefix(ty, "f64") {
-        f64 arg_f64 = 0;
+        f64 arg = 0;
         fmt = "%f";
 
         if strprefix(ty, "f32") {
-            arg_f64 = (f64)args.yield(f32);
+            arg = (f64)args.yield(f32);
         } else {
-            arg_f64 = args.yield(f64);
+            arg = args.yield(f64);
         }
 
-        length = snprintf(nil, 0, fmt, arg_f64);
+        length = snprintf(nil, 0, fmt, arg);
         res = malloc(length);
-        sprintf(res, fmt, arg_f64);
+        sprintf(res, fmt, arg);
     }
 
     if strprefix(ty, "char") {
-        char arg_char = args.yield(char);
+        char arg = args.yield(char);
 
         if wrap {
             fmt = "'%c'";
@@ -143,18 +143,13 @@ fn to_string(string ty, i64 args, bool wrap) {
             fmt = "%c";
         }
 
-        length = snprintf(nil, 0, fmt, arg_char);
+        length = snprintf(nil, 0, fmt, arg);
         res = malloc(length);
-        sprintf(res, fmt, arg_char);
+        sprintf(res, fmt, arg);
     }
 
     if strprefix(ty, "bool") {
-        string arg_bool = args.yield(bool).to_string();
-        fmt = "%s";
-
-        length = snprintf(nil, 0, fmt, arg_bool);
-        res = malloc(length);
-        sprintf(res, fmt, arg_bool);
+        res = args.yield(bool).to_string();
     }
 
     // We never yielded any string, ie the caller passed a struct
@@ -164,7 +159,7 @@ fn to_string(string ty, i64 args, bool wrap) {
     // to ElleMeta at each index then we can return [%s, %s...]
     // and to_string() each member of the array if it an array
     if res == nil {
-        fprintf(stderr, "Unimplemented expression type '%s'\n", ty);
+        fprintf(stderr, "Unimplemented expression type '%s'\n", $$...$$, ty);
     }
 
     return res;

@@ -1,18 +1,18 @@
 global pub;
 
-fn i64::max() {
+fn i64::max() -> i64 {
     return 9_223_372_036_854_775_807;
 }
 
-fn i64::min() {
+fn i64::min() -> i64 {
     return -i64::max() - 1;
 }
 
-fn i32::max() {
+fn i32::max() -> i32 {
     return 2_147_483_647;
 }
 
-fn i32::min() {
+fn i32::min() -> i32 {
     return -i32::max() - 1;
 }
 

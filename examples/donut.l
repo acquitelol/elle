@@ -11,7 +11,7 @@ const i32 WIDTH = 60;
 const i32 HEIGHT = 24;
 const i32 SIZE = WIDTH * HEIGHT;
 
-fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 lightDirection) {
+fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 *lightDirection) {
     memset(zBuffer, 0, SIZE * #size(f32));
     memset(output, 32, SIZE * #size(char));
 
@@ -55,7 +55,7 @@ fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 lightDirectio
                 normal = normal.scale(1.0 / normalLengthSquared);
             }
 
-            f32 illumination = normal.dot(lightDirection);
+            f32 illumination = normal.dot(*lightDirection);
             i32 lightingIndex = (i32)(fabs(illumination) * (strlen(LIGHTING) - 1));
 
             if HEIGHT > y && y > 0 && x > 0 && WIDTH > x && depth > zBuffer[offset] {
@@ -98,7 +98,7 @@ fn main() {
     printf("\x1b[2J");
 
     while true {
-        update(rotX, rotZ, zBuffer, output, lightDirection);
+        update(rotX, rotZ, zBuffer, output, &lightDirection);
 
         rotX += 0.004;
         rotZ += 0.002;
