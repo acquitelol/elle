@@ -2,14 +2,12 @@ use std/io;
 use std/math;
 
 fn other(i64 *arr, i32 val, i32 size) {
-    printf(
-        "\narr[0] = %ld\nval = %d\nsize = %d\n",
-        arr[0], val, size
-    );
+    putchar('\n');
+    dbg(arr[0], val, size);
 }
 
 fn main() {
-    i64 *test = [i64.max(), i64.min(), -39];
+    i64 *test = [i64::max(), i64::min(), -39];
 
     for i32 i = 0; i < #arrlen(test); i += 1 {
         printf("test[%d] = %ld\n", i, test[i]);
@@ -18,5 +16,5 @@ fn main() {
     test[2] *= 10;
     printf("\ntest[2] * 10 = %ld\n", test[2]);
 
-    other([i64.max()], [123][0], #size([1, 2, 3]));
+    other([i64::max()], [123][0], #size([1, 2, 3]));
 }

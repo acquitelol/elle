@@ -21,18 +21,23 @@ impl<'a> Function<'a> {
         self.parser.advance();
 
         let mut name = self.parser.get_identifier();
+        let location = self.parser.current_token().location.clone();
 
         self.parser.advance();
 
-        if self.parser.current_token().kind == TokenKind::Dot {
+        if self.parser.current_token().kind == TokenKind::DoubleColon {
             if !(self.parser.struct_pool.contains(&name)
                 || ValueKind::String(name.clone()).is_base_type())
             {
                 panic!(
                     "{}",
-                    self.parser.current_token().location.error(format!(
-                        "Attempted to create a method for {} but it is not in the struct pool and isn't a primitive type",
-                        name
+                    location.error(format!(
+                        "Cannot create a method for '{}' because it isn't a struct or primitive type.\n{}",
+                        name.clone(), if let Some(map) = ValueKind::similar_mapping(name.clone()) {
+                            format!("A similar type exists which might be what you need: '{}'", map)
+                        } else {
+                            format!("Are you sure you spelt '{}' correctly?", name)
+                        }
                     ))
                 )
             }

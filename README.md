@@ -216,8 +216,6 @@ def ElleMeta {
 > [!IMPORTANT]
 > You do not need to supply the structure yourself. This is automatically managed by the compiler.
 
-> The compiler automatically passes the structure to any functions that define `ElleMeta` as their 0th parameter.
-
 This means that here:
 
 ```c
@@ -352,9 +350,7 @@ printf("%c", out[0]);
 A very simple example of this is declaring a variable and deferring printing its value, like this:
 
 ```cpp
-fn print_int(i32 num) {
-    printf("%d\n", num);
-}
+use std/io;
 
 fn main() {
     i32 i = 0;
@@ -362,26 +358,24 @@ fn main() {
     // If this were not in a defer statement, then this would print 0
     // However, it will print 25 instead.
     // Realistically this code only runs right before `return 0`.
-    defer print_int(i);
+    defer print(i);
 
     i += 5;
     i *= i;
 }
 ```
-You can see how this only calls `print_int` right before it returns 0, which is indeed *after* the `i` variable has had changes made to it. This also works if you return in other scopes, such as if statements, while loops, standalone blocks, etc, as stated above. Any defer statements in inner blocks will not be called on any return, rather will only be called when the inner block is about to leave scope.
+You can see how this only calls `print` right before it returns 0, which is indeed *after* the `i` variable has had changes made to it. This also works if you return in other scopes, such as if statements, while loops, standalone blocks, etc, as stated above. Any defer statements in inner blocks will not be called on any return, rather will only be called when the inner block is about to leave scope.
 
 This also means that if you, hypothetically, design a program like this
 ```cpp
-fn print_int(i32 num) {
-    printf("%d\n", num);
-}
+use std/io;
 
 fn main() {
     i32 i = 0;
-    defer print_int(i);
+    defer print(i);
 
     {
-        defer print_int(i);
+        defer print(i);
         i += 2;
     }
 
@@ -396,10 +390,10 @@ You can also write something like this:
 ```cpp
 fn main() {
     i32 i = 0;
-    defer print_int(i);
+    defer print(i);
 
     {
-        defer print_int(i);
+        defer print(i);
         i += 2;
 
         {
@@ -994,7 +988,7 @@ def Foo {
     i32 a;
 }
 
-fn Foo.add(Foo self, Foo other) {
+fn Foo::add(Foo self, Foo other) {
     return Foo { a = self.a + other.a };
 }
 
@@ -1003,7 +997,7 @@ fn main() {
     Foo foo2 = Foo { a = 30 };
 
     Foo res1 = foo1.add(foo2);
-    Foo res2 = Foo.add(foo1, foo2);
+    Foo res2 = Foo::add(foo1, foo2);
 
     dbg(res1.a, res2.a);
 }
@@ -1011,8 +1005,34 @@ fn main() {
 
 You can define `fn <Struct name>.<method name>(<Struct name> self, <args>)` to create instance methods.
 <br />
-You can then either call them through `instance.<method name>()` or `<Struct name>.<method name>(instance)`.
+You can then either call them through `instance.<method name>()` or `<Struct name>::<method name>(instance)`.
+<br />
+In this case, `foo1.add(foo2)` is an identical expression to `Foo::add(foo1, foo2)`
 For more examples, please view [vectors.l](https://github.com/acquitelol/elle/blob/rewrite/std/vectors.l)
+
+You may also specify that `self` is a `Struct *` instead of a `Struct` if you require editing it in-place:
+```rs
+use std/io;
+
+def Foo {
+    i32 a;
+}
+
+fn Foo::divideBy(Foo *self, i32 num) {
+    self.a /= num;
+}
+
+fn main() {
+    Foo foo = Foo { a = 10 };
+    foo.divideBy(2);
+
+    dbg(foo.a); // foo.a = 5
+}
+```
+
+The compiler will automatically pass the **address** of `foo` instead of `foo` itself to the function.
+<br />
+In the case of a method that takes in a `self` pointer, the identical expression to `foo1.divideBy(2)` is `Foo::divideBy(&foo1, 2)`.
 
 <hr />
 

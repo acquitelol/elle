@@ -21,6 +21,7 @@ pub enum TokenKind {
     ExactLiteral,
     Comment,
     Colon,
+    DoubleColon,
     AtMark,
     LeftParenthesis,
     RightParenthesis,
@@ -255,6 +256,17 @@ impl ValueKind {
                 "void" => Some(Type::Void),
                 other => Some(Type::Struct(other.into())),
             },
+            _ => None,
+        }
+    }
+
+    pub fn similar_mapping(ty: String) -> Option<String> {
+        match ty.as_str() {
+            "short" => Some("i16".into()),
+            "int" => Some("i32".into()),
+            "long" => Some("i64".into()),
+            "float" => Some("f32".into()),
+            "double" => Some("f64".into()),
             _ => None,
         }
     }

@@ -7,7 +7,7 @@ external fn atoi(string str) -> i32;
 external fn atol(string str) -> i64;
 external fn atof(string str) -> f64;
 
-fn bool.to_string(bool self) -> string {
+fn bool::to_string(bool self) -> string {
     if self {
         return "true";
     } else {

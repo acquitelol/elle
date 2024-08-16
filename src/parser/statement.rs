@@ -38,6 +38,12 @@ impl<'a> Statement<'a> {
         }
     }
 
+    pub fn unwind(&mut self) {
+        if self.position != 0 {
+            self.position -= 1;
+        }
+    }
+
     pub fn advance_opt(&mut self) -> Option<()> {
         if self.is_eof() {
             None
@@ -221,7 +227,33 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::Equal]);
         self.advance();
 
-        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
+        let mut nesting = 1;
+        let mut location = self.current_token().location.clone();
+
+        location.column = location.ctx.len(); // + padding - 1
+        location.length = 1;
+
+        let tokens = self.yield_tokens_with_condition(|token, _| {
+            if token.kind == TokenKind::LeftCurlyBrace {
+                nesting += 1;
+                return false;
+            }
+
+            if token.kind == TokenKind::RightCurlyBrace {
+                nesting -= 1;
+                return false;
+            }
+
+            if token.kind == TokenKind::Semicolon || nesting == 0 {
+                return true;
+            }
+
+            return false;
+        });
+
+        if !self.is_eof() && self.current_token().kind != TokenKind::Semicolon {
+            panic!("{}", location.error("Expected semicolon here"))
+        }
 
         let res = Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
             .parse()
@@ -342,10 +374,32 @@ impl<'a> Statement<'a> {
     fn parse_return(&mut self) -> AstNode {
         self.advance();
 
-        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
+        let mut nesting = 1;
+        let mut location = self.current_token().location.clone();
 
-        if !self.is_eof() {
-            self.expect_tokens(vec![TokenKind::Semicolon]);
+        location.column = location.ctx.len(); // + padding - 1
+        location.length = 1;
+
+        let tokens = self.yield_tokens_with_condition(|token, _| {
+            if token.kind == TokenKind::LeftCurlyBrace {
+                nesting += 1;
+                return false;
+            }
+
+            if token.kind == TokenKind::RightCurlyBrace {
+                nesting -= 1;
+                return false;
+            }
+
+            if token.kind == TokenKind::Semicolon || nesting == 0 {
+                return true;
+            }
+
+            return false;
+        });
+
+        if !self.is_eof() && self.current_token().kind != TokenKind::Semicolon {
+            panic!("{}", location.error("Expected semicolon here"))
         }
 
         let res = if tokens.len() > 0 {
@@ -1668,6 +1722,10 @@ impl<'a> Statement<'a> {
             values.push((name, value));
         }
 
+        if !self.is_eof() {
+            self.expect_tokens(vec![TokenKind::Semicolon]);
+        }
+
         AstNode::StructStatement {
             name,
             values,
@@ -2043,6 +2101,28 @@ impl<'a> Statement<'a> {
                             .error("Unexpected EOF when parsing an identifier"),
                     );
 
+                    macro_rules! not_valid_struct_or_type {
+                        () => {{
+                            let name = self.current_token().value.get_string_inner().unwrap();
+
+                            panic!(
+                                "{}",
+                                self.current_token().location.error(format!(
+                                    "Identifier '{}' isn't a struct or primitive type.\n{}",
+                                    name.clone(),
+                                    if let Some(map) = ValueKind::similar_mapping(name.clone()) {
+                                        format!(
+                                            "A similar type exists which might be what you need: '{}'",
+                                            map
+                                        )
+                                    } else {
+                                        format!("Are you sure you spelt '{}' correctly?", name)
+                                    }
+                                )),
+                            )
+                        }};
+                    }
+
                     if next.kind == TokenKind::LeftParenthesis {
                         self.parse_function(None, None, false)
                     } else if next.kind == TokenKind::LeftBlockBrace {
@@ -2074,6 +2154,10 @@ impl<'a> Statement<'a> {
                         self.parse_declarative_like()
                     } else if next.kind.is_arithmetic() {
                         self.parse_arithmetic()
+                    } else if next.kind == TokenKind::Identifier {
+                        not_valid_struct_or_type!()
+                    } else if next.kind == TokenKind::DoubleColon {
+                        not_valid_struct_or_type!()
                     } else {
                         panic!(
                             "{}",
@@ -2114,11 +2198,19 @@ impl<'a> Statement<'a> {
                     if token.kind == TokenKind::LeftCurlyBrace {
                         self.parse_struct_init()
                     } else if token.kind == TokenKind::Dot {
+                        panic!(
+                            "{}",
+                            token.location.error(format!(
+                                "Cannot access methods on a struct or type '{}' using '.'\nPlease use '::' for non-instance method access.",
+                                self.current_token().value.get_string_inner().unwrap()
+                            ))
+                        )
+                    } else if token.kind == TokenKind::DoubleColon {
                         let ty = self.current_token().clone();
                         let method =
                             self.next_token_seek(2)
                                 .expect(&self.current_token().location.error(format!(
-                                    "Expected method name after '{}.'",
+                                    "Expected method name after '{}::'",
                                     ty.value.get_string_inner().unwrap()
                                 )));
 
@@ -2126,7 +2218,7 @@ impl<'a> Statement<'a> {
                             panic!(
                                 "{}",
                                 method.location.error(format!(
-                                    "Expected method name in '{}.{}', but got '{:?}' instead.",
+                                    "Expected method name in '{}::{}', but got '{:?}' instead.",
                                     ty.value.get_string_inner().unwrap(),
                                     method
                                         .value

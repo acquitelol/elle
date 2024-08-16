@@ -1,19 +1,19 @@
 global pub;
 
-fn i64.max() {
+fn i64::max() {
     return 9_223_372_036_854_775_807;
 }
 
-fn i64.min() {
-    return -i64.max() - 1;
+fn i64::min() {
+    return -i64::max() - 1;
 }
 
-fn i32.max() {
+fn i32::max() {
     return 2_147_483_647;
 }
 
-fn i32.min() {
-    return -i32.max() - 1;
+fn i32::min() {
+    return -i32::max() - 1;
 }
 
 const f64 E = 2.7182818284590455348848081484902650117;

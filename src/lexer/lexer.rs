@@ -66,7 +66,14 @@ impl Lexer {
         let (kind, value) = match c {
             ':' => {
                 self.advance();
-                (TokenKind::Colon, ValueKind::Nil)
+
+                match self.current_char() {
+                    ':' => {
+                        self.advance();
+                        (TokenKind::DoubleColon, ValueKind::Nil)
+                    }
+                    _ => (TokenKind::Colon, ValueKind::Nil),
+                }
             }
             '@' => {
                 self.advance();

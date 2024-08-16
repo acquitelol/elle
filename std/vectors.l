@@ -14,56 +14,56 @@ def Vector2 {
 
 // ----- Vector2 methods -----
 
-fn Vector2.zero() {
+fn Vector2::zero() {
     return Vector2 {
         x = 0,
         y = 0
     };
 }
 
-fn Vector2.dot(Vector2 self, Vector2 v2) {
+fn Vector2::dot(Vector2 self, Vector2 v2) {
     return self.x * v2.x + self.y * v2.y;
 }
 
-fn Vector2.cross(Vector2 self, Vector2 v2) {
+fn Vector2::cross(Vector2 self, Vector2 v2) {
     return self.x * v2.y - self.y * v2.x;
 }
 
-fn Vector2.length_sq(Vector2 self) {
+fn Vector2::length_sq(Vector2 self) {
     return self.dot(self);
 }
 
-fn Vector2.length(Vector2 self) {
+fn Vector2::length(Vector2 self) {
     return sqrt(self.length_sq());
 }
 
-fn Vector2.add(Vector2 self, Vector2 v2) {
+fn Vector2::add(Vector2 self, Vector2 v2) {
     return Vector2 {
         x = self.x + v2.x,
         y = self.y + v2.y,
     };
 }
 
-fn Vector2.sub(Vector2 self, Vector2 v2) {
+fn Vector2::sub(Vector2 self, Vector2 v2) {
     return Vector2 {
         x = self.x - v2.x,
         y = self.y - v2.y,
     };
 }
 
-fn Vector2.scale(Vector2 self, f32 scalar) {
+fn Vector2::scale(Vector2 self, f32 scalar) {
     return Vector2 {
         x = self.x * scalar,
         y = self.y * scalar,
     };
 }
 
-fn Vector2.normalize(Vector2 self) {
+fn Vector2::normalize(Vector2 self) {
     f32 length = self.length();
     return self.scale(1.0 / length);
 }
 
-fn Vector2.rotate(Vector2 self, f32 angle) {
+fn Vector2::rotate(Vector2 self, f32 angle) {
     f32 c = cos(angle);
     f32 s = sin(angle);
 
@@ -73,13 +73,13 @@ fn Vector2.rotate(Vector2 self, f32 angle) {
     };
 }
 
-fn Vector2.angle(Vector2 self, Vector2 v2) {
+fn Vector2::angle(Vector2 self, Vector2 v2) {
     return atan2(v2.y, v2.x) - atan2(self.y, self.x);
 }
 
 // ----- Vector3 methods -----
 
-fn Vector3.zero() {
+fn Vector3::zero() {
     return Vector3 {
         x = 0,
         y = 0,
@@ -87,11 +87,11 @@ fn Vector3.zero() {
     };
 }
 
-fn Vector3.dot(Vector3 self, Vector3 v2) {
+fn Vector3::dot(Vector3 self, Vector3 v2) {
     return self.x * v2.x + self.y * v2.y + self.z * v2.z;
 }
 
-fn Vector3.cross(Vector3 self, Vector3 v2) {
+fn Vector3::cross(Vector3 self, Vector3 v2) {
     return Vector3 {
         x = self.y * v2.z - self.z * v2.y,
         y = self.z * v2.x - self.x * v2.z,
@@ -99,15 +99,15 @@ fn Vector3.cross(Vector3 self, Vector3 v2) {
     };
 }
 
-fn Vector3.length_sq(Vector3 self) {
+fn Vector3::length_sq(Vector3 self) {
     return self.dot(self);
 }
 
-fn Vector3.length(Vector3 self) {
+fn Vector3::length(Vector3 self) {
     return sqrt(self.length_sq());
 }
 
-fn Vector3.add(Vector3 self, Vector3 v2) {
+fn Vector3::add(Vector3 self, Vector3 v2) {
     return Vector3 {
         x = self.x + v2.x,
         y = self.y + v2.y,
@@ -115,7 +115,7 @@ fn Vector3.add(Vector3 self, Vector3 v2) {
     };
 }
 
-fn Vector3.sub(Vector3 self, Vector3 v2) {
+fn Vector3::sub(Vector3 self, Vector3 v2) {
     return Vector3 {
         x = self.x - v2.x,
         y = self.y - v2.y,
@@ -123,7 +123,7 @@ fn Vector3.sub(Vector3 self, Vector3 v2) {
     };
 }
 
-fn Vector3.scale(Vector3 self, f32 scalar) {
+fn Vector3::scale(Vector3 self, f32 scalar) {
     return Vector3 {
         x = self.x * scalar,
         y = self.y * scalar,
@@ -131,7 +131,7 @@ fn Vector3.scale(Vector3 self, f32 scalar) {
     };
 }
 
-fn Vector3.normalize(Vector3 self) {
+fn Vector3::normalize(Vector3 self) {
     f32 length = self.length();
     return self.scale(1.0 / length);
 }
@@ -148,7 +148,7 @@ fn Vector3.normalize(Vector3 self) {
 // × denotes the cross product
 // ⋅ denotes the dot product
 // ----------
-fn Vector3.rotate(Vector3 self, Vector3 axis, f32 angle) {
+fn Vector3::rotate(Vector3 self, Vector3 axis, f32 angle) {
     Vector3 u = axis.normalize();
 
     f32 cos_theta = cos(angle);
@@ -173,7 +173,7 @@ fn Vector3.rotate(Vector3 self, Vector3 axis, f32 angle) {
 // ⋅ denotes the dot product
 // ||x|| denotes the magnitude
 // ----------
-fn Vector3.angle(Vector3 self, Vector3 v2) {
+fn Vector3::angle(Vector3 self, Vector3 v2) {
     f32 dot = self.dot(v2);
     f32 lengths = self.length() * v2.length();
 

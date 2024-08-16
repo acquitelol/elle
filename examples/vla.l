@@ -6,7 +6,7 @@ def Array {
     i32 *elements;
 }
 
-fn Array.init(Array *self, i32 initialCapacity) -> Array * {
+fn Array::init(Array *self, i32 initialCapacity) -> Array * {
     self.elements = (i32 *)malloc(initialCapacity * #size(i32));
     self.size = 0;
     self.capacity = initialCapacity;
@@ -14,12 +14,12 @@ fn Array.init(Array *self, i32 initialCapacity) -> Array * {
     return self;
 }
 
-fn Array.resize(Array *self, i32 newCapacity) {
+fn Array::resize(Array *self, i32 newCapacity) {
     self.elements = (i32 *)realloc(self.elements, newCapacity * #size(i32));
     self.capacity = newCapacity;
 }
 
-fn Array.push(Array *self, i32 element) {
+fn Array::push(Array *self, i32 element) {
     if self.size >= self.capacity {
         self.resize(self.capacity * 2);
     }
@@ -28,7 +28,7 @@ fn Array.push(Array *self, i32 element) {
     self.size += 1;
 }
 
-fn Array.free(Array *self) {
+fn Array::free(Array *self) {
     free(self.elements);
     self.elements = nil;
     self.size = 0;
