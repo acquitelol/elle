@@ -417,12 +417,6 @@ impl Compiler {
                         final_val,
                     ));
 
-                    func.borrow_mut().assign_instruction(
-                        temp.clone(),
-                        ty.clone().into_base(),
-                        Instruction::Load(ty.clone(), addr_temp),
-                    );
-
                     return Some((final_ty.clone(), temp));
                 }
 
@@ -1602,7 +1596,7 @@ impl Compiler {
                 Some((Type::Pointer(Box::new(buf_ty)), tmp))
             }
             AstNode::AddressStatement { value, location } => {
-                let (ty, val) = self
+                let (_, val) = self
                     .generate_statement(func, module, *value.clone(), ty.clone(), None, false)
                     .expect(&location.error(
                         "Unexpected error when trying to compile the value of an address statement",
