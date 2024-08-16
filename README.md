@@ -1003,11 +1003,12 @@ fn main() {
 }
 ```
 
-You can define `fn <Struct name>.<method name>(<Struct name> self, <args>)` to create instance methods.
+You can define `fn <Struct name>::<method name>(<Struct name> self, <args>)` to create instance methods.
 <br />
 You can then either call them through `instance.<method name>()` or `<Struct name>::<method name>(instance)`.
 <br />
 In this case, `foo1.add(foo2)` is an identical expression to `Foo::add(foo1, foo2)`
+<br />
 For more examples, please view [vectors.l](https://github.com/acquitelol/elle/blob/rewrite/std/vectors.l)
 
 You may also specify that `self` is a `Struct *` instead of a `Struct` if you require editing it in-place:
