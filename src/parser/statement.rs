@@ -38,12 +38,6 @@ impl<'a> Statement<'a> {
         }
     }
 
-    pub fn unwind(&mut self) {
-        if self.position != 0 {
-            self.position -= 1;
-        }
-    }
-
     pub fn advance_opt(&mut self) -> Option<()> {
         if self.is_eof() {
             None
@@ -1766,9 +1760,10 @@ impl<'a> Statement<'a> {
         self.advance();
 
         self.expect_tokens(vec![TokenKind::Identifier]);
-        let inner_location = self.current_token().location.clone();
+
         let name = self.get_identifier();
         let mut right = Box::new(AstNode::token_to_literal(self.current_token()));
+
         self.advance();
 
         if self.current_token().kind == TokenKind::LeftParenthesis {

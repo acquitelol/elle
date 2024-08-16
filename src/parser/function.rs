@@ -25,6 +25,16 @@ impl<'a> Function<'a> {
 
         self.parser.advance();
 
+        if self.parser.current_token().kind == TokenKind::Dot {
+            panic!(
+                "{}",
+                self.parser.current_token().location.error(format!(
+                    "Cannot create a method for '{}' using '.'\nPlease use '::' instead.",
+                    name
+                ))
+            )
+        }
+
         if self.parser.current_token().kind == TokenKind::DoubleColon {
             if !(self.parser.struct_pool.contains(&name)
                 || ValueKind::String(name.clone()).is_base_type())
