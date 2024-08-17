@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -6,6 +7,7 @@ use std::process::ExitCode;
 
 mod compiler;
 mod lexer;
+mod macros;
 mod parser;
 
 use compiler::compiler::Compiler;
@@ -19,32 +21,6 @@ use parser::enums::Primitive;
 use parser::parser::Parser;
 
 static META_STRUCT_NAME: &str = "ElleMeta";
-
-macro_rules! override_and_add_node {
-    ($val:path, $tree:expr, $name:expr, $symbol:expr, $public:expr, $allow_all:expr, $functions:expr $(,)?) => {
-        match existing_definition($tree.clone(), $name.clone()) {
-            Some(index) => {
-                $tree.remove(index);
-            }
-            None => {}
-        }
-
-        let mut new_symbol = $symbol.clone();
-        if let $val {
-            ref mut usable,
-            ref mut imported,
-            ..
-        } = new_symbol
-        {
-            *usable =
-                is_valid_insert_context($name.clone(), $public, $allow_all, $functions.clone());
-
-            *imported = true;
-        }
-
-        $tree.insert(0, new_symbol);
-    };
-}
 
 fn lex_and_parse(
     input_path: String,

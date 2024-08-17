@@ -776,14 +776,14 @@ impl Function {
             imported,
             arguments,
             return_type,
-            blocks: Vec::new(),
+            blocks: vec![],
         }
     }
 
     pub fn add_block(&mut self, label: impl Into<String>) -> &mut Block {
         self.blocks.push(Block {
             label: label.into(),
-            statements: Vec::new(),
+            statements: vec![],
         });
 
         self.blocks.last_mut().unwrap()
@@ -922,9 +922,9 @@ pub struct Module {
 impl Module {
     pub fn new() -> Module {
         Module {
-            functions: Vec::new(),
-            types: Vec::new(),
-            data: Vec::new(),
+            functions: vec![],
+            types: vec![],
+            data: vec![],
         }
     }
 

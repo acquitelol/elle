@@ -166,7 +166,7 @@ impl<'a> Function<'a> {
         }
 
         let mut res = body.borrow_mut().to_owned().clone();
-        let mut deferred: Vec<AstNode> = Vec::new();
+        let mut deferred: Vec<AstNode> = vec![];
 
         res.retain(|node| match node.clone() {
             AstNode::DeferStatement { value, .. } => {
@@ -181,7 +181,7 @@ impl<'a> Function<'a> {
             deferred: &Vec<AstNode>,
             root: bool,
         ) {
-            let mut new_nodes = Vec::new();
+            let mut new_nodes = vec![];
             let mut found_return = false;
 
             for node in nodes.drain(..) {

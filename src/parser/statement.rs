@@ -2,13 +2,13 @@ use std::cell::RefCell;
 use std::iter::FromIterator;
 
 use super::enums::AstNode;
-use crate::ensure_fn_pointer;
 use crate::lexer::enums::Location;
 use crate::{
     compiler::enums::Type,
     lexer::enums::{Token, TokenKind, ValueKind},
     token_to_node,
 };
+use crate::{ensure_fn_pointer, not_valid_struct_or_type};
 
 pub struct Statement<'a> {
     tokens: Vec<Token>,
@@ -1972,7 +1972,7 @@ impl<'a> Statement<'a> {
         }
 
         let mut res = cell.borrow_mut().to_owned().clone();
-        let mut deferred: Vec<AstNode> = Vec::new();
+        let mut deferred: Vec<AstNode> = vec![];
 
         res.retain(|node| match node.clone() {
             AstNode::DeferStatement { value, .. } => {
@@ -1987,7 +1987,7 @@ impl<'a> Statement<'a> {
             deferred: &Vec<AstNode>,
             root: bool,
         ) {
-            let mut new_nodes = Vec::new();
+            let mut new_nodes = vec![];
             let mut found_return = false;
 
             for node in nodes.drain(..) {
@@ -2096,28 +2096,6 @@ impl<'a> Statement<'a> {
                             .error("Unexpected EOF when parsing an identifier"),
                     );
 
-                    macro_rules! not_valid_struct_or_type {
-                        () => {{
-                            let name = self.current_token().value.get_string_inner().unwrap();
-
-                            panic!(
-                                "{}",
-                                self.current_token().location.error(format!(
-                                    "Identifier '{}' isn't a struct or primitive type.\n{}",
-                                    name.clone(),
-                                    if let Some(map) = ValueKind::similar_mapping(name.clone()) {
-                                        format!(
-                                            "A similar type exists which might be what you need: '{}'",
-                                            map
-                                        )
-                                    } else {
-                                        format!("Are you sure you spelt '{}' correctly?", name)
-                                    }
-                                )),
-                            )
-                        }};
-                    }
-
                     if next.kind == TokenKind::LeftParenthesis {
                         self.parse_function(None, None, false)
                     } else if next.kind == TokenKind::LeftBlockBrace {
@@ -2150,9 +2128,9 @@ impl<'a> Statement<'a> {
                     } else if next.kind.is_arithmetic() {
                         self.parse_arithmetic()
                     } else if next.kind == TokenKind::Identifier {
-                        not_valid_struct_or_type!()
+                        not_valid_struct_or_type!(self)
                     } else if next.kind == TokenKind::DoubleColon {
-                        not_valid_struct_or_type!()
+                        not_valid_struct_or_type!(self)
                     } else {
                         panic!(
                             "{}",

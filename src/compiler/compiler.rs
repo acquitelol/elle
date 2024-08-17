@@ -6,6 +6,7 @@ use std::{
 };
 
 use crate::{
+    advance, cast_warning, hashmap,
     lexer::enums::{Location, TokenKind, ValueKind},
     parser::enums::{Argument, AstNode, Primitive},
     META_STRUCT_NAME,
@@ -168,9 +169,9 @@ impl Compiler {
         module: &RefCell<Module>,
         location: Location,
     ) -> GeneratorResult<Function> {
-        self.scopes.push(HashMap::new());
+        self.scopes.push(hashmap!());
 
-        let mut args = Vec::new();
+        let mut args = vec![];
 
         for argument in arguments.clone() {
             let ty = argument.r#type.clone();
@@ -195,7 +196,7 @@ impl Compiler {
             imported,
             arguments: args,
             return_type,
-            blocks: Vec::new(),
+            blocks: vec![],
         };
 
         if external {
@@ -1077,7 +1078,7 @@ impl Compiler {
                 else_body,
                 location,
             } => {
-                self.scopes.push(HashMap::new());
+                self.scopes.push(hashmap!());
 
                 let (_, value) = self
                     .generate_statement(func, module, *condition.clone(), ty, None, false)
@@ -1223,7 +1224,7 @@ impl Compiler {
                 body,
                 location,
             } => {
-                self.scopes.push(HashMap::new());
+                self.scopes.push(hashmap!());
 
                 self.tmp_counter += 1;
 
@@ -1362,7 +1363,7 @@ impl Compiler {
                 Some((ty, tmp))
             }
             AstNode::BlockStatement { body, location: _ } => {
-                self.scopes.push(HashMap::new());
+                self.scopes.push(hashmap!());
                 self.tmp_counter += 1;
 
                 let body_label = format!("block.start.{}", self.tmp_counter);
@@ -1445,7 +1446,7 @@ impl Compiler {
                 location,
             } => {
                 let mut first_type: Option<Type> = None;
-                let mut results: Vec<Value> = Vec::new();
+                let mut results: Vec<Value> = vec![];
 
                 // value.is_some() because we don't want to do this to
                 // arrays that aren't assigned to a variable
@@ -1949,14 +1950,6 @@ impl Compiler {
                                     .collect::<Vec<char>>();
                                 let mut i = 0;
 
-                                macro_rules! advance {
-                                    () => {
-                                        if i + 1 < chars.len() {
-                                            i += 1;
-                                        }
-                                    };
-                                }
-
                                 loop {
                                     if i + 1 >= chars.len() {
                                         if paren_nesting > 0
@@ -1985,7 +1978,7 @@ impl Compiler {
                                     }
 
                                     res.push(chars[i]);
-                                    advance!();
+                                    advance!(i, chars);
 
                                     if chars[i] == ',' {
                                         if paren_nesting > 0
@@ -1993,7 +1986,7 @@ impl Compiler {
                                             || curly_nesting > 0
                                         {
                                             res.push(chars[i]);
-                                            advance!();
+                                            advance!(i, chars);
                                             continue;
                                         } else {
                                             break;
@@ -2365,25 +2358,10 @@ impl Compiler {
             return (first, val);
         }
 
-        macro_rules! cast_warning {
-            () => {
-                if !explicit {
-                    println!(
-                        "{}",
-                        location.warning(format!(
-                            "Implicit casting from {} to {}",
-                            first.display(),
-                            second.display()
-                        ))
-                    );
-                }
-            };
-        }
-
         if first.weight() == second.weight() {
             return (second, val);
         } else if (first.is_int() && second.is_int()) || (first.is_float() && second.is_float()) {
-            cast_warning!();
+            cast_warning!(explicit, location, first, second);
 
             let conv = self.new_temporary(Some("conv"), true);
             let is_first_higher = first.weight() > second.weight();
@@ -2406,7 +2384,7 @@ impl Compiler {
 
             return (second, conv);
         } else {
-            cast_warning!();
+            cast_warning!(explicit, location, first, second);
 
             let conv = self.new_temporary(Some("conv"), true);
 
@@ -2423,13 +2401,13 @@ impl Compiler {
     pub fn compile(tree: Vec<Primitive>, output_path: String) {
         let mut generator = Compiler {
             tmp_counter: 0,
-            scopes: Vec::new(),
-            data_sections: Vec::new(),
-            type_sections: Vec::new(),
-            struct_pool: HashMap::new(),
-            loop_labels: Vec::new(),
-            ret_types: HashMap::new(),
-            buf_metadata: HashMap::new(),
+            scopes: vec![],
+            data_sections: vec![],
+            type_sections: vec![],
+            struct_pool: hashmap!(),
+            loop_labels: vec![],
+            ret_types: hashmap!(),
+            buf_metadata: hashmap!(),
             tree,
         };
 
