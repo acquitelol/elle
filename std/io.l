@@ -73,7 +73,12 @@ fn io::eprintln(ElleMeta meta, ...) {
 
 fn io::assert(ElleMeta meta, bool condition, string message) {
     if !condition {
-        io::eprintln(meta.caller, ": Assertion '", meta.exprs[0], "' failed.\n", message);
+        string parsed = message || "No additional information was specified.";
+
+        io::eprintln(
+            meta.caller, ": Assertion '", meta.exprs[0], "' failed.\n",
+            parsed.color("italic").reset()
+        );
 
         abort();
     }

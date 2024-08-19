@@ -2355,25 +2355,25 @@ impl Compiler {
 
         let left_label = format!("{}.left.{}", kind, self.tmp_counter);
         let right_label = format!("{}.right.{}", kind, self.tmp_counter);
-        let true_label = format!("{}.true.{}", kind, self.tmp_counter);
+        let left_matches_label = format!("{}.left.match.{}", kind, self.tmp_counter);
+        let right_matches_label = format!("{}.right.match.{}", kind, self.tmp_counter);
         let end_label = format!("{}.end.{}", kind, self.tmp_counter);
 
         let result_tmp = self.new_temporary(Some(&kind.to_string()), true);
 
-        // Keep it as false until we know it is true
-        func.borrow_mut().assign_instruction(
-            result_tmp.clone(),
-            Type::Word,
-            Instruction::Copy(Value::Const(Type::Word, 0)),
-        );
-
-        func.borrow_mut().add_block(left_label);
-
-        let (_, left_val) = self
+        let (left_ty, left_val) = self
             .generate_statement(func, module, *left.clone(), ty.clone(), None, is_return)
             .expect(&location.error(
                 "Unexpected error when trying to parse left side of an arithmetic operation",
             ));
+
+        func.borrow_mut().assign_instruction(
+            result_tmp.clone(),
+            left_ty.clone(),
+            Instruction::Copy(Value::Const(left_ty.clone(), 0)),
+        );
+
+        func.borrow_mut().add_block(left_label.clone());
 
         let left_tmp = self.new_temporary(Some(&format!("{}.left", kind.to_string())), true);
 
@@ -2383,7 +2383,7 @@ impl Compiler {
             Instruction::Compare(
                 Type::Boolean,
                 Comparison::Equal,
-                left_val,
+                left_val.clone(),
                 Value::Const(Type::Word, 0),
             ),
         );
@@ -2400,7 +2400,7 @@ impl Compiler {
                 func.borrow_mut().add_instruction(Instruction::JumpNonZero(
                     left_tmp.clone(),
                     right_label.clone(),
-                    true_label.clone(),
+                    left_matches_label.clone(),
                 ));
             }
             other => panic!(
@@ -2428,7 +2428,7 @@ impl Compiler {
             Instruction::Compare(
                 Type::Boolean,
                 Comparison::Equal,
-                right_val,
+                right_val.clone(),
                 Value::Const(Type::Word, 0),
             ),
         );
@@ -2437,22 +2437,33 @@ impl Compiler {
         func.borrow_mut().add_instruction(Instruction::JumpNonZero(
             right_tmp.clone(),
             end_label.clone(),
-            true_label.clone(),
+            right_matches_label.clone(),
         ));
 
-        func.borrow_mut().add_block(true_label.clone());
+        func.borrow_mut().add_block(left_matches_label.clone());
 
         func.borrow_mut().assign_instruction(
             result_tmp.clone(),
-            Type::Word,
-            Instruction::Copy(Value::Const(Type::Word, 1)),
+            left_ty.clone(),
+            Instruction::Copy(left_val),
+        );
+
+        func.borrow_mut()
+            .add_instruction(Instruction::Jump(end_label.clone()));
+
+        func.borrow_mut().add_block(right_matches_label.clone());
+
+        func.borrow_mut().assign_instruction(
+            result_tmp.clone(),
+            left_ty.clone(),
+            Instruction::Copy(right_val),
         );
 
         func.borrow_mut()
             .add_instruction(Instruction::Jump(end_label.clone()));
 
         func.borrow_mut().add_block(end_label);
-        return (Type::Word, result_tmp);
+        return (left_ty, result_tmp);
     }
 
     fn convert_to_type(

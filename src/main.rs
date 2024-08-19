@@ -14,17 +14,13 @@ static META_STRUCT_NAME: &str = "ElleMeta";
 
 pub enum Warning {
     ImplicitCast = 1 << 0,
-    ImplicitDeclaration = 1 << 1,
-    StructFieldsMissing = 1 << 2,
-    InvalidAlias = 1 << 3,
+    StructFieldsMissing = 1 << 1,
+    InvalidAlias = 1 << 2,
 }
 
 impl Warning {
     pub const fn all() -> u32 {
-        Self::ImplicitCast as u32
-            | Self::ImplicitDeclaration as u32
-            | Self::InvalidAlias as u32
-            | Self::StructFieldsMissing as u32
+        Self::ImplicitCast as u32 | Self::InvalidAlias as u32 | Self::StructFieldsMissing as u32
     }
 }
 
@@ -75,7 +71,6 @@ fn main() -> ExitCode {
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "-Wimplicitcast" => warnings.set_warning(Warning::ImplicitCast),
-            "-Wimplicitdeclaration" => warnings.set_warning(Warning::ImplicitDeclaration),
             "-Wstructfieldsmissing" => warnings.set_warning(Warning::StructFieldsMissing),
             "-Winvalidalias" => warnings.set_warning(Warning::InvalidAlias),
             "-Wall" => warnings.set_all(),

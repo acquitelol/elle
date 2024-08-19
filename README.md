@@ -871,7 +871,7 @@ local fn increment(i32 a) {
 
 ### ♡ **Structs**
 
-Structs are allocations in memory with a defined layout. In Elle, these are defined using the `def` keyword.
+Structs are allocations in memory with a defined layout. In Elle, these are defined using the `struct` keyword.
 
 Example:
 

@@ -19,9 +19,16 @@ else
 	cc -o $@ $<
 endif
 
-$(ASM_PATH): $(TMP_PATH)/out.tmp3.s
+$(ASM_PATH): $(TMP_PATH)/out.tmp5.s
 	mv $< $@
 	rm -rf $(TMP_PATH)
+
+# Fix codegen issue when doing logical operations with strings on lhs or rhs
+$(TMP_PATH)/out.tmp5.s: $(TMP_PATH)/out.tmp4.s
+	sed -E 's/add\tw([0-9]+), w([0-9]+), _(.*)/add x\1, x\2, _\3/g' $< > $@
+
+$(TMP_PATH)/out.tmp4.s: $(TMP_PATH)/out.tmp3.s
+	sed -E 's/adrp\tw([0-9]+), _(.*)/adrp\tx\1, _\2/g' $< > $@
 
 # Fix codegen issue when taking size for a buffer as an argument
 $(TMP_PATH)/out.tmp3.s: $(TMP_PATH)/out.tmp2.s

@@ -25,7 +25,7 @@ fn main() {
 
     io::assert(
         resWithInstance.a == resWithStruct.a,
-        "instance and struct methods should produce equal results"
+        "Instance and struct methods should produce equal results."
     );
 
     io::dbg(resWithInstance.a, resWithStruct.a);

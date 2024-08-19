@@ -31,21 +31,21 @@ fn main() {
     io::assert(d.contains("eo"), d.concat(" should contain \"eo\""));
 
     string e = "ewew";
-    io::assert(e.concat(e).equals("ewewewew"), "result is ".concat(e.concat(e)));
+    io::assert(e.concat(e).equals("ewewewew"), "result = ".concat(e.concat(e)));
 
     string f = "awa";
-    io::assert(f.repeat(4).equals("awaawaawaawa"), "result is ".concat(f.repeat(4)));
+    io::assert(f.repeat(4).equals("awaawaawaawa"), "result = ".concat(f.repeat(4)));
 
     string g = "test123AWA";
-    io::assert(g.to_upper().equals("TEST123AWA"), "result is ".concat(g.to_upper()));
-    io::assert(g.to_lower().equals("test123awa"), "result is ".concat(g.to_lower()));
+    io::assert(g.to_upper().equals("TEST123AWA"), "result = ".concat(g.to_upper()));
+    io::assert(g.to_lower().equals("test123awa"), "result = ".concat(g.to_lower()));
 
     string h = string::ascii_upper();
-    io::assert(h.slice(0, 3).equals("ABC"), "result is ".concat(h.slice(0, 3)));
+    io::assert(h.slice(0, 3).equals("ABC"), "result = ".concat(h.slice(0, 3)));
 
     string i = "me";
     i.extend("wo");
-    io::assert(i.equals("mewo"), "result is ".concat(i));
+    io::assert(i.equals("mewo"), "result = ".concat(i));
 
     char ch = i.pop();
     io::assert(ch == 'o', "ch should be 'o'");
