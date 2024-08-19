@@ -6,8 +6,8 @@ use std/cast;
 fn main() {
     srand(time(nil));
 
-    i32 lower = i32_cast(input("Enter the lower bound: "));
-    i32 upper = i32_cast(input("Enter the upper bound: "));
+    i32 lower = i32_cast(io::input("Enter the lower bound: "));
+    i32 upper = i32_cast(io::input("Enter the upper bound: "));
 
-    printf("Rolled %d\n", random(lower, upper));
+    io::printf("Rolled %d\n", random(lower, upper));
 }

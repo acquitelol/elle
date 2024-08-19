@@ -1,12 +1,12 @@
 use std/io;
 
 fn main() {
-    string res = concat(
-        "‎ ‎╱|、",
-        "(˚ˎ 。7",
-        "|、˜〵",
+    string res = string::concat(
+        "‎ ‎╱|、\n",
+        "(˚ˎ 。7\n",
+        "|、˜〵\n",
         "じしˍ,)ノ"
     );
 
-    printf("%s", res);
+    io::println(res);
 }

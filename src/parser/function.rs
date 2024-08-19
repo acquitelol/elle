@@ -1,6 +1,9 @@
 use std::cell::RefCell;
 
-use crate::lexer::enums::{TokenKind, ValueKind};
+use crate::{
+    lexer::enums::{Attribute, TokenKind, ValueKind},
+    Warning,
+};
 
 use super::{
     enums::{Argument, AstNode, Primitive},
@@ -110,8 +113,56 @@ impl<'a> Function<'a> {
         self.parser.advance();
 
         let mut r#return = None;
+        let mut unaliased = None;
+
+        if self.parser.match_token(TokenKind::Attribute, false) {
+            while self.parser.current_token().kind == TokenKind::Attribute {
+                self.parser.advance();
+                let location = self.parser.current_token().location.clone();
+                let attribute = self.parser.current_token().parse_attribute();
+
+                match attribute {
+                    Attribute::Alias => {
+                        self.parser.advance();
+                        self.parser.expect_tokens(vec![TokenKind::LeftParenthesis]);
+                        self.parser.advance();
+                        self.parser.expect_tokens(vec![TokenKind::StringLiteral]);
+
+                        let alias = self
+                            .parser
+                            .current_token()
+                            .value
+                            .get_string_inner()
+                            .unwrap();
+
+                        if external {
+                            unaliased = Some(name);
+                            name = alias.replace("::", ".");
+                        } else {
+                            if self.parser.warnings.has_warning(Warning::InvalidAlias) {
+                                println!(
+                                    "{}",
+                                    location.warning(format!(
+                                        "Can't assign aliases to a non-external functions\nSkipping alias '{}' for function '{}'",
+                                        alias, name
+                                    ))
+                                )
+                            }
+                        }
+
+                        self.parser.advance();
+                        self.parser.expect_tokens(vec![TokenKind::RightParenthesis]);
+                        self.parser.advance();
+                    }
+                    _ => unreachable!(),
+                }
+            }
+        }
+
+        let mut location = self.parser.current_token().location.clone();
 
         if self.parser.match_token(TokenKind::RightArrow, true) {
+            location = self.parser.current_token().location.clone();
             r#return = Some(self.parser.get_type());
             self.parser.advance();
         }
@@ -126,6 +177,7 @@ impl<'a> Function<'a> {
                 manual,
                 name,
                 external,
+                unaliased,
                 arguments,
                 r#return,
                 body: vec![],
@@ -294,12 +346,13 @@ impl<'a> Function<'a> {
             manual,
             name,
             external,
+            unaliased,
             arguments,
             r#return,
             body: res,
             usable: true,
             imported: false,
-            location: self.parser.current_token().location,
+            location,
         }
     }
 }

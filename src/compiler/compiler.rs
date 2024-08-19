@@ -9,7 +9,7 @@ use crate::{
     advance, cast_warning, hashmap,
     lexer::enums::{Location, TokenKind, ValueKind},
     parser::enums::{Argument, AstNode, Primitive},
-    META_STRUCT_NAME,
+    unknown_function, Warning, Warnings, META_STRUCT_NAME,
 };
 
 type GeneratorResult<T> = Result<T, String>;
@@ -30,6 +30,7 @@ pub struct Compiler {
     ret_types: HashMap<String, Type>,
     buf_metadata: HashMap<Value, (Type, Value)>,
     tree: Vec<Primitive>,
+    warnings: Warnings,
 }
 
 impl Compiler {
@@ -161,6 +162,7 @@ impl Compiler {
         variadic: bool,
         manual: bool,
         external: bool,
+        unaliased: Option<String>,
         usable: bool,
         imported: bool,
         arguments: &Vec<Argument>,
@@ -192,10 +194,11 @@ impl Compiler {
             variadic_index: if variadic { args.len() } else { 1 },
             manual,
             external,
+            unaliased,
             usable,
             imported,
             arguments: args,
-            return_type,
+            return_type: return_type.clone(),
             blocks: vec![],
         };
 
@@ -210,6 +213,12 @@ impl Compiler {
         func.add_block("start");
 
         let func_ref = RefCell::new(func.clone());
+
+        // Could be a tail call recursion
+        //
+        // The compiler is single pass which means that
+        // we need to forward-declare the function with an empty body
+        module.borrow_mut().add_function(func.clone());
 
         for statement in body.clone() {
             // Ignore plain literals that aren't assigned to anything
@@ -248,7 +257,7 @@ impl Compiler {
         }
 
         let mut first_ty: Option<Type> = None;
-        let ty_err_message = |first: Type, second: Type| {
+        let ty_err_message = |first: Type, second: Type, location: Location| {
             location.error(format!(
                 "Inconsistent return types in function '{}': {:?} and {:?}",
                 func.name, first, second
@@ -262,10 +271,17 @@ impl Compiler {
                         if first_ty.is_none() {
                             first_ty = Some(val.0)
                         } else {
-                            if val.0 != first_ty.clone().unwrap()
+                            let r_ty = val.0.clone();
+                            let f_ty = first_ty.clone().unwrap();
+
+                            if r_ty != f_ty
                                 && !matches!(val.1, Value::Const(_, _))
+                                && !(r_ty.is_pointer()
+                                    && f_ty.is_pointer()
+                                    && (r_ty.clone().get_pointer_inner().unwrap().is_void()
+                                        || f_ty.clone().get_pointer_inner().unwrap().is_void()))
                             {
-                                panic!("{}", ty_err_message(val.0, first_ty.unwrap()))
+                                panic!("{}", ty_err_message(val.0, first_ty.unwrap(), val.2))
                             }
                         }
                     }
@@ -279,8 +295,19 @@ impl Compiler {
             if return_ty.is_none() {
                 func_ref.borrow_mut().return_type = first_ty;
             } else {
-                if return_ty.clone().unwrap() != first_ty.clone().unwrap() {
-                    panic!("{}", ty_err_message(return_ty.unwrap(), first_ty.unwrap()))
+                let r_ty = return_ty.clone().unwrap();
+                let f_ty = first_ty.clone().unwrap();
+
+                if r_ty != f_ty
+                    && !(r_ty.is_pointer()
+                        && f_ty.is_pointer()
+                        && (r_ty.clone().get_pointer_inner().unwrap().is_void()
+                            || f_ty.clone().get_pointer_inner().unwrap().is_void()))
+                {
+                    panic!(
+                        "{}",
+                        ty_err_message(return_ty.unwrap(), first_ty.unwrap(), location)
+                    )
                 }
             }
         }
@@ -291,6 +318,7 @@ impl Compiler {
                 .add_instruction(Instruction::Return(Some((
                     Type::Word,
                     Value::Const(Type::Word, 0),
+                    location,
                 ))));
         }
 
@@ -303,6 +331,13 @@ impl Compiler {
         }
 
         func_new.return_type = func_new.return_type.clone().map(|ty| ty.into_abi());
+
+        // Remove the empty function from the module
+        // it will be added automatically when this function leaves scope
+        module
+            .borrow_mut()
+            .functions
+            .retain(|func| func.name != name);
 
         Ok(func_new)
     }
@@ -393,10 +428,10 @@ impl Compiler {
                         func.borrow_mut().assign_instruction(
                             tmp.clone(),
                             addr_ty.clone(),
-                            Instruction::Load(addr_ty.clone().into_abi(), addr_val),
+                            Instruction::Load(addr_ty.clone(), addr_val),
                         );
 
-                        return Some((addr_ty.into_abi(), tmp));
+                        return Some((addr_ty, tmp));
                     }
 
                     let addr_temp = self
@@ -423,13 +458,16 @@ impl Compiler {
 
                 None
             }
-            AstNode::ReturnStatement { value, .. } => {
+            AstNode::ReturnStatement {
+                value, location, ..
+            } => {
                 match self.generate_statement(func, module, *value.clone(), ty.clone(), None, true)
                 {
                     Some((ret_ty, value)) => {
                         if !func.borrow_mut().manual {
-                            func.borrow_mut()
-                                .add_instruction(Instruction::Return(Some((ret_ty, value))))
+                            func.borrow_mut().add_instruction(Instruction::Return(Some((
+                                ret_ty, value, location,
+                            ))))
                         }
                     }
                     None => {
@@ -555,7 +593,7 @@ impl Compiler {
                 let op_temp = self.new_temporary(None, true);
 
                 let final_ty = if operator.is_comparative() {
-                    Type::Word
+                    Type::Boolean
                 } else {
                     instruction_ty.clone()
                 };
@@ -583,8 +621,8 @@ impl Compiler {
 
                                     func.borrow_mut().assign_instruction(
                                         val.clone(),
-                                        ty.clone().into_base(),
-                                        Instruction::Load(ty.clone().into_base(), addr_val),
+                                        ty.clone(),
+                                        Instruction::Load(ty.clone(), addr_val),
                                     );
 
                                     return Some((ty, val));
@@ -699,21 +737,22 @@ impl Compiler {
             AstNode::FunctionCall {
                 mut name,
                 parameters,
-                from_struct,
+                type_method,
                 location,
             } => {
                 // Get the type of the functions based on the ones currently imported into this module
                 let cached_ty = self.ret_types.get(&name).unwrap_or(&Type::Word).to_owned();
                 let declarative_ty = ty.clone().unwrap_or(cached_ty);
-                let mut should_get_address = false;
+                let mut should_get_address = false; // Gets address if first arg's ty is the same as ty predicate
+                let mut first_param = None;
 
-                if from_struct {
+                if type_method {
                     let parameter =
                         parameters.get(0).expect(&location.error(
                             "Tried to get the 0th parameter to parse struct call but failed",
                         ));
 
-                    let (ty, _) = self.generate_statement(
+                    let (ty, val) = self.generate_statement(
                         func,
                         module,
                         parameter.1.clone(),
@@ -728,9 +767,19 @@ impl Compiler {
                         ))
                     );
 
+                    // The first param needs to be compiled to get its type
+                    // however if the first param is mutating (ie `yield()`)
+                    // then there will be a double yield causing many issues.
+                    // Therefore, we store the first param here to be
+                    // used later when compiling all of the params instead
+                    // of compiling the first parameter again
+                    first_param = Some((ty.clone(), val));
+
+                    // struct access
                     if ty.is_struct() {
                         should_get_address = true;
                         name = format!("{}.{}", ty.get_struct_inner().unwrap(), name)
+                    // struct * access
                     } else if ty.is_pointer() && ty.clone().get_pointer_inner().unwrap().is_struct()
                     {
                         name = format!(
@@ -738,6 +787,25 @@ impl Compiler {
                             ty.get_pointer_inner().unwrap().get_struct_inner().unwrap(),
                             name
                         )
+                    // string access
+                    } else if ty.is_pointer()
+                        && ty.clone().get_pointer_inner().unwrap() == Type::Char
+                    {
+                        should_get_address = true;
+                        name = format!("string.{}", name)
+                    // string * access
+                    } else if ty.is_pointer()
+                        && ty.clone().get_pointer_inner().unwrap().is_pointer()
+                        && ty
+                            .clone()
+                            .get_pointer_inner()
+                            .unwrap()
+                            .get_pointer_inner()
+                            .unwrap()
+                            == Type::Char
+                    {
+                        name = format!("string.{}", name)
+                    // primitive access
                     } else {
                         name = format!("{}.{}", ty.id(), name)
                     }
@@ -750,28 +818,57 @@ impl Compiler {
                     .find(|function| function.name == name.clone())
                     .map(|function| function.clone());
 
-                if tmp_function_option.is_none() {
-                    println!(
-                        "{}",
-                        location.warning(format!(
-                            "Function '{}' is called but it is implicitly defined.",
-                            name.clone()
-                        ))
-                    );
-                }
+                let tmp_function = if let Some(func) = tmp_function_option {
+                    func
+                } else {
+                    // Function could be a callback pointer
+                    let callback = self.get_variable(name.as_str(), Some(func));
 
-                let tmp_function = tmp_function_option.unwrap_or(Function::new(
-                    Linkage::public(),
-                    name.clone(),
-                    false,
-                    0,
-                    false,
-                    false,
-                    true,
-                    false,
-                    vec![],
-                    Some(declarative_ty.clone()),
-                ));
+                    if let Ok((ty, _)) = callback {
+                        if ty.is_pointer()
+                            && ty.clone().get_pointer_inner().unwrap().is_struct()
+                            && &ty.get_pointer_inner().unwrap().get_struct_inner().unwrap() == "fn"
+                        {
+                            Function::new(
+                                Linkage::public(),
+                                name.clone(),
+                                false,
+                                0,
+                                false,
+                                false,
+                                None,
+                                true,
+                                false,
+                                // TODO: Allow the function declaration to specify a real signature instead of just `fn *`
+                                parameters.clone().iter().map(|param| {
+                                    self.generate_statement(
+                                        func,
+                                        module,
+                                        param.1.clone(),
+                                        None,
+                                        None,
+                                        false,
+                                    )
+                                    .expect(&param.0.error(
+                                        format!(
+                                            "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
+                                            name
+                                        ))
+                                    )
+                                }).collect(),
+                                Some(declarative_ty.clone()),
+                            )
+                        } else {
+                            unknown_function!(location, name, module)
+                        }
+                    } else {
+                        unknown_function!(location, name, module)
+                    }
+                };
+
+                if let Some(unaliased_name) = tmp_function.unaliased {
+                    name = unaliased_name;
+                };
 
                 if !tmp_function.usable && !func.borrow_mut().imported {
                     panic!(
@@ -784,7 +881,6 @@ impl Compiler {
                 }
 
                 let mut params = vec![];
-
                 let mut add_meta = false;
 
                 if let Some(inner) = tmp_function.arguments.get(0) {
@@ -812,10 +908,12 @@ impl Compiler {
 
                     if let Some(first_arg) = first_arg {
                         if i == 0
-                            && from_struct
+                            && type_method
                             && should_get_address
+                            && first_param.is_some()
                             && first_arg.0.is_pointer()
-                            && first_arg.0.clone().get_pointer_inner().unwrap().is_struct()
+                            && first_arg.0.clone().get_pointer_inner().unwrap()
+                                == first_param.clone().unwrap().0
                         {
                             parameter.1 = AstNode::AddressStatement {
                                 value: Box::new(parameter.1),
@@ -824,23 +922,27 @@ impl Compiler {
                         }
                     }
 
-                    let (ty, val) = self.generate_statement(
-                        func,
-                        module,
-                        parameter.1,
-                        param_ty.clone(),
-                        None,
-                        false,
-                    )
-                    .expect(&parameter.0.error(
-                        format!(
-                            "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
-                            name
-                        ))
-                    );
+                    let (ty, val) = if i == 0 && first_param.is_some() && !should_get_address {
+                        first_param.clone().unwrap()
+                    } else {
+                        self.generate_statement(
+                            func,
+                            module,
+                            parameter.1,
+                            param_ty.clone(),
+                            None,
+                            false,
+                        )
+                        .expect(&parameter.0.error(
+                            format!(
+                                "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
+                                name
+                            ))
+                        )
+                    };
 
                     params.push(if param_ty.is_none() || ty == param_ty.clone().unwrap() {
-                        (ty.clone().into_abi(), val.clone())
+                        (ty.clone(), val.clone())
                     } else {
                         self.convert_to_type(
                             func,
@@ -896,6 +998,27 @@ impl Compiler {
                         ));
 
                     params.insert(tmp_function.variadic_index, res);
+                }
+
+                if !tmp_function.variadic {
+                    let only = if tmp_function.arguments.len() > params.len() {
+                        "only "
+                    } else {
+                        ""
+                    };
+
+                    if tmp_function.arguments.len() != params.len() {
+                        panic!(
+                            "{}",
+                            location.error(format!(
+                                "Function named '{}' takes {} arguments, but you {}passed {}",
+                                tmp_function.name,
+                                tmp_function.arguments.len() - add_meta as usize,
+                                only,
+                                params.len() - add_meta as usize
+                            ))
+                        )
+                    }
                 }
 
                 let temp =
@@ -1010,20 +1133,28 @@ impl Compiler {
                 }
 
                 let inner = if left_ty.is_pointer() {
-                    left_ty.get_pointer_inner().unwrap()
+                    left_ty.clone().get_pointer_inner().unwrap()
                 } else {
-                    right_ty.get_pointer_inner().unwrap()
+                    right_ty.clone().get_pointer_inner().unwrap()
                 };
 
                 let node = AstNode::ArithmeticOperation {
-                    left,
+                    left: if left_ty.is_pointer() {
+                        left.clone()
+                    } else {
+                        right.clone()
+                    },
                     right: Box::new(AstNode::ArithmeticOperation {
                         left: Box::new(AstNode::LiteralStatement {
                             kind: TokenKind::LongLiteral,
                             value: ValueKind::Number(inner.size(module) as i128),
                             location: right_location.clone(),
                         }),
-                        right,
+                        right: if left_ty.is_pointer() {
+                            right.clone()
+                        } else {
+                            left.clone()
+                        },
                         operator: TokenKind::Multiply,
                         location: right_location.clone(),
                     }),
@@ -1054,7 +1185,7 @@ impl Compiler {
                         )));
 
                     func.borrow_mut().add_instruction(Instruction::Store(
-                        inner.to_owned(),
+                        inner.clone(),
                         compiled_location.clone(),
                         compiled,
                     ));
@@ -1429,9 +1560,9 @@ impl Compiler {
 
                 func.borrow_mut().assign_instruction(
                     temp.clone(),
-                    ty.clone(),
+                    Type::Boolean,
                     Instruction::Compare(
-                        ty.clone(),
+                        Type::Boolean,
                         Comparison::Equal,
                         val,
                         Value::Const(ty.clone(), 0),
@@ -1756,14 +1887,16 @@ impl Compiler {
 
                 let diff: Vec<_> = member_set.difference(&value_set).collect();
 
-                for member in diff.iter().cloned() {
-                    println!(
-                        "{}",
-                        location.warning(format!(
-                            "Declaring struct '{}' without field '{}'",
-                            name, member
-                        ))
-                    );
+                if self.warnings.has_warning(Warning::StructFieldsMissing) {
+                    for member in diff.iter().cloned() {
+                        println!(
+                            "{}",
+                            location.warning(format!(
+                                "Declaring struct '{}' without field '{}'",
+                                name, member
+                            ))
+                        );
+                    }
                 }
 
                 let ty = Type::Struct(name.clone());
@@ -2246,9 +2379,9 @@ impl Compiler {
 
         func.borrow_mut().assign_instruction(
             left_tmp.clone(),
-            Type::Word,
+            Type::Boolean,
             Instruction::Compare(
-                Type::Word,
+                Type::Boolean,
                 Comparison::Equal,
                 left_val,
                 Value::Const(Type::Word, 0),
@@ -2291,9 +2424,9 @@ impl Compiler {
 
         func.borrow_mut().assign_instruction(
             right_tmp.clone(),
-            Type::Word,
+            Type::Boolean,
             Instruction::Compare(
-                Type::Word,
+                Type::Boolean,
                 Comparison::Equal,
                 right_val,
                 Value::Const(Type::Word, 0),
@@ -2361,7 +2494,14 @@ impl Compiler {
         if first.weight() == second.weight() {
             return (second, val);
         } else if (first.is_int() && second.is_int()) || (first.is_float() && second.is_float()) {
-            cast_warning!(explicit, location, first, second);
+            cast_warning!(
+                explicit,
+                location,
+                first,
+                second,
+                self.warnings,
+                Warning::ImplicitCast
+            );
 
             let conv = self.new_temporary(Some("conv"), true);
             let is_first_higher = first.weight() > second.weight();
@@ -2384,7 +2524,14 @@ impl Compiler {
 
             return (second, conv);
         } else {
-            cast_warning!(explicit, location, first, second);
+            cast_warning!(
+                explicit,
+                location,
+                first,
+                second,
+                self.warnings,
+                Warning::ImplicitCast
+            );
 
             let conv = self.new_temporary(Some("conv"), true);
 
@@ -2398,7 +2545,7 @@ impl Compiler {
         }
     }
 
-    pub fn compile(tree: Vec<Primitive>, output_path: String) {
+    pub fn compile(tree: Vec<Primitive>, output_path: String, warnings: Warnings) {
         let mut generator = Compiler {
             tmp_counter: 0,
             scopes: vec![],
@@ -2408,6 +2555,7 @@ impl Compiler {
             loop_labels: vec![],
             ret_types: hashmap!(),
             buf_metadata: hashmap!(),
+            warnings,
             tree,
         };
 
@@ -2430,7 +2578,7 @@ impl Compiler {
                 "\n{}\nERROR: Could not compile module \"{output_path}\"\n{}\n\n{}\n{}\n",
                 "-".repeat(40),
                 "Module has no entry-point. To create one, write:",
-                "fn main() {\n    puts(\"Hello world!\");\n}",
+                "fn main() {\n\n\n}",
                 "-".repeat(40),
             )
         }
@@ -2451,6 +2599,7 @@ impl Compiler {
                     false,
                     false,
                     false,
+                    None,
                     usable,
                     imported,
                     &vec![],
@@ -2473,6 +2622,7 @@ impl Compiler {
                     variadic,
                     manual,
                     external,
+                    unaliased,
                     arguments,
                     r#return,
                     body,
@@ -2485,6 +2635,7 @@ impl Compiler {
                     variadic,
                     manual,
                     external,
+                    unaliased,
                     usable,
                     imported,
                     &arguments,

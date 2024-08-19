@@ -3,6 +3,7 @@ use crate::{
     ensure_fn_pointer,
     lexer::enums::{Token, TokenKind, ValueKind},
     parser::{constant::Constant, function::Function, r#struct::Struct},
+    Warnings,
 };
 
 use super::{enums::Primitive, r#use::Use};
@@ -13,16 +14,18 @@ pub struct Parser {
     pub tree: Vec<Primitive>,
     pub struct_pool: Vec<String>,
     pub global_public: bool,
+    pub warnings: Warnings,
 }
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>, struct_pool: Vec<String>) -> Self {
+    pub fn new(tokens: Vec<Token>, struct_pool: Vec<String>, warnings: Warnings) -> Self {
         Parser {
             tokens,
             position: 0,
             tree: vec![],
             struct_pool,
             global_public: false,
+            warnings,
         }
     }
 
@@ -229,6 +232,48 @@ impl Parser {
                         );
                     }
 
+                    if self.position >= 2 && self.tokens.len() > 2 {
+                        let mut position = self.position.clone();
+
+                        // Skip over function meta
+                        while vec![
+                            TokenKind::Function,
+                            TokenKind::External,
+                            TokenKind::Public,
+                            TokenKind::Local,
+                        ]
+                        .contains(&self.tokens[position].kind)
+                        {
+                            position -= 1;
+                        }
+
+                        // The cases where this can match true:
+                        //
+                        // ```
+                        // external fn foo() <-- no semicolon
+                        // ```
+                        if position >= 1
+                            && !vec![TokenKind::Semicolon, TokenKind::RightCurlyBrace]
+                                .contains(&self.tokens[position].kind)
+                        {
+                            let mut location = self
+                                .tokens
+                                .get(self.position - 2)
+                                .unwrap_or(&self.tokens[self.position - 2])
+                                .location
+                                .clone();
+
+                            location.ctx.push(' ');
+                            location.column += 1;
+
+                            dbg!(self.current_token());
+                            panic!(
+                                "{}",
+                                location.error("Expected semicolon here, but definition has ended")
+                            )
+                        }
+                    }
+
                     let mut function = Function::new(self);
                     let statement = function.parse(
                         if local {
@@ -270,7 +315,7 @@ impl Parser {
                     local = false;
                     external = false;
                 }
-                TokenKind::Define if !imports_only => {
+                TokenKind::Struct if !imports_only => {
                     if external {
                         panic!("{}", self.current_token().location.error("Cannot have an external struct. Please remove the `external` keyword."))
                     }

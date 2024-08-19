@@ -1,24 +1,24 @@
 use std/io;
 
-def Bar {
+struct Bar {
     i32 meow;
     i32 nya;
-}
+};
 
-def Foo {
+struct Foo {
     i64 a;
     f64 *b;
     i32 c;
     Bar bar;
     Bar *ptr;
-}
+};
 
 fn other(Foo *a) {
     a.b[0] = 1.7113e2;
     a.bar.meow = 50001;
     a.ptr.nya = 10;
 
-    dbg(a.ptr.nya, a.b[0]);
+    io::dbg(a.ptr.nya, a.b[0]);
 }
 
 fn main() {
@@ -41,5 +41,5 @@ fn main() {
     foo.c = 14;
 
     other(&foo);
-    dbg(foo.c, foo.bar.meow, foo.ptr.nya);
+    io::dbg(foo.c, foo.bar.meow, foo.ptr.nya);
 }

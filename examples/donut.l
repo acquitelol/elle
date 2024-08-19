@@ -12,6 +12,9 @@ const i32 HEIGHT = 24;
 const i32 SIZE = WIDTH * HEIGHT;
 
 fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 *lightDirection) {
+    string lighting = LIGHTING;
+    u32 lightingLength = lighting.len();
+
     memset(zBuffer, 0, SIZE * #size(f32));
     memset(output, 32, SIZE * #size(char));
 
@@ -56,34 +59,34 @@ fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 *lightDirecti
             }
 
             f32 illumination = normal.dot(*lightDirection);
-            i32 lightingIndex = (i32)(fabs(illumination) * (strlen(LIGHTING) - 1));
+            i32 lightingIndex = (i32)(fabs(illumination) * (lightingLength - 1));
 
             if HEIGHT > y && y > 0 && x > 0 && WIDTH > x && depth > zBuffer[offset] {
                 zBuffer[offset] = depth;
-                i32 lightingMapping = (i32)lightingIndex % (strlen(LIGHTING) - 1);
+                i32 lightingMapping = (i32)lightingIndex % (lightingLength - 1);
 
                 if lightingMapping < 0 {
-                    output[offset] = LIGHTING[0];
+                    output[offset] = lighting[0];
                     continue;
                 }
 
-                if lightingMapping > strlen(LIGHTING) - 4 {
-                    output[offset] = LIGHTING[lightingMapping - 4];
+                if lightingMapping > lightingLength - 4 {
+                    output[offset] = lighting[lightingMapping - 4];
                     continue;
                 }
 
-                output[offset] = LIGHTING[lightingMapping];
+                output[offset] = lighting[lightingMapping];
             }
         }
     }
 
-    printf("\x1b[H");
+    io::printf("\x1b[H");
 
     for i32 character = 0; character < SIZE; character += 1 {
         if character % WIDTH {
-            putchar(output[character]);
+            io::putchar(output[character]);
         } else {
-            putchar('\n');
+            io::putchar('\n');
         }
     }
 }
@@ -95,7 +98,7 @@ fn main() {
     f32 *zBuffer = malloc(SIZE * #size(f32));
     string output = malloc(SIZE * #size(char));
     Vector3 lightDirection = Vector3 { x = 0, y = 1, z = -1 };
-    printf("\x1b[2J");
+    io::printf("\x1b[2J");
 
     while true {
         update(rotX, rotZ, zBuffer, output, &lightDirection);

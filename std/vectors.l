@@ -1,16 +1,16 @@
 use std/math;
 global pub;
 
-def Vector3 {
+struct Vector3 {
     f32 x;
     f32 y;
     f32 z;
-}
+};
 
-def Vector2 {
+struct Vector2 {
     f32 x;
     f32 y;
-}
+};
 
 // ----- Vector2 methods -----
 

@@ -1,7 +1,7 @@
 use std/io;
 
 fn rhs(string name, string state, string operator) {
-    printf(
+    io::printf(
         "%s is %s in a logical %s so the rhs branch was taken\n",
         name, state, operator
     );

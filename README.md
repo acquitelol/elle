@@ -13,7 +13,7 @@
 
 ### ♡ **How is this better than C?**
 
-- It's not.
+- It's not. It never will be. As it stands, this is a project developed by a single person, me. I am neither smart enough nor efficient enough to mimic an enterprise programming language compiler such as clang.
 
 ### ✩ *If you like this project, consider giving it a star!* ✩
 
@@ -21,9 +21,11 @@
 
 Writing a hello world program in Elle is super easy:
 
-```ts
+```c
+use std/io;
+
 fn main() {
-    puts("Hello world!");
+    io::println("Hello world!");
 }
 ```
 
@@ -31,29 +33,7 @@ Let's dissect the code:
 
 * The `fn` keyword declares the identifier as a function
 * The word `main` defines the function as the entry point of our program.
-* The function call `puts` is part of the C ABI. It takes the 0th argument and writes it to the standard output.
-
-* That's it! ✩
-
-Elle uses the QBE compiler backend. This means that files compile into QBE's intermediate language before being executed.
-
-Let's also take a look at the QBE IR source:
-
-```ts
-export function w $main() {
-@start
-    %tmp_2 =w call $puts(l $main_1)
-    ret
-}
-data $main_1 = { b "Hello world!", b 0 }
-```
-
-* The `main_1` data segment is used to store the literal string later used in `puts`
-* The function is exported, as denoted with the `export` keyword. Even if you do not denote a function with `pub`, Elle will automatically make the `main` function public.
-* The function returns a `w` (`word`), is called `main`, and uses the `$` sigil to denote it is global.
-* The `@start` directive describes the beginning of the function
-* We then use the `call` operation and the global `puts` function with the `l` (`i64`) data section we stored earlier.
-* The compiler falls back to returning the literal `0` if no specific return value is specified. Therefore, we `ret` at the end.
+* The function call `io::println` is a function which prints all of its arguments.
 
 * Simple enough! ♡
 
@@ -68,8 +48,8 @@ data $main_1 = { b "Hello world!", b 0 }
 * There is currently no `else if` or similar. A workaround is to just define another `if statement` with your new condition.
 * Example:
 
-```cpp
-i32 a = 0; // Variables must be initialized.
+```c
+i32 a = 0;
 
 if expression {
     a += 1;
@@ -89,7 +69,7 @@ if expression {
 * There is no `do while` or `finally` functionality at the time of writing this.
 * Example:
 
-```cpp
+```c
 while expression {
     // do code
 }
@@ -97,11 +77,11 @@ while expression {
 
 * You also have access to block scoped variables inside of this loop. This means you can create a pseudo `for loop` with the following code:
 
-```cpp
+```c
 i32 i = 0;
 
-while (i < 10) {
-    printf("%d\n", i);
+while i < 10 {
+    io::println(i);
     i += 1;
 }
 ```
@@ -123,14 +103,14 @@ Essentially, the loop creates the variable defined in (1), and evaluates the blo
 * For loop expressions can be wrapped in `()` but this is not mandatory
 * Basic example of a for loop that prints the digits 0-9 to the stdout:
 
-```cpp
+```c
 for i32 i = 0; i < 10; i += 1 {
-    printf("%d\n", i);
+    io::println(i);
 }
 ```
 
 * More advanced example:
-```cpp
+```c
 use std/io;
 
 fn fact(i64 n) -> i64 {
@@ -153,7 +133,7 @@ fn get_e() {
 
 fn main() {
     f64 e = get_e();
-    printf("e = %.50f\n", e);
+    io::printf("e = %.50f\n", e);
 }
 ```
 
@@ -167,7 +147,7 @@ Please keep in mind that you also have access to the `break` and `continue` keyw
 
 Here's a simple example:
 
-```cpp
+```c
 fn main() {
     i32 a = 0;
 
@@ -181,7 +161,7 @@ fn main() {
 
 And it is relatively clear how this code is essentially equal to:
 
-```cpp
+```c
 fn main() {
     i32 a = 0;
 
@@ -204,13 +184,13 @@ This is done by ensuring the 0th argument of your function is typed to use the E
 The compiler will automatically supply the struct to you when the function is called, you do not need to manually call it.
 
 This struct is not defined in Elle code, however its equivalent structure may look like:
-```cpp
-def ElleMeta {
+```c
+struct ElleMeta {
     string *exprs; // An array of every argument's expression passed to the function as a string
     string *types; // An array of the type of every argument supplied to the function
     i32 arity; // The number of arguments supplied to the function. This does NOT include the metadata parameter.
     string caller; // The caller of the function as a string
-}
+};
 ```
 
 > [!IMPORTANT]
@@ -252,7 +232,7 @@ fn main() {
 
 Here's a basic example of a variadic function which takes in any amount of arguments and returns their sum:
 
-```cpp
+```c
 fn add(ElleMeta meta, ...) {
     // Note: `i32` should be the same as the type
     // you are yielding from later.
@@ -278,10 +258,10 @@ Let's go through an explanation for how this works:
 
 At the call-site, using this function is easy. It can be done like this:
 
-```cpp
+```c
 fn main() {
     i32 res = add(1, 2, 3, 4);
-    printf("%d\n", res);
+    io::println(res);
 }
 ```
 
@@ -302,12 +282,12 @@ You can also use the manual return directive, which states that Elle should **NO
 
 Here is a basic example that dereferences an `i32 *` to the underlying `i32`:
 
-```cpp
+```c
 use std/io;
 
 fn deref(i32 *ptr) -> i32 {
     $$__MANUAL_RETURN__$$;
-    $$%deref.val =w loadsb %ptr.1$$;
+    $$%deref.val =w loadsw %ptr.1$$;
     $$ret %deref.val$$;
 }
 
@@ -317,7 +297,7 @@ fn main() {
 
     // Print the value at the 0th index (pointer start + 0)
     // This is identical to `some_buffer[0]`
-    printf("%d\n", deref(some_buffer + 0));
+    io::printf("%d\n", deref(some_buffer + 0));
 }
 ```
 
@@ -335,10 +315,10 @@ fn main() {
 * Assuming you wrote the above code, you would now have a variable in scope, defined with the name `buf`. This variable is a pointer to the type specified.
 * Example:
 
-```cpp
+```c
 char out[128];
 out[0] = 'a'; // Keep in mind that `out` is a `char *`
-printf("%c", out[0]);
+io::printf("%c", out[0]);
 ```
 
 <hr />
@@ -349,7 +329,7 @@ printf("%c", out[0]);
 
 A very simple example of this is declaring a variable and deferring printing its value, like this:
 
-```cpp
+```c
 use std/io;
 
 fn main() {
@@ -358,24 +338,24 @@ fn main() {
     // If this were not in a defer statement, then this would print 0
     // However, it will print 25 instead.
     // Realistically this code only runs right before `return 0`.
-    defer print(i);
+    defer io::print(i);
 
     i += 5;
     i *= i;
 }
 ```
-You can see how this only calls `print` right before it returns 0, which is indeed *after* the `i` variable has had changes made to it. This also works if you return in other scopes, such as if statements, while loops, standalone blocks, etc, as stated above. Any defer statements in inner blocks will not be called on any return, rather will only be called when the inner block is about to leave scope.
+You can see how this only calls `io::print` right before it returns 0, which is indeed *after* the `i` variable has had changes made to it. This also works if you return in other scopes, such as if statements, while loops, standalone blocks, etc, as stated above. Any defer statements in inner blocks will not be called on any return, rather will only be called when the inner block is about to leave scope.
 
 This also means that if you, hypothetically, design a program like this
-```cpp
+```c
 use std/io;
 
 fn main() {
     i32 i = 0;
-    defer print(i);
+    defer io::print(i);
 
     {
-        defer print(i);
+        defer io::print(i);
         i += 2;
     }
 
@@ -384,16 +364,16 @@ fn main() {
 ```
 
 The expected output is 2, then 4.
-This is because it will call `print_int` once when the standalone block will leave scope, at which point `i` is 2, then it will call `print_int` again when the function itself (`main`) will leave scope, at which point it will be 4 because `i` was squared (`i *= i`).
+This is because it will call `io::print` once when the standalone block will leave scope, at which point `i` is 2, then it will call `print_int` again when the function itself (`main`) will leave scope, at which point it will be 4 because `i` was squared (`i *= i`).
 
 You can also write something like this:
-```cpp
+```c
 fn main() {
     i32 i = 0;
-    defer print(i);
+    defer io::print(i);
 
     {
-        defer print(i);
+        defer io::print(i);
         i += 2;
 
         {
@@ -410,7 +390,7 @@ The most useful application of deferring is for memory management, however.
 
 Consider this code:
 
-```cpp
+```c
 use std/io;
 
 fn main() {
@@ -421,10 +401,9 @@ fn main() {
     for i64 i = 0; i < size - 1; i += 1 {
         numbers[i] = i * 2;
         i64 res = numbers[i];
-        printf("numbers[%ld] = %ld\n", i, res);
+        io::printf("numbers[%ld] = %ld\n", i, res);
     }
 
-    // (Ignore that this never runs)
     if numbers[2] + 1 * 5 == 10 {
         // Calls `free` here
         return 1;
@@ -436,7 +415,7 @@ fn main() {
 
 Without deferring, you would have to call `free` at every single place where you return. Not only is this inefficient, but also very easy to forget.
 
-Of course for a function like the above, you are able to determine what path the code will take at compile time, however if you use something like `rand()` you no longer have the ability to do this, so you need to call `free` manually at all points where the function leaves its scope. This is an elegant method to prevent that.
+Of course for a function like the above, you are able to determine what path the code will take at compile time, however if you use something like `rand()` you no longer have the ability to do this, so you need to call `free` manually at all points where the function leaves its scope. This is an elegant way to prevent that.
 
 <hr />
 
@@ -472,7 +451,7 @@ You can cast a type in a similar manner to C.
 
 Here is an example that casts a float to an integer to add it to another integer:
 
-```cpp
+```c
 fn main() {
     f32 a = 1.5;
     i32 b = (i32)a + 2;
@@ -486,7 +465,7 @@ Casting is not necessary here, because the Elle compiler is smart enough to auto
 You can also cast to pointer types, however note that, unlike C, casting to a pointer type when using `malloc` is *not* necessary because the Elle compiler automatically casts the `void *` into the type of the variable.
 
 This means you can write:
-```cpp
+```c
 fn main() {
     f64 *a = malloc(1024 * #size(f64));
 }
@@ -511,21 +490,21 @@ Any identifier or literal can be prefixed by one of these operators.
 
 Example of using bitwise `NOT`:
 
-```cpp
+```c
 use std/io;
 
 pub fn main() {
     bool myBool = false;
 
     if !myBool {
-        puts("Hello world!");
+        io::println("Hello world!");
     }
 }
 ```
 
 This can also be used for negative or positive values:
 
-```cpp
+```c
 const i64 MAX_SIGNED_LONG = 9_223_372_036_854_775_807;
 const i64 MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
 ```
@@ -534,11 +513,11 @@ Using unary `-` will multiply the expression by -1 while unary `+` will multiply
 
 The unary `&` operator is used to get the memory address of a local variable in a function. Here is an example:
 
-```cpp
+```c
 use std/io;
 
 fn other(i32 *something) {
-    printf("%d\n", *something);
+    io::println(*something);
 }
 
 pub fn main() {
@@ -548,17 +527,17 @@ pub fn main() {
 }
 ```
 
-Here we declare `a` as 39, then we pass the "address" of `a` to `other` as a pointer to an `i32`, then this pointer is dereferenced. Keep in mind that you can only take the address of an identifier. A `&` operator must **ALWAYS** have an identifier following it.
+Here we declare `a` as 39, then we pass the "address" of `a` to `other` as a pointer to an `i32`, then this pointer is dereferenced.
 
 <hr />
 
 The unary `*` operator is used to dereference a pointer to a value:
 
-```cpp
+```c
 use std/io;
 
 fn other(i32 *a, string *str) {
-    printf("(fn other)\n\ta = %d\n\tstr = %s\n", *a, *str);
+    io::printf("(fn other)\n\ta = %d\n\tstr = %s\n", *a, *str);
     *a = 542;
 }
 
@@ -567,7 +546,7 @@ fn main() {
     string str = "Hello world!";
 
     other(&a, &str);
-    printf("(fn main)\n\ta = %d\n", a);
+    io::printf("(fn main)\n\ta = %d\n", a);
 }
 ```
 
@@ -579,14 +558,14 @@ The example also implies that you can store values at those dereferenced address
 This means that if you want to manipulate the address before it is dereferenced, you can wrap it in `()`.
 
 This code:
-```cpp
-printf("%d\n", *a + 1);
+```c
+io::println(*a + 1);
 ```
 will dereference `a` and then add 1 to the result.
 
 This code, however:
-```cpp
-printf("%d\n", *(a + 1));
+```c
+io::println(*(a + 1));
 ```
 will first add 1 to the address of `a`, and then will dereference that address.
 
@@ -614,13 +593,13 @@ This is the mapping defined by Elle:
 Keep in mind that you can also use these operators when doing a variable declaration.
 This means the following code is valid:
 
-```cpp
+```c
 use std/io;
 
 fn main() {
     i32 a = 1;
     a ^= 1; // a is now 0
-    printf("%d", a);
+    io::println(a);
 }
 ```
 
@@ -630,19 +609,17 @@ Elle follows the standard [order of operations](https://github.com/acquitelol/el
 
 Example of a program that calculates the xor (`^`) and sum (`+`) of some values:
 
-```cpp
+```c
 use std/io;
 
-pub fn main() {
+fn main() {
     i32 a = 1 + (5 ^ 2); // Xor has a lower precedence than addition
 
     // We're expecting this to be 8 because
     //  5 ^ 2 = 7 and 7 + 1 = 8, however
     // without the brackets it would be 4
     // because it would evaluate to 6 ^ 2 = 4
-    printf("%d", a);
-
-    return 0;
+    io::println(a);
 }
 ```
 
@@ -652,7 +629,7 @@ pub fn main() {
 
 * An array literal is a simple and intuitive syntax to automatically allocate stack memory for a buffer and assign values at each offset based on the literal definition. Essentially, an expression like this:
 
-```cpp
+```c
 i32 *some_arr = [512, 1, -3];
 ```
 
@@ -662,30 +639,14 @@ So it would first store `512` at `some_arr + 0`, then it would store `1` at `som
 
 <br />
 
-Here is an example of an array that holds 3 `i64`s:
-
-```cpp
-use std/io;
-
-const i64 MAX_SIGNED_LONG = 9_223_372_036_854_775_807;
-const i64 MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
-
-fn main() {
-    i64 *test = [MAX_SIGNED_LONG, MIN_SIGNED_LONG, -39];
-
-    for i32 i = 0; i < #arrlen(test); i += 1 {
-        printf("test[%d] = %ld\n", i, test[i]);
-    }
-}
-```
-
+You can view a more detailed example of array usage at [array.l](https://github.com/acquitelol/elle/blob/rewrite/examples/array.l).
 Array literals are not required to be assigned to a variable. Please look at this example:
 
 ```c
 use std/io;
 
 fn other(i64 *arr, i32 val) {
-    printf("\narr[0] = %ld\nval = %ld\n", arr[0], val);
+    io::printf("\narr[0] = %ld\nval = %ld\n", arr[0], val);
 }
 
 fn main() {
@@ -712,11 +673,11 @@ You can only place **expressions** inside of the `#arrlen()` directive as it ret
 
 For example, take this snippet:
 
-```cpp
+```c
 use std/io;
 
 fn other(i32 *buf) {
-    printf(
+    io::printf(
         "(fn other)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
         #size(buf),
         #arrlen(buf)
@@ -727,7 +688,7 @@ fn main() {
     i32 buf[100];
     buf[0] = 123;
 
-    printf(
+    io::printf(
         "(fn main)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
         #size(buf),
         #arrlen(buf)
@@ -740,8 +701,8 @@ fn main() {
 
 At this part:
 
-```cpp
-printf(
+```c
+io::printf(
     "(fn other)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
     #size(buf),
     #arrlen(buf)
@@ -754,18 +715,18 @@ Essentially, contextually this means that the `buf` variable is just an `i32 *` 
 
 In this example:
 
-```cpp
+```c
 use std/io;
 
 fn other(i32 *buf) {
-    printf("(fn other)\n\t#size(buf) = %d\n", #size(buf));
+    io::printf("(fn other)\n\t#size(buf) = %d\n", #size(buf));
 }
 
 fn main() {
     i32 buf[100];
     buf[0] = 123;
 
-    printf(
+    io::printf(
         "(fn main)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
         #size(buf),
         #arrlen(buf)
@@ -781,14 +742,14 @@ The code will compile successfully, because `#arrlen` is no longer used on a buf
 
 Finally, here is a basic example of using `#arrlen` to loop through an array of strings and print their values:
 
-```cpp
+```c
 use std/io;
 
 fn main() {
     string *some_array = ["abc", "meow", "test"]";
 
     for i32 i = 0; i < #arrlen(some_array); i += 1 {
-        printf("some_array[%d] = %s\n", i, some_array[i]);
+        io::printf("some_array[%d] = %s\n", i, some_array[i]);
     }
 }
 ```
@@ -803,7 +764,7 @@ fn main() {
 
 Consider this example that uses constants:
 
-```cpp
+```c
 use std/io;
 
 const i32 WIDTH = 100;
@@ -811,7 +772,7 @@ const i32 HEIGHT = 24;
 const i32 SIZE = WIDTH * HEIGHT;
 
 pub fn main() {
-    printf("%d\n", SIZE);
+    io::println(SIZE);
     return 0;
 }
 ```
@@ -845,10 +806,7 @@ fn main() {
     i64 d = 1.2e9;
     f64 e = 2.7182818e2;
 
-    printf(
-        "a = %X\nb = %d\nc = %d\nd = %ld\ne = %f\n",
-        a, b, c, d, e
-    );
+    io::dbg(a, b, c, d, e);
 }
 ```
 
@@ -918,15 +876,15 @@ Structs are allocations in memory with a defined layout. In Elle, these are defi
 Example:
 
 ```c
-def Bar {
+struct Bar {
     f32 myFloat;
-}
+};
 
-def Foo {
+struct Foo {
     i32 a;
     Bar bar;
     f64 baz;
-}
+};
 ```
 
 You can then create these structures like this:
@@ -941,16 +899,18 @@ fn main() {
         baz = 3.141592
     };
 
-    printf("%f\n", (f64)foo.bar.myFloat);
+    io::println(foo.bar.myFloat);
 }
 ```
 
 If taking a pointer to them from another function, you can do so like this:
 
 ```c
+use std/io;
+
 fn other(Foo *foo) {
     foo.baz = 17.98;
-    printf("%d\n", foo.a);
+    io::println(foo.a);
 }
 
 fn main() {
@@ -964,9 +924,11 @@ fn main() {
 > You can still manually dereference the struct pointer manually if you like, but it will have no difference compared to directly using dot notation.
 > This means that the following code will accurately update the value inside the struct Foo:
 ```c
-def Foo {
+use std/io;
+
+struct Foo {
     i32 a;
-}
+};
 
 fn other(Foo *foo) {
     foo.a = 5;
@@ -975,7 +937,7 @@ fn other(Foo *foo) {
 fn main() {
     Foo foo = Foo { a = 100 };
     other(&foo);
-    printf("%d\n", foo.a); // foo.a is now 5 not 100
+    io::println(foo.a); // foo.a is now 5 not 100
 }
 ```
 
@@ -984,9 +946,9 @@ You can also define methods on structs (and primitive types):
 ```c
 use std/io;
 
-def Foo {
+struct Foo {
     i32 a;
-}
+};
 
 fn Foo::add(Foo self, Foo other) {
     return Foo { a = self.a + other.a };
@@ -999,7 +961,7 @@ fn main() {
     Foo res1 = foo1.add(foo2);
     Foo res2 = Foo::add(foo1, foo2);
 
-    dbg(res1.a, res2.a);
+    io::dbg(res1.a, res2.a);
 }
 ```
 
@@ -1011,13 +973,13 @@ In this case, `foo1.add(foo2)` is an identical expression to `Foo::add(foo1, foo
 <br />
 For more examples, please view [vectors.l](https://github.com/acquitelol/elle/blob/rewrite/std/vectors.l)
 
-You may also specify that `self` is a `Struct *` instead of a `Struct` if you require editing it in-place:
+You may also specify that `self` is a `<ty> *` instead of a `<ty>` if you require editing it in-place:
 ```rs
 use std/io;
 
-def Foo {
+struct Foo {
     i32 a;
-}
+};
 
 fn Foo::divideBy(Foo *self, i32 num) {
     self.a /= num;
@@ -1027,7 +989,7 @@ fn main() {
     Foo foo = Foo { a = 10 };
     foo.divideBy(2);
 
-    dbg(foo.a); // foo.a = 5
+    io::dbg(foo.a); // foo.a = 5
 }
 ```
 
@@ -1045,10 +1007,12 @@ Due to Elle's compilation to QBE which implements the C ABI, getting input from 
 
 Consider this function which accepts argv and prints them all to the console:
 
-```cpp
+```c
+use std/io;
+
 fn main(i32 argc, string *argv) {
     for i32 i = 0; i < argc; i += 1 {
-        printf("argv[%d] = %s\n", i, argv[i]);
+        io::printf("argv[%d] = %s\n", i, argv[i]);
     }
 }
 ```
@@ -1065,30 +1029,26 @@ You can also accept `string *envp` (and `string *apple` on MacOS/Darwin platform
 <br/>
 
 You can do this with the following example:
-```cpp
+```c
 external fn printf(string formatter, ...);
 ```
 
 It essentially tells Elle where it should put the variadic argument starter. You could exclude this, if you like, but you will have to explicitly declare where the variadic arguments begin, because Elle no longer has this context.
 
 You can also make these statements public:
-```cpp
-pub external fn fprintf(i64 fd, string formatter, ...);
+```c
+pub external fn fprintf(FILE *fd, string formatter, ...);
 ```
 In fact the order of prefixes before `fn` is not enforced, you can write `external pub fn` and achieve the same result.
 
-If you do not want to declare the function's interface, you can still use the function as long as you do not pass any arguments that are variadic. If you attempt to do so, and do not declare the interface, all of the data printed will be garbage. You also have this alternative to use the function with variadic arguments but without an interface definition:
+You may also alias exported functions, and allow them to be accessible through a pseudo-namespace:
 
-```cpp
-printf("%d, %d\n", $$...$$, a, b);
+```c
+pub external fn InitWindow(i32 width, i32 height, string title) @alias("raylib::init_window");
+struct raylib {};
+
+// You can now call raylib::init_window() and it will internally reference the InitWindow symbol
 ```
-
-> [!NOTE]
-> The code example above uses exact literals. You can read up on those, if you like, however, as mentioned in that part of the README, these shouldn't be used unless you really know what you're doing.
-
-Even though this achieves the same behavior, manually specifying this index each time you are calling the function is not very efficient.
-
-Keep in mind that all other examples in this README.md have the `printf` interface implicitly defined, however any examples in the `/examples` directory will have this interface (and any other necessary ones) defined explicitly.
 
 **Technical note:** This declaration does not emit any IR code. This means that all these definitions do is provide more information and context to the compiler. They do not change the output of the program directly.
 

@@ -77,7 +77,12 @@ impl Lexer {
             }
             '@' => {
                 self.advance();
-                (TokenKind::AtMark, ValueKind::Nil)
+
+                if self.current_char().is_alphabetic() {
+                    (TokenKind::Attribute, ValueKind::Nil)
+                } else {
+                    (TokenKind::AtMark, ValueKind::Nil)
+                }
             }
             '(' => {
                 self.advance();
@@ -522,7 +527,7 @@ impl Lexer {
             "variadic" => TokenKind::Variadic,
             "defer" => TokenKind::Defer,
             "external" => TokenKind::External,
-            "def" => TokenKind::Define,
+            "struct" => TokenKind::Struct,
             "global" => TokenKind::Global,
             "local" => TokenKind::Local,
             _ => TokenKind::Identifier,

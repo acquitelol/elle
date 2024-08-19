@@ -39,7 +39,7 @@ pub enum AstNode {
     FunctionCall {
         name: String,
         parameters: Vec<(Location, AstNode)>,
-        from_struct: bool,
+        type_method: bool,
         location: Location,
     },
     /// Performs an arithmetic operation with `operator` using `left` and `right
@@ -170,6 +170,7 @@ pub enum Primitive {
         variadic: bool,
         manual: bool,
         external: bool,
+        unaliased: Option<String>,
         arguments: Vec<Argument>,
         r#return: Option<Type>,
         body: Vec<AstNode>,

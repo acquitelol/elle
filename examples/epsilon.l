@@ -38,7 +38,7 @@ fn main() {
         results[i] = roll(results, formattedEpsilon);
     }
 
-    printf(
+    io::printf(
         "Rolled a %.4f%% chance in an average of %d attempts\n",
         EPSILON,
         calculateAverage(results)

@@ -8,5 +8,5 @@ fn main() {
     i32 b = (color >> 8) & 0xFF;
     i32 a = color & 0xFF;
 
-    dbg(r, g, b, a);
+    io::dbg(r, g, b, a);
 }

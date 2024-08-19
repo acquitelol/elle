@@ -1,9 +1,8 @@
 use std/io;
-use std/assert;
 
-def Foo {
+struct Foo {
     i32 a;
-}
+};
 
 // `Foo`, only gets a copy of Foo
 fn Foo::add(Foo self, Foo other) {
@@ -24,6 +23,10 @@ fn main() {
     Foo resWithInstance = foo1.add(foo2);
     Foo resWithStruct = Foo::add(foo1, foo2);
 
-    assert(resWithInstance.a == resWithStruct.a);
-    dbg(resWithInstance.a, resWithStruct.a);
+    io::assert(
+        resWithInstance.a == resWithStruct.a,
+        "instance and struct methods should produce equal results"
+    );
+
+    io::dbg(resWithInstance.a, resWithStruct.a);
 }

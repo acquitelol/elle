@@ -2,7 +2,7 @@ global pub;
 
 const i64 CLOCKS_PER_SEC = 1000;
 
-def time_info {
+struct time_info {
     i32 seconds; // Seconds [0, 60]
     i32 minutes; // Minutes [0, 59]
     i32 hours; // Hour [0, 23]
@@ -12,7 +12,7 @@ def time_info {
     i32 weekdays; // Day of week [0,6] (Sunday =0)
     i32 yeardays; // Day of year [0,365].
     i32 dst; // Daylight Savings flag.
-}
+};
 
 external fn asctime(time_info *timeptr) -> string;
 external fn asctime_r(time_info *restrict, string restrict) -> string;

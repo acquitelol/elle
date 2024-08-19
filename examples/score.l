@@ -8,15 +8,15 @@ fn main() {
     defer free(winner);
 
     while true {
-        string person = input("Enter a person's name (or 'stop'): ");
+        string person = io::input("Enter a person's name (or 'stop'): ");
         defer free(person);
 
-        if (streq(person, "stop")) {
+        if person.equals("stop") {
             break;
         }
 
-        printf("Enter %s's score: ", person);
-        i32 score = i32_cast(input(""));
+        io::printf("Enter %s's score: ", person);
+        i32 score = i32_cast(io::input(""));
 
         if score > highestScore {
             highestScore = score;
@@ -24,5 +24,5 @@ fn main() {
         }
     }
 
-    printf("The winner is %s with a score of %d\n", winner, highestScore);
+    io::printf("The winner is %s with a score of %d\n", winner, highestScore);
 }

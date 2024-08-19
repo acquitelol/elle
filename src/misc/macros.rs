@@ -108,6 +108,49 @@ macro_rules! not_valid_struct_or_type {
     }};
 }
 
+#[macro_export]
+macro_rules! unknown_function {
+    ($location:expr, $name:expr, $module:expr $(,)?) => {{
+        let mut similar_name = None;
+        let mut lowest_distance = usize::max_value();
+
+        for func in $module
+            .borrow_mut()
+            .functions
+            .iter()
+            .filter(|func| func.name != "nil")
+        {
+            let contains_name = func.name.contains($name.as_str());
+            let distance =
+                crate::misc::levenshtein::levenshtein($name.as_str(), func.name.clone().as_str());
+
+            if contains_name && (distance <= lowest_distance || similar_name.is_none()) {
+                lowest_distance = distance;
+                similar_name = Some(func.name.clone());
+            } else if !contains_name && distance < lowest_distance && similar_name.is_none() {
+                lowest_distance = distance;
+                similar_name = Some(func.name.clone());
+            }
+        }
+
+        panic!(
+            "{}",
+            $location.error(format!(
+                "Function named '{}' has an unknown interface.{}",
+                $name.clone().replace(".", "::"),
+                if let Some(similar) = similar_name {
+                    format!(
+                        "\nA function with a similar name exists: '{}'",
+                        similar.replace(".", "::")
+                    )
+                } else {
+                    "".into()
+                }
+            ))
+        )
+    }};
+}
+
 /// Converts a token [`token`] into an AstNode
 ///
 /// This accounts for [`TrueLiteral`, `FalseLiteral`, `FloatingPoint`]
@@ -205,8 +248,8 @@ macro_rules! advance {
 /// [`explicit`]: $explicit:expr
 #[macro_export]
 macro_rules! cast_warning {
-    ($explicit:expr, $location:expr, $first:expr, $second:expr $(,)?) => {
-        if !$explicit {
+    ($explicit:expr, $location:expr, $first:expr, $second:expr, $warnings:expr, $warning:expr $(,)?) => {
+        if !$explicit && $warnings.has_warning($warning) {
             println!(
                 "{}",
                 $location.warning(format!(

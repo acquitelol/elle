@@ -7,7 +7,8 @@ fn main() {
     bool c = false;
     i32 *arr = [1, 2, 3];
 
-    dbg(foo, a, b, c, &a, 'z', 1e5, true, arr, ["a", "meow"]);
-    printf("\n");
-    print(foo, a, b, c, &a, 'z', 1e5, true, arr, ["a", "meow"]);
+    io::dbg(foo, a, b, c, &a, 'z', 1e5, true, arr, ["a", "meow"]);
+    io::print("this is a string literal and ", foo, '\n');
+    io::println("this is a string literal and ", foo, " (now with a newline!)\n");
+    io::eprintln("i failed to do something... :3");
 }

@@ -7,5 +7,5 @@ fn main() {
     i64 d = 1.2e9;
     f64 e = 2.7182818e2;
 
-    dbg(a, b, c, d, e);
+    io::dbg(a, b, c, d, e);
 }

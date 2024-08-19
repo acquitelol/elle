@@ -38,7 +38,7 @@ $(TMP_PATH)/out.tmp1.s: $(IR_PATH)
 $(IR_PATH): $(EXAMPLES_PATH)/$(RUN_ARGS).l dist/ellec
 	rm -rf $(DIST_PATH)
 	mkdir -p $(DIST_PATH)
-	dist/ellec $< $@
+	dist/ellec $< $@ -Winvalidalias
 
 .PHONY: run
 run: $(EXEC_PATH)

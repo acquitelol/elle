@@ -1,5 +1,5 @@
-use std/assert;
+use std/io;
 
 fn main() {
-    assert(0 && "meow");
+    io::assert(false, "meow");
 }

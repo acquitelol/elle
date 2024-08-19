@@ -1,91 +1,99 @@
 use std/core;
 use std/string;
+use std/libc/io;
 
 global pub;
 
-const i64 BUF_SIZE = 1024;
-
-def FILE {
-    i32 fd;                 // File descriptor
-    string buffer;          // Buffer for file I/O
-    i64 buffer_size;        // Size of the buffer
-    i64 position;           // Current position in the buffer
-    i64 file_size;          // Total size of the file
-    i32 mode;               // Mode in which the file is opened
-}
-
-external fn fdopen(i64 descriptor, string mode) -> FILE *;
-
-const FILE *stdin = fdopen(0, "r");
-const FILE *stdout = fdopen(1, "w");
-const FILE *stderr = fdopen(2, "w");
-
-external fn printf(string formatter, ...) -> i32;
-external fn fprintf(FILE *fd, string formatter, ...) -> i32;
-external fn sprintf(string str, string formatter, ...) -> i32;
-external fn snprintf(string str, i32 size, string formatter, ...);
-
-external fn fscanf(FILE *stream, string format, ...) -> i32;
-external fn scanf(string format, ...) -> i32;
-external fn sscanf(string str, string format, ...) -> i32;
-
-external fn fgetc(FILE *stream) -> i32;
-external fn fgets(string str, i32 n, i64 stream) -> string;
-external fn fputc(char character, i64 stream) -> i32;
-external fn fputs(string str, i64 stream) -> i32;
-
-external fn fflush(FILE *stream) -> i32;
-
-external fn getc(FILE *stream) -> i32;
-external fn getchar() -> i32;
-external fn gets(string str) -> string;
-
-external fn putc(char character, i64 stream) -> i32;
-external fn putchar(char character) -> i32;
-external fn puts(string str) -> i32;
-
-external fn fopen(string filename, string mode) -> i64;
-external fn fclose(FILE *stream) -> i32;
-external fn fread(void *ptr, i64 size, i64 nmemb, FILE *stream) -> i64;
-external fn fwrite(void *ptr, i64 size, i64 nmemb, FILE *stream) -> i64;
-
-fn input(string message) -> string {
-    string buf = malloc(BUF_SIZE * #size(char));
-    defer free(buf);
-
-    printf(message);
-    fgets(buf, BUF_SIZE, stdin);
-    buf[strlen(buf) - 1] = '\0';
-
-    string result = malloc(strlen(buf) + 1);
-    strcpy(result, buf);
-    return result;
-}
-
-fn dbg(ElleMeta meta, ...) {
-    variadic args[meta.arity]; // Arity does NOT include meta
-
+local fn __print(i64 args, ElleMeta meta, bool wrap, bool full, bool newline) {
     for i32 i = 0; i < meta.arity; i += 1 {
         string ty = meta.types[i];
         string expr = meta.exprs[i];
-        string res = to_string(ty, args, true);
+        string res = to_string(ty, args, wrap);
 
-        printf("%s = %s\n", expr, res);
+        if full {
+            io::printf("%s = %s\n", expr, res);
+        } else {
+            io::printf("%s", res);
+        }
+
+        free(res); // Don't leak memory
+    }
+
+    if newline {
+        io::putchar('\n');
     }
 }
 
-fn print(ElleMeta meta, ...) {
-    variadic args[meta.arity]; // Arity does NOT include meta
+local fn __err(i64 args, ElleMeta meta, bool newline) {
+    FILE *stderr = fdopen(2, "w");
+    string fmt = "\x1b[31m[ERROR]: %s\x1b[0m";
+    string error = "";
 
     for i32 i = 0; i < meta.arity; i += 1 {
         string ty = meta.types[i];
         string expr = meta.exprs[i];
         string res = to_string(ty, args, false);
 
-        if i == meta.arity - 1 {
-            puts(res);
-        } else {
-            printf("%s ", res);
-        }
+        error = string::concat(error, res);
+        free(res); // Don't leak memory
     }
+
+    io::fprintf(stderr, fmt, error);
+    io::fflush(stderr);
+
+    if newline {
+        io::putchar('\n');
+    }
+}
+
+fn io::dbg(ElleMeta meta, ...) {
+    variadic args[meta.arity];
+    __print(args, meta, true, true, false);
+}
+
+fn io::print(ElleMeta meta, ...) {
+    variadic args[meta.arity];
+    __print(args, meta, false, false, false);
+}
+
+fn io::println(ElleMeta meta, ...) {
+    variadic args[meta.arity];
+    __print(args, meta, false, false, true);
+}
+
+fn io::eprint(ElleMeta meta, ...) {
+    variadic args[meta.arity];
+    __err(args, meta, false);
+}
+
+fn io::eprintln(ElleMeta meta, ...) {
+    variadic args[meta.arity];
+    __err(args, meta, true);
+}
+
+fn io::assert(ElleMeta meta, bool condition, string message) {
+    if !condition {
+        io::eprintln(meta.caller, ": Assertion '", meta.exprs[0], "' failed.\n", message);
+
+        abort();
+    }
+}
+
+const i64 BUF_SIZE = 1024;
+
+fn io::input(string message) -> string {
+    string buf = malloc(BUF_SIZE * #size(char));
+    defer free(buf);
+
+    io::print(message);
+    io::fgets(buf, BUF_SIZE, stdin);
+
+    // I would rather O(n) than O(2n)
+    i32 length = buf.len();
+
+    buf[buf.len() - 1] = '\0';
+    string result = malloc(buf.len() + 1);
+    strcpy(result, buf);
+
+    return result;
 }

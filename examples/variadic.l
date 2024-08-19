@@ -13,5 +13,5 @@ fn add(ElleMeta meta, ...) {
 
 fn main() {
     i32 sum = add(1, 2, 3, 4, 5);
-    dbg(sum);
+    io::dbg(sum);
 }

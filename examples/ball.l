@@ -6,12 +6,12 @@ use examples/resources/raylib;
 const i32 screenWidth = 600;
 const i32 screenHeight = 600;
 
-const Color BLACK = GetColor(0x00000000);
-const Color PINK = GetColor(0xFF7DFBFF);
-const Color BERRY = GetColor(0x2E172DFF);
-const Color PURPLE = GetColor(0xE785FFFF);
-const Color YELLOW = GetColor(0xFFE2B8FF);
-const Color BLUE = GetColor(0xC6B5FFFF);
+const Color BLACK = raylib::get_color(0x00000000);
+const Color PINK = raylib::get_color(0xFF7DFBFF);
+const Color BERRY = raylib::get_color(0x2E172DFF);
+const Color PURPLE = raylib::get_color(0xE785FFFF);
+const Color YELLOW = raylib::get_color(0xFFE2B8FF);
+const Color BLUE = raylib::get_color(0xC6B5FFFF);
 
 const f32 circleRadius = 50.0;
 const f32 gravity = 1000.0;
@@ -22,16 +22,16 @@ fn main() {
     string title = "Using raylib in Elle! <3";
     string subtitle = "Try controlling the ball with W, A, S, D!";
 
-    InitWindow(screenWidth, screenHeight, title);
-    defer CloseWindow();
+    raylib::init_window(screenWidth, screenHeight, title);
+    defer raylib::close_window();
 
-    InitAudioDevice();
-    defer CloseAudioDevice();
+    raylib::init_audio_device();
+    defer raylib::close_audio_device();
 
-    Sound sound = LoadSound("./examples/resources/hit.wav");
-    defer UnloadSound(sound);
+    Sound sound = raylib::load_sound("./examples/resources/hit.wav");
+    defer raylib::unload_sound(sound);
 
-    SetTargetFPS(60);
+    raylib::set_target_fps(60);
 
     Vector2 position = Vector2 {
         x = screenWidth - circleRadius,
@@ -51,10 +51,12 @@ fn main() {
     i32 bounces = 0;
 
     // 10 = number of digits in INT_MAX
-    string bouncesString[strlen("Bounces: ") + 10];
+    string bouncesString["Bounces: ".len() + 10];
+    string fpsString["FPS: ".len() + 10];
 
-    while !WindowShouldClose() {
-        f32 deltaTime = GetFrameTime();
+    while !raylib::window_should_close() {
+        f32 deltaTime = raylib::get_frame_time();
+        i32 fps = round(1 / deltaTime);
 
         if finished {
             finished = false;
@@ -62,67 +64,73 @@ fn main() {
             velocity.y = gravity * velocityUpdateFactor * 0.2;
         }
 
-        BeginDrawing();
-            velocity.y += gravity * deltaTime;
-            ClearBackground(BERRY);
+        raylib::begin_drawing();
+        velocity.y += gravity * deltaTime;
+        raylib::clear_background(BERRY);
 
-            if IsKeyDown('W') {
-                velocity.y = -200;
-            }
+        if raylib::is_key_down('W') {
+            velocity.y = -200;
+        }
 
-            if IsKeyDown('S') {
-                velocity.y = 200;
-            }
+        if raylib::is_key_down('S') {
+            velocity.y = 200;
+        }
 
-            if IsKeyDown('A') {
-                velocity.x = -200;
-            }
+        if raylib::is_key_down('A') {
+            velocity.x = -200;
+        }
 
-            if IsKeyDown('D') {
-                velocity.x = 200;
-            }
+        if raylib::is_key_down('D') {
+            velocity.x = 200;
+        }
 
-            f32 newX = position.x + velocity.x * deltaTime;
+        f32 newX = position.x + velocity.x * deltaTime;
 
-            if newX < circleRadius || newX + circleRadius > GetScreenWidth() {
-                bounces += 1;
-                velocity.x *= damping;
-                PlaySound(sound);
-            } else {
-                position.x = newX;
-            }
+        if newX < circleRadius || newX + circleRadius > raylib::get_screen_width() {
+            bounces += 1;
+            velocity.x *= damping;
+            raylib::play_sound(sound);
+        } else {
+            position.x = newX;
+        }
 
-            f32 newY = position.y + velocity.y * deltaTime;
+        f32 newY = position.y + velocity.y * deltaTime;
 
-            if newY < circleRadius || newY + circleRadius > GetScreenHeight() {
-                bounces += 1;
-                velocity.y *= damping;
-                PlaySound(sound);
-            } else {
-                position.y = newY;
-            }
+        if newY < circleRadius || newY + circleRadius > raylib::get_screen_height() {
+            bounces += 1;
+            velocity.y *= damping;
+            raylib::play_sound(sound);
+        } else {
+            position.y = newY;
+        }
 
-            position.x += velocity.x * deltaTime;
-            position.y += velocity.y * deltaTime;
+        position.x += velocity.x * deltaTime;
+        position.y += velocity.y * deltaTime;
 
-            if (fabs(velocity.y) < epsilon) && screenHeight - circleRadius - position.y < epsilon && !finished {
-                finished = true;
-            }
+        if (fabs(velocity.y) < epsilon) && screenHeight - circleRadius - position.y < epsilon && !finished {
+            finished = true;
+        }
 
-            DrawCircle((i32)position.x, (i32)position.y, circleRadius, PINK);
+        raylib::draw_circle((i32)position.x, (i32)position.y, circleRadius, PINK);
 
-            // Title
-            DrawText(title, (screenWidth - MeasureText(title, fontSize)) / 2, 40, fontSize, BLUE);
+        // Title
+        raylib::draw_text(title, (screenWidth - raylib::measure_text(title, fontSize)) / 2, 40, fontSize, BLUE);
 
-            // Bounces
-            sprintf(bouncesString, "Bounces: %d", bounces);
-            DrawText(bouncesString, (screenWidth - MeasureText(bouncesString, fontSize)) / 2, 100, fontSize, YELLOW);
+        // Bounces
+        io::sprintf(bouncesString, "Bounces: %d", bounces);
+        raylib::draw_text(bouncesString, (screenWidth - raylib::measure_text(bouncesString, fontSize)) / 2, 100, fontSize, YELLOW);
 
-            // Subtitle
-            DrawText(subtitle, (screenWidth - MeasureText(subtitle, fontSize / 2)) / 2, 160, fontSize / 2, PURPLE);
+        // Subtitle
+        raylib::draw_text(subtitle, (screenWidth - raylib::measure_text(subtitle, fontSize / 2)) / 2, 160, fontSize / 2, PURPLE);
 
-            dbg(position.x, position.y, velocity.x, velocity.y, deltaTime);
-            printf("-----------------------\n");
-        EndDrawing();
+        // FPS
+        io::sprintf(fpsString, "FPS: %d", fps);
+        raylib::draw_text(fpsString, screenWidth - raylib::measure_text(fpsString, fontSize / 2) - 30, screenHeight - 50, fontSize / 2, YELLOW);
+
+
+        io::dbg(position.x, position.y, velocity.x, velocity.y, deltaTime);
+        io::println("-----------------------");
+
+        raylib::end_drawing();
     }
 }

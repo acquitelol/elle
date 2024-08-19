@@ -1,6 +1,6 @@
-use std/io@{printf, fprintf, stderr};
-use std/core@{atol, atof};
-use std/string@{strspn, strlen, streq};
+use std/io;
+use std/core;
+use std/string;
 
 global pub;
 
@@ -10,24 +10,24 @@ local fn is_valid(string str, string type) -> bool {
     i32 type_index = -1;
 
     for i32 i = 0; i < #arrlen(valid_types); i += 1 {
-        if streq(valid_types[i], type) {
+        if valid_types[i].equals(type) {
             type_index = i;
         }
     }
 
     if type_index == -1 {
-        printf("'%s' is not a valid type for casting. Falling back to 0\n", type);
-        printf("Valid types:\n");
+        io::eprintln(type, " is not a valid type for casting. Falling back to 0", type);
+        io::eprintln("Valid types:");
 
         for (i32 i = 0; i < #arrlen(valid_types); i += 1) {
-            printf("-\t%s\n", valid_types[i]);
+            io::eprintln("-\t", valid_types[i]);
         }
 
         return false;
     }
 
-    if strspn(str, valid_strspn[type_index]) != strlen(str) {
-        fprintf(stderr, "Invalid input: '%s'. Falling back to 0\n", str);
+    if strspn(str, valid_strspn[type_index]) != str.len() {
+        io::eprintln("Invalid input: '", str, "'. Falling back to 0.");
         return false;
     }
 

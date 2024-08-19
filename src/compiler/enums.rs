@@ -7,6 +7,8 @@ use std::{
     mem,
 };
 
+use crate::lexer::enums::Location;
+
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Copy)]
 pub enum Comparison {
     LessThan,
@@ -29,7 +31,8 @@ pub enum Instruction {
     BitwiseXor(Value, Value),
     Compare(Type, Comparison, Value, Value),
     Copy(Value),
-    Return(Option<(Type, Value)>),
+    // Location in AST for reporting inconsistent return types
+    Return(Option<(Type, Value, Location)>),
     JumpNonZero(Value, String, String),
     Jump(String),
     Call(Value, Vec<(Type, Value)>),
@@ -79,11 +82,10 @@ impl Instruction {
             | Self::VAStart(v)
             | Self::Literal(v)
             | Self::Copy(v)
-            | Self::Return(Some((_, v)))
             | Self::JumpNonZero(v, _, _)
             | Self::Alloc8(v) => matches!(v, Value::Global(name) if name == global_name),
             Self::Return(val) => match val {
-                Some((_, v)) => matches!(v, Value::Global(name) if name == global_name),
+                Some((_, v, _)) => matches!(v, Value::Global(name) if name == global_name),
                 None => false,
             },
             Self::Call(v, args) => {
@@ -156,7 +158,7 @@ impl fmt::Display for Instruction {
             Self::VAArg(val) => write!(formatter, "vaarg {}", val),
             Self::VAStart(val) => write!(formatter, "vastart {}", val),
             Self::Return(val) => match val {
-                Some((_, val)) => write!(formatter, "ret {}", val),
+                Some((_, val, _)) => write!(formatter, "ret {}", val),
                 None => write!(formatter, "ret"),
             },
             Self::JumpNonZero(val, if_nonzero, if_zero) => {
@@ -171,7 +173,7 @@ impl fmt::Display for Instruction {
                     args.iter()
                         .map(|(ty, temp)| match ty {
                             Type::Null => format!("{}", temp),
-                            _ => format!("{} {}", ty, temp),
+                            _ => format!("{} {}", ty.clone().into_abi(), temp),
                         })
                         .collect::<Vec<String>>()
                         .join(", "),
@@ -188,7 +190,11 @@ impl fmt::Display for Instruction {
                 write!(
                     formatter,
                     "store{} {}, {}",
-                    r#type.clone().into_base(),
+                    if r#type.clone() != Type::Char {
+                        r#type.clone().into_base()
+                    } else {
+                        r#type.clone()
+                    },
                     value,
                     dest
                 )
@@ -197,10 +203,15 @@ impl fmt::Display for Instruction {
                 write!(
                     formatter,
                     "load{} {}",
-                    if r#type.clone().into_abi() == Type::Word {
-                        format!("s{}", r#type.clone().into_base())
+                    if !r#type.is_unsigned() && r#type.is_map_to_int() {
+                        format!("s{}", r#type.clone())
                     } else {
-                        r#type.clone().into_base().to_string()
+                        if r#type.is_struct() {
+                            r#type.clone().into_base()
+                        } else {
+                            r#type.clone()
+                        }
+                        .to_string()
                     },
                     src
                 )
@@ -325,11 +336,11 @@ impl Type {
     pub fn into_abi(self) -> Self {
         match self {
             Self::Byte
+            | Self::Char
             | Self::UnsignedByte
             | Self::Halfword
             | Self::UnsignedHalfword
-            | Self::UnsignedWord
-            | Self::Char => Self::Word,
+            | Self::UnsignedWord => Self::Word,
             Self::UnsignedLong => Self::Long,
             other => other,
         }
@@ -338,11 +349,11 @@ impl Type {
     pub fn into_base(self) -> Self {
         match self {
             Self::Byte
+            | Self::Char
             | Self::UnsignedByte
             | Self::Halfword
             | Self::UnsignedHalfword
-            | Self::UnsignedWord
-            | Self::Char => Self::Word,
+            | Self::UnsignedWord => Self::Word,
             Self::UnsignedLong => Self::Long,
             Self::Struct(_) => Self::Long,
             other => other,
@@ -395,6 +406,7 @@ impl Type {
             | Self::Halfword
             | Self::UnsignedHalfword
             | Self::UnsignedWord
+            | Self::Boolean
             | Self::Char => true,
             _ => false,
         }
@@ -455,7 +467,7 @@ impl fmt::Display for Type {
         match self {
             Self::Byte => write!(formatter, "b"),
             Self::UnsignedByte => write!(formatter, "ub"),
-            Self::Char => write!(formatter, "w"),
+            Self::Char => write!(formatter, "b"),
             Self::Halfword => write!(formatter, "h"),
             Self::UnsignedHalfword => write!(formatter, "uh"),
             Self::Boolean => write!(formatter, "w"),
@@ -745,6 +757,7 @@ pub struct Function {
     pub variadic_index: usize,
     pub manual: bool,
     pub external: bool,
+    pub unaliased: Option<String>,
     pub usable: bool,
     pub imported: bool,
     pub arguments: Vec<(Type, Value)>,
@@ -760,6 +773,7 @@ impl Function {
         variadic_index: usize,
         manual: bool,
         external: bool,
+        unaliased: Option<String>,
         usable: bool,
         imported: bool,
         arguments: Vec<(Type, Value)>,
@@ -772,6 +786,7 @@ impl Function {
             variadic_index,
             manual,
             external,
+            unaliased,
             usable,
             imported,
             arguments,

@@ -84,13 +84,14 @@ pub enum TokenKind {
     ArrayLength,
     External,
     Address,
-    Define, // Used for both structs and enums
+    Struct,
     ShiftRight,
     ShiftLeft,
     ShiftRightEqual,
     ShiftLeftEqual,
     Global,
     Local,
+    Attribute,
 }
 
 impl TokenKind {
@@ -184,10 +185,23 @@ impl TokenKind {
         }
     }
 
+    pub fn is_brace(&self) -> bool {
+        match self {
+            Self::LeftParenthesis
+            | Self::RightParenthesis
+            | Self::LeftBlockBrace
+            | Self::RightBlockBrace
+            | Self::LeftCurlyBrace
+            | Self::RightCurlyBrace => true,
+            _ => false,
+        }
+    }
+
     pub fn is_unary_context(&self) -> bool {
         match self {
             Self::LeftParenthesis
             | Self::LeftCurlyBrace
+            | Self::RightCurlyBrace
             | Self::LeftBlockBrace
             | Self::Comma
             | Self::Colon
@@ -250,7 +264,7 @@ impl ValueKind {
                 "u64" => Some(Type::UnsignedLong),
                 "f32" => Some(Type::Single),
                 "f64" => Some(Type::Double),
-                "char" => Some(Type::Byte),
+                "char" => Some(Type::Char),
                 "bool" => Some(Type::Boolean),
                 // Arbitrary because it will be turned into `long` anyway when used as void*`
                 "void" => Some(Type::Void),
@@ -298,7 +312,7 @@ impl fmt::Display for ValueKind {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Location {
     pub file: String,
     pub row: usize,
@@ -468,6 +482,31 @@ pub struct Token {
     pub kind: TokenKind,
     pub location: Location,
     pub value: ValueKind,
+}
+
+#[derive(Debug, Clone)]
+pub enum Attribute {
+    Alias,
+}
+
+impl Token {
+    /// Ensures an attribute is valid and returns its enum variant
+    pub fn parse_attribute(&self) -> Attribute {
+        if self.kind != TokenKind::Identifier {
+            panic!(
+                "{}",
+                self.location
+                    .error("Tried to parse an attribute on a non-identifier token")
+            );
+        }
+
+        let attribute = self.value.get_string_inner().unwrap();
+
+        match attribute.as_str() {
+            "alias" => Attribute::Alias,
+            _ => todo!("more attributes"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

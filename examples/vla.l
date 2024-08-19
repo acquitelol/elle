@@ -1,10 +1,10 @@
 use std/io;
 
-def Array {
+struct Array {
     i32 size;
     i32 capacity;
     i32 *elements;
-}
+};
 
 fn Array::init(Array *self, i32 initialCapacity) -> Array * {
     self.elements = (i32 *)malloc(initialCapacity * #size(i32));
@@ -46,7 +46,7 @@ fn main() {
     arr.push(53);
 
     for i32 i = 0; i < arr.size; i += 1 {
-        printf("arr[%d] = %d\n", i, arr.elements[i]);
+        io::printf("arr[%d] = %d\n", i, arr.elements[i]);
     }
 
     arr.free();

@@ -1,6 +1,6 @@
 use std/io;
 
-fn direction(i32 *other) {
+fn direction(i32 *other) -> bool {
     i32 x = 0;
 
     if !other {
@@ -19,8 +19,9 @@ fn formattedDirection() -> string {
 }
 
 fn main() {
-    printf(
-        "The stack is growing %swards for your architecture.\n",
-        formattedDirection()
-    );
+    io::println(
+        "The stack is growing ",
+        formattedDirection(),
+        "wards for your architecture."
+    )
 }
