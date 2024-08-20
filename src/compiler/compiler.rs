@@ -409,7 +409,11 @@ impl Compiler {
                                 name
                             )));
 
-                        if addr_ty != final_ty {
+                        if addr_ty != final_ty
+                            && !(addr_ty.is_pointer()
+                                && final_ty.is_pointer()
+                                && final_ty.clone().get_pointer_inner().unwrap().is_void())
+                        {
                             panic!(
                                 "{}",
                                 location.error(format!(
