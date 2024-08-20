@@ -9,6 +9,6 @@ fn main() {
         a = a - (a * a - x) / (2 * a);
     }
 
-    io::printf("sqrt(%.0f) ≈ %.50f\n", x, a);
-    io::printf("precision: %.50f\n", sqrt(x) - a);
+    io::printf("sqrt({}) ≈ {}", x, a);
+    io::printf("precision: {}", sqrt(x) - a);
 }

@@ -133,7 +133,7 @@ fn get_e() {
 
 fn main() {
     f64 e = get_e();
-    io::printf("e = %.50f\n", e);
+    io::dbg(e);
 }
 ```
 
@@ -297,7 +297,7 @@ fn main() {
 
     // Print the value at the 0th index (pointer start + 0)
     // This is identical to `some_buffer[0]`
-    io::printf("%d\n", deref(some_buffer + 0));
+    io::println(deref(some_buffer + 0));
 }
 ```
 
@@ -318,7 +318,7 @@ fn main() {
 ```c
 char out[128];
 out[0] = 'a'; // Keep in mind that `out` is a `char *`
-io::printf("%c", out[0]);
+io::println(out[0]);
 ```
 
 <hr />
@@ -401,7 +401,7 @@ fn main() {
     for i64 i = 0; i < size - 1; i += 1 {
         numbers[i] = i * 2;
         i64 res = numbers[i];
-        io::printf("numbers[%ld] = %ld\n", i, res);
+        io::printf("numbers[{}] = {}", i, res);
     }
 
     if numbers[2] + 1 * 5 == 10 {
@@ -537,7 +537,7 @@ The unary `*` operator is used to dereference a pointer to a value:
 use std/io;
 
 fn other(i32 *a, string *str) {
-    io::printf("(fn other)\n\ta = %d\n\tstr = %s\n", *a, *str);
+    io::printf("(fn other)\n\ta = {}\n\tstr = {}", *a, *str);
     *a = 542;
 }
 
@@ -546,7 +546,7 @@ fn main() {
     string str = "Hello world!";
 
     other(&a, &str);
-    io::printf("(fn main)\n\ta = %d\n", a);
+    io::printf("(fn main)\n\ta = {}", a);
 }
 ```
 
@@ -646,7 +646,7 @@ Array literals are not required to be assigned to a variable. Please look at thi
 use std/io;
 
 fn other(i64 *arr, i32 val) {
-    io::printf("\narr[0] = %ld\nval = %ld\n", arr[0], val);
+    io::printf("\narr[0] = {}\nval = {}", arr[0], val);
 }
 
 fn main() {
@@ -678,7 +678,7 @@ use std/io;
 
 fn other(i32 *buf) {
     io::printf(
-        "(fn other)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
+        "(fn other)\n\t#size(buf) = {}\n\t#arrlen(buf) = {}",
         #size(buf),
         #arrlen(buf)
     );
@@ -689,7 +689,7 @@ fn main() {
     buf[0] = 123;
 
     io::printf(
-        "(fn main)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
+        "(fn main)\n\t#size(buf) = {}\n\t#arrlen(buf) = {}",
         #size(buf),
         #arrlen(buf)
     );
@@ -703,7 +703,7 @@ At this part:
 
 ```c
 io::printf(
-    "(fn other)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
+    "(fn other)\n\t#size(buf) = {}\n\t#arrlen(buf) = {}",
     #size(buf),
     #arrlen(buf)
 );
@@ -719,7 +719,7 @@ In this example:
 use std/io;
 
 fn other(i32 *buf) {
-    io::printf("(fn other)\n\t#size(buf) = %d\n", #size(buf));
+    io::printf("(fn other)\n\t#size(buf) = {}", #size(buf));
 }
 
 fn main() {
@@ -727,7 +727,7 @@ fn main() {
     buf[0] = 123;
 
     io::printf(
-        "(fn main)\n\t#size(buf) = %d\n\t#arrlen(buf) = %d\n",
+        "(fn main)\n\t#size(buf) = {}\n\t#arrlen(buf) = {}",
         #size(buf),
         #arrlen(buf)
     );
@@ -749,7 +749,7 @@ fn main() {
     string *some_array = ["abc", "meow", "test"]";
 
     for i32 i = 0; i < #arrlen(some_array); i += 1 {
-        io::printf("some_array[%d] = %s\n", i, some_array[i]);
+        io::printf("some_array[{}] = {}", i, some_array[i]);
     }
 }
 ```
@@ -1012,7 +1012,7 @@ use std/io;
 
 fn main(i32 argc, string *argv) {
     for i32 i = 0; i < argc; i += 1 {
-        io::printf("argv[%d] = %s\n", i, argv[i]);
+        io::printf("argv[{}] = {}", i, argv[i]);
     }
 }
 ```

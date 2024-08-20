@@ -33,6 +33,6 @@ fn Vector2::test() {
 
 fn main() {
     Vector3::test();
-    io::println("");
+    io::print('\n');
     Vector2::test();
 }

@@ -19,9 +19,8 @@ fn formattedDirection() -> string {
 }
 
 fn main() {
-    io::println(
-        "The stack is growing ",
-        formattedDirection(),
-        "wards for your architecture."
-    )
+    io::printf(
+        "The stack is growing {}wards for your architecture.",
+        formattedDirection()
+    );
 }

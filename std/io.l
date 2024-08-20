@@ -11,9 +11,9 @@ local fn __print(i64 args, ElleMeta meta, bool wrap, bool full, bool newline) {
         string res = to_string(ty, args, wrap);
 
         if full {
-            io::printf("%s = %s\n", expr, res);
+            io::cprintf("%s = %s\n", expr, res);
         } else {
-            io::printf("%s", res);
+            io::cprintf("%s", res);
         }
 
         free(res); // Don't leak memory
@@ -69,6 +69,11 @@ fn io::eprint(ElleMeta meta, ...) {
 fn io::eprintln(ElleMeta meta, ...) {
     variadic args[meta.arity];
     __err(args, meta, true);
+}
+
+fn io::printf(ElleMeta meta, string fmt, ...) {
+    variadic args[meta.arity - 1];
+    io::println(__internal_fmt(fmt, meta, args));
 }
 
 fn io::assert(ElleMeta meta, bool condition, string message) {

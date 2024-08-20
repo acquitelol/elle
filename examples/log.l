@@ -9,6 +9,10 @@ fn main() {
 
     io::dbg(foo, a, b, c, &a, 'z', 1e5, true, arr, ["a", "meow"]);
     io::print("this is a string literal and ", foo, '\n');
-    io::println("this is a string literal and ", foo, " (now with a newline!)\n");
+    io::println("this is a string literal and ", foo, " (now with a newline!)");
+
+    // extra newline (printf adds a newline automatically)
+    io::printf("meow? i think that is so {}!\n", true);
+
     io::eprintln("i failed to do something... :3");
 }

@@ -80,7 +80,7 @@ fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 *lightDirecti
         }
     }
 
-    io::printf("\x1b[H");
+    io::print("\x1b[H");
 
     for i32 character = 0; character < SIZE; character += 1 {
         if character % WIDTH {
@@ -98,7 +98,7 @@ fn main() {
     f32 *zBuffer = malloc(SIZE * #size(f32));
     string output = malloc(SIZE * #size(char));
     Vector3 lightDirection = Vector3 { x = 0, y = 1, z = -1 };
-    io::printf("\x1b[2J");
+    io::print("\x1b[2J");
 
     while true {
         update(rotX, rotZ, zBuffer, output, &lightDirection);

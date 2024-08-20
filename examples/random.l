@@ -9,5 +9,5 @@ fn main() {
     i32 lower = i32_cast(io::input("Enter the lower bound: "));
     i32 upper = i32_cast(io::input("Enter the upper bound: "));
 
-    io::printf("Rolled %d\n", random(lower, upper));
+    io::printf("Rolled {}", random(lower, upper));
 }

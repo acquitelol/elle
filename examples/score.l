@@ -15,8 +15,7 @@ fn main() {
             break;
         }
 
-        io::printf("Enter %s's score: ", person);
-        i32 score = i32_cast(io::input(""));
+        i32 score = i32_cast(io::input(string::format("Enter {}'s score: ", person)));
 
         if score > highestScore {
             highestScore = score;
@@ -24,5 +23,5 @@ fn main() {
         }
     }
 
-    io::printf("The winner is %s with a score of %d\n", winner, highestScore);
+    io::printf("The winner is {} with a score of {}", winner, highestScore);
 }

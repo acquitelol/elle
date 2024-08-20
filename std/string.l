@@ -393,3 +393,54 @@ fn to_string(string ty, i64 args, bool wrap) {
 
     return res;
 }
+
+fn string::as_string(ElleMeta meta, ...) {
+    variadic args[meta.arity];
+    return to_string(meta.types[0], args, false);
+}
+
+fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
+    string result = malloc(fmt.len());
+
+    i32 arg = 0;
+    bool is_open = false;
+
+    for i32 i = 0; i < fmt.len(); i += 1 {
+        if is_open {
+            // Allow for escaping { using {{}
+            if fmt[i] == '{' {
+                is_open = false;
+
+                // Push '{' as it was skipped the first time
+                result.push(fmt[i]);
+
+                continue;
+            }
+
+            if fmt[i] != '}' {
+                io::fprintf(stderr, "Invalid format at position '%d' (%c)\n", i, fmt[i]);
+                io::fflush(stderr);
+                return "";
+            }
+
+            result.extend(to_string(meta.types[arg + 1], args, false));
+            arg += 1;
+            is_open = false;
+            continue;
+        }
+
+        if fmt[i] == '{' {
+            is_open = true;
+            continue;
+        }
+
+        result.push(fmt[i]);
+    }
+
+    return result;
+}
+
+fn string::format(ElleMeta meta, string fmt, ...) -> string {
+    variadic args[meta.arity - 1];
+    return __internal_fmt(fmt, meta, args);
+}

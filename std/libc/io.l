@@ -15,7 +15,7 @@ const FILE *stdin = fdopen(0, "r");
 const FILE *stdout = fdopen(1, "w");
 const FILE *stderr = fdopen(2, "w");
 
-external fn printf(string formatter, ...) @alias("io::printf") -> i32;
+external fn printf(string formatter, ...) @alias("io::cprintf") -> i32;
 external fn fprintf(FILE *fd, string formatter, ...) @alias("io::fprintf") -> i32;
 external fn sprintf(string str, string formatter, ...) @alias("io::sprintf") -> i32;
 external fn snprintf(string str, i32 size, string formatter, ...) @alias("io::snprintf");

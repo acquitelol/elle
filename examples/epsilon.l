@@ -39,7 +39,7 @@ fn main() {
     }
 
     io::printf(
-        "Rolled a %.4f%% chance in an average of %d attempts\n",
+        "Rolled a {}% chance in an average of {} attempts\n",
         EPSILON,
         calculateAverage(results)
     );

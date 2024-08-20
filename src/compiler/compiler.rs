@@ -900,7 +900,7 @@ impl Compiler {
                         if tmp.is_some() {
                             tmp.map(|item| item.0.clone())
                         } else {
-                            ty.clone()
+                            None
                         }
                     };
 

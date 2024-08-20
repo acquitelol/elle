@@ -46,7 +46,7 @@ fn main() {
     arr.push(53);
 
     for i32 i = 0; i < arr.size; i += 1 {
-        io::printf("arr[%d] = %d\n", i, arr.elements[i]);
+        io::printf("arr[{}] = {}", i, arr.elements[i]);
     }
 
     arr.free();
