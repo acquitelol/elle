@@ -61,8 +61,8 @@ impl Compiler {
             let existing_var = self.get_variable(name, func);
 
             match existing_var {
-                Ok((_, val)) => match val.clone() {
-                    Value::Temporary(_) => val.clone(),
+                Ok((_, val)) => match val {
+                    Value::Temporary(_) => val,
                     _ => self.new_temporary(Some(name), minify),
                 },
                 Err(_) => self.new_temporary(Some(name), minify),
@@ -93,7 +93,7 @@ impl Compiler {
             .ok_or_else(|| format!("\nUndefined variable '{}'", name));
 
         if var.is_err() {
-            for item in self.tree.clone() {
+            for item in self.tree.iter().cloned() {
                 match item {
                     Primitive::Constant {
                         name: const_name,
@@ -116,8 +116,8 @@ impl Compiler {
                             let temp = self.new_temporary(Some("constant"), true);
 
                             func.unwrap().borrow_mut().assign_instruction(
-                                temp.clone(),
-                                ty.clone().unwrap(),
+                                &temp,
+                                &ty.clone().unwrap(),
                                 Instruction::Call(Value::Global(name.into()), vec![]),
                             );
 
@@ -430,8 +430,8 @@ impl Compiler {
                         ));
 
                         func.borrow_mut().assign_instruction(
-                            tmp.clone(),
-                            addr_ty.clone(),
+                            &tmp,
+                            &addr_ty,
                             Instruction::Load(addr_ty.clone(), addr_val),
                         );
 
@@ -443,8 +443,8 @@ impl Compiler {
                         .expect(&location.error(format!("Unexpected error when trying to create a variable to store the stack address of a local variable named '{}'", name)));
 
                     func.borrow_mut().assign_instruction(
-                        addr_temp.clone(),
-                        Type::Pointer(Box::new(final_ty.clone())),
+                        &addr_temp,
+                        &Type::Pointer(Box::new(final_ty.clone())),
                         Instruction::Alloc8(Value::Const(
                             Type::Word,
                             final_ty.size(module) as i128,
@@ -603,7 +603,7 @@ impl Compiler {
                 };
 
                 func.borrow_mut()
-                    .assign_instruction(op_temp.clone(), final_ty.clone(), res);
+                    .assign_instruction(&op_temp, &final_ty, res);
 
                 Some((final_ty, op_temp))
             }
@@ -624,8 +624,8 @@ impl Compiler {
                                     let (_, addr_val) = res.unwrap();
 
                                     func.borrow_mut().assign_instruction(
-                                        val.clone(),
-                                        ty.clone(),
+                                        &val,
+                                        &ty,
                                         Instruction::Load(ty.clone(), addr_val),
                                     );
 
@@ -1032,11 +1032,8 @@ impl Compiler {
                     .get_variable(&name, Some(func))
                     .unwrap_or((Type::Long, Value::Global(name)));
 
-                func.borrow_mut().assign_instruction(
-                    temp.clone(),
-                    ty.clone(),
-                    Instruction::Call(val, params),
-                );
+                func.borrow_mut()
+                    .assign_instruction(&temp, &ty, Instruction::Call(val, params));
 
                 Some((ty, temp))
             }
@@ -1089,8 +1086,8 @@ impl Compiler {
                     self.convert_to_type(func, ty, Type::Long, val, location, false);
 
                 func.borrow_mut().assign_instruction(
-                    tmp.clone(),
-                    buf_ty.clone(),
+                    &tmp,
+                    &buf_ty,
                     Instruction::Alloc8(converted_val.clone()),
                 );
 
@@ -1200,8 +1197,8 @@ impl Compiler {
                 let temp = self.new_temporary(Some("load"), true);
 
                 func.borrow_mut().assign_instruction(
-                    temp.clone(),
-                    inner.clone(),
+                    &temp,
+                    &inner,
                     Instruction::Load(inner.clone(), compiled_location.clone()),
                 );
 
@@ -1464,8 +1461,8 @@ impl Compiler {
                     )));
 
                 func.borrow_mut().assign_instruction(
-                    var.clone(),
-                    Type::Long,
+                    &var,
+                    &Type::Long,
                     Instruction::Alloc8(final_val),
                 );
 
@@ -1489,11 +1486,8 @@ impl Compiler {
                 let ty = r#type.unwrap_or(Type::Long);
                 let tmp = self.new_temporary(Some("next"), true);
 
-                func.borrow_mut().assign_instruction(
-                    tmp.clone(),
-                    ty.clone(),
-                    Instruction::VAArg(ptr),
-                );
+                func.borrow_mut()
+                    .assign_instruction(&tmp, &ty, Instruction::VAArg(ptr));
 
                 Some((ty, tmp))
             }
@@ -1563,8 +1557,8 @@ impl Compiler {
                 let temp = self.new_temporary(Some("not"), true);
 
                 func.borrow_mut().assign_instruction(
-                    temp.clone(),
-                    Type::Boolean,
+                    &temp,
+                    &Type::Boolean,
                     Instruction::Compare(
                         Type::Boolean,
                         Comparison::Equal,
@@ -1697,8 +1691,8 @@ impl Compiler {
                     self.convert_to_type(func, ty, Type::Long, val, location.clone(), false);
 
                 func.borrow_mut().assign_instruction(
-                    tmp.clone(),
-                    buf_ty.clone(),
+                    &tmp,
+                    &buf_ty,
                     Instruction::Alloc8(converted_val.clone()),
                 );
 
@@ -1711,8 +1705,8 @@ impl Compiler {
                     let value_ptr = self.new_temporary(Some("array.offset"), true);
 
                     func.borrow_mut().assign_instruction(
-                        value_ptr.clone(),
-                        Type::Long,
+                        &value_ptr,
+                        &Type::Long,
                         Instruction::Add(
                             tmp.clone(),
                             Value::Const(
@@ -1768,8 +1762,8 @@ impl Compiler {
                     let temp = self.new_temporary(Some("size"), true);
 
                     func.borrow_mut().assign_instruction(
-                        temp.clone(),
-                        tmp_ty.clone(),
+                        &temp,
+                        &tmp_ty,
                         Instruction::Copy(Value::Const(tmp_ty.clone(), ty.size(module) as i128)),
                     );
 
@@ -1793,8 +1787,8 @@ impl Compiler {
                                 self.buf_metadata.get(&val).map(|item| item.to_owned())
                             {
                                 func.borrow_mut().assign_instruction(
-                                    size.clone(),
-                                    ty.clone(),
+                                    &size,
+                                    &ty,
                                     if standalone {
                                         Instruction::Copy(buf_val.clone())
                                     } else {
@@ -1821,8 +1815,8 @@ impl Compiler {
                             }
 
                             func.borrow_mut().assign_instruction(
-                                size.clone(),
-                                ty.clone(),
+                                &size,
+                                &ty,
                                 Instruction::Copy(Value::Const(
                                     Type::Long,
                                     ty.size(module) as i128,
@@ -1833,8 +1827,8 @@ impl Compiler {
                         }
                         other => {
                             func.borrow_mut().assign_instruction(
-                                size.clone(),
-                                other.clone(),
+                                &size,
+                                &other,
                                 Instruction::Copy(Value::Const(
                                     other.clone(),
                                     ty.clone().size(module) as i128,
@@ -1913,8 +1907,8 @@ impl Compiler {
                     .add_instruction(Instruction::Comment(format!("size of :{}", name)));
 
                 func.borrow_mut().assign_instruction(
-                    alloc_tmp.clone(),
-                    Type::Long,
+                    &alloc_tmp,
+                    &Type::Long,
                     Instruction::Alloc8(Value::Const(Type::Word, size as i128)),
                 );
 
@@ -1955,8 +1949,8 @@ impl Compiler {
                     let offset_tmp = self.new_temporary(Some("offset"), true);
 
                     func.borrow_mut().assign_instruction(
-                        offset_tmp.clone(),
-                        Type::Long,
+                        &offset_tmp,
+                        &Type::Long,
                         Instruction::Add(
                             alloc_tmp.clone(),
                             Value::Const(Type::Word, offset as i128),
@@ -2010,8 +2004,8 @@ impl Compiler {
                 let temp = self.new_temporary(Some("field"), true);
 
                 func.borrow_mut().assign_instruction(
-                    temp.clone(),
-                    field_ty.clone().into_base(),
+                    &temp,
+                    &field_ty,
                     Instruction::Load(field_ty.clone(), offset_tmp.clone()),
                 );
 
@@ -2272,8 +2266,8 @@ impl Compiler {
                             let tmp = self.new_temporary(Some("load"), true);
 
                             func.borrow_mut().assign_instruction(
-                                tmp.clone(),
-                                Type::Long,
+                                &tmp,
+                                &Type::Long,
                                 Instruction::Load(ty.clone().get_pointer_inner().unwrap(), left),
                             );
 
@@ -2302,8 +2296,8 @@ impl Compiler {
                     let offset_tmp = self.new_temporary(Some("offset"), true);
 
                     func.borrow_mut().assign_instruction(
-                        offset_tmp.clone(),
-                        Type::Long,
+                        &offset_tmp,
+                        &Type::Long,
                         Instruction::Add(left.clone(), Value::Const(Type::Word, offset as i128)),
                     );
 
@@ -2311,8 +2305,8 @@ impl Compiler {
                         let tmp = self.new_temporary(Some("load"), true);
 
                         func.borrow_mut().assign_instruction(
-                            tmp.clone(),
-                            Type::Long,
+                            &tmp,
+                            &Type::Long,
                             Instruction::Load(member_ty.clone().unwrap(), offset_tmp),
                         );
 
@@ -2372,8 +2366,8 @@ impl Compiler {
             ));
 
         func.borrow_mut().assign_instruction(
-            result_tmp.clone(),
-            left_ty.clone(),
+            &result_tmp,
+            &left_ty,
             Instruction::Copy(Value::Const(left_ty.clone(), 0)),
         );
 
@@ -2382,8 +2376,8 @@ impl Compiler {
         let left_tmp = self.new_temporary(Some(&format!("{}.left", kind.to_string())), true);
 
         func.borrow_mut().assign_instruction(
-            left_tmp.clone(),
-            Type::Boolean,
+            &left_tmp,
+            &Type::Boolean,
             Instruction::Compare(
                 Type::Boolean,
                 Comparison::Equal,
@@ -2427,8 +2421,8 @@ impl Compiler {
         let right_tmp = self.new_temporary(Some(&format!("{}.right", kind.to_string())), true);
 
         func.borrow_mut().assign_instruction(
-            right_tmp.clone(),
-            Type::Boolean,
+            &right_tmp,
+            &Type::Boolean,
             Instruction::Compare(
                 Type::Boolean,
                 Comparison::Equal,
@@ -2446,22 +2440,16 @@ impl Compiler {
 
         func.borrow_mut().add_block(left_matches_label.clone());
 
-        func.borrow_mut().assign_instruction(
-            result_tmp.clone(),
-            left_ty.clone(),
-            Instruction::Copy(left_val),
-        );
+        func.borrow_mut()
+            .assign_instruction(&result_tmp, &left_ty, Instruction::Copy(left_val));
 
         func.borrow_mut()
             .add_instruction(Instruction::Jump(end_label.clone()));
 
         func.borrow_mut().add_block(right_matches_label.clone());
 
-        func.borrow_mut().assign_instruction(
-            result_tmp.clone(),
-            left_ty.clone(),
-            Instruction::Copy(right_val),
-        );
+        func.borrow_mut()
+            .assign_instruction(&result_tmp, &left_ty, Instruction::Copy(right_val));
 
         func.borrow_mut()
             .add_instruction(Instruction::Jump(end_label.clone()));
@@ -2522,8 +2510,8 @@ impl Compiler {
             let is_first_higher = first.weight() > second.weight();
 
             func.borrow_mut().assign_instruction(
-                conv.clone(),
-                second.clone(),
+                &conv,
+                &second,
                 if is_first_higher {
                     if first.is_float() {
                         Instruction::Truncate(val)
@@ -2551,8 +2539,8 @@ impl Compiler {
             let conv = self.new_temporary(Some("conv"), true);
 
             func.borrow_mut().assign_instruction(
-                conv.clone(),
-                second.clone(),
+                &conv,
+                &second,
                 Instruction::Conversion(first, second.clone(), val),
             );
 

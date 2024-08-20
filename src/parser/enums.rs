@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     compiler::enums::Type,
     lexer::enums::{Location, Token, TokenKind, ValueKind},
@@ -151,7 +153,6 @@ impl AstNode {
 pub enum Primitive {
     Use {
         module: String,
-        functions: Vec<String>,
         location: Location,
     },
     Struct {

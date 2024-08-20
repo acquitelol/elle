@@ -1,4 +1,6 @@
 use std::cell::RefCell;
+use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::fs;
 
 use compiler::enums::Type;
@@ -18,9 +20,11 @@ use crate::Warnings;
 use crate::META_STRUCT_NAME;
 
 pub fn lex_and_parse(
-    input_path: String,
-    struct_pool: &RefCell<Vec<String>>,
-    warnings: Warnings,
+    input_path: &String,
+    existing_tree: Option<&mut Vec<Primitive>>,
+    struct_pool: &RefCell<HashSet<String>>,
+    parsed_modules: &RefCell<HashSet<String>>,
+    warnings: &Warnings,
     root: bool,
 ) -> Vec<Primitive> {
     let with_elle = fs::metadata(format!("{}.elle", input_path)).is_ok();
@@ -42,7 +46,7 @@ pub fn lex_and_parse(
         Ok(content) => content,
         Err(err) => {
             eprintln!("\nERROR: Could not load module \"{input_path}\": {err}\n");
-            format!("")
+            return Vec::new();
         }
     };
 
@@ -51,7 +55,7 @@ pub fn lex_and_parse(
             "\n{}\nERROR: Could not load module \"{input_path}\"\n{}\n\n{}\n{}\n",
             "-".repeat(40),
             "Module is empty. To create an entry-point, write:",
-            "use std/io;\n\nfn main() {\n\n\n}",
+            "use std/io;\n\nfn main() {\n\n}",
             "-".repeat(40),
         )
     }
@@ -68,28 +72,55 @@ pub fn lex_and_parse(
         }
     }
 
-    // dbg!(&tokens);
-
     let mut parser = Parser::new(
         tokens.clone(),
         struct_pool.borrow().to_owned(),
         warnings.clone(),
     );
-    let (mut tree, new_struct_pool) = parser.parse(true, None);
 
+    let mut fallback = vec![];
+    let tree = existing_tree.unwrap_or(&mut fallback);
+
+    let (imports, new_struct_pool) = parser.parse(true, None);
     struct_pool.replace_with(|_| new_struct_pool);
 
-    for node in tree.clone().iter().cloned() {
-        handle_node(&mut tree, struct_pool, node, warnings.clone());
+    for import in imports.iter().cloned() {
+        match import {
+            Primitive::Use { module, .. } if !parsed_modules.borrow().contains(&module) => {
+                let nodes = lex_and_parse(
+                    &module,
+                    Some(tree),
+                    struct_pool,
+                    parsed_modules,
+                    warnings,
+                    false,
+                );
+
+                for symbol in nodes.iter().rev() {
+                    match symbol.clone() {
+                        Primitive::Use { .. } => {}
+                        Primitive::Constant { name, public, .. } => {
+                            override_and_add_node!(Primitive::Constant, tree, name, symbol, public);
+                        }
+                        Primitive::Function { name, public, .. } => {
+                            override_and_add_node!(Primitive::Function, tree, name, symbol, public);
+                        }
+                        Primitive::Struct { name, public, .. } => {
+                            override_and_add_node!(Primitive::Struct, tree, name, symbol, public);
+                        }
+                    }
+                }
+
+                parsed_modules.borrow_mut().insert(module);
+            }
+            _ => {}
+        }
     }
 
-    let (mut tree, new_struct_pool) = parser.parse(false, Some(struct_pool.borrow().to_owned()));
-
+    let (others, new_struct_pool) = parser.parse(false, Some(struct_pool.borrow().to_owned()));
     struct_pool.replace_with(|_| new_struct_pool);
 
-    for node in tree.clone().iter().cloned() {
-        handle_node(&mut tree, struct_pool, node, warnings.clone());
-    }
+    tree.extend(others);
 
     // Add global constants
     // - nil => 0 (nullptr)
@@ -151,79 +182,14 @@ pub fn lex_and_parse(
         );
     }
 
-    tree
-}
-
-pub fn handle_node(
-    tree: &mut Vec<Primitive>,
-    struct_pool: &RefCell<Vec<String>>,
-    node: Primitive,
-    warnings: Warnings,
-) {
-    match node {
-        Primitive::Use {
-            module, functions, ..
-        } => {
-            let module_tree = lex_and_parse(module, struct_pool, warnings.clone(), false);
-            let allow_all = functions.len() == 0;
-
-            for symbol in module_tree.iter().cloned().rev() {
-                match symbol.clone() {
-                    Primitive::Use { .. } => {}
-                    Primitive::Constant { name, public, .. } => {
-                        override_and_add_node!(
-                            Primitive::Constant,
-                            tree,
-                            name,
-                            symbol,
-                            public,
-                            allow_all,
-                            functions
-                        );
-                    }
-                    Primitive::Function { name, public, .. } => {
-                        override_and_add_node!(
-                            Primitive::Function,
-                            tree,
-                            name,
-                            symbol,
-                            public,
-                            allow_all,
-                            functions
-                        );
-                    }
-                    Primitive::Struct { name, public, .. } => {
-                        override_and_add_node!(
-                            Primitive::Struct,
-                            tree,
-                            name,
-                            symbol,
-                            public,
-                            allow_all,
-                            functions
-                        );
-                    }
-                }
-            }
-        }
-        _ => {}
-    }
-}
-
-pub fn is_valid_insert_context(
-    node_name: String,
-    public: bool,
-    allow_all: bool,
-    functions: Vec<String>,
-) -> bool {
-    public && (allow_all || functions.contains(&node_name))
+    tree.to_vec()
 }
 
 pub fn existing_definition(tree: Vec<Primitive>, node_name: String) -> Option<usize> {
-    tree.iter().position(|item| match item.to_owned().clone() {
+    tree.iter().position(|item| match item {
         Primitive::Use { .. } => false,
-        Primitive::Constant { name, .. } => name == node_name,
-        Primitive::Function { name, .. } => name == node_name,
-        Primitive::Struct { name, .. } => name == node_name,
+        Primitive::Constant { name, .. } => name == &node_name,
+        Primitive::Function { name, .. } => name == &node_name,
+        Primitive::Struct { name, .. } => name == &node_name,
     })
 }

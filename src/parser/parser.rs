@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     compiler::enums::Type,
     ensure_fn_pointer,
@@ -12,13 +14,13 @@ pub struct Parser {
     pub tokens: Vec<Token>,
     pub position: usize,
     pub tree: Vec<Primitive>,
-    pub struct_pool: Vec<String>,
+    pub struct_pool: HashSet<String>,
     pub global_public: bool,
     pub warnings: Warnings,
 }
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>, struct_pool: Vec<String>, warnings: Warnings) -> Self {
+    pub fn new(tokens: Vec<Token>, struct_pool: HashSet<String>, warnings: Warnings) -> Self {
         Parser {
             tokens,
             position: 0,
@@ -164,8 +166,8 @@ impl Parser {
     pub fn parse(
         &mut self,
         imports_only: bool,
-        new_struct_pool: Option<Vec<String>>,
-    ) -> (Vec<Primitive>, Vec<String>) {
+        new_struct_pool: Option<HashSet<String>>,
+    ) -> (Vec<Primitive>, HashSet<String>) {
         if new_struct_pool.is_some() {
             self.struct_pool = new_struct_pool.unwrap();
         }

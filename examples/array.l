@@ -9,7 +9,7 @@ fn main() {
     i64 *test = [i64::max(), i64::min(), -39];
 
     for i32 i = 0; i < #arrlen(test); i += 1 {
-        io::printf("test[{}] = {}\n", i, test[i]);
+        io::printf("test[{}] = {}", i, test[i]);
     }
 
     test[2] *= 10;

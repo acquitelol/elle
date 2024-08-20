@@ -20,31 +20,31 @@ else
 endif
 
 $(ASM_PATH): $(TMP_PATH)/out.tmp5.s
-	mv $< $@
-	rm -rf $(TMP_PATH)
+	@mv $< $@
+	@rm -rf $(TMP_PATH)
 
 # Fix codegen issue when doing logical operations with strings on lhs or rhs
 $(TMP_PATH)/out.tmp5.s: $(TMP_PATH)/out.tmp4.s
-	sed -E 's/add\tw([0-9]+), w([0-9]+), _(.*)/add x\1, x\2, _\3/g' $< > $@
+	@sed -E 's/add\tw([0-9]+), w([0-9]+), _(.*)/add x\1, x\2, _\3/g' $< > $@
 
 $(TMP_PATH)/out.tmp4.s: $(TMP_PATH)/out.tmp3.s
-	sed -E 's/adrp\tw([0-9]+), _(.*)/adrp\tx\1, _\2/g' $< > $@
+	@sed -E 's/adrp\tw([0-9]+), _(.*)/adrp\tx\1, _\2/g' $< > $@
 
 # Fix codegen issue when taking size for a buffer as an argument
 $(TMP_PATH)/out.tmp3.s: $(TMP_PATH)/out.tmp2.s
-	sed -E 's/and\t(.*), #(.*), lsl (.*)/lsl\t\1, \3\n\tand\t\1, #\2/g' $< > $@
+	@sed -E 's/and\t(.*), #(.*), lsl (.*)/lsl\t\1, \3\n\tand\t\1, #\2/g' $< > $@
 
 # Fix codegen issue for generating floating point numbers
 $(TMP_PATH)/out.tmp2.s: $(TMP_PATH)/out.tmp1.s
-	sed -E 's/Lfp([0-9]+):/_Lfp\1:/g' $< > $@
+	@sed -E 's/Lfp([0-9]+):/_Lfp\1:/g' $< > $@
 
 $(TMP_PATH)/out.tmp1.s: $(IR_PATH)
-	mkdir -p $(TMP_PATH)
+	@mkdir -p $(TMP_PATH)
 	qbe -o $@ $<
 
 $(IR_PATH): $(EXAMPLES_PATH)/$(RUN_ARGS).l dist/ellec
-	rm -rf $(DIST_PATH)
-	mkdir -p $(DIST_PATH)
+	@rm -rf $(DIST_PATH)
+	@mkdir -p $(DIST_PATH)
 	dist/ellec $< $@ -Winvalidalias
 
 .PHONY: run

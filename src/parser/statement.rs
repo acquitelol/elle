@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::iter::FromIterator;
 
 use super::enums::AstNode;
@@ -14,7 +15,7 @@ pub struct Statement<'a> {
     tokens: Vec<Token>,
     position: usize,
     body: &'a RefCell<Vec<AstNode>>,
-    struct_pool: Vec<String>,
+    struct_pool: HashSet<String>,
 }
 
 impl<'a> Statement<'a> {
@@ -22,7 +23,7 @@ impl<'a> Statement<'a> {
         tokens: Vec<Token>,
         position: usize,
         body: &'a RefCell<Vec<AstNode>>,
-        struct_pool: Vec<String>,
+        struct_pool: HashSet<String>,
     ) -> Self {
         Statement {
             tokens,
@@ -94,8 +95,8 @@ impl<'a> Statement<'a> {
     pub fn get(&mut self, expected: Vec<TokenKind>) -> String {
         let mut found = false;
 
-        for kind in expected.clone().iter().cloned() {
-            if self.current_token().kind == kind {
+        for kind in expected.clone().iter() {
+            if &self.current_token().kind == kind {
                 found = true;
                 break;
             }

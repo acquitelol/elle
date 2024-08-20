@@ -702,9 +702,12 @@ impl Block {
         self.statements.push(Statement::Volatile(instr));
     }
 
-    pub fn assign_instruction(&mut self, temp: Value, r#type: Type, instruction: Instruction) {
-        self.statements
-            .push(Statement::Assign(temp, r#type.into_abi(), instruction));
+    pub fn assign_instruction(&mut self, temp: &Value, r#type: &Type, instruction: Instruction) {
+        self.statements.push(Statement::Assign(
+            temp.to_owned(),
+            r#type.to_owned().into_abi(),
+            instruction,
+        ));
     }
 
     /// Returns true if the block's last instruction is a jump
@@ -817,7 +820,7 @@ impl Function {
             .add_instruction(instruction);
     }
 
-    pub fn assign_instruction(&mut self, temp: Value, r#type: Type, instruction: Instruction) {
+    pub fn assign_instruction(&mut self, temp: &Value, r#type: &Type, instruction: Instruction) {
         self.blocks
             .last_mut()
             .expect("Couldn't find last block!")
@@ -986,11 +989,11 @@ impl Module {
 
             self.functions.retain(|func| {
                 if !used_functions.contains(&func.name) {
-                    #[cfg(debug_assertions)]
-                    println!(
-                        "Eliminating function '{}' due to it not being called or referenced",
-                        func.name.clone()
-                    );
+                    // #[cfg(debug_assertions)]
+                    // println!(
+                    //     "Eliminating function '{}' due to it not being called or referenced",
+                    //     func.name.clone()
+                    // );
                     false
                 } else {
                     true
@@ -1021,11 +1024,11 @@ impl Module {
 
         self.data.retain(|data| {
             if !used_data_sections.contains(&data.name) {
-                #[cfg(debug_assertions)]
-                println!(
-                    "Eliminating data section '{}' due to it not being referenced",
-                    data.name.clone()
-                );
+                // #[cfg(debug_assertions)]
+                // println!(
+                //     "Eliminating data section '{}' due to it not being referenced",
+                //     data.name.clone()
+                // );
                 false
             } else {
                 true

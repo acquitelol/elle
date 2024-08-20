@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::lexer::enums::{TokenKind, ValueKind};
 
 use super::{enums::Primitive, parser::Parser};
@@ -37,36 +39,9 @@ impl<'a> Use<'a> {
             self.parser.advance();
         }
 
-        let mut functions = vec![];
-
-        if self.parser.match_token(TokenKind::AtMark, true) {
-            self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
-            self.parser.advance();
-
-            while self.parser.current_token().kind != TokenKind::RightCurlyBrace {
-                self.parser.expect_tokens(vec![TokenKind::Identifier]);
-
-                let function = self.parser.get_identifier();
-                functions.push(function);
-                self.parser.advance();
-
-                if self.parser.current_token().kind == TokenKind::Comma {
-                    self.parser.advance();
-                    continue;
-                }
-            }
-
-            self.parser.expect_tokens(vec![TokenKind::RightCurlyBrace]);
-            self.parser.advance();
-        }
-
         self.parser.expect_tokens(vec![TokenKind::Semicolon]);
         self.parser.advance();
 
-        Primitive::Use {
-            module,
-            functions,
-            location,
-        }
+        Primitive::Use { module, location }
     }
 }

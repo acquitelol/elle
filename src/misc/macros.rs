@@ -58,12 +58,9 @@ macro_rules! hashmap {
 /// [`val`]: $val:path
 #[macro_export]
 macro_rules! override_and_add_node {
-    ($val:path, $tree:expr, $name:expr, $symbol:expr, $public:expr, $allow_all:expr, $functions:expr $(,)?) => {
-        match existing_definition($tree.clone(), $name.clone()) {
-            Some(index) => {
-                $tree.remove(index);
-            }
-            None => {}
+    ($val:path, $tree:expr, $name:expr, $symbol:expr, $public:expr $(,)?) => {
+        if let Some(index) = existing_definition($tree.clone(), $name.clone()) {
+            $tree.remove(index);
         }
 
         let mut new_symbol = $symbol.clone();
@@ -73,9 +70,7 @@ macro_rules! override_and_add_node {
             ..
         } = new_symbol
         {
-            *usable =
-                is_valid_insert_context($name.clone(), $public, $allow_all, $functions.clone());
-
+            *usable = $public;
             *imported = true;
         }
 
@@ -114,12 +109,9 @@ macro_rules! unknown_function {
         let mut similar_name = None;
         let mut lowest_distance = usize::max_value();
 
-        for func in $module
-            .borrow_mut()
-            .functions
-            .iter()
-            .filter(|func| func.name != "nil")
-        {
+        for func in $module.borrow_mut().functions.iter().filter(|func| {
+            func.name != "nil" && func.name != "main" && (func.usable || func.imported)
+        }) {
             let contains_name = func.name.contains($name.as_str());
             let distance =
                 crate::misc::levenshtein::levenshtein($name.as_str(), func.name.clone().as_str());

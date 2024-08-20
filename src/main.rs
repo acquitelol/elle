@@ -1,7 +1,9 @@
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::env;
 use std::path::Path;
 use std::process::ExitCode;
+use std::time::Instant;
 
 mod compiler;
 mod lexer;
@@ -78,13 +80,32 @@ fn main() -> ExitCode {
         }
     }
 
-    let pool = vec![META_STRUCT_NAME.into()];
-    let struct_pool: RefCell<Vec<String>> = RefCell::new(pool);
-    let tree = lex_and_parse(input_path, &struct_pool, warnings.clone(), true);
+    let mut now = Instant::now();
+    let mut pool = HashSet::new();
+
+    pool.insert(META_STRUCT_NAME.into());
+
+    let struct_pool: RefCell<HashSet<String>> = RefCell::new(pool);
+    let parsed_modules = RefCell::new(HashSet::new());
+
+    let tree = lex_and_parse(
+        &input_path,
+        None,
+        &struct_pool,
+        &parsed_modules,
+        &warnings,
+        true,
+    );
+
+    println!("Tokenization and parsing took {:?}", now.elapsed());
 
     // #[cfg(debug_assertions)]
     // dbg!(&tree);
 
+    now = Instant::now();
+
     Compiler::compile(tree, output_path, warnings);
+
+    println!("Compilation took {:?}", now.elapsed());
     ExitCode::SUCCESS
 }

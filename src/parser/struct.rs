@@ -49,7 +49,7 @@ impl<'a> Struct<'a> {
         self.parser.expect_tokens(vec![TokenKind::Semicolon]);
         self.parser.advance();
 
-        self.parser.struct_pool.push(name.clone());
+        self.parser.struct_pool.insert(name.clone());
 
         Primitive::Struct {
             name,

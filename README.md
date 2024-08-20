@@ -827,12 +827,6 @@ use path/to/module;
 
 where, in your current directory, there is a `./path/to/module.elle` or a `./path/to/module.l` file.
 
-You may also choose to import specific symbols from this module:
-
-```c
-use path/to/module@{func1, const2};
-```
-
 The syntax to export a symbol from your current file is as follows:
 
 ```c
@@ -846,7 +840,12 @@ pub fn foo() {
 
 which you can then import
 ```c
-use module@{myFavouriteNumber, foo};
+use std/io;
+use module;
+
+fn main() {
+    io::println(foo() + myFavouriteNumber);
+}
 ```
 
 You can also add `global pub;` to your module to automatically make every symbol public in the module.
