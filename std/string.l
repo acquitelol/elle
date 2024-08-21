@@ -1,31 +1,8 @@
 use std/libc/io;
 use std/libc/mem;
+use std/libc/string;
 use std/core;
 global pub;
-
-external fn memchr(string str, char character, i64 n) -> i64;
-external fn memcmp(string str1, string str2, i64 n) -> i32;
-external fn memcpy(void *dest, void *src, i64 n) -> i64;
-external fn memmove(void *dest, void *src, i64 n) -> i64;
-external fn memset(string str, char character, i64 n) -> i64;
-
-external fn strcat(string dest, string src) -> string;
-external fn strncat(string dest, string src, i64 n) -> string;
-external fn strchr(string str, char character) -> string;
-external fn strcmp(string str1, string str2) -> i32;
-external fn strncmp(string str1, string str2, i64 n) -> i32;
-external fn strcoll(string str1, string str2) -> i32;
-external fn strcpy(string dest, string src) -> string;
-external fn strncpy(string dest, string src, i64 n) -> string;
-external fn strspn(string str1, string str2) -> i64;
-external fn strcspn(string str1, string str2) -> i64;
-external fn strerror(i32 errnum) -> string;
-external fn strlen(string str) -> i64;
-external fn strpbrk(string str1, string str2) -> string;
-external fn strrchr(string str, char character) -> string;
-external fn strstr(string haystack, string needle) -> string;
-external fn strtok(string str, string delim) -> string;
-external fn strxfrm(string dest, string src, i64 n) -> i64;
 
 // NOTE: This is for null-terminated strings
 // so it may perform differently than you expect
@@ -92,15 +69,6 @@ fn string::to_lower(string self) {
     }
 
     return out;
-}
-
-
-fn string::ascii_lower() {
-    return "abcdefghijklmnopqrstuvwxyz";
-}
-
-fn string::ascii_upper() {
-    return string::ascii_lower().to_upper();
 }
 
 fn string::slice(string self, i32 start, i32 end) -> string {
@@ -443,4 +411,25 @@ fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
 fn string::format(ElleMeta meta, string fmt, ...) -> string {
     variadic args[meta.arity - 1];
     return __internal_fmt(fmt, meta, args);
+}
+
+fn string::ascii_lower() {
+    return "abcdefghijklmnopqrstuvwxyz";
+}
+
+fn string::ascii_upper() {
+    return string::ascii_lower().to_upper();
+}
+
+fn string::ascii_numerics() {
+    return "0123456789";
+}
+
+fn string::ascii_all() {
+    return string::format(
+        "{}{}{}",
+        string::ascii_lower(),
+        string::ascii_upper(),
+        string::ascii_numerics()
+    )
 }

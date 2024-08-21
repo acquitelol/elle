@@ -1,21 +1,20 @@
 use std::cell::RefCell;
 use std::collections::HashSet;
-use std::collections::VecDeque;
 use std::fs;
+use std::time::Instant;
 
-use compiler::enums::Type;
-use lexer::enums::Location;
-use lexer::enums::ValueKind;
-use lexer::{enums::TokenKind, lexer::Lexer};
-use parser::enums::Argument;
-use parser::enums::AstNode;
-use parser::enums::Primitive;
-use parser::parser::Parser;
+use crate::compiler::enums::Type;
+use crate::lexer::enums::Location;
+use crate::lexer::enums::ValueKind;
+use crate::lexer::{enums::TokenKind, lexer::Lexer};
+use crate::parser::enums::Argument;
+use crate::parser::enums::AstNode;
+use crate::parser::enums::Primitive;
+use crate::parser::parser::Parser;
 
-use crate::compiler;
-use crate::lexer;
+use crate::elapsed_with_color;
+use crate::lexer::colors::{GREEN, RESET};
 use crate::override_and_add_node;
-use crate::parser;
 use crate::Warnings;
 use crate::META_STRUCT_NAME;
 
@@ -25,29 +24,38 @@ pub fn lex_and_parse(
     struct_pool: &RefCell<HashSet<String>>,
     parsed_modules: &RefCell<HashSet<String>>,
     warnings: &Warnings,
-    root: bool,
+    debug: bool,
+    nesting: usize,
 ) -> Vec<Primitive> {
-    let with_elle = fs::metadata(format!("{}.elle", input_path)).is_ok();
-    let base = fs::metadata(input_path.clone()).is_ok();
+    let content = {
+        let with_elle = fs::metadata(format!("{}.elle", input_path)).is_ok();
+        let base = fs::metadata(input_path).is_ok();
 
-    let content = match fs::read_to_string(&format!(
-        "{}{}",
-        input_path,
-        if base {
-            ""
-        } else {
-            if with_elle {
-                ".elle"
+        let content = match fs::read_to_string(&format!(
+            "{}{}",
+            input_path,
+            if base {
+                ""
             } else {
-                ".l"
+                if with_elle {
+                    ".elle"
+                } else {
+                    ".l"
+                }
             }
-        }
-    )) {
-        Ok(content) => content,
-        Err(err) => {
-            eprintln!("\nERROR: Could not load module \"{input_path}\": {err}\n");
-            return Vec::new();
-        }
+        )) {
+            Ok(content) => content,
+            Err(err) => {
+                eprintln!(
+                    "\nERROR: Could not load module \"{}\": {}\n",
+                    input_path, err
+                );
+
+                return vec![];
+            }
+        };
+
+        content
     };
 
     if content.trim().is_empty() {
@@ -79,7 +87,7 @@ pub fn lex_and_parse(
     );
 
     let mut fallback = vec![];
-    let tree = existing_tree.unwrap_or(&mut fallback);
+    let mut tree = existing_tree.unwrap_or(&mut fallback);
 
     let (imports, new_struct_pool) = parser.parse(true, None);
     struct_pool.replace_with(|_| new_struct_pool);
@@ -87,28 +95,74 @@ pub fn lex_and_parse(
     for import in imports.iter().cloned() {
         match import {
             Primitive::Use { module, .. } if !parsed_modules.borrow().contains(&module) => {
+                let now = if debug { Some(Instant::now()) } else { None };
+
+                if debug {
+                    println!(
+                        "{}╭― Importing module '{GREEN}{}{RESET}'",
+                        if nesting > 0 {
+                            "┆    ".repeat(nesting)
+                        } else {
+                            "".into()
+                        },
+                        module
+                    );
+                }
+
                 let nodes = lex_and_parse(
                     &module,
                     Some(tree),
                     struct_pool,
                     parsed_modules,
                     warnings,
-                    false,
+                    debug,
+                    nesting + 1,
                 );
 
                 for symbol in nodes.iter().rev() {
                     match symbol.clone() {
                         Primitive::Use { .. } => {}
                         Primitive::Constant { name, public, .. } => {
-                            override_and_add_node!(Primitive::Constant, tree, name, symbol, public);
+                            override_and_add_node!(
+                                Primitive::Constant,
+                                &mut tree,
+                                &name,
+                                symbol,
+                                public
+                            );
                         }
                         Primitive::Function { name, public, .. } => {
-                            override_and_add_node!(Primitive::Function, tree, name, symbol, public);
+                            override_and_add_node!(
+                                Primitive::Function,
+                                &mut tree,
+                                &name,
+                                symbol,
+                                public
+                            );
                         }
                         Primitive::Struct { name, public, .. } => {
-                            override_and_add_node!(Primitive::Struct, tree, name, symbol, public);
+                            override_and_add_node!(
+                                Primitive::Struct,
+                                &mut tree,
+                                &name,
+                                symbol,
+                                public
+                            );
                         }
                     }
+                }
+
+                if debug {
+                    println!(
+                        "{}╰― Imported '{GREEN}{}{RESET}' in {}",
+                        if nesting > 0 {
+                            "┆    ".repeat(nesting)
+                        } else {
+                            "".into()
+                        },
+                        module,
+                        elapsed_with_color!(now.unwrap().elapsed())
+                    );
                 }
 
                 parsed_modules.borrow_mut().insert(module);
@@ -125,7 +179,7 @@ pub fn lex_and_parse(
     // Add global constants
     // - nil => 0 (nullptr)
     // - ElleMeta => Utility struct
-    if root {
+    if nesting == 0 {
         tree.insert(
             0,
             Primitive::Constant {
@@ -185,7 +239,7 @@ pub fn lex_and_parse(
     tree.to_vec()
 }
 
-pub fn existing_definition(tree: Vec<Primitive>, node_name: String) -> Option<usize> {
+pub fn existing_definition(tree: &mut Vec<Primitive>, node_name: &str) -> Option<usize> {
     tree.iter().position(|item| match item {
         Primitive::Use { .. } => false,
         Primitive::Constant { name, .. } => name == &node_name,

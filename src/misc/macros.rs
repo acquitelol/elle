@@ -59,7 +59,7 @@ macro_rules! hashmap {
 #[macro_export]
 macro_rules! override_and_add_node {
     ($val:path, $tree:expr, $name:expr, $symbol:expr, $public:expr $(,)?) => {
-        if let Some(index) = existing_definition($tree.clone(), $name.clone()) {
+        if let Some(index) = existing_definition($tree, $name) {
             $tree.remove(index);
         }
 
@@ -76,6 +76,30 @@ macro_rules! override_and_add_node {
 
         $tree.insert(0, new_symbol);
     };
+}
+
+/// Returns a formatted string with an ANSI color depending on
+/// the [`elapsed`] time provided using [`colors`]
+///
+/// There are three possible results:
+///
+/// - Green (< 500ms)
+/// - Yellow (< 2000ms)
+/// - Red (Anything else)
+///
+/// [`elapsed`]: $elapsed:expr
+/// [`colors`]: crate::lexer::colors
+#[macro_export]
+macro_rules! elapsed_with_color {
+    ($elapsed:expr) => {{
+        let color = match $elapsed.as_millis() {
+            val if val < 500 => crate::lexer::colors::GREEN,
+            val if val < 2000 => crate::lexer::colors::YELLOW,
+            _ => crate::lexer::colors::RED,
+        };
+
+        format!("{color}{:?}{}", $elapsed, crate::lexer::colors::RESET)
+    }};
 }
 
 /// Throws an error informing the user that [`self.current_token()`]

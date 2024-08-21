@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use crate::{
     compiler::enums::Type,
     lexer::enums::{Location, Token, TokenKind, ValueKind},

@@ -41,6 +41,10 @@ local fn __err(i64 args, ElleMeta meta, bool newline) {
     io::fprintf(stderr, fmt, error);
     io::fflush(stderr);
 
+    if meta.arity > 0 {
+        free(error);
+    }
+
     if newline {
         io::putchar('\n');
     }

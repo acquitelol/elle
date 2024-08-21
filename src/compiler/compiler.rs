@@ -49,7 +49,7 @@ impl Compiler {
 
     fn new_variable(
         &mut self,
-        ty: Type,
+        ty: &Type,
         name: &str,
         func: Option<&RefCell<Function>>,
         new: bool,
@@ -175,9 +175,9 @@ impl Compiler {
 
         let mut args = vec![];
 
-        for argument in arguments.clone() {
+        for argument in arguments {
             let ty = argument.r#type.clone();
-            let tmp = self.new_variable(ty.clone(), &argument.name, None, false, false)?;
+            let tmp = self.new_variable(&ty, &argument.name, None, false, false)?;
 
             args.push((ty.into_abi(), tmp));
         }
@@ -198,7 +198,7 @@ impl Compiler {
             usable,
             imported,
             arguments: args,
-            return_type: return_type.clone(),
+            return_type,
             blocks: vec![],
         };
 
@@ -218,12 +218,12 @@ impl Compiler {
         //
         // The compiler is single pass which means that
         // we need to forward-declare the function with an empty body
-        module.borrow_mut().add_function(func.clone());
+        module.borrow_mut().add_function(func);
 
-        for statement in body.clone() {
+        for statement in body.iter() {
             // Ignore plain literals that aren't assigned to anything
-            match statement.clone() {
-                AstNode::LiteralStatement { kind, .. } => match kind.clone() {
+            match statement {
+                AstNode::LiteralStatement { kind, .. } => match kind {
                     TokenKind::ExactLiteral => {
                         match self.generate_statement(
                             &func_ref,
@@ -257,31 +257,36 @@ impl Compiler {
         }
 
         let mut first_ty: Option<Type> = None;
-        let ty_err_message = |first: Type, second: Type, location: Location| {
-            location.error(format!(
-                "Inconsistent return types in function '{}': {:?} and {:?}",
-                func.name, first, second
-            ))
-        };
 
-        for block in func_ref.borrow_mut().blocks.iter().cloned() {
-            for statement in block.statements {
-                if let Statement::Volatile(Instruction::Return(val)) = statement.clone() {
+        macro_rules! ty_err_message {
+            ($first:expr, $second:expr, $location:expr $(,)?) => {
+                $location.error(format!(
+                    "Inconsistent return types in function '{}': {:?} and {:?}",
+                    func_ref.borrow_mut().name,
+                    $first,
+                    $second
+                ))
+            };
+        }
+
+        for block in func_ref.borrow_mut().blocks.iter() {
+            for statement in block.statements.clone() {
+                if let Statement::Volatile(Instruction::Return(val)) = statement {
                     if let Some(val) = val {
                         if first_ty.is_none() {
                             first_ty = Some(val.0)
                         } else {
-                            let r_ty = val.0.clone();
-                            let f_ty = first_ty.clone().unwrap();
+                            let ret_ty = val.0.clone();
+                            let fst_ty = first_ty.clone().unwrap();
 
-                            if r_ty != f_ty
+                            if ret_ty != fst_ty
                                 && !matches!(val.1, Value::Const(_, _))
-                                && !(r_ty.is_pointer()
-                                    && f_ty.is_pointer()
-                                    && (r_ty.clone().get_pointer_inner().unwrap().is_void()
-                                        || f_ty.clone().get_pointer_inner().unwrap().is_void()))
+                                && !(ret_ty.is_pointer()
+                                    && fst_ty.is_pointer()
+                                    && (ret_ty.get_pointer_inner().unwrap().is_void()
+                                        || fst_ty.get_pointer_inner().unwrap().is_void()))
                             {
-                                panic!("{}", ty_err_message(val.0, first_ty.unwrap(), val.2))
+                                panic!("{}", ty_err_message!(val.0, first_ty.unwrap(), val.2))
                             }
                         }
                     }
@@ -289,24 +294,24 @@ impl Compiler {
             }
         }
 
-        if first_ty.clone().is_some() {
+        if first_ty.is_some() {
             let return_ty = func_ref.borrow_mut().return_type.clone();
 
             if return_ty.is_none() {
                 func_ref.borrow_mut().return_type = first_ty;
             } else {
-                let r_ty = return_ty.clone().unwrap();
-                let f_ty = first_ty.clone().unwrap();
+                let ret_ty = return_ty.clone().unwrap();
+                let fst_ty = first_ty.clone().unwrap();
 
-                if r_ty != f_ty
-                    && !(r_ty.is_pointer()
-                        && f_ty.is_pointer()
-                        && (r_ty.clone().get_pointer_inner().unwrap().is_void()
-                            || f_ty.clone().get_pointer_inner().unwrap().is_void()))
+                if ret_ty != fst_ty
+                    && !(ret_ty.is_pointer()
+                        && fst_ty.is_pointer()
+                        && (ret_ty.get_pointer_inner().unwrap().is_void()
+                            || fst_ty.get_pointer_inner().unwrap().is_void()))
                 {
                     panic!(
                         "{}",
-                        ty_err_message(return_ty.unwrap(), first_ty.unwrap(), location)
+                        ty_err_message!(return_ty.unwrap(), first_ty.unwrap(), location)
                     )
                 }
             }
@@ -330,7 +335,7 @@ impl Compiler {
             func_new.return_type = Some(Type::Word)
         }
 
-        func_new.return_type = func_new.return_type.clone().map(|ty| ty.into_abi());
+        func_new.return_type = func_new.return_type.map(|ty| ty.into_abi());
 
         // Remove the empty function from the module
         // it will be added automatically when this function leaves scope
@@ -359,7 +364,7 @@ impl Compiler {
                 location,
             } => {
                 let existing = match self.get_variable(name.as_str(), Some(func)) {
-                    Ok((ty, _)) => ty.clone(),
+                    Ok((ty, _)) => ty,
                     Err(_) => Type::Word,
                 };
 
@@ -368,10 +373,10 @@ impl Compiler {
                 }
 
                 let res = self.get_variable(&format!("{}.addr", name), Some(func));
-                let ty = r#type.unwrap_or(existing.clone());
+                let ty = r#type.unwrap_or(existing);
 
                 let temp = self
-                    .new_variable(ty.clone(), &name, Some(func), false, false)
+                    .new_variable(&ty, &name, Some(func), false, false)
                     .expect(&location.error(format!(
                         "Unexpected error when trying to make a new variable called '{}'",
                         name
@@ -380,7 +385,7 @@ impl Compiler {
                 let parsed = self.generate_statement(
                     func,
                     module,
-                    *value.clone(),
+                    *value,
                     Some(ty.clone()),
                     Some(temp.clone()),
                     false,
@@ -388,14 +393,7 @@ impl Compiler {
 
                 if let Some((ret_ty, value)) = parsed {
                     let (final_ty, final_val) = if ret_ty != ty {
-                        self.convert_to_type(
-                            func,
-                            ret_ty.clone(),
-                            ty.clone(),
-                            value.clone(),
-                            location.clone(),
-                            false,
-                        )
+                        self.convert_to_type(func, ret_ty, ty.clone(), value, &location, false)
                     } else {
                         (ty.clone(), value.clone())
                     };
@@ -403,7 +401,7 @@ impl Compiler {
                     if res.is_ok() {
                         let (addr_ty, addr_val) = res.unwrap();
                         let tmp = self
-                            .new_variable(addr_ty.clone(), &name, Some(func), true, false)
+                            .new_variable(&addr_ty, &name, Some(func), true, false)
                             .expect(&location.error(format!(
                                 "Unexpected error when trying to make a new variable called '{}'",
                                 name
@@ -412,7 +410,7 @@ impl Compiler {
                         if addr_ty != final_ty
                             && !(addr_ty.is_pointer()
                                 && final_ty.is_pointer()
-                                && final_ty.clone().get_pointer_inner().unwrap().is_void())
+                                && final_ty.get_pointer_inner().unwrap().is_void())
                         {
                             panic!(
                                 "{}",
@@ -439,7 +437,7 @@ impl Compiler {
                     }
 
                     let addr_temp = self
-                        .new_variable(ty.clone(), &format!("{}.addr", name), Some(func), false, false)
+                        .new_variable(&ty, &format!("{}.addr", name), Some(func), false, false)
                         .expect(&location.error(format!("Unexpected error when trying to create a variable to store the stack address of a local variable named '{}'", name)));
 
                     func.borrow_mut().assign_instruction(
@@ -453,11 +451,11 @@ impl Compiler {
 
                     func.borrow_mut().add_instruction(Instruction::Store(
                         final_ty.clone(),
-                        addr_temp.clone(),
+                        addr_temp,
                         final_val,
                     ));
 
-                    return Some((final_ty.clone(), temp));
+                    return Some((final_ty, temp));
                 }
 
                 None
@@ -465,8 +463,7 @@ impl Compiler {
             AstNode::ReturnStatement {
                 value, location, ..
             } => {
-                match self.generate_statement(func, module, *value.clone(), ty.clone(), None, true)
-                {
+                match self.generate_statement(func, module, *value, ty, None, true) {
                     Some((ret_ty, value)) => {
                         if !func.borrow_mut().manual {
                             func.borrow_mut().add_instruction(Instruction::Return(Some((
@@ -497,13 +494,13 @@ impl Compiler {
                 }
 
                 let (left_ty_unparsed, left_val_unparsed) = self
-                    .generate_statement(func, module, *left.clone(), ty.clone(), None, is_return)
+                    .generate_statement(func, module, *left, ty.clone(), None, is_return)
                     .expect(&location.error(
                         "Unexpected error when trying to parse left side of an arithmetic operation"
                     ));
 
                 let (right_ty_unparsed, right_val_unparsed) = self
-                    .generate_statement(func, module, *right.clone(), ty.clone(), None, is_return)
+                    .generate_statement(func, module, *right, ty.clone(), None, is_return)
                     .expect(&location.error(
                         "Unexpected error when trying to parse right side of an arithmetic operation"
                     ));
@@ -518,7 +515,7 @@ impl Compiler {
                         right_ty_unparsed,
                         left_ty_unparsed,
                         right_val_unparsed,
-                        location.clone(),
+                        &location,
                         false,
                     );
 
@@ -529,7 +526,7 @@ impl Compiler {
                         left_ty_unparsed,
                         right_ty_unparsed,
                         left_val_unparsed,
-                        location.clone(),
+                        &location,
                         false,
                     );
 
@@ -538,6 +535,7 @@ impl Compiler {
                 }
 
                 let instruction_ty = left_ty;
+                let cloned_ty = instruction_ty.clone();
 
                 let res = match operator.clone() {
                     TokenKind::Add => Instruction::Add(left_val, right_val),
@@ -546,41 +544,32 @@ impl Compiler {
                     TokenKind::Divide => Instruction::Divide(left_val, right_val),
                     TokenKind::Modulus => Instruction::Modulus(left_val, right_val),
                     TokenKind::GreaterThan => Instruction::Compare(
-                        instruction_ty.clone(),
+                        cloned_ty,
                         Comparison::GreaterThan,
                         left_val,
                         right_val,
                     ),
                     TokenKind::GreaterThanEqual => Instruction::Compare(
-                        instruction_ty.clone(),
+                        cloned_ty,
                         Comparison::GreaterThanEqual,
                         left_val,
                         right_val,
                     ),
-                    TokenKind::LessThan => Instruction::Compare(
-                        instruction_ty.clone(),
-                        Comparison::LessThan,
-                        left_val,
-                        right_val,
-                    ),
+                    TokenKind::LessThan => {
+                        Instruction::Compare(cloned_ty, Comparison::LessThan, left_val, right_val)
+                    }
                     TokenKind::LessThanEqual => Instruction::Compare(
-                        instruction_ty.clone(),
+                        cloned_ty,
                         Comparison::LessThanEqual,
                         left_val,
                         right_val,
                     ),
-                    TokenKind::EqualTo => Instruction::Compare(
-                        instruction_ty.clone(),
-                        Comparison::Equal,
-                        left_val,
-                        right_val,
-                    ),
-                    TokenKind::NotEqualTo => Instruction::Compare(
-                        instruction_ty.clone(),
-                        Comparison::NotEqual,
-                        left_val,
-                        right_val,
-                    ),
+                    TokenKind::EqualTo => {
+                        Instruction::Compare(cloned_ty, Comparison::Equal, left_val, right_val)
+                    }
+                    TokenKind::NotEqualTo => {
+                        Instruction::Compare(cloned_ty, Comparison::NotEqual, left_val, right_val)
+                    }
                     TokenKind::BitwiseAnd => Instruction::BitwiseAnd(left_val, right_val),
                     TokenKind::BitwiseOr => Instruction::BitwiseOr(left_val, right_val),
                     TokenKind::BitwiseXor => Instruction::BitwiseXor(left_val, right_val),
@@ -599,7 +588,7 @@ impl Compiler {
                 let final_ty = if operator.is_comparative() {
                     Type::Boolean
                 } else {
-                    instruction_ty.clone()
+                    instruction_ty
                 };
 
                 func.borrow_mut()
@@ -611,7 +600,7 @@ impl Compiler {
                 kind,
                 value,
                 location,
-            } => match kind.clone() {
+            } => match kind {
                 TokenKind::Identifier => match value {
                     ValueKind::String(name) => {
                         let var = self.get_variable(&name, Some(func));
@@ -690,7 +679,7 @@ impl Compiler {
                             _ => Type::Word,
                         };
 
-                        let mut final_ty = ty.clone().unwrap_or(num_ty);
+                        let mut final_ty = ty.unwrap_or(num_ty);
 
                         if is_return {
                             final_ty = func.borrow_mut().return_type.clone().unwrap_or(final_ty);
@@ -700,10 +689,8 @@ impl Compiler {
                     }
                     ValueKind::String(val) => {
                         self.tmp_counter += 1;
-                        let name = self.tmp_name_with_debug_assertions(
-                            &func.borrow_mut().name.to_string(),
-                            true,
-                        );
+                        let name = self
+                            .tmp_name_with_debug_assertions(&func.borrow_mut().name.clone(), true);
 
                         self.data_sections.push(Data::new(
                             Linkage::private(),
@@ -722,10 +709,8 @@ impl Compiler {
                     }
                     ValueKind::Nil => {
                         self.tmp_counter += 1;
-                        let name = self.tmp_name_with_debug_assertions(
-                            &func.borrow_mut().name.to_string(),
-                            true,
-                        );
+                        let name = self
+                            .tmp_name_with_debug_assertions(&func.borrow_mut().name.clone(), true);
 
                         self.data_sections.push(Data::new(
                             Linkage::private(),
@@ -746,7 +731,7 @@ impl Compiler {
             } => {
                 // Get the type of the functions based on the ones currently imported into this module
                 let cached_ty = self.ret_types.get(&name).unwrap_or(&Type::Word).to_owned();
-                let declarative_ty = ty.clone().unwrap_or(cached_ty);
+                let declarative_ty = ty.unwrap_or(cached_ty);
                 let mut should_get_address = false; // Gets address if first arg's ty is the same as ty predicate
                 let mut first_param = None;
 
@@ -771,41 +756,25 @@ impl Compiler {
                         ))
                     );
 
-                    // The first param needs to be compiled to get its type
-                    // however if the first param is mutating (ie `yield()`)
-                    // then there will be a double yield causing many issues.
-                    // Therefore, we store the first param here to be
-                    // used later when compiling all of the params instead
-                    // of compiling the first parameter again
-                    first_param = Some((ty.clone(), val));
-
                     // struct access
                     if ty.is_struct() {
                         should_get_address = true;
                         name = format!("{}.{}", ty.get_struct_inner().unwrap(), name)
                     // struct * access
-                    } else if ty.is_pointer() && ty.clone().get_pointer_inner().unwrap().is_struct()
-                    {
+                    } else if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct() {
                         name = format!(
                             "{}.{}",
                             ty.get_pointer_inner().unwrap().get_struct_inner().unwrap(),
                             name
                         )
                     // string access
-                    } else if ty.is_pointer()
-                        && ty.clone().get_pointer_inner().unwrap() == Type::Char
-                    {
+                    } else if ty.is_pointer() && ty.get_pointer_inner().unwrap() == Type::Char {
                         should_get_address = true;
                         name = format!("string.{}", name)
                     // string * access
                     } else if ty.is_pointer()
-                        && ty.clone().get_pointer_inner().unwrap().is_pointer()
-                        && ty
-                            .clone()
-                            .get_pointer_inner()
-                            .unwrap()
-                            .get_pointer_inner()
-                            .unwrap()
+                        && ty.get_pointer_inner().unwrap().is_pointer()
+                        && ty.get_pointer_inner().unwrap().get_pointer_inner().unwrap()
                             == Type::Char
                     {
                         name = format!("string.{}", name)
@@ -813,13 +782,21 @@ impl Compiler {
                     } else {
                         name = format!("{}.{}", ty.id(), name)
                     }
+
+                    // The first param needs to be compiled to get its type
+                    // however if the first param is mutating (ie `yield()`)
+                    // then there will be a double yield causing many issues.
+                    // Therefore, we store the first param here to be
+                    // used later when compiling all of the params instead
+                    // of compiling the first parameter again
+                    first_param = Some((ty, val));
                 }
 
                 let tmp_function_option = module
                     .borrow_mut()
                     .functions
                     .iter()
-                    .find(|function| function.name == name.clone())
+                    .find(|function| function.name == name)
                     .map(|function| function.clone());
 
                 let tmp_function = if let Some(func) = tmp_function_option {
@@ -830,8 +807,8 @@ impl Compiler {
 
                     if let Ok((ty, _)) = callback {
                         if ty.is_pointer()
-                            && ty.clone().get_pointer_inner().unwrap().is_struct()
-                            && &ty.get_pointer_inner().unwrap().get_struct_inner().unwrap() == "fn"
+                            && ty.get_pointer_inner().unwrap().is_struct()
+                            && ty.get_pointer_inner().unwrap().get_struct_inner().unwrap() == "fn"
                         {
                             Function::new(
                                 Linkage::public(),
@@ -844,7 +821,7 @@ impl Compiler {
                                 true,
                                 false,
                                 // TODO: Allow the function declaration to specify a real signature instead of just `fn *`
-                                parameters.clone().iter().map(|param| {
+                                parameters.iter().map(|param| {
                                     self.generate_statement(
                                         func,
                                         module,
@@ -891,13 +868,13 @@ impl Compiler {
                     if inner.0.is_struct() {
                         let name = inner.0.get_struct_inner().unwrap();
 
-                        if name == META_STRUCT_NAME.to_string() {
+                        if name == META_STRUCT_NAME {
                             add_meta = true;
                         }
                     }
                 }
 
-                for (i, mut parameter) in parameters.clone().iter().cloned().enumerate() {
+                for (i, mut parameter) in parameters.iter().cloned().enumerate() {
                     let param_ty = {
                         let tmp = tmp_function.arguments.get(i + add_meta as usize);
 
@@ -916,7 +893,7 @@ impl Compiler {
                             && should_get_address
                             && first_param.is_some()
                             && first_arg.0.is_pointer()
-                            && first_arg.0.clone().get_pointer_inner().unwrap()
+                            && first_arg.0.get_pointer_inner().unwrap()
                                 == first_param.clone().unwrap().0
                         {
                             parameter.1 = AstNode::AddressStatement {
@@ -946,20 +923,20 @@ impl Compiler {
                     };
 
                     params.push(if param_ty.is_none() || ty == param_ty.clone().unwrap() {
-                        (ty.clone(), val.clone())
+                        (ty, val)
                     } else {
                         self.convert_to_type(
                             func,
                             ty.into_abi(),
                             param_ty.unwrap(),
-                            val.clone(),
-                            parameter.0.clone(),
+                            val,
+                            &parameter.0,
                             false,
                         )
                     });
                 }
 
-                let ty = tmp_function.return_type.clone().unwrap_or(declarative_ty);
+                let ty = tmp_function.return_type.unwrap_or(declarative_ty);
 
                 if add_meta {
                     let res = self
@@ -968,7 +945,7 @@ impl Compiler {
                             module,
                             Compiler::generate_meta_struct(
                                 func,
-                                params.clone(),
+                                &params,
                                 parameters,
                                 location.clone(),
                             ),
@@ -1044,11 +1021,12 @@ impl Compiler {
                 location,
             } => {
                 let buf_ty = Type::Pointer(Box::new(r#type.clone().unwrap()));
+
                 let (ty, val) = self
                     .generate_statement(
                         func,
                         module,
-                        if let Some(ty) = r#type.clone() {
+                        if let Some(ref ty) = r#type {
                             AstNode::ArithmeticOperation {
                                 left: size,
                                 right: Box::new(AstNode::LiteralStatement {
@@ -1076,14 +1054,14 @@ impl Compiler {
                     )));
 
                 let tmp = self
-                    .new_variable(buf_ty.clone(), &name.clone(), Some(func), true, false)
+                    .new_variable(&buf_ty, &name, Some(func), true, false)
                     .expect(&location.error(format!(
                         "Unexpected error when trying to create a variable named '{}'",
                         name
                     )));
 
                 let (_, converted_val) =
-                    self.convert_to_type(func, ty, Type::Long, val, location, false);
+                    self.convert_to_type(func, ty, Type::Long, val, &location, false);
 
                 func.borrow_mut().assign_instruction(
                     &tmp,
@@ -1093,7 +1071,7 @@ impl Compiler {
 
                 self.buf_metadata.insert(
                     tmp.clone(),
-                    (buf_ty.clone().get_pointer_inner().unwrap(), converted_val),
+                    (buf_ty.get_pointer_inner().unwrap(), converted_val),
                 );
 
                 Some((Type::Pointer(Box::new(buf_ty)), tmp))
@@ -1134,9 +1112,9 @@ impl Compiler {
                 }
 
                 let inner = if left_ty.is_pointer() {
-                    left_ty.clone().get_pointer_inner().unwrap()
+                    left_ty.get_pointer_inner().unwrap()
                 } else {
-                    right_ty.clone().get_pointer_inner().unwrap()
+                    right_ty.get_pointer_inner().unwrap()
                 };
 
                 let node = AstNode::ArithmeticOperation {
@@ -1151,11 +1129,7 @@ impl Compiler {
                             value: ValueKind::Number(inner.size(module) as i128),
                             location: right_location.clone(),
                         }),
-                        right: if left_ty.is_pointer() {
-                            right.clone()
-                        } else {
-                            left.clone()
-                        },
+                        right: if left_ty.is_pointer() { right } else { left },
                         operator: TokenKind::Multiply,
                         location: right_location.clone(),
                     }),
@@ -1164,13 +1138,13 @@ impl Compiler {
                 };
 
                 let (_, compiled_location) = self
-                    .generate_statement(func, module, node.clone(), None, None, false)
+                    .generate_statement(func, module, node, None, None, false)
                     .expect(&right_location.error(format!(
                         "Unexpected error when trying to compile the offset of a {} statement",
                         if value.is_some() { "store" } else { "load" }
                     )));
 
-                if let Some(val) = value.clone() {
+                if let Some(ref val) = value {
                     let (_, compiled) = self
                         .generate_statement(
                             func,
@@ -1199,10 +1173,10 @@ impl Compiler {
                 func.borrow_mut().assign_instruction(
                     &temp,
                     &inner,
-                    Instruction::Load(inner.clone(), compiled_location.clone()),
+                    Instruction::Load(inner.clone(), compiled_location),
                 );
 
-                Some((inner.clone(), temp))
+                Some((inner, temp))
             }
             AstNode::IfStatement {
                 condition,
@@ -1213,7 +1187,7 @@ impl Compiler {
                 self.scopes.push(hashmap!());
 
                 let (_, value) = self
-                    .generate_statement(func, module, *condition.clone(), ty, None, false)
+                    .generate_statement(func, module, *condition, ty, None, false)
                     .expect(&location.error(
                         "Unexpected error when trying to compile the condition of an if statement",
                     ));
@@ -1236,13 +1210,13 @@ impl Compiler {
 
                 func.borrow_mut().add_block(true_label);
 
-                for statement in body.clone() {
-                    match statement.clone() {
+                for statement in body.iter() {
+                    match statement {
                         AstNode::LiteralStatement {
                             kind,
                             value: literal_value,
                             location,
-                        } => match kind.clone() {
+                        } => match kind {
                             TokenKind::ExactLiteral => {
                                 match self.generate_statement(
                                     func,
@@ -1252,7 +1226,7 @@ impl Compiler {
                                     None,
                                     false,
                                 ) {
-                                    Some((_, value)) => match literal_value.clone() {
+                                    Some((_, value)) => match literal_value {
                                         ValueKind::String(val) => match val.as_str() {
                                             "__MANUAL_RETURN__" => {
                                                 func.borrow_mut().manual = true;
@@ -1301,9 +1275,9 @@ impl Compiler {
 
                     func.borrow_mut().add_block(false_label.clone());
 
-                    for statement in else_body.clone() {
-                        match statement.clone() {
-                            AstNode::LiteralStatement { kind, .. } => match kind.clone() {
+                    for statement in else_body.iter() {
+                        match statement {
+                            AstNode::LiteralStatement { kind, .. } => match kind {
                                 TokenKind::ExactLiteral => match self.generate_statement(
                                     func,
                                     module,
@@ -1370,7 +1344,7 @@ impl Compiler {
                 func.borrow_mut().add_block(cond_label.clone());
 
                 let (_, value) = self
-                    .generate_statement(func, module, *condition.clone(), ty.clone(), None, false)
+                    .generate_statement(func, module, *condition, ty.clone(), None, false)
                     .expect(&location.error(
                         "Unexpected error when trying to compile the condition of a while loop",
                     ));
@@ -1384,7 +1358,7 @@ impl Compiler {
                 func.borrow_mut().add_block(step_label.clone());
 
                 if let Some(step) = step {
-                    self.generate_statement(func, module, *step, ty.clone(), None, false)
+                    self.generate_statement(func, module, *step, ty, None, false)
                         .expect(&location.error(
                             "Unexpected error when trying to compile the step of a while loop",
                         ));
@@ -1395,9 +1369,9 @@ impl Compiler {
 
                 func.borrow_mut().add_block(body_label.clone());
 
-                for statement in body.clone() {
-                    match statement.clone() {
-                        AstNode::LiteralStatement { kind, .. } => match kind.clone() {
+                for statement in body.iter() {
+                    match statement {
+                        AstNode::LiteralStatement { kind, .. } => match kind {
                             TokenKind::ExactLiteral => {
                                 match self.generate_statement(
                                     func,
@@ -1445,16 +1419,16 @@ impl Compiler {
                 location,
             } => {
                 let (ty, size) = self
-                    .generate_statement(func, module, *size.clone(), ty, None, false)
+                    .generate_statement(func, module, *size, ty, None, false)
                     .expect(&location.error(
                         format!("Unexpected error when trying to compile the size of a variadic statement named '{}'", name)
                     ));
 
                 let (_, final_val) =
-                    self.convert_to_type(func, ty, Type::Long, size, location.clone(), false);
+                    self.convert_to_type(func, ty, Type::Long, size, &location, false);
 
                 let var = self
-                    .new_variable(Type::Long, &name, Some(func), false, false)
+                    .new_variable(&Type::Long, &name, Some(func), false, false)
                     .expect(&location.error(format!(
                         "Unexpected error when trying to create a new variable named '{}'",
                         name
@@ -1480,8 +1454,7 @@ impl Compiler {
                         "Unexpected error when trying to get a variable named '{}'",
                         name
                     )))
-                    .1
-                    .clone();
+                    .1;
 
                 let ty = r#type.unwrap_or(Type::Long);
                 let tmp = self.new_temporary(Some("next"), true);
@@ -1499,9 +1472,9 @@ impl Compiler {
                 let end_label = format!("block.end.{}", self.tmp_counter);
                 func.borrow_mut().add_block(body_label.clone());
 
-                for statement in body.clone() {
-                    match statement.clone() {
-                        AstNode::LiteralStatement { kind, .. } => match kind.clone() {
+                for statement in body.iter() {
+                    match statement {
+                        AstNode::LiteralStatement { kind, .. } => match kind {
                             TokenKind::ExactLiteral => {
                                 match self.generate_statement(
                                     func,
@@ -1542,14 +1515,14 @@ impl Compiler {
                 location,
             } => {
                 let (first, val) = self
-                    .generate_statement(func, module, *value.clone(), ty, None, false)
+                    .generate_statement(func, module, *value, ty, None, false)
                     .expect(&location.error("Unexpected error when trying to compile the value of a conversion statement"));
 
-                Some(self.convert_to_type(func, first, second.unwrap(), val, location, true))
+                Some(self.convert_to_type(func, first, second.unwrap(), val, &location, true))
             }
             AstNode::NotStatement { value, location } => {
                 let (ty, val) = self
-                    .generate_statement(func, module, *value.clone(), ty, None, false)
+                    .generate_statement(func, module, *value, ty, None, false)
                     .expect(&location.error(
                         "Unexpected error when trying to compile the value of a not statement",
                     ));
@@ -1584,14 +1557,14 @@ impl Compiler {
                         "{}",
                         location.error(
                             format!("The type of array '{:?}' must be a pointer to the inner type of the array (it is {})",
-                                values.clone(), ty.clone().unwrap().display()
+                                values, ty.unwrap().display()
                             )
                         )
                     );
                 }
 
                 let inner_ty = if let Some(ty) = ty {
-                    ty.clone().get_pointer_inner()
+                    ty.get_pointer_inner()
                 } else {
                     None
                 };
@@ -1616,7 +1589,7 @@ impl Compiler {
                             ),
                         );
 
-                    results.push(val.clone());
+                    results.push(val);
 
                     if let Some(first_type) = first_type.clone() {
                         if ty != first_type {
@@ -1640,8 +1613,6 @@ impl Compiler {
                             )
                         }
                     } else {
-                        first_type = Some(ty.clone());
-
                         if inner_ty.is_some() && inner_ty.clone().unwrap() != ty {
                             panic!(
                                 "{}",
@@ -1651,6 +1622,8 @@ impl Compiler {
                                 ))
                             )
                         }
+
+                        first_type = Some(ty);
                     }
                 }
 
@@ -1659,7 +1632,7 @@ impl Compiler {
                     .generate_statement(
                         func,
                         module,
-                        if let Some(ty) = first_type.clone() {
+                        if let Some(ref ty) = first_type {
                             AstNode::ArithmeticOperation {
                                 left: Box::new(AstNode::LiteralStatement {
                                     kind: TokenKind::LongLiteral,
@@ -1688,7 +1661,7 @@ impl Compiler {
                 let tmp = self.new_temporary(Some("array"), true);
 
                 let (_, converted_val) =
-                    self.convert_to_type(func, ty, Type::Long, val, location.clone(), false);
+                    self.convert_to_type(func, ty, Type::Long, val, &location, false);
 
                 func.borrow_mut().assign_instruction(
                     &tmp,
@@ -1697,8 +1670,8 @@ impl Compiler {
                 );
 
                 self.buf_metadata.insert(
-                    value.clone().unwrap_or(tmp.clone()),
-                    (buf_ty.clone().get_pointer_inner().unwrap(), converted_val),
+                    value.unwrap_or(tmp.clone()),
+                    (buf_ty.get_pointer_inner().unwrap(), converted_val),
                 );
 
                 for (i, value) in results.iter().enumerate() {
@@ -1719,7 +1692,7 @@ impl Compiler {
                     func.borrow_mut().add_instruction(Instruction::Store(
                         first_type.as_ref().unwrap().clone(),
                         value_ptr,
-                        value.to_owned(),
+                        value.clone(),
                     ));
                 }
 
@@ -1727,7 +1700,7 @@ impl Compiler {
             }
             AstNode::AddressStatement { value, location } => {
                 let (_, val) = self
-                    .generate_statement(func, module, *value.clone(), ty.clone(), None, false)
+                    .generate_statement(func, module, *value, ty, None, false)
                     .expect(&location.error(
                         "Unexpected error when trying to compile the value of an address statement",
                     ));
@@ -1772,15 +1745,15 @@ impl Compiler {
 
                 Err(value) => {
                     let (ty, val) = self
-                        .generate_statement(func, module, *value.clone(), ty.clone(), None, false)
+                        .generate_statement(func, module, *value, ty, None, false)
                         .expect(&location.error(
                             "Unexpected error when trying to compile the size of a statement",
                         ));
 
                     let size = self.new_temporary(Some("size"), true);
 
-                    match ty.clone() {
-                        Type::Pointer(_) => {
+                    match &ty {
+                        &Type::Pointer(_) => {
                             let ty = Type::Long;
 
                             if let Some((buf_ty, buf_val)) =
@@ -1790,7 +1763,7 @@ impl Compiler {
                                     &size,
                                     &ty,
                                     if standalone {
-                                        Instruction::Copy(buf_val.clone())
+                                        Instruction::Copy(buf_val)
                                     } else {
                                         Instruction::Divide(
                                             buf_val,
@@ -1831,11 +1804,11 @@ impl Compiler {
                                 &other,
                                 Instruction::Copy(Value::Const(
                                     other.clone(),
-                                    ty.clone().size(module) as i128,
+                                    ty.size(module) as i128,
                                 )),
                             );
 
-                            Some((other, size))
+                            Some((other.to_owned(), size))
                         }
                     }
                 }
@@ -1875,7 +1848,6 @@ impl Compiler {
                 let struct_pool = self.struct_pool.clone();
                 let members = struct_pool.get(&name).unwrap();
                 let member_names = members
-                    .clone()
                     .iter()
                     .map(|member| member.name.clone())
                     .collect::<Vec<String>>();
@@ -1923,17 +1895,14 @@ impl Compiler {
                         );
                     }
 
-                    let (_, offset) = self
-                        .member_to_offset(module, name.clone(), member_name.clone())
-                        .unwrap();
+                    let (_, offset) = self.member_to_offset(module, &name, &member_name).unwrap();
 
                     let (ty, val) = self
                         .generate_statement(
                             func,
                             module,
-                            *value.clone(),
+                            *value,
                             members
-                                .clone()
                                 .iter()
                                 .find(|member| member.name == member_name)
                                 .map(|arg| arg.r#type.clone()),
@@ -1973,8 +1942,8 @@ impl Compiler {
                     .generate_statement(
                         func,
                         module,
-                        *left.clone(),
-                        ty.clone(),
+                        *left,
+                        ty,
                         None,
                         false,
                     )
@@ -1989,11 +1958,11 @@ impl Compiler {
 
                 if let Some(value) = value {
                     let (_, compiled) = self
-                        .generate_statement(func, module, *value.clone(), Some(field_ty.clone()), None, false)
+                        .generate_statement(func, module, *value, Some(field_ty.clone()), None, false)
                         .expect(&location.error("Unexpected error when trying to compile the value of a store statement"));
 
                     func.borrow_mut().add_instruction(Instruction::Store(
-                        field_ty.to_owned(),
+                        field_ty.clone(),
                         offset_tmp.clone(),
                         compiled,
                     ));
@@ -2006,10 +1975,10 @@ impl Compiler {
                 func.borrow_mut().assign_instruction(
                     &temp,
                     &field_ty,
-                    Instruction::Load(field_ty.clone(), offset_tmp.clone()),
+                    Instruction::Load(field_ty.clone(), offset_tmp),
                 );
 
-                Some((field_ty.clone().into_base(), temp))
+                Some((field_ty.into_base(), temp))
             }
             _ => todo!("statement: {:?}", stmt),
         };
@@ -2031,7 +2000,7 @@ impl Compiler {
             items.push((member.r#type, 1));
         }
 
-        self.struct_pool.insert(name.clone(), members.clone());
+        self.struct_pool.insert(name.clone(), members);
 
         Ok(TypeDef {
             name,
@@ -2045,7 +2014,7 @@ impl Compiler {
 
     fn generate_meta_struct(
         func: &RefCell<Function>,
-        params: Vec<(Type, Value)>,
+        params: &Vec<(Type, Value)>,
         parameters: Vec<(Location, AstNode)>,
         location: Location,
     ) -> AstNode {
@@ -2062,7 +2031,6 @@ impl Compiler {
                         }),
                         values: params
                             .iter()
-                            .cloned()
                             .enumerate()
                             .map(|(i, _)| {
                                 let location = parameters.get(i).unwrap().0.clone();
@@ -2074,10 +2042,9 @@ impl Compiler {
                                 let mut curly_nesting = 0;
 
                                 let chars = ctx
-                                    .clone()
                                     .as_bytes()
                                     .iter()
-                                    .map(|x| x.to_owned() as char)
+                                    .map(|x| *x as char)
                                     .collect::<Vec<char>>();
                                 let mut i = 0;
 
@@ -2174,7 +2141,6 @@ impl Compiler {
                         }),
                         values: params
                             .iter()
-                            .cloned()
                             .map(|param| {
                                 let inner = param.0.id();
 
@@ -2208,28 +2174,28 @@ impl Compiler {
                     }),
                 ),
             ],
-            location: location.clone(),
+            location,
         }
     }
 
     fn member_to_offset(
         &self,
         module: &RefCell<Module>,
-        struct_name: String,
-        member_name: String,
+        struct_name: &String,
+        member_name: &String,
     ) -> Option<(Option<Type>, u64)> {
-        match self.struct_pool.get(&struct_name) {
+        match self.struct_pool.get(struct_name) {
             Some(members) => {
-                if !members.iter().any(|member| member.name == member_name) {
+                if !members.iter().any(|member| &member.name == member_name) {
                     return None;
                 }
 
                 let mut offset = 0_u64;
                 let mut ty = None;
 
-                for member in members.iter().cloned() {
-                    if member.name == member_name {
-                        ty = Some(member.r#type);
+                for member in members.iter() {
+                    if &member.name == member_name {
+                        ty = Some(member.r#type.clone());
                         break;
                     }
 
@@ -2262,17 +2228,17 @@ impl Compiler {
 
                     if !ty.is_struct() {
                         // Automatically deref 'Foo *' into 'Foo' when processing
-                        if ty.is_pointer() && ty.clone().get_pointer_inner().unwrap().is_struct() {
+                        if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct() {
                             let tmp = self.new_temporary(Some("load"), true);
 
                             func.borrow_mut().assign_instruction(
                                 &tmp,
                                 &Type::Long,
-                                Instruction::Load(ty.clone().get_pointer_inner().unwrap(), left),
+                                Instruction::Load(ty.get_pointer_inner().unwrap(), left),
                             );
 
                             left = tmp;
-                            ty = ty.clone().get_pointer_inner().unwrap();
+                            ty = ty.get_pointer_inner().unwrap();
                         } else {
                             panic!(
                                 "{}",
@@ -2286,7 +2252,7 @@ impl Compiler {
                     }
 
                     let (member_ty, offset) = self
-                        .member_to_offset(module, ty.get_struct_inner().unwrap(), field.clone())
+                        .member_to_offset(module, &ty.get_struct_inner().unwrap(), &field)
                         .expect(&location.error(format!(
                             "Could not find a field named '{}' for struct '{}'",
                             field,
@@ -2298,7 +2264,7 @@ impl Compiler {
                     func.borrow_mut().assign_instruction(
                         &offset_tmp,
                         &Type::Long,
-                        Instruction::Add(left.clone(), Value::Const(Type::Word, offset as i128)),
+                        Instruction::Add(left, Value::Const(Type::Word, offset as i128)),
                     );
 
                     if load {
@@ -2320,14 +2286,8 @@ impl Compiler {
                     right: nested_right,
                     ..
                 } => {
-                    let (nested_ty, nested_left_value) = self.process_field_access(
-                        func,
-                        module,
-                        ty.clone(),
-                        left.clone(),
-                        *nested_left.clone(),
-                        true,
-                    );
+                    let (nested_ty, nested_left_value) =
+                        self.process_field_access(func, module, ty, left, *nested_left, true);
 
                     ty = nested_ty;
                     left = nested_left_value;
@@ -2360,7 +2320,7 @@ impl Compiler {
         let result_tmp = self.new_temporary(Some(&kind.to_string()), true);
 
         let (left_ty, left_val) = self
-            .generate_statement(func, module, *left.clone(), ty.clone(), None, is_return)
+            .generate_statement(func, module, *left, ty.clone(), None, is_return)
             .expect(&location.error(
                 "Unexpected error when trying to parse left side of an arithmetic operation",
             ));
@@ -2371,9 +2331,9 @@ impl Compiler {
             Instruction::Copy(Value::Const(left_ty.clone(), 0)),
         );
 
-        func.borrow_mut().add_block(left_label.clone());
+        func.borrow_mut().add_block(left_label);
 
-        let left_tmp = self.new_temporary(Some(&format!("{}.left", kind.to_string())), true);
+        let left_tmp = self.new_temporary(Some(&format!("{}.left", kind)), true);
 
         func.borrow_mut().assign_instruction(
             &left_tmp,
@@ -2389,14 +2349,14 @@ impl Compiler {
         match kind {
             TokenKind::And => {
                 func.borrow_mut().add_instruction(Instruction::JumpNonZero(
-                    left_tmp.clone(),
+                    left_tmp,
                     end_label.clone(),
                     right_label.clone(),
                 ));
             }
             TokenKind::Or => {
                 func.borrow_mut().add_instruction(Instruction::JumpNonZero(
-                    left_tmp.clone(),
+                    left_tmp,
                     right_label.clone(),
                     left_matches_label.clone(),
                 ));
@@ -2410,15 +2370,15 @@ impl Compiler {
             ),
         }
 
-        func.borrow_mut().add_block(right_label.clone());
+        func.borrow_mut().add_block(right_label);
 
         let (_, right_val) = self
-            .generate_statement(func, module, *right.clone(), ty.clone(), None, is_return)
+            .generate_statement(func, module, *right, ty, None, is_return)
             .expect(&location.error(
                 "Unexpected error when trying to parse right side of an arithmetic operation",
             ));
 
-        let right_tmp = self.new_temporary(Some(&format!("{}.right", kind.to_string())), true);
+        let right_tmp = self.new_temporary(Some(&format!("{}.right", kind)), true);
 
         func.borrow_mut().assign_instruction(
             &right_tmp,
@@ -2433,12 +2393,12 @@ impl Compiler {
 
         // This is the same for AND and OR
         func.borrow_mut().add_instruction(Instruction::JumpNonZero(
-            right_tmp.clone(),
+            right_tmp,
             end_label.clone(),
             right_matches_label.clone(),
         ));
 
-        func.borrow_mut().add_block(left_matches_label.clone());
+        func.borrow_mut().add_block(left_matches_label);
 
         func.borrow_mut()
             .assign_instruction(&result_tmp, &left_ty, Instruction::Copy(left_val));
@@ -2446,7 +2406,7 @@ impl Compiler {
         func.borrow_mut()
             .add_instruction(Instruction::Jump(end_label.clone()));
 
-        func.borrow_mut().add_block(right_matches_label.clone());
+        func.borrow_mut().add_block(right_matches_label);
 
         func.borrow_mut()
             .assign_instruction(&result_tmp, &left_ty, Instruction::Copy(right_val));
@@ -2464,7 +2424,7 @@ impl Compiler {
         first: Type,
         second: Type,
         val: Value,
-        location: Location,
+        location: &Location,
         explicit: bool,
     ) -> (Type, Value) {
         if first.is_struct() || second.is_struct() {
@@ -2488,8 +2448,8 @@ impl Compiler {
             )
         }
 
-        if (first.is_pointer() && first.clone().get_pointer_inner().unwrap().is_void())
-            || (second.is_pointer() && second.clone().get_pointer_inner().unwrap().is_void())
+        if (first.is_pointer() && first.get_pointer_inner().unwrap().is_void())
+            || (second.is_pointer() && second.get_pointer_inner().unwrap().is_void())
         {
             return (first, val);
         }

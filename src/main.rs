@@ -11,6 +11,7 @@ mod misc;
 mod parser;
 
 use compiler::compiler::Compiler;
+use lexer::colors::{GREEN, RESET};
 use misc::modules::lex_and_parse;
 static META_STRUCT_NAME: &str = "ElleMeta";
 
@@ -69,6 +70,7 @@ fn main() -> ExitCode {
     };
 
     let mut warnings = Warnings::new();
+    let mut debug = false;
 
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -76,11 +78,12 @@ fn main() -> ExitCode {
             "-Wstructfieldsmissing" => warnings.set_warning(Warning::StructFieldsMissing),
             "-Winvalidalias" => warnings.set_warning(Warning::InvalidAlias),
             "-Wall" => warnings.set_all(),
+            "-Dtime" => debug = true,
             _ => {}
         }
     }
 
-    let mut now = Instant::now();
+    let now = if debug { Some(Instant::now()) } else { None };
     let mut pool = HashSet::new();
 
     pool.insert(META_STRUCT_NAME.into());
@@ -94,18 +97,34 @@ fn main() -> ExitCode {
         &struct_pool,
         &parsed_modules,
         &warnings,
-        true,
+        debug,
+        0,
     );
 
-    println!("Tokenization and parsing took {:?}", now.elapsed());
+    if debug {
+        println!(
+            "\n✦ Tokenization and parsing took {}",
+            elapsed_with_color!(now.unwrap().elapsed())
+        );
+    }
 
     // #[cfg(debug_assertions)]
     // dbg!(&tree);
 
-    now = Instant::now();
+    let now = if debug { Some(Instant::now()) } else { None };
 
     Compiler::compile(tree, output_path, warnings);
 
-    println!("Compilation took {:?}", now.elapsed());
+    if debug {
+        println!(
+            "✦ Compilation took {}\n",
+            elapsed_with_color!(now.unwrap().elapsed())
+        );
+        println!(
+            "{GREEN}Finished compiling '{path}' successfully! ヽ(•ᴗ•)ﾉ\n{RESET}",
+            path = input_path.split("/").last().unwrap()
+        )
+    }
+
     ExitCode::SUCCESS
 }

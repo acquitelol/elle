@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use crate::lexer::enums::{TokenKind, ValueKind};
 
 use super::{enums::Primitive, parser::Parser};

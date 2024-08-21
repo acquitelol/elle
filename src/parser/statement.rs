@@ -1017,7 +1017,7 @@ impl<'a> Statement<'a> {
             self.current_token().location.clone()
         };
 
-        let mut value = None;
+        let value;
 
         let left_tokens = if lhs.is_some() {
             vec![]

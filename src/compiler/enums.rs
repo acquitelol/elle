@@ -36,7 +36,7 @@ pub enum Instruction {
     JumpNonZero(Value, String, String),
     Jump(String),
     Call(Value, Vec<(Type, Value)>),
-    Cast(Value),
+    // Cast(Value),
     VAArg(Value),
     VAStart(Value),
     // Alloc4(Type, Value),
@@ -50,7 +50,8 @@ pub enum Instruction {
     Truncate(Value),
     ShiftLeft(Value, Value),
     ArithmeticShiftRight(Value, Value),
-    LogicalShiftRight(Value, Value),
+    // LogicalShiftRight(Value, Value),
+    #[cfg(debug_assertions)]
     Comment(String),
 }
 
@@ -68,8 +69,8 @@ impl Instruction {
             | Self::Compare(_, _, v1, v2)
             | Self::Store(_, v1, v2)
             | Self::ShiftLeft(v1, v2)
-            | Self::ArithmeticShiftRight(v1, v2)
-            | Self::LogicalShiftRight(v1, v2) => {
+            // | Self::LogicalShiftRight(v1, v2)
+            | Self::ArithmeticShiftRight(v1, v2) => {
                 matches!(v1, Value::Global(name) if name == global_name)
                     || matches!(v2, Value::Global(name) if name == global_name)
             }
@@ -77,7 +78,7 @@ impl Instruction {
             | Self::Conversion(_, _, v)
             | Self::Extension(_, v)
             | Self::Truncate(v)
-            | Self::Cast(v)
+            // | Self::Cast(v)
             | Self::VAArg(v)
             | Self::VAStart(v)
             | Self::Literal(v)
@@ -103,7 +104,9 @@ impl Instruction {
                     false
                 }
             }
-            Self::Comment(_) | Self::Jump(_) => false,
+            #[cfg(debug_assertions)]
+            Self::Comment(_) => false,
+            Self::Jump(_) => false
         }
     }
 }
@@ -154,7 +157,7 @@ impl fmt::Display for Instruction {
             Self::BitwiseOr(lhs, rhs) => write!(formatter, "or {}, {}", lhs, rhs),
             Self::BitwiseXor(lhs, rhs) => write!(formatter, "xor {}, {}", lhs, rhs),
             Self::Copy(val) => write!(formatter, "copy {}", val),
-            Self::Cast(val) => write!(formatter, "cast {}", val),
+            // Self::Cast(val) => write!(formatter, "cast {}", val),
             Self::VAArg(val) => write!(formatter, "vaarg {}", val),
             Self::VAStart(val) => write!(formatter, "vastart {}", val),
             Self::Return(val) => match val {
@@ -250,12 +253,13 @@ impl fmt::Display for Instruction {
             Self::ShiftLeft(val, amount) => {
                 write!(formatter, "shl {}, {}", val, amount)
             }
-            Self::LogicalShiftRight(val, amount) => {
-                write!(formatter, "shr {}, {}", val, amount)
-            }
+            // Self::LogicalShiftRight(val, amount) => {
+            //     write!(formatter, "shr {}, {}", val, amount)
+            // }
             Self::ArithmeticShiftRight(val, amount) => {
                 write!(formatter, "sar {}, {}", val, amount)
             }
+            #[cfg(debug_assertions)]
             Self::Comment(val) => {
                 write!(formatter, "# {}", val)
             }
@@ -319,9 +323,9 @@ impl Type {
         }
     }
 
-    pub fn get_pointer_inner(self) -> Option<Type> {
+    pub fn get_pointer_inner(&self) -> Option<Type> {
         match self {
-            Self::Pointer(ty) => Some(*ty),
+            Self::Pointer(ty) => Some(*ty.clone()),
             _ => None,
         }
     }
@@ -581,13 +585,6 @@ impl Value {
             Self::Temporary(val) => val,
             Self::Global(val) => val,
             Self::Literal(val) => val,
-            _ => panic!("Invalid value type {}", self),
-        }
-    }
-
-    pub fn get_number_inner(&self) -> i128 {
-        match self.clone() {
-            Self::Const(_, val) => val,
             _ => panic!("Invalid value type {}", self),
         }
     }
@@ -886,26 +883,10 @@ impl Linkage {
         }
     }
 
-    pub fn private_with_section(section: impl Into<String>) -> Linkage {
-        Linkage {
-            exported: false,
-            section: Some(section.into()),
-            secflags: None,
-        }
-    }
-
     pub fn public() -> Linkage {
         Linkage {
             exported: true,
             section: None,
-            secflags: None,
-        }
-    }
-
-    pub fn public_with_section(section: impl Into<String>) -> Linkage {
-        Linkage {
-            exported: true,
-            section: Some(section.into()),
             secflags: None,
         }
     }

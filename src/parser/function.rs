@@ -154,7 +154,6 @@ impl<'a> Function<'a> {
                         self.parser.expect_tokens(vec![TokenKind::RightParenthesis]);
                         self.parser.advance();
                     }
-                    _ => unreachable!(),
                 }
             }
         }
