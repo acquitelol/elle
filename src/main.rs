@@ -57,7 +57,7 @@ fn main() -> ExitCode {
 
     if args.peek().is_none() {
         print_help(program);
-        exit(1);
+        exit(0);
     }
 
     let mut input_path = None;

@@ -137,7 +137,7 @@ impl Compiler {
                                     "{}",
                                     location.error(format!(
                                         "Function named '{}' was not imported and can't be used",
-                                        name
+                                        name.replace(".", "::")
                                     ))
                                 )
                             }
@@ -263,7 +263,7 @@ impl Compiler {
             ($first:expr, $second:expr, $location:expr $(,)?) => {
                 $location.error(format!(
                     "Inconsistent return types in function '{}': {:?} and {:?}",
-                    func_ref.borrow_mut().name,
+                    func_ref.borrow_mut().name.replace(".", "::"),
                     $first,
                     $second
                 ))
@@ -578,9 +578,7 @@ impl Compiler {
                     TokenKind::ShiftRight => Instruction::ArithmeticShiftRight(left_val, right_val),
                     _ => panic!(
                         "{}",
-                        location
-                            .clone()
-                            .error(format!("Invalid operator token: {:?}", operator))
+                        location.error(format!("Invalid operator token: {:?}", operator))
                     ),
                 };
 

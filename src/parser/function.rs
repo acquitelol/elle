@@ -143,8 +143,8 @@ impl<'a> Function<'a> {
                                 println!(
                                     "{}",
                                     location.warning(format!(
-                                        "Can't assign aliases to a non-external functions\nSkipping alias '{}' for function '{}'",
-                                        alias, name
+                                        "Can't assign aliases to non-external functions\nSkipping alias '{}' for function '{}'",
+                                        alias, name.replace(".", "::")
                                     ))
                                 )
                             }

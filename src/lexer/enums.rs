@@ -423,7 +423,7 @@ impl Location {
         let line = format!("{} | ", self.row + 1);
 
         return format!(
-            "\n{upper}\n{user_mesage}\n\n{above}{line_number}{}{lhs}{BOLD}{fmt}{UNDERLINE}{issue}{RESET}{rhs}\n{}{}{BOLD}{GREEN}^{}{RESET}\n{fmt}{}{RESET}\n",
+            "\n{upper}\n{user_mesage}\n\n{above}{line_number}{}{lhs}{BOLD}{fmt}{UNDERLINE}{issue}{RESET}{rhs}\n{}{}{BOLD}{GREEN}^{}{RESET}\n{fmt}{}{RESET}",
             " ".repeat(padding),
             " ".repeat(padding + format!("{} | ", self.row + 1).len()),
             " ".repeat(left),
