@@ -3,13 +3,12 @@ use std::collections::HashSet;
 use std::iter::FromIterator;
 
 use super::enums::AstNode;
-use crate::lexer::enums::Location;
 use crate::{
     compiler::enums::Type,
-    lexer::enums::{Token, TokenKind, ValueKind},
-    token_to_node,
+    ensure_fn_pointer,
+    lexer::enums::{Location, Token, TokenKind, ValueKind},
+    not_valid_struct_or_type, token_to_node,
 };
-use crate::{ensure_fn_pointer, not_valid_struct_or_type};
 
 pub struct Statement<'a> {
     tokens: Vec<Token>,

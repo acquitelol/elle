@@ -7,10 +7,8 @@ use std::{
 
 use crate::{
     advance, cast_warning, hashmap,
-    lexer::{
-        colors::RED,
-        enums::{Location, TokenKind, ValueKind},
-    },
+    lexer::enums::{Location, TokenKind, ValueKind},
+    misc::colors::RED,
     parser::enums::{Argument, AstNode, Primitive},
     unknown_function, Warning, Warnings, META_STRUCT_NAME,
 };

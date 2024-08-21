@@ -93,12 +93,12 @@ macro_rules! override_and_add_node {
 macro_rules! elapsed_with_color {
     ($elapsed:expr) => {{
         let color = match $elapsed.as_millis() {
-            val if val < 500 => crate::lexer::colors::GREEN,
-            val if val < 2000 => crate::lexer::colors::YELLOW,
-            _ => crate::lexer::colors::RED,
+            val if val < 500 => crate::misc::colors::GREEN,
+            val if val < 2000 => crate::misc::colors::YELLOW,
+            _ => crate::misc::colors::RED,
         };
 
-        format!("{color}{:?}{}", $elapsed, crate::lexer::colors::RESET)
+        format!("{color}{:?}{}", $elapsed, crate::misc::colors::RESET)
     }};
 }
 

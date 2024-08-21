@@ -5,21 +5,21 @@ use std::path::Path;
 use std::process::exit;
 use std::time::Instant;
 
-use crate::compiler::enums::Type;
-use crate::lexer::enums::Location;
-use crate::lexer::enums::ValueKind;
-use crate::lexer::{enums::TokenKind, lexer::Lexer};
-use crate::parser::enums::Argument;
-use crate::parser::enums::AstNode;
-use crate::parser::enums::Primitive;
-use crate::parser::parser::Parser;
-
-use crate::elapsed_with_color;
-use crate::lexer::colors::*;
-use crate::override_and_add_node;
-use crate::Warnings;
-use crate::META_STRUCT_NAME;
-use crate::STD_LIB_PATH;
+use crate::{
+    compiler::enums::Type,
+    elapsed_with_color,
+    lexer::{
+        enums::{Location, TokenKind, ValueKind},
+        lexer::Lexer,
+    },
+    misc::colors::*,
+    override_and_add_node,
+    parser::{
+        enums::{Argument, AstNode, Primitive},
+        parser::Parser,
+    },
+    Warnings, META_STRUCT_NAME, STD_LIB_PATH,
+};
 
 pub fn lex_and_parse(
     input_path: &String,

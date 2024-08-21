@@ -1,4 +1,4 @@
-use crate::lexer::colors::*;
+use crate::misc::colors::*;
 
 const DIVIDER_SIZE: usize = 50;
 

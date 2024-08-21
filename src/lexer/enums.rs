@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::compiler::enums::Type;
-use crate::lexer::colors::*;
+use crate::misc::colors::*;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {

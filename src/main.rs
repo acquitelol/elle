@@ -11,10 +11,7 @@ mod misc;
 mod parser;
 
 use compiler::compiler::Compiler;
-use lexer::colors::{GREEN, RED, RESET};
-use misc::build::build;
-use misc::help::print_help;
-use misc::modules::lex_and_parse;
+use misc::{build::build, colors::*, help::print_help, modules::lex_and_parse};
 
 static META_STRUCT_NAME: &str = "ElleMeta";
 static STD_LIB_PATH: &str = "/usr/local/include/elle";

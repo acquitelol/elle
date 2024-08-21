@@ -1,8 +1,7 @@
+use regex::Regex;
 use std::{fs, path::Path, process::Command};
 
-use regex::Regex;
-
-use crate::lexer::colors::{RED, RESET};
+use crate::misc::colors::{RED, RESET};
 
 pub fn build(
     qbe_path: String,
