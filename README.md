@@ -1060,8 +1060,7 @@ All contributions to this project are welcome and I love talking about this stuf
 
 ### ♡ **How to run**
 
-* Ensure you have [Rust](https://www.rust-lang.org/) and the [QBE](https://c9x.me/compile/) compiler backend.
-* Elle has no third-party dependencies, so you can simply do the following:
+* Ensure you have [Rust](https://www.rust-lang.org/), [Cargo](https://crates.io/) and the [QBE](https://c9x.me/compile/) compiler backend.
     ```terminal
       $ git clone https://github.com/acquitelol/elle
     ```
@@ -1071,8 +1070,10 @@ All contributions to this project are welcome and I love talking about this stuf
     ```
 
     ```console
-      $ make compile
+      $ sudo make
     ```
+
+    to install the compiler and standard library (requires root)
 
     **OR**
 
@@ -1080,9 +1081,19 @@ All contributions to this project are welcome and I love talking about this stuf
       $ make compile-release
     ```
 
+    to get only a compiler executable and not install anything (does not require root)
+
   * **You're done!**
 
-> You can now run `make run <name>` to run a file from the `/examples` directory. For example, you can run `make run donut` and it will run `/examples/donut.l`.
+#### ♡ You can now run `ellec` to get a help message of how to use the compiler!
+Try compiling a simple example!
+  ```console
+    $ ellec ./examples/donut.l && ./donut
+  ```
+Try compiling an example with libraries!
+  ```
+    $ ellec ./examples/ball.l -Dtime -Clink-flags -lraylib && ./ball
+  ```
 
 <hr />
 

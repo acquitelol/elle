@@ -1,6 +1,8 @@
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fs;
+use std::path::Path;
+use std::process::exit;
 use std::time::Instant;
 
 use crate::compiler::enums::Type;
@@ -13,10 +15,11 @@ use crate::parser::enums::Primitive;
 use crate::parser::parser::Parser;
 
 use crate::elapsed_with_color;
-use crate::lexer::colors::{GREEN, RESET};
+use crate::lexer::colors::*;
 use crate::override_and_add_node;
 use crate::Warnings;
 use crate::META_STRUCT_NAME;
+use crate::STD_LIB_PATH;
 
 pub fn lex_and_parse(
     input_path: &String,
@@ -24,14 +27,14 @@ pub fn lex_and_parse(
     struct_pool: &RefCell<HashSet<String>>,
     parsed_modules: &RefCell<HashSet<String>>,
     warnings: &Warnings,
-    debug: bool,
+    debug_time: bool,
     nesting: usize,
 ) -> Vec<Primitive> {
     let content = {
         let with_elle = fs::metadata(format!("{}.elle", input_path)).is_ok();
         let base = fs::metadata(input_path).is_ok();
 
-        let content = match fs::read_to_string(&format!(
+        let file_path = &format!(
             "{}{}",
             input_path,
             if base {
@@ -43,13 +46,30 @@ pub fn lex_and_parse(
                     ".l"
                 }
             }
-        )) {
+        );
+
+        // Try to see if the file is installed as a library first
+        let base_path = Path::new(STD_LIB_PATH);
+        let relative_path = Path::new(&file_path);
+        let full_path = base_path.join(relative_path);
+
+        let final_path = if fs::metadata(&full_path).is_ok() {
+            full_path
+        } else {
+            relative_path.to_path_buf()
+        };
+
+        let content = match fs::read_to_string(final_path) {
             Ok(content) => content,
             Err(err) => {
                 eprintln!(
-                    "\nERROR: Could not load module \"{}\": {}\n",
+                    "\n{RED}ERROR: Could not load module \"{}\": {}\n",
                     input_path, err
                 );
+
+                if nesting == 0 {
+                    exit(1);
+                }
 
                 return vec![];
             }
@@ -95,9 +115,13 @@ pub fn lex_and_parse(
     for import in imports.iter().cloned() {
         match import {
             Primitive::Use { module, .. } if !parsed_modules.borrow().contains(&module) => {
-                let now = if debug { Some(Instant::now()) } else { None };
+                let now = if debug_time {
+                    Some(Instant::now())
+                } else {
+                    None
+                };
 
-                if debug {
+                if debug_time {
                     println!(
                         "{}╭― Importing module '{GREEN}{}{RESET}'",
                         if nesting > 0 {
@@ -115,7 +139,7 @@ pub fn lex_and_parse(
                     struct_pool,
                     parsed_modules,
                     warnings,
-                    debug,
+                    debug_time,
                     nesting + 1,
                 );
 
@@ -152,7 +176,7 @@ pub fn lex_and_parse(
                     }
                 }
 
-                if debug {
+                if debug_time {
                     println!(
                         "{}╰― Imported '{GREEN}{}{RESET}' in {}",
                         if nesting > 0 {

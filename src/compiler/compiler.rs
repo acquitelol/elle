@@ -7,7 +7,10 @@ use std::{
 
 use crate::{
     advance, cast_warning, hashmap,
-    lexer::enums::{Location, TokenKind, ValueKind},
+    lexer::{
+        colors::RED,
+        enums::{Location, TokenKind, ValueKind},
+    },
     parser::enums::{Argument, AstNode, Primitive},
     unknown_function, Warning, Warnings, META_STRUCT_NAME,
 };
@@ -2642,7 +2645,7 @@ impl Compiler {
 
         let mut file = File::create(output_path).expect("Failed to create the file.");
         file.write_all(module_ref.borrow().to_string().as_bytes())
-            .expect("Failed to write to file.");
+            .expect(&format!("{RED}Failed to write to file."));
 
         file.flush().expect("Failed to flush file");
     }

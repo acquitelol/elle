@@ -137,8 +137,7 @@ macro_rules! unknown_function {
             func.name != "nil" && func.name != "main" && (func.usable || func.imported)
         }) {
             let contains_name = func.name.contains($name.as_str());
-            let distance =
-                crate::misc::levenshtein::levenshtein($name.as_str(), func.name.clone().as_str());
+            let distance = levenshtein::levenshtein($name.as_str(), func.name.clone().as_str());
 
             if contains_name && (distance <= lowest_distance || similar_name.is_none()) {
                 lowest_distance = distance;
