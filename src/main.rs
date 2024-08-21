@@ -101,8 +101,9 @@ fn main() -> ExitCode {
             }
             other => {
                 println!("{RED}Invalid argument: {}", other);
-                println!("{RED}For help, please use the following command:");
-                println!("{RED}\n{program} [-h | --help]");
+                println!("For help, please use the following command:");
+                println!("\n{program} [-h | --help]\n");
+                println!("If this is a file, please include its file extension.{RESET}",);
 
                 exit(1);
             }
