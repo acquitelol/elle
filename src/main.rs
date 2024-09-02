@@ -11,6 +11,7 @@ mod misc;
 mod parser;
 
 use compiler::compiler::Compiler;
+use lexer::enums::Location;
 use misc::{build::build, colors::*, help::print_help, modules::lex_and_parse};
 
 static META_STRUCT_NAME: &str = "ElleMeta";
@@ -20,15 +21,21 @@ pub enum Warning {
     ImplicitCast = 1 << 0,
     StructFieldsMissing = 1 << 1,
     InvalidAlias = 1 << 2,
+    TooManyGenerics = 1 << 3,
+    MissingGenerics = 1 << 4,
 }
 
 impl Warning {
     pub const fn all() -> u32 {
-        Self::ImplicitCast as u32 | Self::InvalidAlias as u32 | Self::StructFieldsMissing as u32
+        Self::ImplicitCast as u32
+            | Self::InvalidAlias as u32
+            | Self::StructFieldsMissing as u32
+            | Self::TooManyGenerics as u32
+            | Self::MissingGenerics as u32
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 struct Warnings {
     flags: u32,
 }
@@ -78,6 +85,8 @@ fn main() -> ExitCode {
             "-Wimplicit-cast" => warnings.set_warning(Warning::ImplicitCast),
             "-Wstruct-fields-missing" => warnings.set_warning(Warning::StructFieldsMissing),
             "-Winvalid-alias" => warnings.set_warning(Warning::InvalidAlias),
+            "-Wmissing-generics" => warnings.set_warning(Warning::MissingGenerics),
+            "-Wtoo-many-generics" => warnings.set_warning(Warning::TooManyGenerics),
             "-Wall" => warnings.set_all(),
             "--elapsed-time" | "-Dtime" => debug_time = true,
             "--emit-qbe" | "-Demit-qbe" | "-Demit-ssa" => emit_qbe = true,
@@ -138,10 +147,12 @@ fn main() -> ExitCode {
         &input_path,
         None,
         &struct_pool,
+        &vec![],
         &parsed_modules,
         &warnings,
         debug_time,
         0,
+        Location::default(input_path.clone()),
     );
 
     if debug_time {

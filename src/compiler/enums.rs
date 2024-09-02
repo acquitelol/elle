@@ -285,6 +285,7 @@ pub enum Type {
     Null,
     Pointer(Box<Type>),
     Struct(String),
+    Unknown(String),
 }
 
 impl Type {
@@ -306,6 +307,7 @@ impl Type {
             Self::Void => "void".into(),
             Self::Null => "null".into(),
             Self::Struct(td) => td.into(),
+            Self::Unknown(name) => name.into(),
         }
     }
 
@@ -318,6 +320,8 @@ impl Type {
             Self::Pointer(inner) => format!("{}*", (*inner).clone().id()),
             Self::Single => "f32".into(),
             Self::Double => "f64".into(),
+            Self::Void => "void".into(),
+            Self::Null => "null".into(),
             Self::Struct(td) => td.into(),
             _ => "".into(),
         }
@@ -333,6 +337,13 @@ impl Type {
     pub fn get_struct_inner(&self) -> Option<String> {
         match self.clone() {
             Self::Struct(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    pub fn get_unknown_inner(&self) -> Option<String> {
+        match self.clone() {
+            Self::Unknown(val) => Some(val),
             _ => None,
         }
     }
@@ -385,6 +396,13 @@ impl Type {
     pub fn is_struct(&self) -> bool {
         match self {
             Self::Struct(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            Self::Unknown(_) => true,
             _ => false,
         }
     }
@@ -485,6 +503,7 @@ impl fmt::Display for Type {
             Self::Void => write!(formatter, "w"),
             Self::Null => write!(formatter, ""),
             Self::Struct(td) => write!(formatter, ":{}", td),
+            Self::Unknown(name) => panic!("Tried to compile with a generic type {name}"),
         }
     }
 }
@@ -804,7 +823,7 @@ impl Function {
         self.blocks.last_mut().unwrap()
     }
 
-    pub fn last_block(&mut self) -> &Block {
+    pub fn last_block(&self) -> &Block {
         self.blocks
             .last()
             .expect("Function must have at least one block")
@@ -824,7 +843,7 @@ impl Function {
             .assign_instruction(temp, r#type, instruction);
     }
 
-    pub fn returns(&mut self) -> bool {
+    pub fn returns(&self) -> bool {
         let last = self.last_block().statements.last();
 
         last.map_or(false, |i| {

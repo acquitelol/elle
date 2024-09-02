@@ -50,6 +50,24 @@ macro_rules! hashmap {
     }};
 }
 
+#[macro_export]
+macro_rules! get_non_generic_type {
+    ($generics:expr, $external_generics:expr, $ty:expr $(,)?) => {
+        if $ty.is_unknown() && !$external_generics.is_empty() && !$generics.is_empty() {
+            let name = $ty.get_unknown_inner().unwrap();
+
+            if !$generics.contains(&name) {
+                return $ty;
+            }
+
+            let position = $generics.iter().position(|item| item == &name).unwrap();
+            $external_generics.get(position).unwrap().clone()
+        } else {
+            $ty
+        }
+    };
+}
+
 /// Removes a symbol (function, constant, struct) named [`name`]
 ///
 /// Sets the [`usable`] and [`imported`] property on the path [`val`]
@@ -75,6 +93,7 @@ macro_rules! override_and_add_node {
         }
 
         $tree.insert(0, new_symbol);
+        // $tree.push(new_symbol);
     };
 }
 
@@ -124,6 +143,38 @@ macro_rules! not_valid_struct_or_type {
                 }
             )),
         )
+    }};
+}
+
+#[macro_export]
+macro_rules! unknown_field {
+    ($struct:expr, $struct_name:expr, $name:expr, $location:expr $(,)?) => {{
+        let mut similar_name = None;
+        let mut lowest_distance = usize::max_value();
+
+        for arg in $struct.iter().map(|arg| arg.name.clone()) {
+            let contains_name = arg.contains($name.as_str());
+            let distance = levenshtein::levenshtein($name.as_str(), arg.clone().as_str());
+
+            if contains_name && (distance <= lowest_distance || similar_name.is_none()) {
+                lowest_distance = distance;
+                similar_name = Some(arg.clone());
+            } else if !contains_name && distance < lowest_distance && similar_name.is_none() {
+                lowest_distance = distance;
+                similar_name = Some(arg.clone());
+            }
+        }
+
+        $location.error(format!(
+            "Could not find a field named '{}' for struct '{}'{}",
+            $name.clone(),
+            $struct_name,
+            if let Some(similar) = similar_name {
+                format!("\nA field with a similar name exists: '{}'", similar)
+            } else {
+                "".into()
+            }
+        ))
     }};
 }
 

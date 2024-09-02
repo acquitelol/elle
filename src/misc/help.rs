@@ -51,6 +51,14 @@ pub fn print_help(program: String) {
                 "-Winvalid-alias",
                 "Warns you when you attempt to set an alias attribute on a non-external function",
             ),
+            (
+                "-Wtoo-many-generics",
+                "Warns you when you import a module with more generic parameters than the module's requirements",
+            ),
+            (
+                "-Wmissing-generics",
+                "Warns you when you import a module with less generic parameters than the module's requirements",
+            ),
         ],
         ),
         (

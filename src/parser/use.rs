@@ -4,11 +4,15 @@ use super::{enums::Primitive, parser::Parser};
 
 pub struct Use<'a> {
     parser: &'a mut Parser,
+    pub has_generics: bool,
 }
 
 impl<'a> Use<'a> {
     pub fn new(parser: &'a mut Parser) -> Self {
-        Use { parser }
+        Use {
+            parser,
+            has_generics: false,
+        }
     }
 
     fn get_string(&self) -> String {
@@ -24,7 +28,7 @@ impl<'a> Use<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Primitive {
+    pub fn parse(&mut self, do_only: u8) -> Primitive {
         self.parser.advance();
         let mut module = self.get_string();
         let location = self.parser.current_token().location;
@@ -37,9 +41,37 @@ impl<'a> Use<'a> {
             self.parser.advance();
         }
 
+        let mut generics = vec![];
+
+        if self.parser.current_token().kind == TokenKind::LessThan {
+            self.parser.advance();
+
+            while self.parser.current_token().kind != TokenKind::GreaterThan {
+                self.has_generics = true;
+
+                // Ensure that we're parsing generic imports
+                if do_only == 2 {
+                    generics.push(self.parser.get_type());
+                }
+
+                self.parser.advance();
+
+                if self.parser.current_token().kind == TokenKind::Comma {
+                    self.parser.advance();
+                }
+            }
+
+            self.parser.expect_tokens(vec![TokenKind::GreaterThan]);
+            self.parser.advance();
+        }
+
         self.parser.expect_tokens(vec![TokenKind::Semicolon]);
         self.parser.advance();
 
-        Primitive::Use { module, location }
+        Primitive::Use {
+            module,
+            generics,
+            location,
+        }
     }
 }

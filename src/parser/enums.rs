@@ -3,7 +3,7 @@ use crate::{
     lexer::enums::{Location, Token, TokenKind, ValueKind},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     LiteralStatement {
@@ -147,10 +147,11 @@ impl AstNode {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Primitive {
     Use {
         module: String,
+        generics: Vec<Type>,
         location: Location,
     },
     Struct {
@@ -192,7 +193,7 @@ pub struct Case {
     pub body: Box<AstNode>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Argument {
     pub name: String,
     pub r#type: Type,

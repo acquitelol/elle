@@ -5,7 +5,7 @@ use crate::lexer::enums::{Token, TokenKind};
 use super::{
     enums::{AstNode, Primitive},
     parser::Parser,
-    statement::Statement,
+    statement::{Shared, Statement},
 };
 
 pub struct Constant<'a> {
@@ -66,9 +66,19 @@ impl<'a> Constant<'a> {
         self.parser.advance();
 
         let body: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
-        let value = Statement::new(tokens, 0, &body, self.parser.struct_pool.clone())
-            .parse()
-            .0;
+        let value = Statement::new(
+            tokens,
+            0,
+            &body,
+            &Shared {
+                struct_pool: self.parser.struct_pool.clone(),
+                external_generics: &self.parser.external_generics,
+                generic_keys: &self.parser.generic_keys,
+                generic_defaults: &self.parser.generic_defaults,
+            },
+        )
+        .parse()
+        .0;
 
         Primitive::Constant {
             name,

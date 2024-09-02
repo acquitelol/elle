@@ -3,7 +3,7 @@ use std::fmt;
 use crate::compiler::enums::Type;
 use crate::misc::colors::*;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum TokenKind {
     Use,
     Public,
@@ -92,6 +92,7 @@ pub enum TokenKind {
     Global,
     Local,
     Attribute,
+    Generic,
 }
 
 impl TokenKind {
@@ -241,7 +242,7 @@ impl fmt::Display for TokenKind {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ValueKind {
     String(String),
     Number(i128),
@@ -250,7 +251,7 @@ pub enum ValueKind {
 }
 
 impl ValueKind {
-    pub fn to_type_string(&self) -> Option<Type> {
+    pub fn to_type_string(&self, is_struct: bool) -> Option<Type> {
         match self.clone() {
             ValueKind::String(val) => match val.as_str() {
                 "string" => Some(Type::Pointer(Box::new(Type::Char))),
@@ -268,7 +269,11 @@ impl ValueKind {
                 "bool" => Some(Type::Boolean),
                 // Arbitrary because it will be turned into `long` anyway when used as void*`
                 "void" => Some(Type::Void),
-                other => Some(Type::Struct(other.into())),
+                other => Some(if is_struct {
+                    Type::Struct(other.into())
+                } else {
+                    Type::Unknown(other.into())
+                }),
             },
             _ => None,
         }
@@ -286,9 +291,9 @@ impl ValueKind {
     }
 
     pub fn is_base_type(&self) -> bool {
-        self.to_type_string().is_some()
-            && match self.to_type_string().unwrap() {
-                Type::Struct(_) => false,
+        self.to_type_string(false).is_some()
+            && match self.to_type_string(false).unwrap() {
+                Type::Unknown(_) | Type::Struct(_) => false,
                 _ => true,
             }
     }

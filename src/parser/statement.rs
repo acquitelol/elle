@@ -5,16 +5,23 @@ use std::iter::FromIterator;
 use super::enums::AstNode;
 use crate::{
     compiler::enums::Type,
-    ensure_fn_pointer,
+    ensure_fn_pointer, get_non_generic_type,
     lexer::enums::{Location, Token, TokenKind, ValueKind},
     not_valid_struct_or_type, token_to_node,
 };
+
+pub struct Shared<'a> {
+    pub struct_pool: HashSet<String>,
+    pub external_generics: &'a Vec<Type>,
+    pub generic_keys: &'a Vec<String>,
+    pub generic_defaults: &'a Vec<Option<Type>>,
+}
 
 pub struct Statement<'a> {
     tokens: Vec<Token>,
     position: usize,
     body: &'a RefCell<Vec<AstNode>>,
-    struct_pool: HashSet<String>,
+    shared: &'a Shared<'a>,
 }
 
 impl<'a> Statement<'a> {
@@ -22,13 +29,13 @@ impl<'a> Statement<'a> {
         tokens: Vec<Token>,
         position: usize,
         body: &'a RefCell<Vec<AstNode>>,
-        struct_pool: HashSet<String>,
+        shared: &'a Shared<'a>,
     ) -> Self {
         Statement {
             tokens,
             position,
             body,
-            struct_pool,
+            shared,
         }
     }
 
@@ -142,7 +149,8 @@ impl<'a> Statement<'a> {
         };
 
         let is_valid = is_fn_pointer
-            || self.struct_pool.contains(&name)
+            || self.shared.struct_pool.contains(&name)
+            || self.shared.generic_keys.contains(&name)
             || ValueKind::String(name.clone()).is_base_type();
 
         if !is_valid {
@@ -155,7 +163,11 @@ impl<'a> Statement<'a> {
             )
         }
 
-        let mut ty = ValueKind::String(name).to_type_string().unwrap();
+        let mut ty = ValueKind::String(name.clone())
+            .to_type_string(self.shared.struct_pool.contains(&name))
+            .unwrap();
+
+        ty = get_non_generic_type!(self.shared.generic_keys, self.shared.external_generics, ty);
         let mut found_ptr = false;
 
         loop {
@@ -223,9 +235,7 @@ impl<'a> Statement<'a> {
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
-        let res = Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-            .parse()
-            .0;
+        let res = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
         let parsed_res = match res.clone() {
             AstNode::DeclareStatement { name, .. } => {
@@ -268,11 +278,7 @@ impl<'a> Statement<'a> {
                     value: ValueKind::String(name),
                     location: location.clone(),
                 }),
-                right: Box::new(
-                    Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-                        .parse()
-                        .0,
-                ),
+                right: Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0),
                 operator: mapping,
                 location: location.clone(),
             }),
@@ -359,9 +365,7 @@ impl<'a> Statement<'a> {
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
         let res = if tokens.len() > 0 {
-            Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-                .parse()
-                .0
+            Statement::new(tokens, 0, &self.body, self.shared).parse().0
         } else {
             AstNode::LiteralStatement {
                 kind: TokenKind::IntegerLiteral,
@@ -493,7 +497,7 @@ impl<'a> Statement<'a> {
 
             parameters.push((
                 location,
-                Statement::new(tokens.clone(), 0, &self.body, self.struct_pool.clone())
+                Statement::new(tokens.clone(), 0, &self.body, self.shared)
                     .parse()
                     .0,
             ));
@@ -600,16 +604,8 @@ impl<'a> Statement<'a> {
         self.position += left.len() + right_end_index;
 
         AstNode::ArithmeticOperation {
-            left: Box::new(
-                Statement::new(left, 0, &self.body, self.struct_pool.clone())
-                    .parse()
-                    .0,
-            ),
-            right: Box::new(
-                Statement::new(right, 0, &self.body, self.struct_pool.clone())
-                    .parse()
-                    .0,
-            ),
+            left: Box::new(Statement::new(left, 0, &self.body, self.shared).parse().0),
+            right: Box::new(Statement::new(right, 0, &self.body, self.shared).parse().0),
             operator,
             location: self.current_token().location,
         }
@@ -664,11 +660,7 @@ impl<'a> Statement<'a> {
                 return false;
             });
 
-            size = Some(
-                Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-                    .parse()
-                    .0,
-            );
+            size = Some(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
         }
 
         self.expect_tokens(vec![TokenKind::RightBlockBrace]);
@@ -702,7 +694,7 @@ impl<'a> Statement<'a> {
 
             values.push((
                 location,
-                Statement::new(tmp_tokens.clone(), 0, &self.body, self.struct_pool.clone())
+                Statement::new(tmp_tokens.clone(), 0, &self.body, self.shared)
                     .parse()
                     .0,
             ));
@@ -731,9 +723,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::LeftCurlyBrace]);
-        let expression = Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-            .parse()
-            .0;
+        let expression = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
         self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
         self.advance();
@@ -763,9 +753,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::LeftCurlyBrace]);
-        let expression = Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-            .parse()
-            .0;
+        let expression = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
         self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
         self.advance();
@@ -798,14 +786,9 @@ impl<'a> Statement<'a> {
         };
 
         let declare = if declare_tokens.len() > 0 {
-            Statement::new(
-                declare_tokens.clone(),
-                0,
-                &self.body,
-                self.struct_pool.clone(),
-            )
-            .parse()
-            .0
+            Statement::new(declare_tokens.clone(), 0, &self.body, self.shared)
+                .parse()
+                .0
         } else {
             AstNode::LiteralStatement {
                 kind: TokenKind::Not,
@@ -824,7 +807,7 @@ impl<'a> Statement<'a> {
         };
 
         let condition = if condition_tokens.len() > 0 {
-            Statement::new(condition_tokens, 0, &self.body, self.struct_pool.clone())
+            Statement::new(condition_tokens, 0, &self.body, self.shared)
                 .parse()
                 .0
         } else {
@@ -881,7 +864,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let step = if step_tokens.len() > 0 {
-            Statement::new(step_tokens, 0, &self.body, self.struct_pool.clone())
+            Statement::new(step_tokens, 0, &self.body, self.shared)
                 .parse()
                 .0
         } else {
@@ -977,9 +960,7 @@ impl<'a> Statement<'a> {
             }
         }
 
-        let mut expression = Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-            .parse()
-            .0;
+        let mut expression = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
@@ -1027,7 +1008,7 @@ impl<'a> Statement<'a> {
         let left = Box::new(if lhs.is_some() {
             lhs.unwrap().1
         } else {
-            Statement::new(left_tokens, 0, &self.body, self.struct_pool.clone())
+            Statement::new(left_tokens, 0, &self.body, self.shared)
                 .parse()
                 .0
         });
@@ -1048,7 +1029,7 @@ impl<'a> Statement<'a> {
         });
 
         let right = Box::new(
-            Statement::new(right_tokens, 0, &self.body, self.struct_pool.clone())
+            Statement::new(right_tokens, 0, &self.body, self.shared)
                 .parse()
                 .0,
         );
@@ -1074,7 +1055,7 @@ impl<'a> Statement<'a> {
                 let value_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
                 value = Some(Box::new(
-                    Statement::new(value_tokens, 0, &self.body, self.struct_pool.clone())
+                    Statement::new(value_tokens, 0, &self.body, self.shared)
                         .parse()
                         .0,
                 ));
@@ -1137,9 +1118,7 @@ impl<'a> Statement<'a> {
         });
 
         let size = Box::new(if tokens.len() > 0 {
-            Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-                .parse()
-                .0
+            Statement::new(tokens, 0, &self.body, self.shared).parse().0
         } else {
             panic!("Invalid size for buffer {}", name);
         });
@@ -1195,11 +1174,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
-        let value = Box::new(
-            Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-                .parse()
-                .0,
-        );
+        let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
         AstNode::DeferStatement {
             value,
             location: self.current_token().location,
@@ -1259,11 +1234,7 @@ impl<'a> Statement<'a> {
             }
         }
 
-        let value = Box::new(
-            Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-                .parse()
-                .0,
-        );
+        let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
         AstNode::ConversionStatement {
             r#type: Some(r#type),
@@ -1292,11 +1263,15 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let mut location = self.current_token().location.clone();
+        let ty_name = self
+            .current_token()
+            .value
+            .get_string_inner()
+            .unwrap_or("".into());
 
         let value = if self.current_token().kind == TokenKind::Identifier
-            && (self
-                .struct_pool
-                .contains(&self.current_token().value.get_string_inner().unwrap())
+            && (self.shared.struct_pool.contains(&ty_name)
+                || self.shared.generic_keys.contains(&ty_name)
                 || self.current_token().value.is_base_type())
         {
             Ok(self.get_type())
@@ -1351,11 +1326,7 @@ impl<'a> Statement<'a> {
                 }
             }
 
-            let value = Box::new(
-                Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-                    .parse()
-                    .0,
-            );
+            let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
             Err(value)
         };
 
@@ -1430,11 +1401,7 @@ impl<'a> Statement<'a> {
             }
         }
 
-        let value = Box::new(
-            Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-                .parse()
-                .0,
-        );
+        let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
         self.advance();
 
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
@@ -1452,21 +1419,19 @@ impl<'a> Statement<'a> {
         let location = self.current_token().location.clone();
         self.advance();
 
-        let pool = self.struct_pool.clone();
         let tokens = self.yield_tokens_with_condition(|token, prev_token| {
+            let ty_name = prev_token.value.get_string_inner().unwrap_or("".into());
+
             token.kind.is_arithmetic()
-                && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into()))
+                && !(self.shared.struct_pool.contains(&ty_name)
+                    || self.shared.generic_keys.contains(&ty_name)
                     || prev_token.value.is_base_type())
                 || token.kind.is_declarative()
                 || token.kind == TokenKind::Semicolon
                 || token.kind == TokenKind::Equal
         });
 
-        let parsed = Box::new(
-            Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-                .parse()
-                .0,
-        );
+        let parsed = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
         AstNode::ArithmeticOperation {
             left: parsed,
@@ -1478,46 +1443,42 @@ impl<'a> Statement<'a> {
 
     fn parse_not(&mut self) -> AstNode {
         self.advance();
-        let pool = self.struct_pool.clone();
         let location = self.current_token().location.clone();
 
         let tokens = self.yield_tokens_with_condition(|token, prev_token| {
+            let ty_name = prev_token.value.get_string_inner().unwrap_or("".into());
+
             token.kind.is_arithmetic()
-                && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into()))
+                && !(self.shared.struct_pool.contains(&ty_name)
+                    || self.shared.generic_keys.contains(&ty_name)
                     || prev_token.value.is_base_type())
                 || token.kind.is_declarative()
                 || token.kind == TokenKind::Semicolon
                 || token.kind == TokenKind::Equal
         });
 
-        let value = Box::new(
-            Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-                .parse()
-                .0,
-        );
+        let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
         AstNode::NotStatement { value, location }
     }
 
     fn parse_address(&mut self) -> AstNode {
         self.advance();
-        let pool = self.struct_pool.clone();
         let location = self.current_token().location.clone();
 
         let tokens = self.yield_tokens_with_condition(|token, prev_token| {
+            let ty_name = prev_token.value.get_string_inner().unwrap_or("".into());
+
             token.kind.is_arithmetic()
-                && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into()))
+                && !(self.shared.struct_pool.contains(&ty_name)
+                    || self.shared.generic_keys.contains(&ty_name)
                     || prev_token.value.is_base_type())
                 || token.kind.is_declarative()
                 || token.kind == TokenKind::Semicolon
                 || token.kind == TokenKind::Equal
         });
 
-        let value = Box::new(
-            Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-                .parse()
-                .0,
-        );
+        let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
         AstNode::AddressStatement { value, location }
     }
@@ -1528,21 +1489,19 @@ impl<'a> Statement<'a> {
         let left_location = self.current_token().location.clone();
         let mut value = None;
 
-        let pool = self.struct_pool.clone();
-        let addr_tokens = self.yield_tokens_with_condition(|token, prev_token| {
+        let tokens = self.yield_tokens_with_condition(|token, prev_token| {
+            let ty_name = prev_token.value.get_string_inner().unwrap_or("".into());
+
             token.kind.is_arithmetic()
-                && !(pool.contains(&prev_token.value.get_string_inner().unwrap_or("".into()))
+                && !(self.shared.struct_pool.contains(&ty_name)
+                    || self.shared.generic_keys.contains(&ty_name)
                     || prev_token.value.is_base_type())
                 || token.kind.is_declarative()
                 || token.kind == TokenKind::Semicolon
                 || token.kind == TokenKind::Equal
         });
 
-        let left = Box::new(
-            Statement::new(addr_tokens, 0, &self.body, self.struct_pool.clone())
-                .parse()
-                .0,
-        );
+        let left = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
         let right_location = self.current_token().location.clone();
         let right = Box::new(AstNode::LiteralStatement {
@@ -1560,7 +1519,7 @@ impl<'a> Statement<'a> {
                 let value_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
                 value = Some(Box::new(
-                    Statement::new(value_tokens, 0, &self.body, self.struct_pool.clone())
+                    Statement::new(value_tokens, 0, &self.body, self.shared)
                         .parse()
                         .0,
                 ));
@@ -1591,10 +1550,10 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_struct_init(&mut self) -> AstNode {
-        let name = self.get_identifier();
+        let mut name = self.get_identifier();
         let location = self.current_token().location.clone();
 
-        if !self.struct_pool.contains(&name) {
+        if !(self.shared.struct_pool.contains(&name) || self.shared.generic_keys.contains(&name)) {
             panic!(
                 "{}",
                 self.current_token().location.error(format!(
@@ -1602,6 +1561,21 @@ impl<'a> Statement<'a> {
                     name
                 ))
             )
+        }
+
+        if self.shared.generic_keys.contains(&name) {
+            name = self
+                .shared
+                .external_generics
+                .get(
+                    self.shared
+                        .generic_keys
+                        .iter()
+                        .position(|item| item == &name)
+                        .unwrap(),
+                )
+                .unwrap()
+                .id()
         }
 
         self.advance();
@@ -1685,11 +1659,7 @@ impl<'a> Statement<'a> {
                 }
             }
 
-            let value = Box::new(
-                Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-                    .parse()
-                    .0,
-            );
+            let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
             values.push((name, value));
         }
@@ -1724,7 +1694,7 @@ impl<'a> Statement<'a> {
             let left_tokens = self.yield_tokens_with_delimiters(valid_tokens.clone());
 
             Box::new(
-                Statement::new(left_tokens, 0, &self.body, self.struct_pool.clone())
+                Statement::new(left_tokens, 0, &self.body, self.shared)
                     .parse()
                     .0,
             )
@@ -1810,7 +1780,7 @@ impl<'a> Statement<'a> {
                 let value_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
                 value = Some(Box::new(
-                    Statement::new(value_tokens, 0, &self.body, self.struct_pool.clone())
+                    Statement::new(value_tokens, 0, &self.body, self.shared)
                         .parse()
                         .0,
                 ));
@@ -1864,11 +1834,7 @@ impl<'a> Statement<'a> {
 
         AstNode::ArithmeticOperation {
             left: Box::new(node.clone()),
-            right: Box::new(
-                Statement::new(tokens, 0, &self.body, self.struct_pool.clone())
-                    .parse()
-                    .0,
-            ),
+            right: Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0),
             operator: mapping,
             location,
         }
@@ -1933,7 +1899,7 @@ impl<'a> Statement<'a> {
                         self.tokens.clone(),
                         self.position.clone(),
                         &cell,
-                        self.struct_pool.clone(),
+                        self.shared,
                     )
                     .parse();
 
@@ -2044,10 +2010,11 @@ impl<'a> Statement<'a> {
                 let next = self.next_token();
 
                 if let Some(token) = next {
+                    let ty_name = token.value.get_string_inner().unwrap_or("".into());
+
                     if token.kind == TokenKind::Identifier
-                        && (self
-                            .struct_pool
-                            .contains(&token.value.get_string_inner().unwrap())
+                        && (self.shared.struct_pool.contains(&ty_name)
+                            || self.shared.generic_keys.contains(&ty_name)
                             || token.value.is_base_type())
                     {
                         self.parse_type_conversion()
@@ -2157,6 +2124,12 @@ impl<'a> Statement<'a> {
             }
         }
 
+        let ty_name = self
+            .current_token()
+            .value
+            .get_string_inner()
+            .unwrap_or("".into());
+
         let node = match self.current_token().kind {
             TokenKind::Variadic => self.parse_variadic(),
             TokenKind::Return => self.parse_return(),
@@ -2166,9 +2139,8 @@ impl<'a> Statement<'a> {
             TokenKind::Defer => self.parse_defer(),
             other
                 if other == TokenKind::Identifier
-                    && (self
-                        .struct_pool
-                        .contains(&self.current_token().value.get_string_inner().unwrap())
+                    && (self.shared.struct_pool.contains(&ty_name)
+                        || self.shared.generic_keys.contains(&ty_name)
                         || self.current_token().value.is_base_type()) =>
             {
                 if let Some(token) = self.next_token() {

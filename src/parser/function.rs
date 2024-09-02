@@ -2,6 +2,7 @@ use std::cell::RefCell;
 
 use crate::{
     lexer::enums::{Attribute, TokenKind, ValueKind},
+    parser::statement::Shared,
     Warning,
 };
 
@@ -40,6 +41,7 @@ impl<'a> Function<'a> {
 
         if self.parser.current_token().kind == TokenKind::DoubleColon {
             if !(self.parser.struct_pool.contains(&name)
+                || self.parser.generic_keys.contains(&name)
                 || ValueKind::String(name.clone()).is_base_type())
             {
                 panic!(
@@ -56,6 +58,22 @@ impl<'a> Function<'a> {
             }
 
             self.parser.advance();
+
+            if self.parser.generic_keys.contains(&name) {
+                name = self
+                    .parser
+                    .external_generics
+                    .get(
+                        self.parser
+                            .generic_keys
+                            .iter()
+                            .position(|item| item == &name)
+                            .unwrap(),
+                    )
+                    .unwrap()
+                    .id()
+            }
+
             let identifier = self.parser.get_identifier();
             name = format!("{}.{}", name, identifier);
             self.parser.advance();
@@ -68,16 +86,17 @@ impl<'a> Function<'a> {
         let mut variadic = false;
         let mut manual = false;
 
+        let ty_name = self
+            .parser
+            .current_token()
+            .value
+            .get_string_inner()
+            .unwrap_or("".into());
+
         if self.parser.current_token().kind == TokenKind::Identifier
             && (self.parser.current_token().value.is_base_type()
-                || self.parser.struct_pool.contains(
-                    &self
-                        .parser
-                        .current_token()
-                        .value
-                        .get_string_inner()
-                        .unwrap(),
-                ))
+                || self.parser.struct_pool.contains(&ty_name)
+                || self.parser.generic_keys.contains(&ty_name))
         {
             while self.parser.current_token().kind != TokenKind::RightParenthesis {
                 if self.parser.current_token().kind == TokenKind::Ellipsis {
@@ -205,7 +224,12 @@ impl<'a> Function<'a> {
                         self.parser.tokens.clone(),
                         self.parser.position.clone(),
                         &body,
-                        self.parser.struct_pool.clone(),
+                        &Shared {
+                            struct_pool: self.parser.struct_pool.clone(),
+                            external_generics: &self.parser.external_generics,
+                            generic_keys: &self.parser.generic_keys,
+                            generic_defaults: &self.parser.generic_defaults,
+                        },
                     )
                     .parse();
 

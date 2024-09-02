@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{
     compiler::enums::Type,
-    ensure_fn_pointer,
+    ensure_fn_pointer, get_non_generic_type,
     lexer::enums::{Token, TokenKind, ValueKind},
     parser::{constant::Constant, function::Function, r#struct::Struct},
     Warnings,
@@ -15,17 +15,28 @@ pub struct Parser {
     pub position: usize,
     pub tree: Vec<Primitive>,
     pub struct_pool: HashSet<String>,
+    pub external_generics: Vec<Type>,
+    pub generic_keys: Vec<String>,
+    pub generic_defaults: Vec<Option<Type>>,
     pub global_public: bool,
     pub warnings: Warnings,
 }
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>, struct_pool: HashSet<String>, warnings: Warnings) -> Self {
+    pub fn new(
+        tokens: Vec<Token>,
+        struct_pool: HashSet<String>,
+        external_generics: Vec<Type>,
+        warnings: Warnings,
+    ) -> Self {
         Parser {
             tokens,
             position: 0,
             tree: vec![],
             struct_pool,
+            external_generics,
+            generic_keys: vec![],
+            generic_defaults: vec![],
             global_public: false,
             warnings,
         }
@@ -91,7 +102,7 @@ impl Parser {
         }
     }
 
-    pub fn get(&mut self, expected: TokenKind) -> String {
+    pub fn get(&self, expected: TokenKind) -> String {
         self.expect_tokens(vec![expected.clone()]);
 
         let identifier = if let Token {
@@ -111,7 +122,7 @@ impl Parser {
         identifier
     }
 
-    pub fn get_identifier(&mut self) -> String {
+    pub fn get_identifier(&self) -> String {
         self.get(TokenKind::Identifier)
     }
 
@@ -125,6 +136,7 @@ impl Parser {
 
         let is_valid = is_fn_pointer
             || self.struct_pool.contains(&name)
+            || self.generic_keys.contains(&name)
             || ValueKind::String(name.clone()).is_base_type();
 
         if !is_valid {
@@ -137,7 +149,11 @@ impl Parser {
             )
         }
 
-        let mut ty = ValueKind::String(name).to_type_string().unwrap();
+        let mut ty = ValueKind::String(name.clone())
+            .to_type_string(self.struct_pool.contains(&name))
+            .unwrap();
+
+        ty = get_non_generic_type!(self.generic_keys, self.external_generics, ty);
         let mut found_ptr = false;
 
         loop {
@@ -160,25 +176,30 @@ impl Parser {
             }
         }
 
-        ty
+        get_non_generic_type!(self.generic_keys, self.external_generics, ty)
     }
 
+    // 0 - functions, constants, etc
+    // 1 - non-generic imports and generic declarations only
+    // 2 - generic imports only
+    // 3 - structs only
     pub fn parse(
         &mut self,
-        imports_only: bool,
+        do_only: u8,
         new_struct_pool: Option<HashSet<String>>,
     ) -> (Vec<Primitive>, HashSet<String>) {
         if new_struct_pool.is_some() {
             self.struct_pool = new_struct_pool.unwrap();
         }
 
+        self.position = 0;
         let mut public = false;
         let mut local = false;
         let mut external = false;
 
         let mut global_public = self.global_public;
 
-        loop {
+        while self.position < self.tokens.len() - 1 {
             match self.current_token().kind {
                 TokenKind::Global => {
                     self.advance();
@@ -203,28 +224,63 @@ impl Parser {
                     self.expect_tokens(vec![TokenKind::Semicolon]);
                     self.advance();
                 }
-                TokenKind::Public if !imports_only => {
+                TokenKind::Public => {
                     public = true;
                     self.advance();
                 }
-                TokenKind::Local if !imports_only => {
+                TokenKind::Local => {
                     local = true;
                     self.advance();
                 }
-                TokenKind::External if !imports_only => {
+                TokenKind::External if do_only == 0 => {
                     external = true;
                     self.advance();
                 }
-                TokenKind::Use if imports_only => {
-                    let mut r#use = Use::new(self);
-                    let statement = r#use.parse();
-                    self.tree.push(statement);
+                TokenKind::Generic if do_only == 1 => {
+                    self.advance();
+
+                    while vec![TokenKind::Identifier, TokenKind::Comma, TokenKind::Equal]
+                        .contains(&self.current_token().kind)
+                    {
+                        if self.current_token().kind == TokenKind::Comma {
+                            self.advance();
+                        }
+
+                        let generic = self.get_identifier();
+                        let mut default = None;
+                        self.advance();
+
+                        if self.current_token().kind == TokenKind::Equal {
+                            self.advance();
+                            default = Some(self.get_type());
+                            self.advance();
+                        }
+
+                        self.generic_keys.push(generic);
+                        self.generic_defaults.push(default);
+                    }
+
+                    self.expect_tokens(vec![TokenKind::Semicolon]);
+                    self.advance();
 
                     public = false;
                     local = false;
                     external = false;
                 }
-                TokenKind::Function if !imports_only => {
+                TokenKind::Use if do_only == 1 || do_only == 2 => {
+                    let mut r#use = Use::new(self);
+                    let statement = r#use.parse(do_only);
+
+                    if (!r#use.has_generics && do_only == 1) || (r#use.has_generics && do_only == 2)
+                    {
+                        self.tree.push(statement);
+                    }
+
+                    public = false;
+                    local = false;
+                    external = false;
+                }
+                TokenKind::Function if do_only == 0 => {
                     if local && public {
                         panic!(
                             "{}",
@@ -249,11 +305,6 @@ impl Parser {
                             position -= 1;
                         }
 
-                        // The cases where this can match true:
-                        //
-                        // ```
-                        // external fn foo() <-- no semicolon
-                        // ```
                         if position >= 1
                             && !vec![TokenKind::Semicolon, TokenKind::RightCurlyBrace]
                                 .contains(&self.tokens[position].kind)
@@ -268,7 +319,6 @@ impl Parser {
                             location.ctx.push(' ');
                             location.column += 1;
 
-                            dbg!(self.current_token());
                             panic!(
                                 "{}",
                                 location.error("Expected semicolon here, but definition has ended")
@@ -291,7 +341,7 @@ impl Parser {
                     local = false;
                     external = false;
                 }
-                TokenKind::Constant if !imports_only => {
+                TokenKind::Constant if do_only == 0 => {
                     if external {
                         panic!("{}", self.current_token().location.error("Cannot have an external constant. Please remove the `external` keyword."))
                     }
@@ -317,7 +367,7 @@ impl Parser {
                     local = false;
                     external = false;
                 }
-                TokenKind::Struct if !imports_only => {
+                TokenKind::Struct if do_only == 3 => {
                     if external {
                         panic!("{}", self.current_token().location.error("Cannot have an external struct. Please remove the `external` keyword."))
                     }
@@ -331,7 +381,7 @@ impl Parser {
                         );
                     }
 
-                    let mut r#struct = Struct::new(self); // For now all defines are structs
+                    let mut r#struct = Struct::new(self);
                     let statement = r#struct.parse(if local {
                         false
                     } else {
@@ -344,7 +394,7 @@ impl Parser {
                     external = false;
                 }
                 _ => {
-                    break;
+                    self.advance();
                 }
             }
         }
