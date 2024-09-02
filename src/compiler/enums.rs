@@ -776,6 +776,8 @@ pub struct Function {
     pub variadic_index: usize,
     pub manual: bool,
     pub external: bool,
+    pub builtin: bool,
+    pub volatile: bool,
     pub unaliased: Option<String>,
     pub usable: bool,
     pub imported: bool,
@@ -785,35 +787,6 @@ pub struct Function {
 }
 
 impl Function {
-    pub fn new(
-        linkage: Linkage,
-        name: impl Into<String>,
-        variadic: bool,
-        variadic_index: usize,
-        manual: bool,
-        external: bool,
-        unaliased: Option<String>,
-        usable: bool,
-        imported: bool,
-        arguments: Vec<(Type, Value)>,
-        return_type: Option<Type>,
-    ) -> Self {
-        Function {
-            linkage,
-            name: name.into(),
-            variadic,
-            variadic_index,
-            manual,
-            external,
-            unaliased,
-            usable,
-            imported,
-            arguments,
-            return_type,
-            blocks: vec![],
-        }
-    }
-
     pub fn add_block(&mut self, label: impl Into<String>) -> &mut Block {
         self.blocks.push(Block {
             label: label.into(),
@@ -988,12 +961,7 @@ impl Module {
             used_functions.insert("main".to_string());
 
             self.functions.retain(|func| {
-                if !used_functions.contains(&func.name) {
-                    // #[cfg(debug_assertions)]
-                    // println!(
-                    //     "Eliminating function '{}' due to it not being called or referenced",
-                    //     func.name.clone()
-                    // );
+                if !used_functions.contains(&func.name) && !func.volatile {
                     false
                 } else {
                     true
@@ -1024,11 +992,6 @@ impl Module {
 
         self.data.retain(|data| {
             if !used_data_sections.contains(&data.name) {
-                // #[cfg(debug_assertions)]
-                // println!(
-                //     "Eliminating data section '{}' due to it not being referenced",
-                //     data.name.clone()
-                // );
                 false
             } else {
                 true

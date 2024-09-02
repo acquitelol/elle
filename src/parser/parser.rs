@@ -10,6 +10,14 @@ use crate::{
 
 use super::{enums::Primitive, r#use::Use};
 
+#[derive(Eq, PartialEq)]
+pub enum DoOnly {
+    FunctionsAndConstants,
+    NonGenericImportsAndGenericDefs,
+    GenericImports,
+    Structs,
+}
+
 pub struct Parser {
     pub tokens: Vec<Token>,
     pub position: usize,
@@ -185,7 +193,7 @@ impl Parser {
     // 3 - structs only
     pub fn parse(
         &mut self,
-        do_only: u8,
+        do_only: &DoOnly,
         new_struct_pool: Option<HashSet<String>>,
     ) -> (Vec<Primitive>, HashSet<String>) {
         if new_struct_pool.is_some() {
@@ -232,11 +240,11 @@ impl Parser {
                     local = true;
                     self.advance();
                 }
-                TokenKind::External if do_only == 0 => {
+                TokenKind::External if do_only == &DoOnly::FunctionsAndConstants => {
                     external = true;
                     self.advance();
                 }
-                TokenKind::Generic if do_only == 1 => {
+                TokenKind::Generic if do_only == &DoOnly::NonGenericImportsAndGenericDefs => {
                     self.advance();
 
                     while vec![TokenKind::Identifier, TokenKind::Comma, TokenKind::Equal]
@@ -267,11 +275,15 @@ impl Parser {
                     local = false;
                     external = false;
                 }
-                TokenKind::Use if do_only == 1 || do_only == 2 => {
+                TokenKind::Use
+                    if do_only == &DoOnly::NonGenericImportsAndGenericDefs
+                        || do_only == &DoOnly::GenericImports =>
+                {
                     let mut r#use = Use::new(self);
                     let statement = r#use.parse(do_only);
 
-                    if (!r#use.has_generics && do_only == 1) || (r#use.has_generics && do_only == 2)
+                    if (!r#use.has_generics && do_only == &DoOnly::NonGenericImportsAndGenericDefs)
+                        || (r#use.has_generics && do_only == &DoOnly::GenericImports)
                     {
                         self.tree.push(statement);
                     }
@@ -280,7 +292,7 @@ impl Parser {
                     local = false;
                     external = false;
                 }
-                TokenKind::Function if do_only == 0 => {
+                TokenKind::Function if do_only == &DoOnly::FunctionsAndConstants => {
                     if local && public {
                         panic!(
                             "{}",
@@ -327,6 +339,7 @@ impl Parser {
                     }
 
                     let mut function = Function::new(self);
+
                     let statement = function.parse(
                         if local {
                             false
@@ -335,13 +348,14 @@ impl Parser {
                         },
                         external,
                     );
+
                     self.tree.push(statement);
 
                     public = false;
                     local = false;
                     external = false;
                 }
-                TokenKind::Constant if do_only == 0 => {
+                TokenKind::Constant if do_only == &DoOnly::FunctionsAndConstants => {
                     if external {
                         panic!("{}", self.current_token().location.error("Cannot have an external constant. Please remove the `external` keyword."))
                     }
@@ -356,18 +370,20 @@ impl Parser {
                     }
 
                     let mut constant = Constant::new(self);
+
                     let statement = constant.parse(if local {
                         false
                     } else {
                         global_public || public
                     });
+
                     self.tree.push(statement);
 
                     public = false;
                     local = false;
                     external = false;
                 }
-                TokenKind::Struct if do_only == 3 => {
+                TokenKind::Struct if do_only == &DoOnly::Structs => {
                     if external {
                         panic!("{}", self.current_token().location.error("Cannot have an external struct. Please remove the `external` keyword."))
                     }
@@ -382,11 +398,13 @@ impl Parser {
                     }
 
                     let mut r#struct = Struct::new(self);
+
                     let statement = r#struct.parse(if local {
                         false
                     } else {
                         global_public || public
                     });
+
                     self.tree.push(statement);
 
                     public = false;

@@ -1,5 +1,5 @@
-use std/io;
 use std/collections/sll<i32>;
+use std/io;
 
 fn main() {
     Node *head = nil;

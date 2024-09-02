@@ -492,6 +492,7 @@ pub struct Token {
 #[derive(Debug, Clone)]
 pub enum Attribute {
     Alias,
+    Volatile,
 }
 
 impl Token {
@@ -509,6 +510,7 @@ impl Token {
 
         match attribute.as_str() {
             "alias" => Attribute::Alias,
+            "volatile" => Attribute::Volatile,
             _ => todo!("more attributes"),
         }
     }

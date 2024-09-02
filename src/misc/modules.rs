@@ -16,7 +16,7 @@ use crate::{
     override_and_add_node,
     parser::{
         enums::{Argument, AstNode, Primitive},
-        parser::Parser,
+        parser::{DoOnly, Parser},
     },
     Warning, Warnings, META_STRUCT_NAME, STD_LIB_PATH,
 };
@@ -117,7 +117,8 @@ pub fn lex_and_parse(
     let mut tree = existing_tree.unwrap_or(&mut fallback);
 
     // Non-generic imports and generic declarations
-    let (mut imports, new_struct_pool) = parser.parse(1, None);
+    let (mut imports, new_struct_pool) =
+        parser.parse(&DoOnly::NonGenericImportsAndGenericDefs, None);
     struct_pool.replace_with(|_| new_struct_pool);
 
     if generics.len() > parser.generic_keys.len() {
@@ -169,12 +170,16 @@ pub fn lex_and_parse(
     }
 
     // Structs
-    let (structs, new_struct_pool) = parser.parse(3, Some(struct_pool.borrow().to_owned()));
+    let (structs, new_struct_pool) =
+        parser.parse(&DoOnly::Structs, Some(struct_pool.borrow().to_owned()));
     struct_pool.replace_with(|_| new_struct_pool);
     tree.extend(structs.clone());
 
     // Generic imports
-    let (generic_imports, new_struct_pool) = parser.parse(2, Some(struct_pool.borrow().to_owned()));
+    let (generic_imports, new_struct_pool) = parser.parse(
+        &DoOnly::GenericImports,
+        Some(struct_pool.borrow().to_owned()),
+    );
     struct_pool.replace_with(|_| new_struct_pool);
 
     imports.extend(generic_imports);
@@ -299,13 +304,17 @@ pub fn lex_and_parse(
         }
     }
 
-    let (others, new_struct_pool) = parser.parse(0, Some(struct_pool.borrow().to_owned()));
+    let (others, new_struct_pool) = parser.parse(
+        &DoOnly::FunctionsAndConstants,
+        Some(struct_pool.borrow().to_owned()),
+    );
     struct_pool.replace_with(|_| new_struct_pool);
     tree.extend(others);
 
     // Add global constants
     // - nil => 0 (nullptr)
     // - ElleMeta => Utility struct
+    // - bool::to_string
     if nesting == 0 {
         tree.insert(
             0,
@@ -361,6 +370,94 @@ pub fn lex_and_parse(
                 location: Location::default(input_path.clone()),
             },
         );
+
+        tree.insert(
+            0,
+            Primitive::Function {
+                name: "bool.to_string".into(),
+                public: false,
+                usable: true,
+                imported: false,
+                variadic: false,
+                manual: false,
+                external: false,
+                builtin: true,
+                volatile: false,
+                unaliased: None,
+                arguments: vec![Argument {
+                    name: "self".into(),
+                    r#type: Type::Boolean,
+                }],
+                r#return: Some(Type::Pointer(Box::new(Type::Char))),
+                body: vec![AstNode::IfStatement {
+                    condition: Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::Identifier,
+                        value: ValueKind::String("self".into()),
+                        location: Location::default(input_path.clone()),
+                    }),
+                    body: vec![AstNode::ReturnStatement {
+                        value: Box::new(AstNode::LiteralStatement {
+                            kind: TokenKind::StringLiteral,
+                            value: ValueKind::String("true".into()),
+                            location: Location {
+                                file: input_path.clone(),
+                                row: 0,
+                                column: 0,
+                                ctx: "\"false\"".into(),
+                                length: 7, // Length of the ctx above
+                                above: None,
+                            },
+                        }),
+                        location: Location {
+                            file: input_path.clone(),
+                            row: 0,
+                            column: 0,
+                            ctx: "return \"true\";".into(),
+                            length: 14, // Length of the ctx above
+                            above: None,
+                        },
+                    }],
+                    else_body: vec![AstNode::ReturnStatement {
+                        value: Box::new(AstNode::LiteralStatement {
+                            kind: TokenKind::StringLiteral,
+                            value: ValueKind::String("false".into()),
+                            location: Location {
+                                file: input_path.clone(),
+                                row: 0,
+                                column: 0,
+                                ctx: "\"true\"".into(),
+                                length: 6, // Length of the ctx above
+                                above: None,
+                            },
+                        }),
+                        location: Location {
+                            file: input_path.clone(),
+                            row: 0,
+                            column: 0,
+                            ctx: "return \"false\";".into(),
+                            length: 15, // Length of the ctx above
+                            above: None,
+                        },
+                    }],
+                    location: Location {
+                        file: input_path.clone(),
+                        row: 0,
+                        column: 0,
+                        ctx: "if self {".into(),
+                        length: 9, // Length of the ctx above
+                        above: None,
+                    },
+                }],
+                location: Location {
+                    file: input_path.clone(),
+                    row: 0,
+                    column: 0,
+                    ctx: "fn bool::to_string(bool self) -> string {".into(),
+                    length: 41, // Length of the ctx above
+                    above: None,
+                },
+            },
+        )
     }
 
     tree.to_vec()

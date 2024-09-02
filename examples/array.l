@@ -1,5 +1,5 @@
-use std/io;
 use std/math;
+use std/io;
 
 fn other(i64 *arr, i32 val, i32 size) {
     io::dbg(arr[0], val, size);

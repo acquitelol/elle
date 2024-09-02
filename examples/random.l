@@ -1,7 +1,7 @@
-use std/io;
 use std/rand;
 use std/time;
 use std/cast;
+use std/io;
 
 fn main() {
     srand(time(nil));

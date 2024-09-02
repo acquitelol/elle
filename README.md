@@ -816,7 +816,7 @@ fn main() {
 
 Elle's module system works in the following way:
 
-- Elle will look in the /usr/local/elle folder for modules (not implemented yet)
+- Elle will look in the /usr/local/include/elle folder for modules
 - Elle will look in the current working directory for modules
 
 The syntax for importing is as follows:
@@ -863,6 +863,29 @@ local const i32 c = 5; // Private
 // Private
 local fn increment(i32 a) {
     return a + 1;
+}
+```
+
+You can also create "generic modules" which are modules that contain a generic type which is specified at the import time.
+
+Example:
+
+```c
+// module/foo.l
+struct foo {}; // namespace
+generic T; // generic parameter
+
+pub fn foo::add(T x, T y) -> T {
+    return x + y;
+}
+```
+```c
+// main.l
+use module/foo<i32>; // i32 replaces T everywhere
+use std/io;
+
+fn main() {
+    io::println(foo::add(1, 2)); // 3
 }
 ```
 
@@ -1021,6 +1044,35 @@ It accepts `argc` as a signed 32-bit integer and `argv` as an array of `string` 
 You can also accept `string *envp` (and `string *apple` on MacOS/Darwin platforms, which provides arbitrary OS information, such as the path to the executing binary).
 
 <hr />
+
+### ♡ **Attributes**
+
+* These are tags you can put on functions to specify extra functionality
+
+The current existing attributes are:
+
+- Alias - Allows you to specify an alias for external functions
+- Volatile - Allows you to specify that Elle should not discard this function if it is unused.
+
+Example:
+
+```c
+// Attributes go BEFORE the return type
+// The alias attribute will be purposefully ignored
+// because this function is not external
+fn add(i32 x, i32 y) @alias("foo") @volatile -> i32 {
+    return x + y;
+}
+
+// The volatile attribute will be purposefully ignored
+// because external functions do not generate IR
+external fn printf(string formatter, ...) @alias("formatted_print") @volatile;
+```
+
+If you specify an alias attribute on a non-external function, you will only be warned, an error will **not** be thrown. Keep in mind that external functions do not generate IR, so the @volatile attribute will have no effect on them.
+
+<hr />
+
 
 ### ♡ **External symbols**
 

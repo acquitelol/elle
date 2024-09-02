@@ -1,5 +1,5 @@
-use std/io;
 use std/option<string>;
+use std/io;
 
 fn get_something(i32 input) {
     if (input == 3) {

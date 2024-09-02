@@ -1,5 +1,5 @@
-use std/io;
 use std/collections/array<i32>;
+use std/io;
 
 fn main() {
     Array array = Array::new();
@@ -11,7 +11,7 @@ fn main() {
     array.push(172);
     array.push(53);
 
-    for i32 i = 0; i < arr.len(); i += 1 {
-        io::printf("array[{}] = {}", i, arr.elements[i]);
+    for i32 i = 0; i < array.len(); i += 1 {
+        io::printf("array[{}] = {}", i, array.elements[i]);
     }
 }

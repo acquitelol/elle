@@ -1,7 +1,7 @@
-use std/io;
+use std/vectors;
 use std/string;
 use std/math;
-use std/vectors;
+use std/io;
 
 const f32 THETA_SPACING = 0.07;
 const f32 PHI_SPACING = 0.02;

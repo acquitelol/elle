@@ -40,6 +40,7 @@ pub enum AstNode {
         name: String,
         parameters: Vec<(Location, AstNode)>,
         type_method: bool,
+        ignore_no_def: bool,
         location: Location,
     },
     /// Performs an arithmetic operation with `operator` using `left` and `right
@@ -170,6 +171,8 @@ pub enum Primitive {
         variadic: bool,
         manual: bool,
         external: bool,
+        builtin: bool,
+        volatile: bool,
         unaliased: Option<String>,
         arguments: Vec<Argument>,
         r#return: Option<Type>,

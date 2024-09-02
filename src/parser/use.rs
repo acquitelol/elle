@@ -1,6 +1,9 @@
 use crate::lexer::enums::{TokenKind, ValueKind};
 
-use super::{enums::Primitive, parser::Parser};
+use super::{
+    enums::Primitive,
+    parser::{DoOnly, Parser},
+};
 
 pub struct Use<'a> {
     parser: &'a mut Parser,
@@ -28,7 +31,7 @@ impl<'a> Use<'a> {
         }
     }
 
-    pub fn parse(&mut self, do_only: u8) -> Primitive {
+    pub fn parse(&mut self, do_only: &DoOnly) -> Primitive {
         self.parser.advance();
         let mut module = self.get_string();
         let location = self.parser.current_token().location;
@@ -50,7 +53,7 @@ impl<'a> Use<'a> {
                 self.has_generics = true;
 
                 // Ensure that we're parsing generic imports
-                if do_only == 2 {
+                if do_only == &DoOnly::GenericImports {
                     generics.push(self.parser.get_type());
                 }
 

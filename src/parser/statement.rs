@@ -514,6 +514,7 @@ impl<'a> Statement<'a> {
             name,
             parameters,
             type_method,
+            ignore_no_def: false,
             location: location.clone(),
         };
 

@@ -133,6 +133,7 @@ impl<'a> Function<'a> {
 
         let mut r#return = None;
         let mut unaliased = None;
+        let mut volatile = false;
 
         if self.parser.match_token(TokenKind::Attribute, false) {
             while self.parser.current_token().kind == TokenKind::Attribute {
@@ -173,6 +174,10 @@ impl<'a> Function<'a> {
                         self.parser.expect_tokens(vec![TokenKind::RightParenthesis]);
                         self.parser.advance();
                     }
+                    Attribute::Volatile => {
+                        volatile = true;
+                        self.parser.advance();
+                    }
                 }
             }
         }
@@ -195,6 +200,8 @@ impl<'a> Function<'a> {
                 manual,
                 name,
                 external,
+                builtin: false,
+                volatile: false,
                 unaliased,
                 arguments,
                 r#return,
@@ -369,6 +376,8 @@ impl<'a> Function<'a> {
             manual,
             name,
             external,
+            builtin: false,
+            volatile,
             unaliased,
             arguments,
             r#return,

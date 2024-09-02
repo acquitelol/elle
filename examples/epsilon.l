@@ -1,6 +1,6 @@
-use std/io;
 use std/rand;
 use std/time;
+use std/io;
 
 const i32 ITERATIONS = 1e5;
 const i32 ACCURACY = 1e6;

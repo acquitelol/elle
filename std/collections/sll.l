@@ -1,5 +1,5 @@
-global pub;
 generic T;
+global pub;
 
 struct Node {
     void *next;

@@ -1,5 +1,5 @@
-use std/io;
 use std/libc/mem;
+use std/io;
 
 generic T;
 global pub;
