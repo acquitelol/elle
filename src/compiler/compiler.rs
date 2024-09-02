@@ -10,7 +10,7 @@ use crate::{
     lexer::enums::{Location, TokenKind, ValueKind},
     misc::colors::RED,
     parser::enums::{Argument, AstNode, Primitive},
-    unknown_function, Warning, Warnings, META_STRUCT_NAME,
+    unknown_field, unknown_function, Warning, Warnings, META_STRUCT_NAME,
 };
 
 type GeneratorResult<T> = Result<T, String>;
@@ -129,10 +129,11 @@ impl Compiler {
                         name: op_name,
                         usable,
                         location,
+                        builtin,
                         ..
                     } => {
                         if name == op_name {
-                            if !usable && !func.unwrap().borrow_mut().imported {
+                            if !usable && !func.unwrap().borrow_mut().imported && !builtin {
                                 panic!(
                                     "{}",
                                     location.error(format!(
@@ -163,6 +164,8 @@ impl Compiler {
         variadic: bool,
         manual: bool,
         external: bool,
+        builtin: bool,
+        volatile: bool,
         unaliased: Option<String>,
         usable: bool,
         imported: bool,
@@ -195,6 +198,8 @@ impl Compiler {
             variadic_index: if variadic { args.len() } else { 1 },
             manual,
             external,
+            builtin,
+            volatile,
             unaliased,
             usable,
             imported,
@@ -263,14 +268,14 @@ impl Compiler {
             ($first:expr, $second:expr, $location:expr $(,)?) => {
                 $location.error(format!(
                     "Inconsistent return types in function '{}': {:?} and {:?}",
-                    func_ref.borrow_mut().name.replace(".", "::"),
+                    func_ref.borrow().name.replace(".", "::"),
                     $first,
                     $second
                 ))
             };
         }
 
-        for block in func_ref.borrow_mut().blocks.iter() {
+        for block in func_ref.borrow().blocks.iter() {
             for statement in block.statements.clone() {
                 if let Statement::Volatile(Instruction::Return(val)) = statement {
                     if let Some(val) = val {
@@ -726,6 +731,7 @@ impl Compiler {
                 mut name,
                 parameters,
                 type_method,
+                ignore_no_def,
                 location,
             } => {
                 // Get the type of the functions based on the ones currently imported into this module
@@ -804,43 +810,51 @@ impl Compiler {
                     // Function could be a callback pointer
                     let callback = self.get_variable(name.as_str(), Some(func));
 
-                    if let Ok((ty, _)) = callback {
-                        if ty.is_pointer()
-                            && ty.get_pointer_inner().unwrap().is_struct()
-                            && ty.get_pointer_inner().unwrap().get_struct_inner().unwrap() == "fn"
-                        {
-                            Function::new(
-                                Linkage::public(),
-                                name.clone(),
-                                false,
-                                0,
-                                false,
-                                false,
+                    let fallback = Function {
+                        linkage: Linkage::public(),
+                        name: name.clone(),
+                        variadic: false,
+                        variadic_index: 0,
+                        manual: false,
+                        external: false,
+                        builtin: false,
+                        volatile: false,
+                        unaliased: None,
+                        usable: true,
+                        imported: false,
+                        // TODO: Allow the function declaration to specify a real signature instead of just `fn *`
+                        arguments: parameters.iter().map(|param| {
+                            self.generate_statement(
+                                func,
+                                module,
+                                param.1.clone(),
                                 None,
-                                true,
+                                None,
                                 false,
-                                // TODO: Allow the function declaration to specify a real signature instead of just `fn *`
-                                parameters.iter().map(|param| {
-                                    self.generate_statement(
-                                        func,
-                                        module,
-                                        param.1.clone(),
-                                        None,
-                                        None,
-                                        false,
-                                    )
-                                    .expect(&param.0.error(
-                                        format!(
-                                            "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
-                                            name
-                                        ))
-                                    )
-                                }).collect(),
-                                Some(declarative_ty.clone()),
                             )
+                            .expect(&param.0.error(
+                                format!(
+                                    "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
+                                    name
+                                ))
+                            )
+                        }).collect(),
+                        return_type: Some(declarative_ty.clone()),
+                        blocks: vec![]
+                    };
+
+                    if let Ok((ty, _)) = callback {
+                        if (ty.is_pointer()
+                            && ty.get_pointer_inner().unwrap().is_unknown()
+                            && ty.get_pointer_inner().unwrap().get_unknown_inner().unwrap() == "fn")
+                            || ignore_no_def
+                        {
+                            fallback
                         } else {
                             unknown_function!(location, name, module)
                         }
+                    } else if ignore_no_def {
+                        fallback
                     } else {
                         unknown_function!(location, name, module)
                     }
@@ -850,7 +864,7 @@ impl Compiler {
                     name = unaliased_name;
                 };
 
-                if !tmp_function.usable && !func.borrow_mut().imported {
+                if !tmp_function.usable && !func.borrow_mut().imported && !ignore_no_def {
                     panic!(
                         "{}",
                         location.error(format!(
@@ -2250,13 +2264,16 @@ impl Compiler {
                         }
                     }
 
+                    let struct_name = ty.get_struct_inner().unwrap();
+
                     let (member_ty, offset) = self
                         .member_to_offset(module, &ty.get_struct_inner().unwrap(), &field)
-                        .expect(&location.error(format!(
-                            "Could not find a field named '{}' for struct '{}'",
+                        .expect(&unknown_field!(
+                            self.struct_pool.get(&struct_name).unwrap(),
+                            struct_name,
                             field,
-                            ty.get_struct_inner().unwrap()
-                        )));
+                            location
+                        ));
 
                     let offset_tmp = self.new_temporary(Some("offset"), true);
 
@@ -2561,6 +2578,8 @@ impl Compiler {
                     false,
                     false,
                     false,
+                    false,
+                    false,
                     None,
                     usable,
                     imported,
@@ -2584,6 +2603,8 @@ impl Compiler {
                     variadic,
                     manual,
                     external,
+                    builtin,
+                    volatile,
                     unaliased,
                     arguments,
                     r#return,
@@ -2597,6 +2618,8 @@ impl Compiler {
                     variadic,
                     manual,
                     external,
+                    builtin,
+                    volatile,
                     unaliased,
                     usable,
                     imported,

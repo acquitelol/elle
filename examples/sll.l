@@ -1,22 +1,5 @@
+use std/collections/sll<i32>;
 use std/io;
-
-struct Node {
-    void *next;
-    i32 data;
-};
-
-fn Node::add(Node **head, i32 data) {
-    Node *new = malloc(#size(Node *));
-    *new = malloc(#size(Node));
-
-    if !new {
-        return nil;
-    }
-
-    new.data = data;
-    new.next = *head;
-    *head = new;
-}
 
 fn main() {
     Node *head = nil;

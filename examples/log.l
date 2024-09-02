@@ -1,5 +1,9 @@
 use std/io;
 
+struct Foo {
+    i32 a;
+};
+
 fn main() {
     string foo = "this is a string";
     i32 a = 16;
@@ -8,6 +12,7 @@ fn main() {
     i32 *arr = [1, 2, 3];
 
     io::dbg(foo, a, b, c, &a, 'z', 1e5, true, arr, ["a", "meow"]);
+    io::dbg(Foo { a = 5 });
     io::print("this is a string literal and ", foo, '\n');
     io::println("this is a string literal and ", foo, " (now with a newline!)");
 

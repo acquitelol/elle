@@ -1,5 +1,5 @@
-use std/io;
 use std/math;
+use std/io;
 
 fn main() {
     f64 x = 2;

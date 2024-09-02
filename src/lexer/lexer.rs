@@ -530,6 +530,7 @@ impl Lexer {
             "struct" => TokenKind::Struct,
             "global" => TokenKind::Global,
             "local" => TokenKind::Local,
+            "generic" => TokenKind::Generic,
             _ => TokenKind::Identifier,
         };
 

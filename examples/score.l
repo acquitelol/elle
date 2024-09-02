@@ -1,6 +1,6 @@
-use std/io;
 use std/string;
 use std/cast;
+use std/io;
 
 fn main() {
     i32 highestScore = 0;

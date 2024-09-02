@@ -38,20 +38,28 @@ pub fn print_help(program: String) {
         (
             "Warning Flags",
             vec![
-            ("-Wall", "Enables all of the warnings the compiler provides"),
-            (
-                "-Wimplicit-cast",
-                "Warns you when you implicitly cast a variable to another type",
-            ),
-            (
-                "-Wstruct-fields-missing",
-                "Warns you when you initialize a stack-allocated struct without all of its fields",
-            ),
-            (
-                "-Winvalid-alias",
-                "Warns you when you attempt to set an alias attribute on a non-external function",
-            ),
-        ],
+                ("-Wall", "Enables all of the warnings the compiler provides"),
+                (
+                    "-Wimplicit-cast",
+                    "Warns you when you implicitly cast a variable to another type",
+                ),
+                (
+                    "-Wstruct-fields-missing",
+                    "Warns you when you initialize a stack-allocated struct without all of its fields",
+                ),
+                (
+                    "-Winvalid-alias",
+                    "Warns you when you attempt to set an alias attribute on a non-external function",
+                ),
+                (
+                    "-Wtoo-many-generics",
+                    "Warns you when you import a module with more generic parameters than the module's requirements",
+                ),
+                (
+                    "-Wmissing-generics",
+                    "Warns you when you import a module with less generic parameters than the module's requirements",
+                ),
+            ],
         ),
         (
             "Compilation Flags",

@@ -1,6 +1,6 @@
-use std/io;
-use std/math;
 use std/vectors;
+use std/math;
+use std/io;
 
 fn Vector3::test() {
     Vector3 v = Vector3 { x = 1.0, y = 0.0, z = 0.0 };

@@ -1,6 +1,6 @@
-use std/core;
-use std/string;
 use std/libc/io;
+use std/string;
+use std/core;
 
 global pub;
 

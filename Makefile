@@ -17,6 +17,7 @@ install-compiler-release: compile-release
 	mv ./ellec $(BIN_PATH)
 
 install-std:
+	rm -rf $(STD_PATH)
 	mkdir -p $(STD_PATH)
 	cp -rf std/* $(STD_PATH)
 

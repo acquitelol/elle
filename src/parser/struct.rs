@@ -21,6 +21,8 @@ impl<'a> Struct<'a> {
         let location = self.parser.current_token().location.clone();
         self.parser.advance();
 
+        self.parser.struct_pool.insert(name.clone());
+
         self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
         self.parser.advance();
 
@@ -48,8 +50,6 @@ impl<'a> Struct<'a> {
 
         self.parser.expect_tokens(vec![TokenKind::Semicolon]);
         self.parser.advance();
-
-        self.parser.struct_pool.insert(name.clone());
 
         Primitive::Struct {
             name,

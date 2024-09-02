@@ -1,7 +1,7 @@
-use std/libc/io;
-use std/libc/mem;
 use std/libc/string;
-use std/core;
+use std/libc/mem;
+use std/libc/io;
+
 global pub;
 
 // NOTE: This is for null-terminated strings
@@ -356,7 +356,13 @@ fn to_string(string ty, i64 args, bool wrap) {
     }
 
     if res == nil {
-        io::fprintf(stderr, "Unimplemented expression type '%s'\n", ty);
+        i64 arg = args.yield(i64);
+        fmt = "%p";
+
+        length = io::snprintf(nil, 0, fmt, arg);
+        res = malloc(length);
+        io::sprintf(res, fmt, arg);
+        return res;
     }
 
     return res;

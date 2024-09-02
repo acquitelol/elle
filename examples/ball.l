@@ -1,7 +1,7 @@
-use std/io;
+use examples/resources/raylib;
 use std/string;
 use std/math;
-use examples/resources/raylib;
+use std/io;
 
 const i32 screenWidth = 600;
 const i32 screenHeight = 600;

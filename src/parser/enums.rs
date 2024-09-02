@@ -3,7 +3,7 @@ use crate::{
     lexer::enums::{Location, Token, TokenKind, ValueKind},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     LiteralStatement {
@@ -40,6 +40,7 @@ pub enum AstNode {
         name: String,
         parameters: Vec<(Location, AstNode)>,
         type_method: bool,
+        ignore_no_def: bool,
         location: Location,
     },
     /// Performs an arithmetic operation with `operator` using `left` and `right
@@ -147,10 +148,11 @@ impl AstNode {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Primitive {
     Use {
         module: String,
+        generics: Vec<Type>,
         location: Location,
     },
     Struct {
@@ -169,6 +171,8 @@ pub enum Primitive {
         variadic: bool,
         manual: bool,
         external: bool,
+        builtin: bool,
+        volatile: bool,
         unaliased: Option<String>,
         arguments: Vec<Argument>,
         r#return: Option<Type>,
@@ -192,7 +196,7 @@ pub struct Case {
     pub body: Box<AstNode>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Argument {
     pub name: String,
     pub r#type: Type,

@@ -285,6 +285,7 @@ pub enum Type {
     Null,
     Pointer(Box<Type>),
     Struct(String),
+    Unknown(String),
 }
 
 impl Type {
@@ -306,6 +307,7 @@ impl Type {
             Self::Void => "void".into(),
             Self::Null => "null".into(),
             Self::Struct(td) => td.into(),
+            Self::Unknown(name) => name.into(),
         }
     }
 
@@ -318,6 +320,8 @@ impl Type {
             Self::Pointer(inner) => format!("{}*", (*inner).clone().id()),
             Self::Single => "f32".into(),
             Self::Double => "f64".into(),
+            Self::Void => "void".into(),
+            Self::Null => "null".into(),
             Self::Struct(td) => td.into(),
             _ => "".into(),
         }
@@ -333,6 +337,13 @@ impl Type {
     pub fn get_struct_inner(&self) -> Option<String> {
         match self.clone() {
             Self::Struct(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    pub fn get_unknown_inner(&self) -> Option<String> {
+        match self.clone() {
+            Self::Unknown(val) => Some(val),
             _ => None,
         }
     }
@@ -385,6 +396,13 @@ impl Type {
     pub fn is_struct(&self) -> bool {
         match self {
             Self::Struct(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            Self::Unknown(_) => true,
             _ => false,
         }
     }
@@ -485,6 +503,7 @@ impl fmt::Display for Type {
             Self::Void => write!(formatter, "w"),
             Self::Null => write!(formatter, ""),
             Self::Struct(td) => write!(formatter, ":{}", td),
+            Self::Unknown(name) => panic!("Tried to compile with a generic type {name}"),
         }
     }
 }
@@ -757,6 +776,8 @@ pub struct Function {
     pub variadic_index: usize,
     pub manual: bool,
     pub external: bool,
+    pub builtin: bool,
+    pub volatile: bool,
     pub unaliased: Option<String>,
     pub usable: bool,
     pub imported: bool,
@@ -766,35 +787,6 @@ pub struct Function {
 }
 
 impl Function {
-    pub fn new(
-        linkage: Linkage,
-        name: impl Into<String>,
-        variadic: bool,
-        variadic_index: usize,
-        manual: bool,
-        external: bool,
-        unaliased: Option<String>,
-        usable: bool,
-        imported: bool,
-        arguments: Vec<(Type, Value)>,
-        return_type: Option<Type>,
-    ) -> Self {
-        Function {
-            linkage,
-            name: name.into(),
-            variadic,
-            variadic_index,
-            manual,
-            external,
-            unaliased,
-            usable,
-            imported,
-            arguments,
-            return_type,
-            blocks: vec![],
-        }
-    }
-
     pub fn add_block(&mut self, label: impl Into<String>) -> &mut Block {
         self.blocks.push(Block {
             label: label.into(),
@@ -804,7 +796,7 @@ impl Function {
         self.blocks.last_mut().unwrap()
     }
 
-    pub fn last_block(&mut self) -> &Block {
+    pub fn last_block(&self) -> &Block {
         self.blocks
             .last()
             .expect("Function must have at least one block")
@@ -824,7 +816,7 @@ impl Function {
             .assign_instruction(temp, r#type, instruction);
     }
 
-    pub fn returns(&mut self) -> bool {
+    pub fn returns(&self) -> bool {
         let last = self.last_block().statements.last();
 
         last.map_or(false, |i| {
@@ -969,12 +961,7 @@ impl Module {
             used_functions.insert("main".to_string());
 
             self.functions.retain(|func| {
-                if !used_functions.contains(&func.name) {
-                    // #[cfg(debug_assertions)]
-                    // println!(
-                    //     "Eliminating function '{}' due to it not being called or referenced",
-                    //     func.name.clone()
-                    // );
+                if !used_functions.contains(&func.name) && !func.volatile {
                     false
                 } else {
                     true
@@ -1005,11 +992,6 @@ impl Module {
 
         self.data.retain(|data| {
             if !used_data_sections.contains(&data.name) {
-                // #[cfg(debug_assertions)]
-                // println!(
-                //     "Eliminating data section '{}' due to it not being referenced",
-                //     data.name.clone()
-                // );
                 false
             } else {
                 true

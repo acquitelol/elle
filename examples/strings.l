@@ -1,6 +1,6 @@
-use std/io;
 use std/string;
 use std/math;
+use std/io;
 
 fn main() {
     string a = string::ascii_lower();
