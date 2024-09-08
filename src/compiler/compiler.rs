@@ -839,14 +839,10 @@ impl Compiler {
                             name
                         )
                     // string access
-                    } else if ty.is_pointer() && ty.get_pointer_inner().unwrap() == Type::Char {
+                    } else if ty.is_string() {
                         name = format!("string.{}", name)
                     // string * access
-                    } else if ty.is_pointer()
-                        && ty.get_pointer_inner().unwrap().is_pointer()
-                        && ty.get_pointer_inner().unwrap().get_pointer_inner().unwrap()
-                            == Type::Char
-                    {
+                    } else if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_string() {
                         name = format!("string.{}", name)
                     // primitive access
                     } else {
@@ -1231,9 +1227,7 @@ impl Compiler {
                     if parsed_ty.is_struct() {
                         should_get_address = true;
                     // string access
-                    } else if parsed_ty.is_pointer()
-                        && ty.get_pointer_inner().unwrap() == Type::Char
-                    {
+                    } else if parsed_ty.is_string() {
                         should_get_address = true;
                     }
 

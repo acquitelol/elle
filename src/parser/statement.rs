@@ -285,11 +285,20 @@ impl<'a> Statement<'a> {
         if self.is_eof() || self.current_token().kind == TokenKind::Semicolon {
             return AstNode::DeclareStatement {
                 name,
-                r#type,
-                value: Box::new(AstNode::LiteralStatement {
-                    kind: TokenKind::IntegerLiteral,
-                    value: ValueKind::Number(0),
-                    location: self.current_token().location,
+                r#type: r#type.clone(),
+                // If the type is a struct create 'Struct {}' otherwise 0
+                value: Box::new(if r#type.clone().is_some_and(|ty| ty.is_struct()) {
+                    AstNode::StructStatement {
+                        name: r#type.unwrap().get_struct_inner().unwrap(),
+                        values: vec![],
+                        location: self.current_token().location,
+                    }
+                } else {
+                    AstNode::LiteralStatement {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number(0),
+                        location: self.current_token().location,
+                    }
                 }),
                 location,
             };

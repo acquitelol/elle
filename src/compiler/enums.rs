@@ -721,6 +721,13 @@ impl Type {
         }
     }
 
+    pub fn is_string(&self) -> bool {
+        match self {
+            Self::Pointer(inner) => *inner.as_ref() == Self::Char,
+            _ => false,
+        }
+    }
+
     pub fn is_unknown(&self) -> bool {
         match self {
             Self::Unknown(_) => true,
