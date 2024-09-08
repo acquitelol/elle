@@ -1,9 +1,8 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use super::enums::{Argument, AstNode, Primitive};
-use super::parser::StructPool;
+use super::enums::{AstNode, Primitive};
+use super::parser::{create_generic_struct, StructPool};
 use crate::{
     compiler::enums::Type,
     ensure_fn_pointer,
@@ -196,6 +195,8 @@ impl<'a> Statement<'a> {
                             }
                         }
 
+                        let location = self.current_token().location;
+
                         let generic_name = format!(
                             "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
                             known_generics
@@ -206,45 +207,14 @@ impl<'a> Statement<'a> {
                         );
 
                         if !self.shared.struct_pool.borrow().contains_key(&generic_name) {
-                            let (generics, members, location) =
-                                self.shared.struct_pool.borrow().get(&name).unwrap().clone();
-
-                            let parsed_generics =
-                                HashMap::from_iter(generics.iter().enumerate().map(
-                                    |(i, generic)| (generic.clone(), known_generics[i].clone()),
-                                ));
-
-                            let parsed_members = members
-                                .iter()
-                                .map(|member| Argument {
-                                    name: member.name.clone(),
-                                    r#type: member.r#type.clone().unknown_to_known(
-                                        Some(self.shared.struct_pool),
-                                        Some(self.shared.extra_structs),
-                                        generics.clone(),
-                                        parsed_generics.clone(),
-                                    ),
-                                })
-                                .collect::<Vec<Argument>>();
-
-                            self.shared
-                                .extra_structs
-                                .borrow_mut()
-                                .push(Primitive::Struct {
-                                    name: generic_name.clone(),
-                                    public: false,
-                                    usable: true,
-                                    imported: false,
-                                    generics: vec![],
-                                    known_generics: parsed_generics,
-                                    members: parsed_members.clone(),
-                                    location: location.clone(),
-                                });
-
-                            self.shared
-                                .struct_pool
-                                .borrow_mut()
-                                .insert(generic_name.clone(), (vec![], parsed_members, location));
+                            create_generic_struct(
+                                name.clone(),
+                                generic_name.clone(),
+                                location,
+                                known_generics,
+                                &self.shared.struct_pool,
+                                &self.shared.extra_structs,
+                            )
                         }
 
                         ty = Type::Struct(generic_name);

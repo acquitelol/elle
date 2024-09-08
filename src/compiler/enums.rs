@@ -1100,7 +1100,7 @@ impl fmt::Display for Block {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Function {
     pub linkage: Linkage,
     pub name: String,
@@ -1113,7 +1113,7 @@ pub struct Function {
     pub usable: bool,
     pub imported: bool,
     pub generics: Vec<String>,
-    pub known_generics: Vec<Type>,
+    pub known_generics: HashMap<String, Type>,
     pub arguments: Vec<(Type, Value)>,
     pub return_type: Option<Type>,
     pub blocks: Vec<Block>,

@@ -4,6 +4,7 @@ use crate::{
     compiler::enums::Type,
     ensure_fn_pointer,
     lexer::enums::{Location, Token, TokenKind, ValueKind},
+    misc::colors::*,
     parser::{constant::Constant, function::Function, r#struct::Struct},
     Warnings, GENERIC_END, GENERIC_IDENTIFIER,
 };
@@ -21,6 +22,90 @@ pub enum DoOnly {
 }
 
 pub type StructPool = HashMap<String, (Vec<String>, Vec<Argument>, Location)>;
+
+pub fn create_generic_struct(
+    name: String,
+    generic_name: String,
+    mut location: Location,
+    known_generics: Vec<Type>,
+    struct_pool: &RefCell<StructPool>,
+    extra_structs: &RefCell<Vec<Primitive>>,
+) {
+    let (generics, members, struct_location) = struct_pool.borrow().get(&name).unwrap().clone();
+
+    if generics.len() != known_generics.len() {
+        if generics.len() < known_generics.len() {
+            todo!("the user passed too many generics");
+        }
+
+        let unknown = generics
+            .iter()
+            .cloned()
+            .skip(known_generics.len())
+            .collect::<Vec<String>>();
+
+        location.column -= location.ctx.len() - location.ctx.trim().len();
+        location.ctx = location.ctx.trim().into();
+        location.length = location.column;
+        location.column = 0;
+        location.above = Some(format!(
+            "In struct:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
+            " ".repeat(
+                location.ctx.len() - location.ctx.trim().len()
+                    + format!("{}", location.row + 1).len()
+                    + 8
+            ),
+            struct_location.ctx
+        ));
+
+        panic!(
+            "{}",
+            location.error(format!(
+                "Mismatched number of generics in struct {}<{}>.\nCould not find generic{} {} where the function specifies <{}>.",
+                name.replace(".", "::"),
+                generics.join(", "),
+                if unknown.len() == 1 { "" } else { "s" },
+                unknown.join(", "),
+                generics.join(", ")
+            ))
+        )
+    }
+
+    let parsed_generics = HashMap::from_iter(
+        generics
+            .iter()
+            .enumerate()
+            .map(|(i, generic)| (generic.clone(), known_generics[i].clone())),
+    );
+
+    let parsed_members = members
+        .iter()
+        .map(|member| Argument {
+            name: member.name.clone(),
+            r#type: member.r#type.clone().unknown_to_known(
+                Some(struct_pool),
+                Some(extra_structs),
+                generics.clone(),
+                parsed_generics.clone(),
+            ),
+        })
+        .collect::<Vec<Argument>>();
+
+    extra_structs.borrow_mut().push(Primitive::Struct {
+        name: generic_name.clone(),
+        public: false,
+        usable: true,
+        imported: false,
+        generics: vec![],
+        known_generics: parsed_generics,
+        members: parsed_members.clone(),
+        location: location.clone(),
+    });
+
+    struct_pool
+        .borrow_mut()
+        .insert(generic_name.clone(), (vec![], parsed_members, location));
+}
 
 pub struct Parser {
     pub tokens: Vec<Token>,
@@ -184,6 +269,8 @@ impl Parser {
                             }
                         }
 
+                        let location = self.current_token().location;
+
                         let generic_name = format!(
                             "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
                             known_generics
@@ -194,41 +281,14 @@ impl Parser {
                         );
 
                         if !self.struct_pool.borrow().contains_key(&generic_name) {
-                            let (generics, members, location) =
-                                self.struct_pool.borrow().get(&name).unwrap().clone();
-
-                            let parsed_generics =
-                                HashMap::from_iter(generics.iter().enumerate().map(
-                                    |(i, generic)| (generic.clone(), known_generics[i].clone()),
-                                ));
-
-                            let parsed_members = members
-                                .iter()
-                                .map(|member| Argument {
-                                    name: member.name.clone(),
-                                    r#type: member.r#type.clone().unknown_to_known(
-                                        Some(&self.struct_pool),
-                                        Some(&self.extra_structs),
-                                        generics.clone(),
-                                        parsed_generics.clone(),
-                                    ),
-                                })
-                                .collect::<Vec<Argument>>();
-
-                            self.extra_structs.borrow_mut().push(Primitive::Struct {
-                                name: generic_name.clone(),
-                                public: false,
-                                usable: true,
-                                imported: false,
-                                generics: vec![],
-                                known_generics: parsed_generics,
-                                members: parsed_members.clone(),
-                                location: location.clone(),
-                            });
-
-                            self.struct_pool
-                                .borrow_mut()
-                                .insert(generic_name.clone(), (vec![], parsed_members, location));
+                            create_generic_struct(
+                                name.clone(),
+                                generic_name.clone(),
+                                location,
+                                known_generics,
+                                &self.struct_pool,
+                                &self.extra_structs,
+                            )
                         }
 
                         ty = Type::Struct(generic_name);

@@ -169,6 +169,7 @@ impl Compiler {
         usable: bool,
         imported: bool,
         generics: Vec<String>,
+        known_generics: HashMap<String, Type>,
         arguments: &Vec<Argument>,
         return_type: Option<Type>,
         body: Vec<AstNode>,
@@ -203,7 +204,7 @@ impl Compiler {
             usable,
             imported,
             generics,
-            known_generics: vec![],
+            known_generics,
             arguments: args,
             return_type,
             blocks: vec![],
@@ -223,7 +224,7 @@ impl Compiler {
         // we need to forward-declare the function with an empty body
         //
         // TODO: Forward declare *all* functions without their bodies
-        module.borrow_mut().add_function(func);
+        module.borrow_mut().add_function(func.clone());
 
         for statement in body.iter() {
             // Ignore plain literals that aren't assigned to anything
@@ -261,14 +262,36 @@ impl Compiler {
         let mut first_ty: Option<Type> = None;
 
         macro_rules! ty_err_message {
-            ($first:expr, $second:expr, $location:expr $(,)?) => {
+            ($first:expr, $second:expr, $location:expr $(,)?) => {{
                 $location.error(format!(
                     "Inconsistent return types in function '{}': {} and {}",
-                    func_ref.borrow().name.replace(".", "::"),
+                    if is_generic!(func.name) {
+                        let mut parts = func.name.split(".").map(|x| x.to_string()).peekable();
+                        let mut name = parts.next().unwrap();
+
+                        if let Some(next) = parts.peek() {
+                            if next != "0" {
+                                name.push_str(&format!("::{}", parts.next().unwrap()));
+                            }
+                        }
+
+                        name.push_str(&format!(
+                            "<{}>",
+                            func.known_generics
+                                .iter()
+                                .map(|(_, ty)| ty.display())
+                                .collect::<Vec<String>>()
+                                .join(", ")
+                        ));
+                        name
+                    } else {
+                        func.name
+                    }
+                    .replace(".", "::"),
                     $first,
                     $second
                 ))
-            };
+            }};
         }
 
         macro_rules! maybe_void_pointer {
@@ -875,7 +898,7 @@ impl Compiler {
                         usable: true,
                         imported: false,
                         generics: vec![],
-                        known_generics: vec![],
+                        known_generics: hashmap![],
                         // TODO: Allow the function declaration to specify a real signature instead of just `fn *`
                         arguments: parameters.iter().map(|param| {
                             let mut tmp_func = Function::default();
@@ -1075,11 +1098,8 @@ impl Compiler {
                             }
 
                             if generics.len() != known_generics.len() {
-                                // Expecting <T, U> but getting <T, U, V>
-                                // As the user cant pass explicit generics (yet)
-                                // this path should be unreachable for now
                                 if generics.len() < known_generics.len() {
-                                    todo!();
+                                    todo!("the user passed too many generics");
                                 }
 
                                 let a: HashSet<_> = generics.iter().cloned().collect();
@@ -1153,6 +1173,7 @@ impl Compiler {
                                     usable,
                                     imported,
                                     vec![],
+                                    known_generics.clone(),
                                     &arguments
                                         .iter()
                                         .cloned()
@@ -3035,6 +3056,7 @@ impl Compiler {
                         usable,
                         imported,
                         vec![],
+                        hashmap![],
                         &vec![],
                         ty,
                         vec![AstNode::ReturnStatement {
@@ -3079,6 +3101,7 @@ impl Compiler {
                             usable,
                             imported,
                             generics,
+                            hashmap![],
                             &arguments,
                             r#return,
                             body,
