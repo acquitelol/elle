@@ -19,15 +19,6 @@ use super::enums::{
     Value,
 };
 
-struct Shared<'a> {
-    func: &'a RefCell<Function>,
-    module: &'a RefCell<Module>,
-    stmt: AstNode,
-    ty: Option<Type>,
-    value: Option<Value>,
-    is_return: bool,
-}
-
 pub struct Compiler {
     tmp_counter: u32,
     scopes: Vec<HashMap<String, (Type, Value)>>,
@@ -235,20 +226,18 @@ impl Compiler {
         module.borrow_mut().add_function(func);
 
         for statement in body.iter() {
-            let shared = &Shared {
-                func: &func_ref,
-                module,
-                stmt: statement.clone(),
-                ty: None,
-                value: None,
-                is_return: false,
-            };
-
             // Ignore plain literals that aren't assigned to anything
             // exact literals should not be ignored
             match statement {
                 AstNode::LiteralStatement { kind, .. } => match kind {
-                    TokenKind::ExactLiteral => match self.generate_statement(shared) {
+                    TokenKind::ExactLiteral => match self.generate_statement(
+                        &func_ref,
+                        module,
+                        statement.clone(),
+                        None,
+                        None,
+                        false,
+                    ) {
                         Some((_, value)) => func_ref
                             .borrow_mut()
                             .add_instruction(Instruction::Literal(value)),
@@ -256,7 +245,14 @@ impl Compiler {
                     },
                     _ => {}
                 },
-                _ => match self.generate_statement(shared) {
+                _ => match self.generate_statement(
+                    &func_ref,
+                    module,
+                    statement.clone(),
+                    None,
+                    None,
+                    false,
+                ) {
                     _ => {}
                 },
             }
@@ -405,28 +401,35 @@ impl Compiler {
         owned_func
     }
 
-    fn generate_statement(&mut self, shared: &Shared) -> Option<(Type, Value)> {
-        let res = match shared.stmt {
+    fn generate_statement(
+        &mut self,
+        func: &RefCell<Function>,
+        module: &RefCell<Module>,
+        stmt: AstNode,
+        ty: Option<Type>,
+        value: Option<Value>,
+        is_return: bool,
+    ) -> Option<(Type, Value)> {
+        let res = match stmt {
             AstNode::DeclareStatement {
                 name,
                 r#type,
                 value,
                 location,
             } => {
-                let existing = match self.get_variable(name.as_str(), Some(shared.func)) {
+                let existing = match self.get_variable(name.as_str(), Some(func)) {
                     Ok((ty, _)) => ty,
                     Err(_) => Type::Word,
                 };
 
-                if r#type.is_none() && self.get_variable(name.as_str(), Some(shared.func)).is_err()
-                {
+                if r#type.is_none() && self.get_variable(name.as_str(), Some(func)).is_err() {
                     panic!("{}", location.error(format!("Variable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.", name)));
                 }
 
-                let res = self.get_variable(&format!("{}.addr", name), Some(shared.func));
+                let res = self.get_variable(&format!("{}.addr", name), Some(func));
                 let local_ty = r#type.unwrap_or(existing);
 
-                let temp = self.new_variable(&local_ty, &name, Some(shared.func), false, false);
+                let temp = self.new_variable(&local_ty, &name, Some(func), false, false);
 
                 let parsed = self.generate_statement(
                     func,
