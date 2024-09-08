@@ -1,50 +1,46 @@
-use std::collections::HashSet;
+use std::{cell::RefCell, collections::HashMap};
 
 use crate::{
     compiler::enums::Type,
-    ensure_fn_pointer, get_non_generic_type,
-    lexer::enums::{Token, TokenKind, ValueKind},
+    ensure_fn_pointer,
+    lexer::enums::{Location, Token, TokenKind, ValueKind},
     parser::{constant::Constant, function::Function, r#struct::Struct},
-    Warnings,
+    Warnings, GENERIC_END, GENERIC_IDENTIFIER,
 };
 
-use super::{enums::Primitive, r#use::Use};
+use super::{
+    enums::{Argument, Primitive},
+    r#use::Use,
+};
 
 #[derive(Eq, PartialEq)]
 pub enum DoOnly {
     FunctionsAndConstants,
-    NonGenericImportsAndGenericDefs,
-    GenericImports,
+    Imports,
     Structs,
 }
+
+pub type StructPool = HashMap<String, (Vec<String>, Vec<Argument>, Location)>;
 
 pub struct Parser {
     pub tokens: Vec<Token>,
     pub position: usize,
-    pub tree: Vec<Primitive>,
-    pub struct_pool: HashSet<String>,
-    pub external_generics: Vec<Type>,
-    pub generic_keys: Vec<String>,
-    pub generic_defaults: Vec<Option<Type>>,
+    pub extra_structs: RefCell<Vec<Primitive>>,
+    pub tree: RefCell<Vec<Primitive>>,
+    // Map of struct name to members and generics
+    pub struct_pool: RefCell<StructPool>,
     pub global_public: bool,
     pub warnings: Warnings,
 }
 
 impl Parser {
-    pub fn new(
-        tokens: Vec<Token>,
-        struct_pool: HashSet<String>,
-        external_generics: Vec<Type>,
-        warnings: Warnings,
-    ) -> Self {
+    pub fn new(tokens: Vec<Token>, struct_pool: StructPool, warnings: Warnings) -> Self {
         Parser {
             tokens,
             position: 0,
-            tree: vec![],
-            struct_pool,
-            external_generics,
-            generic_keys: vec![],
-            generic_defaults: vec![],
+            extra_structs: RefCell::new(vec![]),
+            tree: RefCell::new(vec![]),
+            struct_pool: RefCell::new(struct_pool),
             global_public: false,
             warnings,
         }
@@ -134,7 +130,7 @@ impl Parser {
         self.get(TokenKind::Identifier)
     }
 
-    pub fn get_type(&mut self) -> Type {
+    pub fn get_type(&mut self, generics: Option<&Vec<String>>) -> Type {
         let is_fn_pointer = self.current_token().kind == TokenKind::Function;
         let name = if is_fn_pointer {
             self.current_token().value.get_string_inner().unwrap()
@@ -142,9 +138,10 @@ impl Parser {
             self.get(TokenKind::Identifier)
         };
 
+        let is_struct = self.struct_pool.borrow().contains_key(&name);
         let is_valid = is_fn_pointer
-            || self.struct_pool.contains(&name)
-            || self.generic_keys.contains(&name)
+            || is_struct
+            || generics.unwrap_or(&vec![]).contains(&name)
             || ValueKind::String(name.clone()).is_base_type();
 
         if !is_valid {
@@ -158,10 +155,8 @@ impl Parser {
         }
 
         let mut ty = ValueKind::String(name.clone())
-            .to_type_string(self.struct_pool.contains(&name))
+            .to_type_string(self.struct_pool.borrow().contains_key(&name))
             .unwrap();
-
-        ty = get_non_generic_type!(self.generic_keys, self.external_generics, ty);
         let mut found_ptr = false;
 
         loop {
@@ -174,6 +169,71 @@ impl Parser {
                         ty = Type::Pointer(Box::new(ty));
                         self.advance();
                     }
+                    TokenKind::LessThan if is_struct => {
+                        self.advance();
+                        self.advance();
+
+                        let mut known_generics = vec![];
+
+                        while self.current_token().kind != TokenKind::GreaterThan {
+                            known_generics.push(self.get_type(generics));
+                            self.advance();
+
+                            if self.current_token().kind == TokenKind::Comma {
+                                self.advance();
+                            }
+                        }
+
+                        let generic_name = format!(
+                            "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
+                            known_generics
+                                .iter()
+                                .map(|known| known.to_internal_id().to_string())
+                                .collect::<Vec<String>>()
+                                .join(".")
+                        );
+
+                        if !self.struct_pool.borrow().contains_key(&generic_name) {
+                            let (generics, members, location) =
+                                self.struct_pool.borrow().get(&name).unwrap().clone();
+
+                            let parsed_generics =
+                                HashMap::from_iter(generics.iter().enumerate().map(
+                                    |(i, generic)| (generic.clone(), known_generics[i].clone()),
+                                ));
+
+                            let parsed_members = members
+                                .iter()
+                                .map(|member| Argument {
+                                    name: member.name.clone(),
+                                    r#type: member.r#type.clone().unknown_to_known(
+                                        Some(&self.struct_pool),
+                                        Some(&self.extra_structs),
+                                        generics.clone(),
+                                        parsed_generics.clone(),
+                                    ),
+                                })
+                                .collect::<Vec<Argument>>();
+
+                            self.extra_structs.borrow_mut().push(Primitive::Struct {
+                                name: generic_name.clone(),
+                                public: false,
+                                usable: true,
+                                imported: false,
+                                generics: vec![],
+                                known_generics: parsed_generics,
+                                members: parsed_members.clone(),
+                                location: location.clone(),
+                            });
+
+                            self.struct_pool
+                                .borrow_mut()
+                                .insert(generic_name.clone(), (vec![], parsed_members, location));
+                        }
+
+                        ty = Type::Struct(generic_name);
+                        self.expect_tokens(vec![TokenKind::GreaterThan]);
+                    }
                     // Crashes if it hasn't got at least 1 nested pointer for
                     // function pointers, ie `fn main(fn a)` is invalid
                     // you must have `fn main(fn *a)` instead.
@@ -184,7 +244,7 @@ impl Parser {
             }
         }
 
-        get_non_generic_type!(self.generic_keys, self.external_generics, ty)
+        ty
     }
 
     // 0 - functions, constants, etc
@@ -194,10 +254,10 @@ impl Parser {
     pub fn parse(
         &mut self,
         do_only: &DoOnly,
-        new_struct_pool: Option<HashSet<String>>,
-    ) -> (Vec<Primitive>, HashSet<String>) {
+        new_struct_pool: Option<StructPool>,
+    ) -> (Vec<Primitive>, StructPool, Vec<Primitive>) {
         if new_struct_pool.is_some() {
-            self.struct_pool = new_struct_pool.unwrap();
+            self.struct_pool = RefCell::new(new_struct_pool.unwrap());
         }
 
         self.position = 0;
@@ -244,49 +304,10 @@ impl Parser {
                     external = true;
                     self.advance();
                 }
-                TokenKind::Generic if do_only == &DoOnly::NonGenericImportsAndGenericDefs => {
-                    self.advance();
-
-                    while vec![TokenKind::Identifier, TokenKind::Comma, TokenKind::Equal]
-                        .contains(&self.current_token().kind)
-                    {
-                        if self.current_token().kind == TokenKind::Comma {
-                            self.advance();
-                        }
-
-                        let generic = self.get_identifier();
-                        let mut default = None;
-                        self.advance();
-
-                        if self.current_token().kind == TokenKind::Equal {
-                            self.advance();
-                            default = Some(self.get_type());
-                            self.advance();
-                        }
-
-                        self.generic_keys.push(generic);
-                        self.generic_defaults.push(default);
-                    }
-
-                    self.expect_tokens(vec![TokenKind::Semicolon]);
-                    self.advance();
-
-                    public = false;
-                    local = false;
-                    external = false;
-                }
-                TokenKind::Use
-                    if do_only == &DoOnly::NonGenericImportsAndGenericDefs
-                        || do_only == &DoOnly::GenericImports =>
-                {
+                TokenKind::Use if do_only == &DoOnly::Imports => {
                     let mut r#use = Use::new(self);
-                    let statement = r#use.parse(do_only);
-
-                    if (!r#use.has_generics && do_only == &DoOnly::NonGenericImportsAndGenericDefs)
-                        || (r#use.has_generics && do_only == &DoOnly::GenericImports)
-                    {
-                        self.tree.push(statement);
-                    }
+                    let statement = r#use.parse();
+                    self.tree.borrow_mut().push(statement);
 
                     public = false;
                     local = false;
@@ -349,7 +370,7 @@ impl Parser {
                         external,
                     );
 
-                    self.tree.push(statement);
+                    self.tree.borrow_mut().push(statement);
 
                     public = false;
                     local = false;
@@ -377,7 +398,7 @@ impl Parser {
                         global_public || public
                     });
 
-                    self.tree.push(statement);
+                    self.tree.borrow_mut().push(statement);
 
                     public = false;
                     local = false;
@@ -405,7 +426,7 @@ impl Parser {
                         global_public || public
                     });
 
-                    self.tree.push(statement);
+                    self.tree.borrow_mut().push(statement);
 
                     public = false;
                     local = false;
@@ -418,6 +439,10 @@ impl Parser {
         }
 
         self.global_public = global_public;
-        return (self.tree.clone(), self.struct_pool.clone());
+        return (
+            self.tree.borrow_mut().to_owned(),
+            self.struct_pool.borrow_mut().to_owned(),
+            self.extra_structs.borrow_mut().to_owned(),
+        );
     }
 }

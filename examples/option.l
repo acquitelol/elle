@@ -1,20 +1,41 @@
-use std/option<string>;
 use std/io;
+use std/string;
+use std/option;
 
-fn get_something(i32 input) {
+fn get_meow(i32 input) -> Option<string> {
     if (input == 3) {
-        return None;
+        return Option::None();
     }
 
-    return Some("meow");
+    return Option::Some("meow");
+}
+
+fn get_miku_number(string input) -> Option<i32> {
+    if input.equals("mikudayo") {
+        return Option::Some(39);
+    }
+
+    return Option::None();
 }
 
 fn main() {
-    Option a = get_something(1);
-    Option b = get_something(3);
+    Option<string> a = get_meow(1);
+    Option<string> b = get_meow(3);
 
-    io::assert(a.unwrap_or("").equals("meow"), nil);
+    io::dbg(a.unwrap_or("Fallback :3"));
+    io::dbg(b.unwrap_or("Fallback :3"));
+
+    io::assert(a.unwrap_or("Fallback :3").equals("meow"), nil);
     io::assert(b.unwrap_or("Fallback :3").equals("Fallback :3"), nil);
+
+    Option<i32> c = get_miku_number("aaa :3");
+    Option<i32> d = get_miku_number("mikudayo");
+
+    io::dbg(c.unwrap_or(-1));
+    io::dbg(d.unwrap_or(-1));
+
+    io::assert(c.unwrap_or(-1) == -1, nil);
+    io::assert(d.unwrap_or(-1) == 39, nil);
 
     io::println("All option tests have passed!".color("green").reset());
 }

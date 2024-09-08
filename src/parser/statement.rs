@@ -1,20 +1,21 @@
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use super::enums::AstNode;
+use super::enums::{Argument, AstNode, Primitive};
+use super::parser::StructPool;
 use crate::{
     compiler::enums::Type,
-    ensure_fn_pointer, get_non_generic_type,
+    ensure_fn_pointer,
     lexer::enums::{Location, Token, TokenKind, ValueKind},
-    not_valid_struct_or_type, token_to_node,
+    not_valid_struct_or_type, token_to_node, GENERIC_END, GENERIC_IDENTIFIER,
 };
 
 pub struct Shared<'a> {
-    pub struct_pool: HashSet<String>,
-    pub external_generics: &'a Vec<Type>,
-    pub generic_keys: &'a Vec<String>,
-    pub generic_defaults: &'a Vec<Option<Type>>,
+    pub struct_pool: &'a RefCell<StructPool>,
+    pub extra_structs: &'a RefCell<Vec<Primitive>>,
+    pub tree: &'a RefCell<Vec<Primitive>>,
+    pub generics: &'a Vec<String>,
 }
 
 pub struct Statement<'a> {
@@ -66,7 +67,7 @@ impl<'a> Statement<'a> {
     }
 
     fn next_token_seek(&mut self, seek: usize) -> Option<Token> {
-        match self.is_eof() {
+        match self.position + seek > self.tokens.len() - 1 {
             true => None,
             false => Some(self.tokens[self.position + seek].clone()),
         }
@@ -140,7 +141,7 @@ impl<'a> Statement<'a> {
         self.get(vec![TokenKind::Identifier])
     }
 
-    pub fn get_type(&mut self) -> Type {
+    pub fn get_type(&mut self, generics: Option<&Vec<String>>) -> Type {
         let is_fn_pointer = self.current_token().kind == TokenKind::Function;
         let name = if is_fn_pointer {
             self.current_token().value.get_string_inner().unwrap()
@@ -148,9 +149,11 @@ impl<'a> Statement<'a> {
             self.get(vec![TokenKind::Identifier])
         };
 
+        let is_struct = self.shared.struct_pool.borrow().contains_key(&name);
+
         let is_valid = is_fn_pointer
-            || self.shared.struct_pool.contains(&name)
-            || self.shared.generic_keys.contains(&name)
+            || is_struct
+            || generics.unwrap_or(&vec![]).contains(&name)
             || ValueKind::String(name.clone()).is_base_type();
 
         if !is_valid {
@@ -164,10 +167,8 @@ impl<'a> Statement<'a> {
         }
 
         let mut ty = ValueKind::String(name.clone())
-            .to_type_string(self.shared.struct_pool.contains(&name))
+            .to_type_string(is_struct)
             .unwrap();
-
-        ty = get_non_generic_type!(self.shared.generic_keys, self.shared.external_generics, ty);
         let mut found_ptr = false;
 
         loop {
@@ -180,6 +181,75 @@ impl<'a> Statement<'a> {
                         ty = Type::Pointer(Box::new(ty));
                         self.advance();
                     }
+                    TokenKind::LessThan if is_struct => {
+                        self.advance();
+                        self.advance();
+
+                        let mut known_generics = vec![];
+
+                        while self.current_token().kind != TokenKind::GreaterThan {
+                            known_generics.push(self.get_type(generics));
+                            self.advance();
+
+                            if self.current_token().kind == TokenKind::Comma {
+                                self.advance();
+                            }
+                        }
+
+                        let generic_name = format!(
+                            "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
+                            known_generics
+                                .iter()
+                                .map(|known| known.to_internal_id().to_string())
+                                .collect::<Vec<String>>()
+                                .join(".")
+                        );
+
+                        if !self.shared.struct_pool.borrow().contains_key(&generic_name) {
+                            let (generics, members, location) =
+                                self.shared.struct_pool.borrow().get(&name).unwrap().clone();
+
+                            let parsed_generics =
+                                HashMap::from_iter(generics.iter().enumerate().map(
+                                    |(i, generic)| (generic.clone(), known_generics[i].clone()),
+                                ));
+
+                            let parsed_members = members
+                                .iter()
+                                .map(|member| Argument {
+                                    name: member.name.clone(),
+                                    r#type: member.r#type.clone().unknown_to_known(
+                                        Some(self.shared.struct_pool),
+                                        Some(self.shared.extra_structs),
+                                        generics.clone(),
+                                        parsed_generics.clone(),
+                                    ),
+                                })
+                                .collect::<Vec<Argument>>();
+
+                            self.shared
+                                .extra_structs
+                                .borrow_mut()
+                                .push(Primitive::Struct {
+                                    name: generic_name.clone(),
+                                    public: false,
+                                    usable: true,
+                                    imported: false,
+                                    generics: vec![],
+                                    known_generics: parsed_generics,
+                                    members: parsed_members.clone(),
+                                    location: location.clone(),
+                                });
+
+                            self.shared
+                                .struct_pool
+                                .borrow_mut()
+                                .insert(generic_name.clone(), (vec![], parsed_members, location));
+                        }
+
+                        ty = Type::Struct(generic_name);
+                        self.expect_tokens(vec![TokenKind::GreaterThan]);
+                    }
                     // Crashes if it hasn't got at least 1 nested pointer for
                     // function pointers, ie `fn main(fn a)` is invalid
                     // you must have `fn main(fn *a)` instead.
@@ -190,19 +260,14 @@ impl<'a> Statement<'a> {
             }
         }
 
-        // Essentially makes the compiler forget what type the pointer holds
-        if matches!(ty.clone(), Type::Pointer(inner) if matches!(*inner, Type::Void)) {
-            Type::Long
-        } else {
-            ty
-        }
+        ty
     }
 
     fn parse_declare(&mut self, ty: Option<Option<Type>>) -> AstNode {
         let r#type = if ty.is_some() {
             ty.clone().unwrap()
         } else {
-            let tmp = self.get_type();
+            let tmp = self.get_type(Some(self.shared.generics));
             self.advance();
 
             Some(tmp)
@@ -362,6 +427,17 @@ impl<'a> Statement<'a> {
     fn parse_return(&mut self) -> AstNode {
         self.advance();
 
+        if self.current_token().kind == TokenKind::Semicolon {
+            return AstNode::ReturnStatement {
+                value: Box::new(AstNode::LiteralStatement {
+                    kind: TokenKind::IntegerLiteral,
+                    value: ValueKind::Number(0),
+                    location: self.current_token().location.clone(),
+                }),
+                location: self.current_token().location,
+            };
+        }
+
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
         let res = if tokens.len() > 0 {
@@ -409,6 +485,24 @@ impl<'a> Statement<'a> {
 
             (location, tmp)
         };
+
+        let mut generics = vec![];
+
+        if self.current_token().kind == TokenKind::LessThan {
+            self.advance();
+
+            while self.current_token().kind != TokenKind::GreaterThan {
+                generics.push(self.get_type(Some(self.shared.generics)));
+                self.advance();
+
+                if self.current_token().kind == TokenKind::Comma {
+                    self.advance();
+                }
+            }
+
+            self.expect_tokens(vec![TokenKind::GreaterThan]);
+            self.advance();
+        }
 
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
         self.advance();
@@ -512,6 +606,7 @@ impl<'a> Statement<'a> {
 
         let mut expression = AstNode::FunctionCall {
             name,
+            generics,
             parameters,
             type_method,
             ignore_no_def: false,
@@ -650,7 +745,7 @@ impl<'a> Statement<'a> {
         let mut location = self.current_token().location.clone();
 
         if self.current_token().kind != TokenKind::RightBlockBrace {
-            let tokens = self.yield_tokens_with_condition(|token, _| {
+            let tokens = self.yield_tokens_with_condition(|token, _, _| {
                 if token.kind == TokenKind::RightBlockBrace {
                     return true;
                 }
@@ -1018,7 +1113,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let mut right_location = self.current_token().location.clone();
-        let right_tokens = self.yield_tokens_with_condition(|token, _| {
+        let right_tokens = self.yield_tokens_with_condition(|token, _, _| {
             if token.kind == TokenKind::RightBlockBrace {
                 return true;
             }
@@ -1107,7 +1202,7 @@ impl<'a> Statement<'a> {
         self.advance();
         let mut location = self.current_token().location.clone();
 
-        let tokens = self.yield_tokens_with_condition(|token, _| {
+        let tokens = self.yield_tokens_with_condition(|token, _, _| {
             if token.kind == TokenKind::RightBlockBrace {
                 return true;
             }
@@ -1146,7 +1241,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let location = self.current_token().location;
-        let r#type = self.get_type();
+        let r#type = self.get_type(Some(&self.shared.generics));
         self.advance();
 
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
@@ -1186,7 +1281,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let location = self.current_token().location.clone();
-        let r#type = self.get_type();
+        let r#type = self.get_type(Some(self.shared.generics));
 
         self.advance();
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
@@ -1271,11 +1366,11 @@ impl<'a> Statement<'a> {
             .unwrap_or("".into());
 
         let value = if self.current_token().kind == TokenKind::Identifier
-            && (self.shared.struct_pool.contains(&ty_name)
-                || self.shared.generic_keys.contains(&ty_name)
+            && (self.shared.struct_pool.borrow().contains_key(&ty_name)
+                || self.shared.generics.contains(&ty_name)
                 || self.current_token().value.is_base_type())
         {
-            Ok(self.get_type())
+            Ok(self.get_type(Some(&self.shared.generics)))
         } else {
             let mut tokens = vec![];
             let mut nesting = 0;
@@ -1420,18 +1515,7 @@ impl<'a> Statement<'a> {
         let location = self.current_token().location.clone();
         self.advance();
 
-        let tokens = self.yield_tokens_with_condition(|token, prev_token| {
-            let ty_name = prev_token.value.get_string_inner().unwrap_or("".into());
-
-            token.kind.is_arithmetic()
-                && !(self.shared.struct_pool.contains(&ty_name)
-                    || self.shared.generic_keys.contains(&ty_name)
-                    || prev_token.value.is_base_type())
-                || token.kind.is_declarative()
-                || token.kind == TokenKind::Semicolon
-                || token.kind == TokenKind::Equal
-        });
-
+        let tokens = self.yield_tokens_for_unary();
         let parsed = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
         AstNode::ArithmeticOperation {
@@ -1446,18 +1530,7 @@ impl<'a> Statement<'a> {
         self.advance();
         let location = self.current_token().location.clone();
 
-        let tokens = self.yield_tokens_with_condition(|token, prev_token| {
-            let ty_name = prev_token.value.get_string_inner().unwrap_or("".into());
-
-            token.kind.is_arithmetic()
-                && !(self.shared.struct_pool.contains(&ty_name)
-                    || self.shared.generic_keys.contains(&ty_name)
-                    || prev_token.value.is_base_type())
-                || token.kind.is_declarative()
-                || token.kind == TokenKind::Semicolon
-                || token.kind == TokenKind::Equal
-        });
-
+        let tokens = self.yield_tokens_for_unary();
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
         AstNode::NotStatement { value, location }
@@ -1467,18 +1540,7 @@ impl<'a> Statement<'a> {
         self.advance();
         let location = self.current_token().location.clone();
 
-        let tokens = self.yield_tokens_with_condition(|token, prev_token| {
-            let ty_name = prev_token.value.get_string_inner().unwrap_or("".into());
-
-            token.kind.is_arithmetic()
-                && !(self.shared.struct_pool.contains(&ty_name)
-                    || self.shared.generic_keys.contains(&ty_name)
-                    || prev_token.value.is_base_type())
-                || token.kind.is_declarative()
-                || token.kind == TokenKind::Semicolon
-                || token.kind == TokenKind::Equal
-        });
-
+        let tokens = self.yield_tokens_for_unary();
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
         AstNode::AddressStatement { value, location }
@@ -1490,18 +1552,7 @@ impl<'a> Statement<'a> {
         let left_location = self.current_token().location.clone();
         let mut value = None;
 
-        let tokens = self.yield_tokens_with_condition(|token, prev_token| {
-            let ty_name = prev_token.value.get_string_inner().unwrap_or("".into());
-
-            token.kind.is_arithmetic()
-                && !(self.shared.struct_pool.contains(&ty_name)
-                    || self.shared.generic_keys.contains(&ty_name)
-                    || prev_token.value.is_base_type())
-                || token.kind.is_declarative()
-                || token.kind == TokenKind::Semicolon
-                || token.kind == TokenKind::Equal
-        });
-
+        let tokens = self.yield_tokens_for_unary();
         let left = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
         let right_location = self.current_token().location.clone();
@@ -1551,10 +1602,10 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_struct_init(&mut self) -> AstNode {
-        let mut name = self.get_identifier();
+        let name = self.get_identifier();
         let location = self.current_token().location.clone();
 
-        if !(self.shared.struct_pool.contains(&name) || self.shared.generic_keys.contains(&name)) {
+        if !(self.shared.struct_pool.borrow().contains_key(&name)) {
             panic!(
                 "{}",
                 self.current_token().location.error(format!(
@@ -1562,21 +1613,6 @@ impl<'a> Statement<'a> {
                     name
                 ))
             )
-        }
-
-        if self.shared.generic_keys.contains(&name) {
-            name = self
-                .shared
-                .external_generics
-                .get(
-                    self.shared
-                        .generic_keys
-                        .iter()
-                        .position(|item| item == &name)
-                        .unwrap(),
-                )
-                .unwrap()
-                .id()
         }
 
         self.advance();
@@ -1841,6 +1877,33 @@ impl<'a> Statement<'a> {
         }
     }
 
+    fn yield_tokens_for_unary(&mut self) -> Vec<Token> {
+        self.yield_tokens_with_condition(|token, prev_token, next_token| {
+            let ty_name = prev_token.value.get_string_inner().unwrap_or("".into());
+
+            if token.kind.is_arithmetic() {
+                if token.kind == TokenKind::LessThan && next_token.is_some() {
+                    let next = next_token.unwrap();
+                    let next_name = next.value.get_string_inner().unwrap_or("".into());
+
+                    !(self.shared.struct_pool.borrow().contains_key(&next_name)
+                        || self.shared.generics.contains(&next_name)
+                        || next.value.is_base_type())
+                } else if token.kind == TokenKind::GreaterThan {
+                    !(self.shared.struct_pool.borrow().contains_key(&ty_name)
+                        || self.shared.generics.contains(&ty_name)
+                        || prev_token.value.is_base_type())
+                } else {
+                    true
+                }
+            } else {
+                token.kind.is_declarative()
+                    || token.kind == TokenKind::Semicolon
+                    || token.kind == TokenKind::Equal
+            }
+        })
+    }
+
     fn yield_tokens_with_delimiters(&mut self, delimiters: Vec<TokenKind>) -> Vec<Token> {
         if delimiters.contains(&self.current_token().kind) {
             panic!(
@@ -1852,12 +1915,12 @@ impl<'a> Statement<'a> {
             );
         }
 
-        return self.yield_tokens_with_condition(|token, _| delimiters.contains(&token.kind));
+        return self.yield_tokens_with_condition(|token, _, _| delimiters.contains(&token.kind));
     }
 
     fn yield_tokens_with_condition<F>(&mut self, mut condition: F) -> Vec<Token>
     where
-        F: FnMut(Token, Token) -> bool,
+        F: FnMut(Token, Token, Option<Token>) -> bool,
     {
         let mut tokens = vec![];
         let mut previous;
@@ -1868,7 +1931,7 @@ impl<'a> Statement<'a> {
 
             let res = self.advance_opt();
 
-            if condition(self.current_token().clone(), previous) {
+            if condition(self.current_token().clone(), previous, self.next_token()) {
                 break;
             }
 
@@ -2014,8 +2077,8 @@ impl<'a> Statement<'a> {
                     let ty_name = token.value.get_string_inner().unwrap_or("".into());
 
                     if token.kind == TokenKind::Identifier
-                        && (self.shared.struct_pool.contains(&ty_name)
-                            || self.shared.generic_keys.contains(&ty_name)
+                        && (self.shared.struct_pool.borrow().contains_key(&ty_name)
+                            || self.shared.generics.contains(&ty_name)
                             || token.value.is_base_type())
                     {
                         self.parse_type_conversion()
@@ -2068,6 +2131,21 @@ impl<'a> Statement<'a> {
                         self.parse_declare(Some(None))
                     } else if next.kind.is_declarative() {
                         self.parse_declarative_like()
+                    } else if next.kind == TokenKind::LessThan {
+                        if let Some(token) = self.next_token_seek(2) {
+                            let ty_name = token.value.get_string_inner().unwrap_or("".into());
+
+                            if token.value.is_base_type()
+                                || self.shared.struct_pool.borrow().contains_key(&ty_name)
+                                || self.shared.generics.contains(&ty_name)
+                            {
+                                self.parse_function(None, None, false)
+                            } else {
+                                self.parse_arithmetic()
+                            }
+                        } else {
+                            self.parse_arithmetic()
+                        }
                     } else if next.kind.is_arithmetic() {
                         self.parse_arithmetic()
                     } else if next.kind == TokenKind::Identifier {
@@ -2079,7 +2157,7 @@ impl<'a> Statement<'a> {
                             "{}",
                             next.location.error(format!(
                                 "Expected left parenthesis or arithmetic, got {:?}",
-                                self.current_token().kind
+                                next.kind
                             )),
                         )
                     }
@@ -2140,8 +2218,7 @@ impl<'a> Statement<'a> {
             TokenKind::Defer => self.parse_defer(),
             other
                 if other == TokenKind::Identifier
-                    && (self.shared.struct_pool.contains(&ty_name)
-                        || self.shared.generic_keys.contains(&ty_name)
+                    && (self.shared.struct_pool.borrow().contains_key(&ty_name)
                         || self.current_token().value.is_base_type()) =>
             {
                 if let Some(token) = self.next_token() {

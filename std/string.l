@@ -274,27 +274,24 @@ fn to_string(string ty, i64 args, bool wrap) {
     i32 length = 0;
 
     if ty.contains("*") {
-        // Ensure the ty is `char *` but isn't `char **`
-        // Any variation (`char ***`) will also match
-        // so `**` is all that's necessary
-        if ty.starts_with("char") && !ty.contains("**") {
-            string arg = args.yield(string);
-
-            if wrap {
-                arg = string::concat("\"", arg, "\"");
-            }
-
-            res = malloc(arg.len() + 1);
-            strcpy(res, arg);
-            return res;
-        }
-
         i64 arg = args.yield(i64);
         fmt = "%p";
 
         length = io::snprintf(nil, 0, fmt, arg);
         res = malloc(length);
         io::sprintf(res, fmt, arg);
+        return res;
+    }
+
+    if ty.starts_with("string") {
+        string arg = args.yield(string);
+
+        if wrap {
+            arg = string::concat("\"", arg, "\"");
+        }
+
+        res = malloc(arg.len() + 1);
+        strcpy(res, arg);
         return res;
     }
 
@@ -373,11 +370,17 @@ fn string::as_string(ElleMeta meta, ...) {
     return to_string(meta.types[0], args, false);
 }
 
+fn string::as_string_wrapped(ElleMeta meta, ...) {
+    variadic args[meta.arity];
+    return to_string(meta.types[0], args, true);
+}
+
 fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
     string result = malloc(fmt.len());
 
     i32 arg = 0;
     bool is_open = false;
+    bool wrapped = false;
 
     for i32 i = 0; i < fmt.len(); i += 1 {
         if is_open {
@@ -387,7 +390,14 @@ fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
 
                 // Push '{' as it was skipped the first time
                 result.push(fmt[i]);
+                continue;
+            }
 
+            // {:} enables wrapped mode which means
+            // that strings are printed as "str" not str
+            // and chars are printed as 'c' not c
+            if fmt[i] == ':' {
+                wrapped = true;
                 continue;
             }
 
@@ -397,9 +407,11 @@ fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
                 return "";
             }
 
-            result.extend(to_string(meta.types[arg + 1], args, false));
             arg += 1;
+            result.extend(to_string(meta.types[arg], args, wrapped));
+
             is_open = false;
+            wrapped = false;
             continue;
         }
 

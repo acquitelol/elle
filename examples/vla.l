@@ -1,17 +1,44 @@
-use std/collections/array<i32>;
+use std/collections/array;
 use std/io;
 
 fn main() {
-    Array array = Array::new();
-    defer array.free();
+    Array<i32> a = Array::new(1, 2, 3);
+    defer a.free();
 
-    array.push(39);
-    array.push(16);
-    array.push(-1);
-    array.push(172);
-    array.push(53);
+    a.push(39);
+    a.push(16);
+    a.push(-1);
 
-    for i32 i = 0; i < array.len(); i += 1 {
-        io::printf("array[{}] = {}", i, array.elements[i]);
-    }
+    Array<string> b = Array::new();
+    defer b.free();
+
+    b.push("hello");
+    b.push("world");
+    b.push("meow");
+    b.push("abcd");
+
+    a.dbg();
+    io::print('\n');
+
+    Array<i32> c = Array::new();
+    defer c.free();
+
+    c.push(172);
+    c.push(53);
+    a.extend(c);
+
+    a.dbg();
+    io::print('\n');
+
+    b.dbg();
+    io::print('\n');
+
+    io::println(b.to_string());
+    io::println(b.join(", "));
+    io::print('\n');
+
+    Array<char> hello_world = Array::from_string("hello world!");
+    io::dbg(hello_world.join(""));
+
+    io::dbg_typeof(a, b);
 }

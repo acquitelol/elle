@@ -1,63 +1,65 @@
-use std/libc/mem;
 use std/io;
-
-generic T;
+use std/libc/mem;
 global pub;
 
-struct Option {
-	T value;
-	bool __private_has_value;
+struct Option<T> {
+    T __value;
+    bool __is_some;
 };
 
-local fn alloc_option(T value, bool has_value) -> Option * {
-    Option *option = malloc(#size(Option));
-    *option = malloc(#size(Option));
+local fn alloc_some<T>(T value) -> Option<T> {
+    Option<T> *option = malloc(#size(Option<T>));
+    *option = malloc(#size(Option<T>));
 
-    option.value = value;
-    option.__private_has_value = has_value;
+    option.__value = value;
+    option.__is_some = true;
 
-    return option;
+    return *option;
 }
 
-fn Some(T val) {
-    return *alloc_option(val, true);
+local fn alloc_none<T>() -> Option<T> {
+    Option<T> *option = malloc(#size(Option<T>));
+    *option = malloc(#size(Option<T>));
+
+    option.__value = 0;
+    option.__is_some = false;
+
+    return *option;
 }
 
-const Option None = *alloc_option((T)nil, false);
-
-fn Option::Some(T val) {
-    return *alloc_option(val, true);
+fn Option::Some<T>(T value) -> Option<T> {
+    return alloc_some(value);
 }
 
-fn Option::None() {
-    return None;
+fn Option::None<T>() -> Option<T> {
+    return alloc_none();
 }
 
-fn Option::expect(Option self, string message) {
-    if !self.__private_has_value {
-        io::eprintln(message);
+fn Option::expect<T>(Option<T> self, string message) -> T {
+    if !self.__is_some {
+        // io::eprintln(message);
         abort();
     }
 
-    return self.value;
+    return self.__value;
 }
 
-fn Option::unwrap(Option self) {
+fn Option::unwrap<T>(Option<T> self) -> T {
     return self.expect("Called `Option::unwrap()` on a `None` value");
 }
 
-fn Option::unwrap_or(Option self, T value) {
-    if !self.__private_has_value {
-        return value;
+fn Option::unwrap_or<T>(Option<T> self, T fallback) -> T {
+    if !self.__is_some {
+        return fallback;
     }
 
-    return self.value;
+    return self.__value;
 }
 
-fn Option::is_some(Option self) {
-    return self.__private_has_value;
+fn Option::is_some<T>(Option<T> self) {
+    return self.__is_some;
 }
 
-fn Option::is_none(Option self) {
+fn Option::is_none<T>(Option<T> self) {
     return !self.is_some();
 }

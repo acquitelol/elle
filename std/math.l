@@ -91,3 +91,11 @@ fn next_power_of_2(i64 x) {
 
 	return y;
 }
+
+fn sign<T>(T x) -> bool {
+    if x > 0 {
+        return 1;
+    }
+
+    return -1;
+}

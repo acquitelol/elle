@@ -93,6 +93,12 @@ fn io::assert(ElleMeta meta, bool condition, string message) {
     }
 }
 
+fn io::dbg_typeof(ElleMeta meta, ...) {
+    for i32 i = 0; i < meta.arity; i += 1 {
+        io::printf("typeof \"{}\" = {}", meta.exprs[i], meta.types[i]);
+    }
+}
+
 const i64 BUF_SIZE = 1024;
 
 fn io::input(string message) -> string {

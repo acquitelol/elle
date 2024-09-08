@@ -68,6 +68,13 @@ macro_rules! get_non_generic_type {
     };
 }
 
+#[macro_export]
+macro_rules! is_generic {
+    ($name:expr $(,)?) => {
+        $name.contains(&format!(".{}.", crate::GENERIC_IDENTIFIER))
+    };
+}
+
 /// Removes a symbol (function, constant, struct) named [`name`]
 ///
 /// Sets the [`usable`] and [`imported`] property on the path [`val`]
@@ -152,7 +159,7 @@ macro_rules! unknown_field {
         let mut similar_name = None;
         let mut lowest_distance = usize::max_value();
 
-        for arg in $struct.iter().map(|arg| arg.name.clone()) {
+        for arg in $struct.1.iter().map(|arg| arg.name.clone()) {
             let contains_name = arg.contains($name.as_str());
             let distance = levenshtein::levenshtein($name.as_str(), arg.clone().as_str());
 

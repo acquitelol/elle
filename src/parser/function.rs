@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 
 use crate::{
+    compiler::enums::Type,
     lexer::enums::{Attribute, TokenKind, ValueKind},
     parser::statement::Shared,
     Warning,
@@ -40,8 +41,7 @@ impl<'a> Function<'a> {
         }
 
         if self.parser.current_token().kind == TokenKind::DoubleColon {
-            if !(self.parser.struct_pool.contains(&name)
-                || self.parser.generic_keys.contains(&name)
+            if !(self.parser.struct_pool.borrow().contains_key(&name)
                 || ValueKind::String(name.clone()).is_base_type())
             {
                 panic!(
@@ -59,23 +59,29 @@ impl<'a> Function<'a> {
 
             self.parser.advance();
 
-            if self.parser.generic_keys.contains(&name) {
-                name = self
-                    .parser
-                    .external_generics
-                    .get(
-                        self.parser
-                            .generic_keys
-                            .iter()
-                            .position(|item| item == &name)
-                            .unwrap(),
-                    )
-                    .unwrap()
-                    .id()
-            }
-
             let identifier = self.parser.get_identifier();
             name = format!("{}.{}", name, identifier);
+            self.parser.advance();
+        }
+
+        let mut generics = vec![];
+
+        if self.parser.current_token().kind == TokenKind::LessThan {
+            self.parser.advance();
+
+            while self.parser.current_token().kind != TokenKind::GreaterThan {
+                if !external {
+                    generics.push(self.parser.get_identifier());
+                }
+
+                self.parser.advance();
+
+                if self.parser.current_token().kind == TokenKind::Comma {
+                    self.parser.advance();
+                }
+            }
+
+            self.parser.expect_tokens(vec![TokenKind::GreaterThan]);
             self.parser.advance();
         }
 
@@ -95,8 +101,15 @@ impl<'a> Function<'a> {
 
         if self.parser.current_token().kind == TokenKind::Identifier
             && (self.parser.current_token().value.is_base_type()
-                || self.parser.struct_pool.contains(&ty_name)
-                || self.parser.generic_keys.contains(&ty_name))
+                || generics.contains(
+                    &self
+                        .parser
+                        .current_token()
+                        .value
+                        .get_string_inner()
+                        .unwrap(),
+                )
+                || self.parser.struct_pool.borrow().contains_key(&ty_name))
         {
             while self.parser.current_token().kind != TokenKind::RightParenthesis {
                 if self.parser.current_token().kind == TokenKind::Ellipsis {
@@ -105,9 +118,20 @@ impl<'a> Function<'a> {
                     break;
                 }
 
-                let r#type = self.parser.get_type();
+                let r#type = self.parser.get_type(Some(&generics));
+                let ty_loc = self.parser.current_token().location.clone();
 
                 self.parser.advance();
+
+                // fn foo(void) isn't supported
+                if r#type == Type::Void
+                    && self.parser.current_token().kind == TokenKind::RightParenthesis
+                {
+                    panic!(
+                        "{}",
+                        ty_loc.error("Elle does not support C-style explicit function prototypes.\nPlease remove the 'void' type from this function's signature.")
+                    )
+                }
 
                 let name = match self.parser.current_token().kind {
                     TokenKind::Identifier => self.parser.get_identifier(),
@@ -182,11 +206,11 @@ impl<'a> Function<'a> {
             }
         }
 
-        let mut location = self.parser.current_token().location.clone();
+        let mut return_location = self.parser.current_token().location.clone();
 
         if self.parser.match_token(TokenKind::RightArrow, true) {
-            location = self.parser.current_token().location.clone();
-            r#return = Some(self.parser.get_type());
+            return_location = self.parser.current_token().location.clone();
+            r#return = Some(self.parser.get_type(Some(&generics)));
             self.parser.advance();
         }
 
@@ -203,12 +227,14 @@ impl<'a> Function<'a> {
                 builtin: false,
                 volatile: false,
                 unaliased,
+                generics,
                 arguments,
                 r#return,
                 body: vec![],
                 usable: true,
                 imported: false,
-                location: self.parser.current_token().location,
+                location: location.clone(),
+                return_location: return_location.clone(),
             };
         }
 
@@ -232,10 +258,10 @@ impl<'a> Function<'a> {
                         self.parser.position.clone(),
                         &body,
                         &Shared {
-                            struct_pool: self.parser.struct_pool.clone(),
-                            external_generics: &self.parser.external_generics,
-                            generic_keys: &self.parser.generic_keys,
-                            generic_defaults: &self.parser.generic_defaults,
+                            struct_pool: &self.parser.struct_pool,
+                            extra_structs: &self.parser.extra_structs,
+                            tree: &self.parser.tree,
+                            generics: &generics,
                         },
                     )
                     .parse();
@@ -347,7 +373,7 @@ impl<'a> Function<'a> {
             _ => true,
         });
 
-        for (i, item) in self.parser.tree.iter().cloned().rev().enumerate() {
+        for (i, item) in self.parser.tree.borrow().iter().cloned().rev().enumerate() {
             match item {
                 Primitive::Constant { name, r#type, .. } => {
                     res.insert(
@@ -379,12 +405,14 @@ impl<'a> Function<'a> {
             builtin: false,
             volatile,
             unaliased,
+            generics,
             arguments,
             r#return,
             body: res,
             usable: true,
             imported: false,
             location,
+            return_location,
         }
     }
 }

@@ -2,12 +2,23 @@
 // https://github.com/garritfra/qbe-rs/blob/main/LICENSE-MIT
 use std::{
     cell::RefCell,
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fmt::{self},
+    iter::Peekable,
     mem,
+    num::ParseIntError,
+    u8,
 };
 
-use crate::lexer::enums::Location;
+use crate::{
+    hashmap, is_generic,
+    lexer::enums::Location,
+    parser::{
+        enums::{Argument, Primitive},
+        parser::StructPool,
+    },
+    GENERIC_END, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN,
+};
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Copy)]
 pub enum Comparison {
@@ -121,7 +132,7 @@ impl fmt::Display for Instruction {
             Self::Modulus(lhs, rhs) => write!(formatter, "rem {}, {}", lhs, rhs),
             Self::Compare(ty, comparison, lhs, rhs) => {
                 assert!(
-                    !matches!(ty, Type::Struct(_)),
+                    !matches!(ty, Type::Struct(..)),
                     "Cannot compare struct types"
                 );
 
@@ -283,8 +294,10 @@ pub enum Type {
     Char,
     Void,
     Null,
+    // Inner type
     Pointer(Box<Type>),
     Struct(String),
+    // Unknown generic
     Unknown(String),
 }
 
@@ -292,21 +305,42 @@ impl Type {
     pub fn display(&self) -> String {
         match self {
             Self::Byte => "byte".into(),
-            Self::UnsignedByte => "unsigned byte".into(),
+            Self::UnsignedByte => "ubyte".into(),
             Self::Char => "char".into(),
-            Self::Halfword => "short".into(),
-            Self::UnsignedHalfword => "unsigned short".into(),
-            Self::Boolean => "boolean".into(),
-            Self::Word => "integer".into(),
-            Self::UnsignedWord => "unsigned integer".into(),
-            Self::Long => "long".into(),
-            Self::UnsignedLong => "unsigned long".into(),
-            Self::Pointer(inner) => format!("{} *", inner.display()),
-            Self::Single => "float".into(),
-            Self::Double => "double".into(),
+            Self::Halfword => "i16".into(),
+            Self::UnsignedHalfword => "u16".into(),
+            Self::Boolean => "bool".into(),
+            Self::Word => "i32".into(),
+            Self::UnsignedWord => "u32".into(),
+            Self::Long => "i64".into(),
+            Self::UnsignedLong => "u64".into(),
+            Self::Pointer(inner) => {
+                if *inner.as_ref() == Type::Char {
+                    "string".into()
+                } else {
+                    format!("{}*", inner.display())
+                }
+            }
+            Self::Single => "f32".into(),
+            Self::Double => "f64".into(),
             Self::Void => "void".into(),
             Self::Null => "null".into(),
-            Self::Struct(td) => td.into(),
+            Self::Struct(td, ..) => {
+                if is_generic!(td) {
+                    let (name, parts) = Type::from_internal_id(td.clone());
+
+                    format!(
+                        "{name}<{}>",
+                        parts
+                            .iter()
+                            .map(|ty| ty.display())
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
+                } else {
+                    td.into()
+                }
+            }
             Self::Unknown(name) => name.into(),
         }
     }
@@ -317,13 +351,300 @@ impl Type {
             Self::Boolean => "bool".into(),
             Self::Word => "i32".into(),
             Self::Long => "i64".into(),
-            Self::Pointer(inner) => format!("{}*", (*inner).clone().id()),
+            Self::Pointer(inner) => {
+                if *inner.as_ref() == Type::Char {
+                    "string".into()
+                } else {
+                    format!("{}*", (*inner).clone().id())
+                }
+            }
             Self::Single => "f32".into(),
             Self::Double => "f64".into(),
             Self::Void => "void".into(),
             Self::Null => "null".into(),
-            Self::Struct(td) => td.into(),
+            Self::Struct(td, ..) => {
+                if is_generic!(td) {
+                    let (name, parts) = Type::from_internal_id(td.clone());
+
+                    format!(
+                        "{name}<{}>",
+                        parts
+                            .iter()
+                            .map(|ty| ty.id())
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
+                } else {
+                    td.into()
+                }
+            }
             _ => "".into(),
+        }
+    }
+
+    pub fn to_internal_id(&self) -> String {
+        let num: u8 = match self {
+            Type::UnsignedByte => 4,
+            Type::UnsignedHalfword => 5,
+            Type::UnsignedWord => 6,
+            Type::UnsignedLong => 7,
+            Type::Byte => 9,
+            Type::Halfword => 9,
+            Type::Boolean => 10,
+            Type::Word => 11,
+            Type::Long => 12,
+            Type::Single => 13,
+            Type::Double => 14,
+            Type::Char => 15,
+            Type::Void => 16,
+            Type::Null => 17,
+            _ => 100, // Invalid
+        };
+
+        match self {
+            Type::Pointer(inner) => format!("{GENERIC_POINTER}.{}", inner.to_internal_id()),
+            Type::Struct(name) => name.clone(),
+            Type::Unknown(name) => format!("{GENERIC_UNKNOWN}.{name}"),
+            _ => num.to_string(),
+        }
+    }
+
+    // Foo.0.8.10.Bar.ptr.ptr.7.1 turns into
+    // ("Foo", vec![Word, Single, Struct("Bar"), Pointer(Pointer(Boolean))])
+    pub fn from_internal_id(id: String) -> (String, Vec<Type>) {
+        fn is_num_id(id: String) -> Result<u8, ParseIntError> {
+            if [
+                GENERIC_IDENTIFIER,
+                GENERIC_END,
+                GENERIC_POINTER,
+                GENERIC_UNKNOWN,
+            ]
+            .contains(&id.as_str())
+            {
+                "-1".parse::<u8>()
+            } else {
+                id.parse::<u8>()
+            }
+        }
+
+        fn id_to_ty(id: String) -> Type {
+            match id.parse::<u8>() {
+                Ok(inner) => match inner {
+                    4 => Type::UnsignedByte,
+                    5 => Type::UnsignedHalfword,
+                    6 => Type::UnsignedWord,
+                    7 => Type::UnsignedLong,
+                    8 => Type::Byte,
+                    9 => Type::Halfword,
+                    10 => Type::Boolean,
+                    11 => Type::Word,
+                    12 => Type::Long,
+                    13 => Type::Single,
+                    14 => Type::Double,
+                    15 => Type::Char,
+                    16 => Type::Void,
+                    17 => Type::Null,
+                    _ => todo!("{}", id),
+                },
+                Err(_) => Type::Struct(id),
+            }
+        }
+
+        fn internal_match<T>(parts: &mut Peekable<T>) -> Option<Type>
+        where
+            T: Iterator<Item = String>,
+        {
+            if parts.peek().is_none() {
+                return None;
+            }
+
+            let mut part = parts.next().unwrap();
+            match is_num_id(part.clone()) {
+                Ok(_) => Some(id_to_ty(part)),
+                Err(_) => {
+                    if &part == GENERIC_POINTER {
+                        let mut nesting = 0;
+
+                        while &part == GENERIC_POINTER {
+                            if parts.peek().is_none() {
+                                return None;
+                            }
+
+                            nesting += 1;
+                            part = parts.next().unwrap();
+                        }
+
+                        let mut res = id_to_ty(part);
+
+                        for _ in 0..nesting {
+                            res = Type::Pointer(Box::new(res));
+                        }
+
+                        Some(res)
+                    } else if &part == GENERIC_UNKNOWN {
+                        Some(Type::Unknown(parts.next().unwrap()))
+                    } else if &part == GENERIC_END {
+                        None
+                    } else {
+                        Some(Type::Struct(part))
+                    }
+                }
+            }
+        }
+
+        let mut parts = id
+            .split('.')
+            .map(|arg| arg.to_string())
+            .collect::<Vec<String>>();
+
+        let name = parts.remove(0);
+        assert_eq!(parts.remove(0), GENERIC_IDENTIFIER.to_string());
+
+        let mut res = vec![];
+        let mut iter = parts.iter().cloned().peekable();
+
+        while iter.peek().is_some() {
+            if let Some(x) = internal_match(&mut iter) {
+                res.push(x);
+            } else {
+                break;
+            }
+        }
+
+        (name, res)
+    }
+
+    pub fn unknown_to_known(
+        self,
+        struct_pool: Option<&RefCell<StructPool>>,
+        extra_structs: Option<&RefCell<Vec<Primitive>>>,
+        generics: Vec<String>,
+        known_generics: HashMap<String, Type>,
+    ) -> Type {
+        match self.clone() {
+            Type::Pointer(inner) => Type::Pointer(Box::new(inner.unknown_to_known(
+                struct_pool,
+                extra_structs,
+                generics,
+                known_generics,
+            ))),
+            Type::Unknown(name) => {
+                if !generics.contains(&name) {
+                    self
+                } else {
+                    known_generics.get(&name).unwrap().to_owned()
+                }
+            }
+            Type::Struct(name) if is_generic!(name) => {
+                let (original_name, _) = Type::from_internal_id(name.clone());
+
+                let generic_name = format!(
+                    "{original_name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
+                    generics
+                        .iter()
+                        .map(|generic| {
+                            known_generics
+                                .get(generic)
+                                .unwrap()
+                                .to_internal_id()
+                                .to_string()
+                        })
+                        .collect::<Vec<String>>()
+                        .join(".")
+                );
+
+                if struct_pool.is_some()
+                    && extra_structs.is_some()
+                    && !struct_pool.unwrap().borrow().contains_key(&generic_name)
+                {
+                    let (generics, members, location) = struct_pool
+                        .unwrap()
+                        .borrow()
+                        .get(&original_name)
+                        .unwrap()
+                        .clone();
+
+                    let parsed_members = members
+                        .iter()
+                        .map(|member| Argument {
+                            name: member.name.clone(),
+                            r#type: member.r#type.clone().unknown_to_known(
+                                struct_pool,
+                                extra_structs,
+                                generics.clone(),
+                                known_generics.clone(),
+                            ),
+                        })
+                        .collect::<Vec<Argument>>();
+
+                    extra_structs.unwrap().borrow_mut().push(Primitive::Struct {
+                        name: generic_name.clone(),
+                        public: false,
+                        usable: true,
+                        imported: false,
+                        generics: vec![],
+                        known_generics: known_generics.clone(),
+                        members: parsed_members.clone(),
+                        location: location.clone(),
+                    });
+
+                    struct_pool
+                        .unwrap()
+                        .borrow_mut()
+                        .insert(generic_name.clone(), (vec![], parsed_members, location));
+                }
+
+                Type::Struct(generic_name)
+            }
+            other => other,
+        }
+    }
+
+    pub fn has_generic_type(self, ty: Type) -> bool {
+        match ty.clone() {
+            Type::Pointer(inner) => self.has_generic_type(*inner),
+            Type::Unknown(_) => true,
+            Type::Struct(name) => {
+                name.contains(&format!(".{}", Type::Unknown("T".into()).to_internal_id()))
+            }
+            _ => false,
+        }
+    }
+
+    pub fn deduce_generic_type(self, generic_type: Type) -> Option<HashMap<String, Type>> {
+        match (self, generic_type) {
+            (Type::Pointer(known_inner), Type::Pointer(generic_inner)) => {
+                known_inner.deduce_generic_type(*generic_inner)
+            }
+            (known, Type::Pointer(other)) if known.is_struct() && other.is_struct() => {
+                known.deduce_generic_type(*other)
+            }
+            (Type::Pointer(known), other) if known.is_struct() && other.is_struct() => {
+                known.deduce_generic_type(other)
+            }
+            (known, Type::Unknown(name)) => Some(hashmap![name => known]),
+            // Struct<(known)> vs Struct<T>
+            (Type::Struct(specialized_name), Type::Struct(name))
+                if is_generic!(specialized_name) && is_generic!(name) =>
+            {
+                let (original_name, known_parts) = Type::from_internal_id(specialized_name.clone());
+                let (struct_name, unknown_parts) = Type::from_internal_id(name.clone());
+
+                if original_name != struct_name {
+                    todo!()
+                }
+
+                assert_eq!(known_parts.len(), unknown_parts.len());
+
+                Some(HashMap::from_iter(
+                    unknown_parts
+                        .iter()
+                        .cloned()
+                        .enumerate()
+                        .map(|(i, v)| (v.get_unknown_inner().unwrap(), known_parts[i].clone())),
+                ))
+            }
+            _ => None,
         }
     }
 
@@ -336,7 +657,7 @@ impl Type {
 
     pub fn get_struct_inner(&self) -> Option<String> {
         match self.clone() {
-            Self::Struct(val) => Some(val),
+            Self::Struct(val, ..) => Some(val),
             _ => None,
         }
     }
@@ -370,7 +691,7 @@ impl Type {
             | Self::UnsignedHalfword
             | Self::UnsignedWord => Self::Word,
             Self::UnsignedLong => Self::Long,
-            Self::Struct(_) => Self::Long,
+            Self::Struct(..) => Self::Long,
             other => other,
         }
     }
@@ -395,7 +716,7 @@ impl Type {
 
     pub fn is_struct(&self) -> bool {
         match self {
-            Self::Struct(_) => true,
+            Self::Struct(..) => true,
             _ => false,
         }
     }
@@ -464,13 +785,16 @@ impl Type {
             Self::Double => 8,
             // Returns 4 on 32-bit and 8 on 64-bit
             Self::UnsignedLong | Self::Long | Self::Pointer(..) => mem::size_of::<usize>() as u64,
-            Self::Struct(val) => {
+            Self::Struct(val, ..) => {
                 let size = module
                     .borrow()
                     .types
                     .iter()
                     .find(|td| td.name == val.clone())
-                    .expect(&format!("Unable to find aggregate type named '{}'", val))
+                    .expect(&format!(
+                        "Unable to find aggregate type named '{}'",
+                        self.display()
+                    ))
                     .size(module) as u64;
 
                 if size < mem::size_of::<usize>() as u64 {
@@ -509,10 +833,11 @@ impl fmt::Display for Type {
 }
 
 /// QBE aggregate type definition
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct TypeDef {
     pub name: String,
     pub align: Option<u64>,
+    pub known_generics: HashMap<String, Type>,
     pub items: Vec<(Type, usize)>,
     pub public: bool,
     pub usable: bool,
@@ -773,7 +1098,6 @@ pub struct Function {
     pub linkage: Linkage,
     pub name: String,
     pub variadic: bool,
-    pub variadic_index: usize,
     pub manual: bool,
     pub external: bool,
     pub builtin: bool,
@@ -781,6 +1105,8 @@ pub struct Function {
     pub unaliased: Option<String>,
     pub usable: bool,
     pub imported: bool,
+    pub generics: Vec<String>,
+    pub known_generics: Vec<Type>,
     pub arguments: Vec<(Type, Value)>,
     pub return_type: Option<Type>,
     pub blocks: Vec<Block>,
@@ -903,7 +1229,7 @@ impl fmt::Display for Linkage {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Module {
     pub functions: Vec<Function>,
     pub types: Vec<TypeDef>,
@@ -997,6 +1323,18 @@ impl Module {
                 true
             }
         });
+    }
+
+    pub fn remove_generics(&mut self) {
+        self.types.retain(|ty| {
+            ty.known_generics
+                .iter()
+                .find(|inner| match inner {
+                    (_, Type::Unknown(_)) => true,
+                    _ => false,
+                })
+                .is_none()
+        })
     }
 }
 

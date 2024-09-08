@@ -92,7 +92,7 @@ pub enum TokenKind {
     Global,
     Local,
     Attribute,
-    Generic,
+    Let
 }
 
 impl TokenKind {
@@ -436,7 +436,7 @@ impl Location {
             "―".repeat(upper_plain.len()),
             above = if !above.is_empty() {
                 format!(
-                    "{} | {}{}\n",
+                    "{:<2} | {}{}\n",
                     self.row,
                     " ".repeat(padding),
                     above
