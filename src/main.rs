@@ -187,6 +187,7 @@ fn main() -> ExitCode {
         &input_path,
         None,
         &struct_pool,
+        &vec![],
         &parsed_modules,
         &warnings,
         debug_time,

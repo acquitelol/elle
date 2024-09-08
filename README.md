@@ -866,6 +866,29 @@ local fn increment(i32 a) {
 }
 ```
 
+You can also create "generic modules" which are modules that contain a generic type which is specified at the import time.
+
+Example:
+
+```c
+// module/foo.l
+struct foo {}; // namespace
+generic T; // generic parameter
+
+pub fn foo::add(T x, T y) -> T {
+    return x + y;
+}
+```
+```c
+// main.l
+use module/foo<i32>; // i32 replaces T everywhere
+use std/io;
+
+fn main() {
+    io::println(foo::add(1, 2)); // 3
+}
+```
+
 <hr />
 
 ### ♡ **Structs**
