@@ -107,6 +107,14 @@ pub fn create_generic_struct(
         .insert(generic_name.clone(), (vec![], parsed_members, location));
 }
 
+#[derive(Eq, PartialEq)]
+pub enum DoOnly {
+    FunctionsAndConstants,
+    NonGenericImportsAndGenericDefs,
+    GenericImports,
+    Structs,
+}
+
 pub struct Parser {
     pub tokens: Vec<Token>,
     pub position: usize,
@@ -304,7 +312,7 @@ impl Parser {
             }
         }
 
-        ty
+        get_non_generic_type!(self.generic_keys, self.external_generics, ty)
     }
 
     // 0 - functions, constants, etc
