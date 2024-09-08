@@ -35,7 +35,7 @@ fn Vector2::length_sq(Vector2 self) {
 }
 
 fn Vector2::length(Vector2 self) {
-    return sqrt(self.length_sq());
+    return math::sqrt(self.length_sq());
 }
 
 fn Vector2::add(Vector2 self, Vector2 v2) {
@@ -65,8 +65,8 @@ fn Vector2::normalize(Vector2 self) {
 }
 
 fn Vector2::rotate(Vector2 self, f32 angle) {
-    f32 c = cos(angle);
-    f32 s = sin(angle);
+    f32 s = math::sin(angle);
+    f32 c = math::cos(angle);
 
     return Vector2 {
         x = self.x * c - self.y * s,
@@ -75,7 +75,7 @@ fn Vector2::rotate(Vector2 self, f32 angle) {
 }
 
 fn Vector2::angle(Vector2 self, Vector2 v2) {
-    return atan2(v2.y, v2.x) - atan2(self.y, self.x);
+    return math::atan2(v2.y, v2.x) - math::atan2(self.y, self.x);
 }
 
 // ----- Vector3 methods -----
@@ -105,7 +105,7 @@ fn Vector3::length_sq(Vector3 self) {
 }
 
 fn Vector3::length(Vector3 self) {
-    return sqrt(self.length_sq());
+    return math::sqrt(self.length_sq());
 }
 
 fn Vector3::add(Vector3 self, Vector3 v2) {
@@ -152,8 +152,8 @@ fn Vector3::normalize(Vector3 self) {
 fn Vector3::rotate(Vector3 self, Vector3 axis, f32 angle) {
     Vector3 u = axis.normalize();
 
-    f32 cos_theta = cos(angle);
-    f32 sin_theta = sin(angle);
+    f32 sin_theta = math::sin(angle);
+    f32 cos_theta = math::cos(angle);
 
     Vector3 term1 = self.scale(cos_theta);
     Vector3 term2 = u.cross(self).scale(sin_theta);
@@ -183,8 +183,8 @@ fn Vector3::angle(Vector3 self, Vector3 v2) {
     }
 
     f32 cos_theta = dot / lengths;
-    cos_theta = fclamp(cos_theta, -1.0, 1.0);
+    cos_theta = math::fclamp(cos_theta, -1.0, 1.0);
 
     // Unwrap the cos(θ) into just θ
-    return (f32)acos(cos_theta);
+    return (f32)math::acos(cos_theta);
 }

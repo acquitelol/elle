@@ -71,6 +71,8 @@ fn string::to_lower(string self) {
     return out;
 }
 
+// Note: these are null terminated strings, which means this
+// function returns a CLONE of the slice, NOT a string view
 fn string::slice(string self, i32 start, i32 end) -> string {
     i32 length = self.len();
 
@@ -93,6 +95,12 @@ fn string::slice(string self, i32 start, i32 end) -> string {
     return sliced;
 }
 
+// Concatenates all of the arguments into 1 final string
+//
+// examples:
+//
+// "a".concat("b").equals("ab")
+// string::concat("me", "ow").equals("meow")
 fn string::concat(ElleMeta meta, ...) -> string {
     variadic args[meta.arity];
 
@@ -127,6 +135,18 @@ fn string::concat(ElleMeta meta, ...) -> string {
     return result;
 }
 
+// Concatenates all of the strings provided and then finally reassigns
+// the original string to the new string
+//
+// examples:
+//
+// string a = "a";
+// a.extend("b");
+// a.equals("ab");
+//
+// string a = "me";
+// string::extend(a, "ow");
+// a.equals("meow")
 fn string::extend(ElleMeta meta, string *self, ...) {
     // - 1 to account for `string *self` which isnt variadic
     variadic args[meta.arity - 1];
@@ -198,6 +218,14 @@ fn string::reset(string self) {
     return self.concat("\x1b[0m");
 }
 
+// Repeats a string `count` amount of times
+//
+// examples:
+//
+// ```
+// io::assert("a".repeat(4).equals("aaaa"))
+// io::assert(string::repeat("e", 2).equals("ee"))
+// ```
 fn string::repeat(string self, i32 count) {
     string res = self;
 
@@ -232,6 +260,19 @@ fn string::insert(string *self, i32 index, char c) {
     *self = result;
 }
 
+// Pops the last character off of a string and returns it
+//
+// This function mutates the string in-place
+//
+// examples:
+//
+// ```
+// string a = "mew";
+// char last = a.pop();
+//
+// io::assert(last == 'w', nil)
+// io::assert(a.equals("me"), nil)
+// ```
 fn string::pop(string *self) -> char {
     i32 length = (*self).len();
 
@@ -268,7 +309,10 @@ fn string::push(string *self, char c) {
     *self = result;
 }
 
-fn to_string(string ty, i64 args, bool wrap) {
+// !! Do not use this unless you know what you're doing !!
+// If you want to turn a value of arbitrary type to a string
+// please use string::as_string or string::as_string_wrapped
+fn __to_string(string ty, i64 args, bool wrap) {
     string res = nil;
     string fmt = nil;
     i32 length = 0;
@@ -367,14 +411,17 @@ fn to_string(string ty, i64 args, bool wrap) {
 
 fn string::as_string(ElleMeta meta, ...) {
     variadic args[meta.arity];
-    return to_string(meta.types[0], args, false);
+    return __to_string(meta.types[0], args, false);
 }
 
 fn string::as_string_wrapped(ElleMeta meta, ...) {
     variadic args[meta.arity];
-    return to_string(meta.types[0], args, true);
+    return __to_string(meta.types[0], args, true);
 }
 
+// !! Do not use this unless you know what you're doing !!
+// If you want to format arguments of arbitrary types
+// into a new string, use string::format() instead
 fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
     string result = malloc(fmt.len());
 
@@ -408,7 +455,7 @@ fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
             }
 
             arg += 1;
-            result.extend(to_string(meta.types[arg], args, wrapped));
+            result.extend(__to_string(meta.types[arg], args, wrapped));
 
             is_open = false;
             wrapped = false;

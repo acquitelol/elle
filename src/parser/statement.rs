@@ -452,9 +452,10 @@ impl<'a> Statement<'a> {
         &mut self,
         maybe_name: Option<(Location, String)>,
         maybe_params: Option<Vec<(Location, AstNode)>>,
+        maybe_position: Option<usize>,
         type_method: bool,
     ) -> AstNode {
-        let position = self.position.clone();
+        let position = maybe_position.unwrap_or(self.position.clone());
         let (location, name) = if let Some((location, name)) = maybe_name {
             (location, name)
         } else {
@@ -584,7 +585,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let mut expression = AstNode::FunctionCall {
-            name,
+            name: name.clone(),
             generics,
             parameters,
             type_method,
@@ -598,6 +599,10 @@ impl<'a> Statement<'a> {
             }
             TokenKind::LeftBlockBrace => {
                 expression = self.parse_offset_store(Some((position, expression, location)))
+            }
+            other if other.is_arithmetic() => {
+                self.position = position;
+                return self.parse_arithmetic();
             }
             _ => {}
         }
@@ -1730,6 +1735,7 @@ impl<'a> Statement<'a> {
             return self.parse_function(
                 Some((location.clone(), name)),
                 Some(vec![(location.clone(), *left)]),
+                Some(position),
                 true,
             );
         }
@@ -1758,6 +1764,7 @@ impl<'a> Statement<'a> {
                             location,
                         },
                     )]),
+                    Some(position),
                     true,
                 );
             }
@@ -1802,7 +1809,14 @@ impl<'a> Statement<'a> {
                 ));
             }
             // foo.a.meow() = meow(foo.a)
-            TokenKind::LeftParenthesis => {}
+            TokenKind::LeftParenthesis => {
+                return self.parse_function(
+                    Some((location.clone(), name)),
+                    Some(vec![(location.clone(), *left)]),
+                    Some(position),
+                    true,
+                )
+            }
             TokenKind::LeftBlockBrace => {
                 return self.parse_offset_store(Some((
                     position,
@@ -2060,7 +2074,19 @@ impl<'a> Statement<'a> {
                             || self.shared.generics.contains(&ty_name)
                             || token.value.is_base_type())
                     {
-                        self.parse_type_conversion()
+                        let next = self.next_token_seek(2);
+
+                        if let Some(next) = next {
+                            if next.kind == TokenKind::LeftCurlyBrace
+                                || next.kind == TokenKind::DoubleColon
+                            {
+                                self.parse_wrapped_statement()
+                            } else {
+                                self.parse_type_conversion()
+                            }
+                        } else {
+                            self.parse_type_conversion()
+                        }
                     } else {
                         self.parse_wrapped_statement()
                     }
@@ -2082,7 +2108,7 @@ impl<'a> Statement<'a> {
                     );
 
                     if next.kind == TokenKind::LeftParenthesis {
-                        self.parse_function(None, None, false)
+                        self.parse_function(None, None, None, false)
                     } else if next.kind == TokenKind::LeftBlockBrace {
                         self.parse_offset_store(None)
                     } else if next.kind == TokenKind::LeftCurlyBrace {
@@ -2118,7 +2144,7 @@ impl<'a> Statement<'a> {
                                 || self.shared.struct_pool.borrow().contains_key(&ty_name)
                                 || self.shared.generics.contains(&ty_name)
                             {
-                                self.parse_function(None, None, false)
+                                self.parse_function(None, None, None, false)
                             } else {
                                 self.parse_arithmetic()
                             }
@@ -2188,6 +2214,8 @@ impl<'a> Statement<'a> {
             .get_string_inner()
             .unwrap_or("".into());
 
+        let position = self.position.clone();
+
         let node = match self.current_token().kind {
             TokenKind::Variadic => self.parse_variadic(),
             TokenKind::Return => self.parse_return(),
@@ -2249,6 +2277,7 @@ impl<'a> Statement<'a> {
                                 ),
                             )),
                             None,
+                            Some(position),
                             false,
                         )
                     } else {

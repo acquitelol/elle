@@ -1,3 +1,4 @@
+// sll = singly linked list
 use std/collections/sll;
 use std/io;
 

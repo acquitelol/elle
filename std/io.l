@@ -8,7 +8,7 @@ local fn __print(i64 args, ElleMeta meta, bool wrap, bool full, bool newline) {
     for i32 i = 0; i < meta.arity; i += 1 {
         string ty = meta.types[i];
         string expr = meta.exprs[i];
-        string res = to_string(ty, args, wrap);
+        string res = __to_string(ty, args, wrap);
 
         if full {
             io::cprintf("%s = %s\n", expr, res);
@@ -32,7 +32,7 @@ local fn __err(i64 args, ElleMeta meta, bool newline) {
     for i32 i = 0; i < meta.arity; i += 1 {
         string ty = meta.types[i];
         string expr = meta.exprs[i];
-        string res = to_string(ty, args, false);
+        string res = __to_string(ty, args, false);
 
         error = string::concat(error, res);
         free(res); // Don't leak memory

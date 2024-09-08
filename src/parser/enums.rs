@@ -168,6 +168,7 @@ fn modify_type_in_node(
     known_types: &HashMap<String, Type>,
 ) -> AstNode {
     match &mut node {
+        AstNode::LiteralStatement { .. } => {}
         AstNode::DeclareStatement { r#type, value, .. } => {
             if let Some(ty) = r#type {
                 *ty = modify_type(ty.clone(), generics, known_types);
@@ -175,10 +176,18 @@ fn modify_type_in_node(
             let new_value = modify_type_in_node(*value.clone(), generics, known_types);
             *value = Box::new(new_value);
         }
+        AstNode::ReturnStatement { value, .. } => {
+            let new_value = modify_type_in_node(*value.clone(), generics, known_types);
+            *value = Box::new(new_value);
+        }
         AstNode::NextStatement { r#type, .. } => {
             if let Some(ty) = r#type {
                 *ty = modify_type(ty.clone(), generics, known_types);
             }
+        }
+        AstNode::VariadicStatement { size, .. } => {
+            let new_size = modify_type_in_node(*size.clone(), generics, known_types);
+            *size = Box::new(new_size);
         }
         AstNode::BufferStatement { r#type, size, .. } => {
             if let Some(ty) = r#type {
@@ -301,7 +310,6 @@ fn modify_type_in_node(
                 *ast_node = Box::new(new_ast_node);
             }
         },
-        _ => {}
     }
     node
 }

@@ -13,6 +13,6 @@ fn main() {
     }
 
     test[2] *= 10;
-    io::printf("\ntest[2] * 10 = {}", test[2]);
+    io::printf("\ntest[2] * 10 = {}\n", test[2]);
     other([i64::max()], [123][0], #size([1, 2, 3]));
 }

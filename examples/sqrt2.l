@@ -10,5 +10,5 @@ fn main() {
     }
 
     io::printf("sqrt({}) ≈ {}", x, a);
-    io::printf("precision: {}", sqrt(x) - a);
+    io::printf("precision: {}", math::sqrt(x) - a);
 }

@@ -1,4 +1,4 @@
-use std/io;
+use std/libc/io;
 use std/libc/mem;
 global pub;
 
@@ -35,19 +35,22 @@ fn Option::None<T>() -> Option<T> {
     return alloc_none();
 }
 
+// Returns the inner T if the option is some, otherwise aborts with a custom message
 fn Option::expect<T>(Option<T> self, string message) -> T {
     if !self.__is_some {
-        // io::eprintln(message);
+        io::fprintf(stderr, "%s\n", message);
         abort();
     }
 
     return self.__value;
 }
 
+// Returns the inner T if the option is some, otherwise aborts
 fn Option::unwrap<T>(Option<T> self) -> T {
     return self.expect("Called `Option::unwrap()` on a `None` value");
 }
 
+// Returns the inner T if the option is some, otherwise returns the fallback
 fn Option::unwrap_or<T>(Option<T> self, T fallback) -> T {
     if !self.__is_some {
         return fallback;
@@ -56,10 +59,12 @@ fn Option::unwrap_or<T>(Option<T> self, T fallback) -> T {
     return self.__value;
 }
 
+// Returns true if the option has a value inside
 fn Option::is_some<T>(Option<T> self) {
     return self.__is_some;
 }
 
+// Returns true if the option has no value inside
 fn Option::is_none<T>(Option<T> self) {
     return !self.is_some();
 }

@@ -18,19 +18,19 @@ fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 *lightDirecti
     memset(zBuffer, 0, SIZE * #size(f32));
     memset(output, 32, SIZE * #size(char));
 
-    f32 sinRotX = sin(rotX);
-    f32 cosRotX = cos(rotX);
+    f32 sinRotX = math::sin(rotX);
+    f32 cosRotX = math::cos(rotX);
 
-    f32 sinRotZ = sin(rotZ);
-    f32 cosRotZ = cos(rotZ);
+    f32 sinRotZ = math::sin(rotZ);
+    f32 cosRotZ = math::cos(rotZ);
 
     for f32 theta = 0; theta < 2 * PI; theta += THETA_SPACING {
-        f32 sinTheta = sin(theta);
-        f32 cosTheta = cos(theta);
+        f32 sinTheta = math::sin(theta);
+        f32 cosTheta = math::cos(theta);
 
         for f32 phi = 0; phi < 2 * PI; phi += PHI_SPACING {
-            f32 sinPhi = sin(phi);
-            f32 cosPhi = cos(phi);
+            f32 sinPhi = math::sin(phi);
+            f32 cosPhi = math::cos(phi);
 
             Vector3 surfacePos = Vector3 {
                 x = cosPhi * (cosTheta + 2),
@@ -59,7 +59,7 @@ fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 *lightDirecti
             }
 
             f32 illumination = normal.dot(*lightDirection);
-            i32 lightingIndex = (i32)(fabs(illumination) * (lightingLength - 1));
+            i32 lightingIndex = (i32)(math::abs(illumination) * (lightingLength - 1));
 
             if HEIGHT > y && y > 0 && x > 0 && WIDTH > x && depth > zBuffer[offset] {
                 zBuffer[offset] = depth;

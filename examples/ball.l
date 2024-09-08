@@ -56,7 +56,7 @@ fn main() {
 
     while !raylib::window_should_close() {
         f32 deltaTime = raylib::get_frame_time();
-        i32 fps = round(1 / deltaTime);
+        i32 fps = math::round(1 / deltaTime);
 
         if finished {
             finished = false;
@@ -107,7 +107,7 @@ fn main() {
         position.x += velocity.x * deltaTime;
         position.y += velocity.y * deltaTime;
 
-        if (fabs(velocity.y) < epsilon) && screenHeight - circleRadius - position.y < epsilon && !finished {
+        if (math::abs(velocity.y) < epsilon) && screenHeight - circleRadius - position.y < epsilon && !finished {
             finished = true;
         }
 

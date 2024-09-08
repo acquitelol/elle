@@ -42,7 +42,7 @@ fn Array::resize<T>(Array<T> *self, i32 newCapacity) {
 }
 
 fn Array::push<T>(Array<T> *self, T element) {
-    if self.size >= self.capacity {
+    while self.size >= self.capacity {
         self.resize((self.capacity || 1) * 2);
     }
 
@@ -50,16 +50,19 @@ fn Array::push<T>(Array<T> *self, T element) {
     self.size += 1;
 }
 
+// Creates a new sized array from a null terminated string
 fn Array::from_string(string str) -> Array<char> {
-    Array<char> array = Array::with_capacity(2);
+    i32 length = str.len();
+    Array<char> array = Array::with_capacity(length);
 
-    for i32 i = 0; i < str.len(); i += 1 {
+    for i32 i = 0; i < length; i += 1 {
         array.push(str[i]);
     }
 
     return array;
 }
 
+// Turn an array into a string in format [1, 2, "xyz", 'y']
 fn Array::to_string<T>(Array<T> *self) -> string {
     string res = "[";
 
@@ -75,6 +78,7 @@ fn Array::to_string<T>(Array<T> *self) -> string {
     return res;
 }
 
+// Join an array's elements by a separator
 fn Array::join<T>(Array<T> *self, string separator) {
     string res = "";
 
@@ -89,22 +93,26 @@ fn Array::join<T>(Array<T> *self, string separator) {
     return res;
 }
 
+// Alias for Array::join<T>()
 fn Array::implode<T>(Array<T> *self, string separator) {
     return self.join(separator);
 }
 
+// Take all the elements of another Array<T> and push them into this Array<T>
 fn Array::extend<T>(Array<T> *self, Array<T> other) {
     for i32 i = 0; i < other.size; i += 1 {
         self.push(other.elements[i]);
     }
 }
 
+// Print all of the elements of this Array<T>
 fn Array::print<T>(Array<T> *self) {
     for i32 i = 0; i < self.len(); i += 1 {
         io::printf("{:}", self.elements[i]);
     }
 }
 
+// Print all of the elements of this Array<T> with extra debug information
 fn Array::dbg<T>(Array<T> *self) {
     for i32 i = 0; i < self.len(); i += 1 {
         io::printf("self[{}] = {:}", i, self.elements[i]);
