@@ -51,24 +51,6 @@ macro_rules! hashmap {
 }
 
 #[macro_export]
-macro_rules! get_non_generic_type {
-    ($generics:expr, $external_generics:expr, $ty:expr $(,)?) => {
-        if $ty.is_unknown() && !$external_generics.is_empty() && !$generics.is_empty() {
-            let name = $ty.get_unknown_inner().unwrap();
-
-            if !$generics.contains(&name) {
-                return $ty;
-            }
-
-            let position = $generics.iter().position(|item| item == &name).unwrap();
-            $external_generics.get(position).unwrap().clone()
-        } else {
-            $ty
-        }
-    };
-}
-
-#[macro_export]
 macro_rules! is_generic {
     ($name:expr $(,)?) => {
         $name.contains(&format!(".{}.", crate::GENERIC_IDENTIFIER))

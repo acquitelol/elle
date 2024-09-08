@@ -669,13 +669,6 @@ impl Type {
         }
     }
 
-    pub fn get_unknown_inner(&self) -> Option<String> {
-        match self.clone() {
-            Self::Unknown(val) => Some(val),
-            _ => None,
-        }
-    }
-
     pub fn into_abi(self) -> Self {
         match self {
             Self::Byte
@@ -731,13 +724,6 @@ impl Type {
     pub fn is_string(&self) -> bool {
         match self {
             Self::Pointer(inner) => *inner.as_ref() == Self::Char,
-            _ => false,
-        }
-    }
-
-    pub fn is_unknown(&self) -> bool {
-        match self {
-            Self::Unknown(_) => true,
             _ => false,
         }
     }

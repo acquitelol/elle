@@ -5,7 +5,7 @@ use super::enums::{AstNode, Primitive};
 use super::parser::{create_generic_struct, StructPool};
 use crate::{
     compiler::enums::Type,
-    ensure_fn_pointer, get_non_generic_type,
+    ensure_fn_pointer,
     lexer::enums::{Location, Token, TokenKind, ValueKind},
     not_valid_struct_or_type, token_to_node, GENERIC_END, GENERIC_IDENTIFIER,
 };
@@ -1581,7 +1581,7 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_struct_init(&mut self) -> AstNode {
-        let mut name = self.get_identifier();
+        let name = self.get_identifier();
         let location = self.current_token().location.clone();
 
         if !(self.shared.struct_pool.borrow().contains_key(&name)) {
@@ -1592,21 +1592,6 @@ impl<'a> Statement<'a> {
                     name
                 ))
             )
-        }
-
-        if self.shared.generic_keys.contains(&name) {
-            name = self
-                .shared
-                .external_generics
-                .get(
-                    self.shared
-                        .generic_keys
-                        .iter()
-                        .position(|item| item == &name)
-                        .unwrap(),
-                )
-                .unwrap()
-                .id()
         }
 
         self.advance();

@@ -108,7 +108,6 @@ pub fn lex_and_parse(
     let mut parser = Parser::new(
         tokens.clone(),
         struct_pool.borrow().to_owned(),
-        generics.clone(),
         warnings.clone(),
     );
 
@@ -140,7 +139,7 @@ pub fn lex_and_parse(
 
                 if debug_time {
                     println!(
-                        "{}╭― Importing module '{GREEN}{}{RESET}' {generic_fmt}",
+                        "{}╭― Importing module '{GREEN}{}{RESET}'",
                         if nesting > 0 {
                             "┆    ".repeat(nesting)
                         } else {
@@ -157,7 +156,6 @@ pub fn lex_and_parse(
                     &module,
                     Some(tree),
                     struct_pool,
-                    &generics,
                     parsed_modules,
                     warnings,
                     debug_time,
