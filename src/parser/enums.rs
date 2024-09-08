@@ -314,7 +314,6 @@ fn modify_type(ty: Type, generics: &Vec<String>, known_types: &HashMap<String, T
 pub enum Primitive {
     Use {
         module: String,
-        generics: Vec<Type>,
         location: Location,
     },
     Struct {
