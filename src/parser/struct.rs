@@ -1,4 +1,4 @@
-use crate::lexer::enums::TokenKind;
+use crate::{hashmap, lexer::enums::TokenKind};
 
 use super::{
     enums::{Argument, Primitive},
@@ -21,7 +21,23 @@ impl<'a> Struct<'a> {
         let location = self.parser.current_token().location.clone();
         self.parser.advance();
 
-        self.parser.struct_pool.insert(name.clone());
+        let mut generics = vec![];
+
+        if self.parser.current_token().kind == TokenKind::LessThan {
+            self.parser.advance();
+
+            while self.parser.current_token().kind != TokenKind::GreaterThan {
+                generics.push(self.parser.get_identifier());
+                self.parser.advance();
+
+                if self.parser.current_token().kind == TokenKind::Comma {
+                    self.parser.advance();
+                }
+            }
+
+            self.parser.expect_tokens(vec![TokenKind::GreaterThan]);
+            self.parser.advance();
+        }
 
         self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
         self.parser.advance();
@@ -33,7 +49,7 @@ impl<'a> Struct<'a> {
                 break;
             }
 
-            let ty = self.parser.get_type();
+            let ty = self.parser.get_type(Some(&generics));
             self.parser.advance();
 
             let name = self.parser.get_identifier();
@@ -44,6 +60,11 @@ impl<'a> Struct<'a> {
 
             members.push(Argument { name, r#type: ty })
         }
+
+        self.parser.struct_pool.borrow_mut().insert(
+            name.clone(),
+            (generics.clone(), members.clone(), location.clone()),
+        );
 
         self.parser.expect_tokens(vec![TokenKind::RightCurlyBrace]);
         self.parser.advance();
@@ -56,6 +77,8 @@ impl<'a> Struct<'a> {
             public,
             usable: true,
             imported: false,
+            generics,
+            known_generics: hashmap![],
             members,
             location,
         }

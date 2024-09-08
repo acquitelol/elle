@@ -53,7 +53,7 @@ impl<'a> Constant<'a> {
     pub fn parse(&mut self, public: bool) -> Primitive {
         self.parser.advance();
 
-        let ty = self.parser.get_type();
+        let ty = self.parser.get_type(None);
         self.parser.advance();
 
         let name = self.parser.get_identifier();
@@ -71,10 +71,10 @@ impl<'a> Constant<'a> {
             0,
             &body,
             &Shared {
-                struct_pool: self.parser.struct_pool.clone(),
-                external_generics: &self.parser.external_generics,
-                generic_keys: &self.parser.generic_keys,
-                generic_defaults: &self.parser.generic_defaults,
+                struct_pool: &self.parser.struct_pool,
+                extra_structs: &self.parser.extra_structs,
+                tree: &self.parser.tree,
+                generics: &vec![],
             },
         )
         .parse()

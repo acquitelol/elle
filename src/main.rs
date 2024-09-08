@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::path::Path;
 use std::process::{exit, ExitCode};
@@ -11,10 +11,16 @@ mod misc;
 mod parser;
 
 use compiler::compiler::Compiler;
+use compiler::enums::Type;
 use lexer::enums::Location;
 use misc::{build::build, colors::*, help::print_help, modules::lex_and_parse};
+use parser::enums::{Argument, Primitive};
 
 static META_STRUCT_NAME: &str = "ElleMeta";
+static GENERIC_IDENTIFIER: &str = "0"; // Start of a generic
+static GENERIC_END: &str = "1"; // Allowing for nested generic structs
+static GENERIC_POINTER: &str = "2"; // Pointer to another type
+static GENERIC_UNKNOWN: &str = "3"; // Unknown type T
 static STD_LIB_PATH: &str = "/usr/local/include/elle";
 
 pub enum Warning {
@@ -128,12 +134,34 @@ fn main() -> ExitCode {
     } else {
         None
     };
-    let mut pool = HashSet::new();
+    let mut pool = HashMap::new();
 
-    pool.insert(META_STRUCT_NAME.into());
-
-    let struct_pool: RefCell<HashSet<String>> = RefCell::new(pool);
-    let parsed_modules = RefCell::new(HashSet::new());
+    let meta_members = vec![
+        // Holds an array of expressions passed into the function in plain text
+        Argument {
+            name: "exprs".into(),
+            // string[]
+            r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
+        },
+        // Holds an array of the type of arguments passed into the function as strings
+        Argument {
+            name: "types".into(),
+            // string[]
+            r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
+        },
+        // Holds the number of arguments that were passed into a function
+        Argument {
+            name: "arity".into(),
+            // i32
+            r#type: Type::Word,
+        },
+        // Holds the name of the caller method as a string
+        Argument {
+            name: "caller".into(),
+            // string
+            r#type: Type::Pointer(Box::new(Type::Char)),
+        },
+    ];
 
     let input_path = if let Some(input_path) = input_path {
         input_path
@@ -143,7 +171,19 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     };
 
-    let tree = lex_and_parse(
+    pool.insert(
+        META_STRUCT_NAME.into(),
+        (
+            vec![],
+            meta_members.clone(),
+            Location::default(input_path.clone()),
+        ),
+    );
+
+    let struct_pool = RefCell::new(pool);
+    let parsed_modules = RefCell::new(HashSet::new());
+
+    let mut tree = lex_and_parse(
         &input_path,
         None,
         &struct_pool,
@@ -153,6 +193,20 @@ fn main() -> ExitCode {
         debug_time,
         0,
         Location::default(input_path.clone()),
+    );
+
+    tree.insert(
+        0,
+        Primitive::Struct {
+            name: META_STRUCT_NAME.into(),
+            public: false,
+            usable: true,
+            imported: false,
+            generics: vec![],
+            known_generics: hashmap![],
+            members: meta_members.clone(),
+            location: Location::default(input_path.clone()),
+        },
     );
 
     if debug_time {

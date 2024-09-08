@@ -1,20 +1,36 @@
-generic T;
+
 global pub;
 
-struct Node {
+struct Node<T> {
     void *next;
     T data;
 };
 
-fn Node::add(Node **head, T data) {
-    Node *new = malloc(#size(Node *));
-    *new = malloc(#size(Node));
+struct LinkedList<T> {
+    Node<T> *head;
+};
+
+fn LinkedList::new<T>() -> LinkedList<T> {
+    return LinkedList { head = nil };
+}
+
+fn LinkedList::add<T>(LinkedList<T> *self, T data) {
+    Node<T> *new = malloc(#size(Node<T>));
+    *new = malloc(#size(Node<T>));
 
     if !new {
-        return nil;
+        return;
     }
 
     new.data = data;
-    new.next = *head;
-    *head = new;
+    new.next = self.head;
+    self.head = new;
+}
+
+fn LinkedList::free<T>(LinkedList<T> *self) {
+    while self.head {
+        Node<T> *next = self.head.next;
+        free(self.head);
+        self.head = next;
+    }
 }

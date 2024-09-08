@@ -16,21 +16,20 @@ use crate::{
     override_and_add_node,
     parser::{
         enums::{Argument, AstNode, Primitive},
-        parser::{DoOnly, Parser},
+        parser::{DoOnly, Parser, StructPool},
     },
-    Warning, Warnings, META_STRUCT_NAME, STD_LIB_PATH,
+    Warnings, STD_LIB_PATH,
 };
 
 pub fn lex_and_parse(
     input_path: &String,
     existing_tree: Option<&mut Vec<Primitive>>,
-    struct_pool: &RefCell<HashSet<String>>,
-    generics: &Vec<Type>,
+    struct_pool: &RefCell<StructPool>,
     parsed_modules: &RefCell<HashSet<String>>,
     warnings: &Warnings,
     debug_time: bool,
     nesting: usize,
-    import_location: Location,
+    _import_location: Location,
 ) -> Vec<Primitive> {
     let content = {
         let with_elle = fs::metadata(format!("{}.elle", input_path)).is_ok();
@@ -117,78 +116,19 @@ pub fn lex_and_parse(
     let mut tree = existing_tree.unwrap_or(&mut fallback);
 
     // Non-generic imports and generic declarations
-    let (mut imports, new_struct_pool) =
-        parser.parse(&DoOnly::NonGenericImportsAndGenericDefs, None);
+    let (imports, new_struct_pool, _) = parser.parse(&DoOnly::Imports, None);
     struct_pool.replace_with(|_| new_struct_pool);
-
-    if generics.len() > parser.generic_keys.len() {
-        if warnings.has_warning(Warning::MissingGenerics) {
-            println!("{}", import_location
-                .warning(format!(
-                    "When importing this module, you passed {} generic arguments, but the module only takes {}.\nThis is only a warning, which means any arguments after \"{}\" are ignored.",
-                    generics.len(), parser.generic_keys.len(), generics.get(parser.generic_keys.len() - 1).unwrap().display()
-                )));
-        }
-    }
-
-    if generics.len() < parser.generic_keys.len() {
-        let defaults = parser
-            .generic_defaults
-            .iter()
-            .skip(generics.len())
-            .map(|v| v.clone().unwrap_or(Type::Void))
-            .collect::<Vec<_>>();
-
-        if warnings.has_warning(Warning::MissingGenerics) {
-            println!("{}", import_location
-                .warning(format!(
-                    "When importing this module, you passed {} generic arguments, but the module takes {}.\nThis is only a warning, so the rest of the arguments will be set to their defaults.\n\nSetting {}",
-                    generics.len(),
-                    parser.generic_keys.len(),
-                    defaults.iter()
-                        .enumerate()
-                        .map(|(i, v)|
-                            format!(
-                                "{} to {}{} ",
-                                parser.generic_keys.iter().nth(generics.len() + i).unwrap(), v.id(),
-                                if i + 1 == defaults.len() - 1 {
-                                    " and"
-                                } else {
-                                    if i == defaults.len() - 1 {
-                                        ""
-                                    } else {
-                                        ","
-                                    }
-                                },
-                            )
-                        )
-                        .collect::<Vec<String>>().join("")
-                )));
-        }
-
-        parser.external_generics.extend(defaults);
-    }
 
     // Structs
-    let (structs, new_struct_pool) =
+    let (structs, new_struct_pool, _) =
         parser.parse(&DoOnly::Structs, Some(struct_pool.borrow().to_owned()));
     struct_pool.replace_with(|_| new_struct_pool);
-    tree.extend(structs.clone());
-
-    // Generic imports
-    let (generic_imports, new_struct_pool) = parser.parse(
-        &DoOnly::GenericImports,
-        Some(struct_pool.borrow().to_owned()),
-    );
-    struct_pool.replace_with(|_| new_struct_pool);
-
-    imports.extend(generic_imports);
+    tree.extend(structs);
 
     for import in imports.iter().cloned() {
         match import {
             Primitive::Use {
                 module,
-                generics,
                 mut location,
                 ..
             } if !parsed_modules.borrow().contains(&module) => {
@@ -207,23 +147,6 @@ pub fn lex_and_parse(
                             "".into()
                         },
                         module,
-                        generic_fmt = if generics.len() > 0 {
-                            format!(
-                                "<{}>",
-                                generics
-                                    .iter()
-                                    .enumerate()
-                                    .map(|(i, ty)| (i, ty.display()))
-                                    .map(|(i, s)| format!(
-                                        "{GREEN}{s}{RESET}{comma}",
-                                        comma = if i < generics.len() - 1 { "," } else { "" }
-                                    ))
-                                    .collect::<Vec<String>>()
-                                    .join("")
-                            )
-                        } else {
-                            "".into()
-                        }
                     );
                 }
 
@@ -264,14 +187,11 @@ pub fn lex_and_parse(
                             );
                         }
                         Primitive::Struct { name, public, .. } => {
-                            // If it's the same struct don't change its permissions
-                            // simply re-define it (to maintain the hierarchy)
-                            match existing_definition(tree, &name) {
-                                Some(pos) if tree.get(pos).unwrap().clone() == symbol.clone() => {
+                            if let Some(pos) = existing_definition(tree, &name) {
+                                if symbol == tree.get(pos).unwrap() {
                                     tree.remove(pos);
                                     tree.insert(0, symbol.clone());
-                                }
-                                _ => {
+                                } else {
                                     override_and_add_node!(
                                         Primitive::Struct,
                                         &mut tree,
@@ -280,6 +200,14 @@ pub fn lex_and_parse(
                                         public
                                     );
                                 }
+                            } else {
+                                override_and_add_node!(
+                                    Primitive::Struct,
+                                    &mut tree,
+                                    &name,
+                                    symbol,
+                                    public
+                                );
                             }
                         }
                     }
@@ -304,11 +232,12 @@ pub fn lex_and_parse(
         }
     }
 
-    let (others, new_struct_pool) = parser.parse(
+    let (others, new_struct_pool, extra_structs) = parser.parse(
         &DoOnly::FunctionsAndConstants,
         Some(struct_pool.borrow().to_owned()),
     );
     struct_pool.replace_with(|_| new_struct_pool);
+    tree.extend(extra_structs);
     tree.extend(others);
 
     // Add global constants
@@ -336,43 +265,6 @@ pub fn lex_and_parse(
 
         tree.insert(
             0,
-            Primitive::Struct {
-                name: META_STRUCT_NAME.into(),
-                public: false,
-                usable: true,
-                imported: false,
-                members: vec![
-                    // Holds an array of expressions passed into the function in plain text
-                    Argument {
-                        name: "exprs".into(),
-                        // string[]
-                        r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
-                    },
-                    // Holds an array of the type of arguments passed into the function as strings
-                    Argument {
-                        name: "types".into(),
-                        // string[]
-                        r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
-                    },
-                    // Holds the number of arguments that were passed into a function
-                    Argument {
-                        name: "arity".into(),
-                        // i32
-                        r#type: Type::Word,
-                    },
-                    // Holds the name of the caller method as a string
-                    Argument {
-                        name: "caller".into(),
-                        // string
-                        r#type: Type::Pointer(Box::new(Type::Char)),
-                    },
-                ],
-                location: Location::default(input_path.clone()),
-            },
-        );
-
-        tree.insert(
-            0,
             Primitive::Function {
                 name: "bool.to_string".into(),
                 public: false,
@@ -384,6 +276,7 @@ pub fn lex_and_parse(
                 builtin: true,
                 volatile: false,
                 unaliased: None,
+                generics: vec![],
                 arguments: vec![Argument {
                     name: "self".into(),
                     r#type: Type::Boolean,
@@ -454,6 +347,14 @@ pub fn lex_and_parse(
                     column: 0,
                     ctx: "fn bool::to_string(bool self) -> string {".into(),
                     length: 41, // Length of the ctx above
+                    above: None,
+                },
+                return_location: Location {
+                    file: input_path.clone(),
+                    row: 0,
+                    column: 33,
+                    ctx: "fn bool::to_string(bool self) -> string {".into(),
+                    length: 6, // Length of the type
                     above: None,
                 },
             },

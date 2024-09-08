@@ -1,49 +1,117 @@
 use std/libc/mem;
-
-generic T;
+use std/libc/io;
+use std/string;
 global pub;
 
-struct Array {
+struct Array<T> {
     i32 size;
     i32 capacity;
     T *elements;
 };
 
-fn Array::len(Array self) {
+fn Array::len<T>(Array<T> *self) -> i32 {
     return self.size;
 }
 
-fn Array::init(Array *self, i32 initialCapacity) -> Array * {
-    self.elements = (T *)malloc(initialCapacity * #size(T));
-    self.size = 0;
-    self.capacity = initialCapacity;
+fn Array::with_capacity<T>(i32 initialCapacity) -> Array<T> {
+    Array<T> array = Array {};
+    array.elements = malloc(initialCapacity * #size(T));
+    array.size = 0;
+    array.capacity = initialCapacity;
 
-    return self;
+    return array;
 }
 
-fn Array::new() -> Array {
-    Array *self = malloc(#size(Array *));
-    *self = malloc(#size(Array));
+fn Array::new<T>(ElleMeta meta, ...) -> Array<T> {
+    Array<T> array = Array::with_capacity(2);
 
-    self.init(2);
-    return *self;
+    if meta.arity > 0 {
+        variadic args[meta.arity];
+
+        for i32 i = 0; i < meta.arity; i += 1 {
+            array.push(args.yield(T));
+        }
+    }
+
+    return array;
 }
 
-fn Array::resize(Array *self, i32 newCapacity) {
-    self.elements = (T *)realloc(self.elements, newCapacity * #size(T));
+fn Array::resize<T>(Array<T> *self, i32 newCapacity) {
+    self.elements = realloc(self.elements, newCapacity * #size(T));
     self.capacity = newCapacity;
 }
 
-fn Array::push(Array *self, T element) {
+fn Array::push<T>(Array<T> *self, T element) {
     if self.size >= self.capacity {
-        self.resize(self.capacity * 2);
+        self.resize((self.capacity || 1) * 2);
     }
 
     self.elements[self.size] = element;
     self.size += 1;
 }
 
-fn Array::free(Array *self) {
+fn Array::from_string(string str) -> Array<char> {
+    Array<char> array = Array::with_capacity(2);
+
+    for i32 i = 0; i < str.len(); i += 1 {
+        array.push(str[i]);
+    }
+
+    return array;
+}
+
+fn Array::to_string<T>(Array<T> *self) -> string {
+    string res = "[";
+
+    for i32 i = 0; i < self.len(); i += 1 {
+        res.extend(string::as_string_wrapped(self.elements[i]));
+
+        if i < self.len() - 1 {
+            res.extend(", ");
+        }
+    }
+
+    res.extend("]");
+    return res;
+}
+
+fn Array::join<T>(Array<T> *self, string separator) {
+    string res = "";
+
+    for i32 i = 0; i < self.len(); i += 1 {
+        res.extend(string::as_string(self.elements[i]));
+
+        if i < self.len() - 1 {
+            res.extend(separator);
+        }
+    }
+
+    return res;
+}
+
+fn Array::implode<T>(Array<T> *self, string separator) {
+    return self.join(separator);
+}
+
+fn Array::extend<T>(Array<T> *self, Array<T> other) {
+    for i32 i = 0; i < other.size; i += 1 {
+        self.push(other.elements[i]);
+    }
+}
+
+fn Array::print<T>(Array<T> *self) {
+    for i32 i = 0; i < self.len(); i += 1 {
+        io::printf("{:}", self.elements[i]);
+    }
+}
+
+fn Array::dbg<T>(Array<T> *self) {
+    for i32 i = 0; i < self.len(); i += 1 {
+        io::printf("self[{}] = {:}", i, self.elements[i]);
+    }
+}
+
+fn Array::free<T>(Array<T> *self) {
     free(self.elements);
     self.elements = nil;
     self.size = 0;

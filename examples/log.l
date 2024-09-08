@@ -17,7 +17,7 @@ fn main() {
     io::println("this is a string literal and ", foo, " (now with a newline!)");
 
     // extra newline (printf adds a newline automatically)
-    io::printf("meow? i think that is so {}!\n", true);
+    io::printf("meow? i think that is so {}! {}!!!\n", (bool)1, true);
 
     io::eprintln("i failed to do something... :3");
 }
