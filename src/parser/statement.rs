@@ -2226,6 +2226,7 @@ impl<'a> Statement<'a> {
             other
                 if other == TokenKind::Identifier
                     && (self.shared.struct_pool.borrow().contains_key(&ty_name)
+                        || self.shared.generics.contains(&ty_name)
                         || self.current_token().value.is_base_type()) =>
             {
                 if let Some(token) = self.next_token() {

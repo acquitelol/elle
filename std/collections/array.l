@@ -13,6 +13,10 @@ fn Array::len<T>(Array<T> *self) -> i32 {
     return self.size;
 }
 
+fn Array::is_empty<T>(Array<T> *self) -> bool {
+    return self.size == 0;
+}
+
 fn Array::with_capacity<T>(i32 initialCapacity) -> Array<T> {
     Array<T> array = Array {};
     array.elements = malloc(initialCapacity * #size(T));
@@ -48,6 +52,23 @@ fn Array::push<T>(Array<T> *self, T element) {
 
     self.elements[self.size] = element;
     self.size += 1;
+}
+
+fn Array::pop<T>(Array<T> *self) -> T {
+    if self.is_empty() {
+        return (T)nil;
+    }
+
+    T last = self.elements[self.size - 1];
+    self.size -= 1;
+    self.resize(self.size);
+
+    return last;
+}
+
+fn Array::clear<T>(Array<T> *self) {
+    self.resize(1);
+    self.size = 0;
 }
 
 // Creates a new sized array from a null terminated string
