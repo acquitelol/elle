@@ -47,13 +47,10 @@ fn main() {
     // Test clearing
     b.clear();
     b.push("a");
-    b.dbg();
+    io::dbg(b.to_string());
     io::print('\n');
 
     // Test from_string
     Array<char> hello_world = Array::from_string("hello world!");
     io::dbg(hello_world.join(""));
-
-    // Test dbg_typeof
-    io::dbg_typeof(a, b);
 }

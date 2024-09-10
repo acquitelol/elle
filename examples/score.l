@@ -11,7 +11,7 @@ fn main() {
         string person = io::input("Enter a person's name (or 'stop'): ");
         defer free(person);
 
-        if person.equals("stop") {
+        if person == "stop" {
             break;
         }
 

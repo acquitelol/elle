@@ -614,6 +614,7 @@ impl Compiler {
                 left,
                 right,
                 operator,
+                treat_as_string,
                 location,
             } => {
                 // Implement conditional short circuiting for logical AND and OR
@@ -624,13 +625,13 @@ impl Compiler {
                 }
 
                 let (left_ty_unparsed, left_val_unparsed) = self
-                    .generate_statement(func, module, *left, ty.clone(), None, is_return)
+                    .generate_statement(func, module, *left.clone(), ty.clone(), None, is_return)
                     .expect(&location.error(
                         "Unexpected error when trying to parse left side of an arithmetic operation"
                     ));
 
                 let (right_ty_unparsed, right_val_unparsed) = self
-                    .generate_statement(func, module, *right, ty.clone(), None, is_return)
+                    .generate_statement(func, module, *right.clone(), ty.clone(), None, is_return)
                     .expect(&location.error(
                         "Unexpected error when trying to parse right side of an arithmetic operation"
                     ));
@@ -642,7 +643,7 @@ impl Compiler {
                 if left_ty_unparsed.weight() > right_ty_unparsed.weight() {
                     let (_, val) = self.convert_to_type(
                         func,
-                        right_ty_unparsed,
+                        right_ty_unparsed.clone(),
                         left_ty_unparsed,
                         right_val_unparsed,
                         &location,
@@ -654,7 +655,7 @@ impl Compiler {
                     let (ty, val) = self.convert_to_type(
                         func,
                         left_ty_unparsed,
-                        right_ty_unparsed,
+                        right_ty_unparsed.clone(),
                         left_val_unparsed,
                         &location,
                         false,
@@ -662,6 +663,95 @@ impl Compiler {
 
                     left_ty = ty;
                     left_val = val;
+                }
+
+                if left_ty.is_string() && right_ty_unparsed.is_string() && treat_as_string {
+                    let mut kind = None;
+
+                    match operator {
+                        // Token => (Name, HasMeta, Type)
+                        TokenKind::EqualTo => kind = Some(("equals", false, Type::Boolean)),
+                        TokenKind::Concat => {
+                            kind = Some(("concat", true, Type::Pointer(Box::new(Type::Char))))
+                        }
+                        _ => {}
+                    }
+
+                    if let Some((kind, has_meta, ty)) = kind {
+                        // TODO: extend this idea to more than just strings?
+                        // ideally add a .equals method on any primitive to make it equatable, and implement it for each
+                        // same for any struct, define a .equals method to allow it to be ran with == directly
+                        let func_name = format!("string.{kind}");
+
+                        let module_ref = module.borrow();
+                        let tmp_function_option = module_ref
+                            .functions
+                            .iter()
+                            .find(|func| func.name == func_name);
+
+                        if tmp_function_option.is_none() {
+                            panic!("{}", location.error(format!("Cannot use the '{}' operator because the string module is not imported.\nPlease import it with {GREEN}{BOLD}use std/string;{RESET} at the top of this file.", operator)))
+                        }
+
+                        let tmp_function = tmp_function_option.unwrap();
+                        let mut params = vec![(left_ty, left_val), (right_ty_unparsed, right_val)];
+
+                        if has_meta {
+                            let meta = Compiler::generate_meta_struct(
+                                func,
+                                &params,
+                                vec![(location.clone(), *left), (location.clone(), *right)],
+                                location.clone(),
+                            );
+
+                            let res = self
+                                .generate_statement(func, module, meta, None, None, false)
+                                .expect(&location.error(
+                                    "Unexpected error when trying to compile the Elle metadata struct",
+                                ));
+
+                            params.insert(0, res);
+                        }
+
+                        if tmp_function.variadic {
+                            let res = self
+                                .generate_statement(
+                                    func,
+                                    module,
+                                    AstNode::LiteralStatement {
+                                        kind: TokenKind::ExactLiteral,
+                                        value: ValueKind::String("...".into()),
+                                        location: location.clone(),
+                                    },
+                                    Some(ty.clone()),
+                                    None,
+                                    false,
+                                )
+                                .expect(&location.error(
+                                    "Unexpected error when trying to compile the variadic literal '...'",
+                                ));
+
+                            params.insert(tmp_function.arguments.len(), res);
+                        }
+
+                        let instr = Instruction::Call(Value::Global(func_name), params);
+                        let op_temp = self.new_temporary(None, true);
+
+                        func.borrow_mut().assign_instruction(&op_temp, &ty, instr);
+
+                        return Some((ty, op_temp));
+                    }
+                }
+
+                if operator == TokenKind::Concat && treat_as_string {
+                    panic!(
+                        "{}",
+                        location.error(format!(
+                            "Cannot use the '<>' operator on non-string types {} and {}",
+                            left_ty.display(),
+                            right_ty_unparsed.display()
+                        ))
+                    )
                 }
 
                 let instruction_ty = left_ty;
@@ -1325,6 +1415,7 @@ impl Compiler {
                     };
 
                     let first_arg = tmp_function.arguments.get(0 + add_meta as usize);
+                    let mut got_address = false;
 
                     if let Some(first_arg) = first_arg {
                         if i == 0
@@ -1335,6 +1426,8 @@ impl Compiler {
                             && (first_arg.0.get_pointer_inner().unwrap()
                                 == first_param.clone().unwrap().0)
                         {
+                            got_address = true;
+
                             parameter.1 = AstNode::AddressStatement {
                                 value: Box::new(parameter.1),
                                 location: call_location.clone(),
@@ -1342,7 +1435,7 @@ impl Compiler {
                         }
                     }
 
-                    let (ty, val) = if i == 0 && first_param.is_some() && !should_get_address {
+                    let (ty, val) = if i == 0 && first_param.is_some() && !got_address {
                         first_param.clone().unwrap()
                     } else {
                         self.generate_statement(
@@ -1508,6 +1601,7 @@ impl Compiler {
                                     location: location.clone(),
                                 }),
                                 operator: TokenKind::Multiply,
+                                treat_as_string: false,
                                 location: location.clone(),
                             }
                         } else {
@@ -1599,9 +1693,11 @@ impl Compiler {
                         }),
                         right: if left_ty.is_pointer() { right } else { left },
                         operator: TokenKind::Multiply,
+                        treat_as_string: false,
                         location: right_location.clone(),
                     }),
                     operator: TokenKind::Add,
+                    treat_as_string: false,
                     location: right_location.clone(),
                 };
 
@@ -2104,6 +2200,7 @@ impl Compiler {
                                 }),
                                 right: size,
                                 operator: TokenKind::Multiply,
+                                treat_as_string: false,
                                 location: location.clone(),
                             }
                         } else {
@@ -2394,7 +2491,8 @@ impl Compiler {
                             "{}",
                             location.warning(format!(
                                 "Declaring struct '{}' without field '{}'",
-                                Type::Struct(name.clone()).display(), member
+                                Type::Struct(name.clone()).display(),
+                                member
                             ))
                         );
                     }

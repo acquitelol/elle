@@ -1,7 +1,10 @@
 use regex::Regex;
 use std::{fs, path::Path, process::Command};
 
-use crate::misc::colors::{RED, RESET};
+use crate::{
+    misc::colors::{RED, RESET},
+    EmitKind,
+};
 
 pub fn build(
     qbe_path: String,
@@ -10,7 +13,7 @@ pub fn build(
     emit_asm: bool,
     linker_flags: Option<String>,
     linker_path: String,
-) -> bool {
+) -> EmitKind {
     let path = Path::new(&path_to_qbe_dist).with_extension("s");
     let path_string = path.to_str().unwrap().to_string();
 
@@ -25,7 +28,7 @@ pub fn build(
             String::from_utf8(result.stderr).unwrap()
         );
 
-        return false;
+        return EmitKind::None;
     }
 
     let mut file =
@@ -59,7 +62,7 @@ pub fn build(
             "{RED}Failed to rename {path_string} to {output_path}"
         ));
 
-        return true;
+        return EmitKind::AsmFile(output_path);
     }
 
     let result = Command::new(linker_path)
@@ -78,8 +81,8 @@ pub fn build(
             String::from_utf8(result.stderr).unwrap()
         );
 
-        return false;
+        return EmitKind::None;
     }
 
-    return true;
+    return EmitKind::Executable(output_path);
 }

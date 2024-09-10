@@ -32,7 +32,7 @@ pub fn print_help(program: String) {
                 (
                     "--emit-asm, -Demit-asm, -Demit-s",
                     "Emits the Assembly file in the form of .s instead of an executable",
-                ),
+                )
             ],
         ),
         (
@@ -50,6 +50,14 @@ pub fn print_help(program: String) {
                 (
                     "-Winvalid-alias",
                     "Warns you when you attempt to set an alias attribute on a non-external function",
+                ),
+                (
+                    "-Wvariadic-no-meta",
+                    "Warns you when creating a variadic function without the ElleMeta struct as the 0th argument"
+                ),
+                (
+                    "-Wc-style-void",
+                    "Warns you when you create a function with explicitly no arguments like 'fn foo(void) {}'"
                 )
             ],
         ),

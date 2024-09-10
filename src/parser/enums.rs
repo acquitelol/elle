@@ -51,6 +51,7 @@ pub enum AstNode {
         left: Box<AstNode>,
         right: Box<AstNode>,
         operator: TokenKind,
+        treat_as_string: bool,
         location: Location,
     },
     /// Runs `body` if condition `condition` is true, otherwise runs `else_body`

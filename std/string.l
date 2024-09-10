@@ -30,11 +30,11 @@ fn string::ends_with(string self, string suffix) -> bool {
         return false;
     }
 
-    return strncmp(self + (string)self_length - (string)suffix_length, suffix, suffix_length) == 0;
+    return strncmp((string)((i64)self + (i64)self_length - suffix_length), suffix, suffix_length) == 0;
 }
 
 fn string::equals(string self, string other) {
-    return self == other || strcmp(self, other) == 0;
+    return (i64)self == (i64)other || strcmp(self, other) == 0;
 }
 
 fn string::to_upper(string self) {
@@ -99,8 +99,8 @@ fn string::slice(string self, i32 start, i32 end) -> string {
 //
 // examples:
 //
-// "a".concat("b").equals("ab")
-// string::concat("me", "ow").equals("meow")
+// "a".concat("b") == "ab"
+// string::concat("me", "ow") == "meow"
 fn string::concat(ElleMeta meta, ...) -> string {
     variadic args[meta.arity];
 
@@ -142,18 +142,18 @@ fn string::concat(ElleMeta meta, ...) -> string {
 //
 // string a = "a";
 // a.extend("b");
-// a.equals("ab");
+// a == "ab";
 //
 // string a = "me";
 // string::extend(a, "ow");
-// a.equals("meow")
+// a == "meow"
 fn string::extend(ElleMeta meta, string *self, ...) {
     // - 1 to account for `string *self` which isnt variadic
     variadic args[meta.arity - 1];
     string res = *self;
 
     for i32 i = 0; i < meta.arity - 1; i += 1 {
-        res = res.concat((string)args.yield(string));
+        res <>= args.yield(string);
     }
 
     *self = res;
@@ -163,43 +163,43 @@ fn string::color(string self, string color) {
     string fmt = "\x1b[%dm";
     i32 code = -1;
 
-    if color.equals("bold") {
+    if color == "bold" {
         code = 1;
     }
 
-    if color.equals("italic") {
+    if color == "italic" {
         code = 3;
     }
 
-    if color.equals("underline") {
+    if color == "underline" {
         code = 4;
     }
 
-    if color.equals("red") {
+    if color == "red" {
         code = 31;
     }
 
-    if color.equals("green") {
+    if color == "green" {
         code = 32;
     }
 
-    if color.equals("yellow") {
+    if color == "yellow" {
         code = 33;
     }
 
-    if color.equals("blue") {
+    if color == "blue" {
         code = 34;
     }
 
-    if color.equals("magenta") {
+    if color == "magenta" {
         code = 35;
     }
 
-    if color.equals("cyan") {
+    if color == "cyan" {
         code = 36;
     }
 
-    if color.equals("white") {
+    if color == "white" {
         code = 37;
     }
 
@@ -207,15 +207,15 @@ fn string::color(string self, string color) {
         return self;
     }
 
-    string formatting = (string)malloc(fmt.len() + 1);
-    io::sprintf(formatting, fmt, code);
-    string result = formatting.concat(self);
+    string result = (string)malloc(fmt.len() + 1);
+    io::sprintf(result, fmt, code);
+    result <>= self;
 
     return result;
 }
 
 fn string::reset(string self) {
-    return self.concat("\x1b[0m");
+    return self <> "\x1b[0m";
 }
 
 // Repeats a string `count` amount of times
@@ -223,8 +223,8 @@ fn string::reset(string self) {
 // examples:
 //
 // ```
-// io::assert("a".repeat(4).equals("aaaa"))
-// io::assert(string::repeat("e", 2).equals("ee"))
+// io::assert("a".repeat(4) == "aaaa")
+// io::assert(string::repeat("e", 2) == "ee")
 // ```
 fn string::repeat(string self, i32 count) {
     string res = self;
@@ -232,7 +232,7 @@ fn string::repeat(string self, i32 count) {
     // count - 1 because we already have 1
     // in the initial declaration
     for i32 i = 0; i < count - 1; i += 1 {
-        res = res.concat(self);
+        res <>= self;
     }
 
     return res;
@@ -254,7 +254,7 @@ fn string::insert(string *self, i32 index, char c) {
 
     strncpy(result, *self, index);
     result[index] = c;
-    strcpy(result + (string)index + (string)1, *self + (string)index);
+    strcpy((string)((i64)result + index + (i64)1), (string)((i64)(*self) + index));
 
     result[length + 1] = '\0';
     *self = result;
@@ -271,7 +271,7 @@ fn string::insert(string *self, i32 index, char c) {
 // char last = a.pop();
 //
 // io::assert(last == 'w', nil)
-// io::assert(a.equals("me"), nil)
+// io::assert(a == "me", nil)
 // ```
 fn string::pop(string *self) -> char {
     i32 length = (*self).len();

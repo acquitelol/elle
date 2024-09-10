@@ -1,5 +1,4 @@
 use std/io;
-use std/string;
 use std/option;
 
 fn get_meow(i32 input) -> Option<string> {
@@ -11,7 +10,7 @@ fn get_meow(i32 input) -> Option<string> {
 }
 
 fn get_miku_number(string input) -> Option<i32> {
-    if input.equals("mikudayo") {
+    if input == "mikudayo" {
         return Option::Some(39);
     }
 
@@ -25,8 +24,8 @@ fn main() {
     io::dbg(a.unwrap_or("Fallback :3"));
     io::dbg(b.unwrap_or("Fallback :3"));
 
-    io::assert(a.unwrap_or("Fallback :3").equals("meow"), nil);
-    io::assert(b.unwrap_or("Fallback :3").equals("Fallback :3"), nil);
+    io::assert(a.unwrap_or("Fallback :3") == "meow", nil);
+    io::assert(b.unwrap_or("Fallback :3") == "Fallback :3", nil);
 
     Option<i32> c = get_miku_number("aaa :3");
     Option<i32> d = get_miku_number("mikudayo");

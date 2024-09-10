@@ -587,6 +587,7 @@ This is the mapping defined by Elle:
 - `|` - Bitwise Or
 - `<<` - Shift Left
 - `>>` - Shift Right
+- `<>` - Concatenation (only works on strings)
 - `&&` - Logical And (Not usable when declaring a variable)
 - `||` - Logical Or (Not usable when declaring a variable)
 
@@ -605,7 +606,7 @@ fn main() {
 
 And of course, this works for every arithmetic operator, not just `^`.
 
-Elle follows the standard [order of operations](https://github.com/acquitelol/elle/blob/rewrite/src/lexer/enums.rs#L104-L117) described by mathematics (typically defined as BIDMAS or PEMDAS), which means you can also wrap expressions in `()` to evaluate them before other expressions that may have a higher precedence.
+Elle follows the standard [order of operations](https://github.com/acquitelol/elle/blob/rewrite/src/lexer/enums.rs#L106-L119) described by mathematics (typically defined as BIDMAS or PEMDAS), which means you can also wrap expressions in `()` to evaluate them before other expressions that may have a higher precedence.
 
 Example of a program that calculates the xor (`^`) and sum (`+`) of some values:
 
@@ -620,6 +621,17 @@ fn main() {
     // without the brackets it would be 4
     // because it would evaluate to 6 ^ 2 = 4
     io::println(a);
+}
+```
+
+Here's another example, using the string concatenation operator:
+```cpp
+use std/io; // std/io contains std/string so we don't need to import it
+
+fn main() {
+    string a = "a" <> "b";
+    a <>= "c"; // Concatenation can be done declaratively
+    io::dbg(a); // Expected: (string) a = "abc"
 }
 ```
 

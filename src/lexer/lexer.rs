@@ -339,6 +339,17 @@ impl Lexer {
                         self.advance();
                         (TokenKind::LeftArrow, ValueKind::Nil)
                     }
+                    '>' => {
+                        self.advance();
+
+                        match self.current_char() {
+                            '=' => {
+                                self.advance();
+                                (TokenKind::ConcatEqual, ValueKind::Nil)
+                            }
+                            _ => (TokenKind::Concat, ValueKind::Nil),
+                        }
+                    }
                     _ => (TokenKind::LessThan, ValueKind::Nil),
                 }
             }

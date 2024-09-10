@@ -6,14 +6,14 @@ fn main() {
     string a = string::ascii_lower();
 
     io::assert(
-        a.to_upper().equals(string::ascii_upper()),
-        string::format("result = \"{}\"", a)
+        a.to_upper() == "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        string::format("result = \"{}\"", a.to_upper())
     );
 
     a.insert(11, '9');
 
     io::assert(
-        a.equals("abcdefghijk9lmnopqrstuvwxyz"),
+        a == "abcdefghijk9lmnopqrstuvwxyz",
         string::format("result = \"{}\"", a)
     );
 
@@ -30,39 +30,39 @@ fn main() {
 
     string d = "meow";
 
-    io::assert(d.ends_with("ow"), d.concat(" should end with \"ow\""));
-    io::assert(!d.starts_with("ow"), d.concat(" should not start with \"ow\""));
-    io::assert(d.contains("eo"), d.concat(" should contain \"eo\""));
+    io::assert(d.ends_with("ow"), d <> " should end with \"ow\"");
+    io::assert(!d.starts_with("ow"), d <> " should not start with \"ow\"");
+    io::assert(d.contains("eo"), d <> " should contain \"eo\"");
 
     string e = "ewew";
 
     io::assert(
-        e.concat(e).equals("ewewewew"),
+        e.concat(e) == "ewewewew" && e <> e == "ewewewew" && e <> e == e.concat(e),
         string::format("result = \"{}\"", e.concat(e))
     );
 
     string f = "awa";
 
     io::assert(
-        f.repeat(4).equals("awaawaawaawa"),
+        f.repeat(4) == "awaawaawaawa",
         string::format("result = \"{}\"", f.repeat(4))
     );
 
     string g = "test123AWA";
 
     io::assert(
-        g.to_upper().equals("TEST123AWA"),
+        g.to_upper() == "TEST123AWA",
         string::format("result = \"{}\"", g.to_upper())
     );
 
     io::assert(
-        g.to_lower().equals("test123awa"),
+        g.to_lower() == "test123awa",
         string::format("result = \"{}\"", g.to_lower())
     );
 
     string h = string::ascii_upper();
     io::assert(
-        h.slice(0, 3).equals("ABC"),
+        h.slice(0, 3) == "ABC",
         string::format("result = \"{}\"", h.slice(0, 3))
     );
 
@@ -70,19 +70,19 @@ fn main() {
     i.extend("wo");
 
     io::assert(
-        i.equals("mewo"),
+        i == "mewo",
         string::format("result = \"{}\"", i)
     );
 
     char ch = i.pop();
 
     io::assert(ch == 'o', string::format("ch = {}", ch));
-    io::assert(i.equals("mew"), string::format("result = \"{}\"", i));
+    io::assert(i == "mew", string::format("result = \"{}\"", i));
 
     i.push('e');
     i.push('w');
 
-    io::assert(i.equals("mewew"), string::format("result = \"{}\"", i));
+    io::assert(i == "mewew", string::format("result = \"{}\"", i));
 
     string j = string::format(
         "abc {}, {}, escaped {{}, mrow {} and a char but i32: {}",
@@ -90,7 +90,7 @@ fn main() {
     );
 
     io::assert(
-        j.equals("abc 1, true, escaped {}, mrow :3 and a char but i32: 97"),
+        j == "abc 1, true, escaped {}, mrow :3 and a char but i32: 97",
         string::format("result = \"{}\"", j)
     );
 

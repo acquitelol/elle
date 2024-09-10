@@ -11,7 +11,7 @@ local fn __print(i64 args, ElleMeta meta, bool wrap, bool full, bool newline) {
         string res = __to_string(ty, args, wrap);
 
         if full {
-            io::cprintf("%s = %s\n", expr, res);
+            io::cprintf("(%s) %s = %s\n", ty, expr, res);
         } else {
             io::cprintf("%s", res);
         }
@@ -34,7 +34,7 @@ local fn __err(i64 args, ElleMeta meta, bool newline) {
         string expr = meta.exprs[i];
         string res = __to_string(ty, args, false);
 
-        error = string::concat(error, res);
+        error <>= res;
         free(res); // Don't leak memory
     }
 
@@ -90,12 +90,6 @@ fn io::assert(ElleMeta meta, bool condition, string message) {
         );
 
         abort();
-    }
-}
-
-fn io::dbg_typeof(ElleMeta meta, ...) {
-    for i32 i = 0; i < meta.arity; i += 1 {
-        io::printf("typeof \"{}\" = {}", meta.exprs[i], meta.types[i]);
     }
 }
 

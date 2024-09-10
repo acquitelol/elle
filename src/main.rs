@@ -27,8 +27,16 @@ pub enum Warning {
     ImplicitCast = 1 << 0,
     StructFieldsMissing = 1 << 1,
     InvalidAlias = 1 << 2,
-    TooManyGenerics = 1 << 3,
-    MissingGenerics = 1 << 4,
+    VariadicNoMeta = 1 << 3,
+    CStyleVoid = 1 << 4,
+}
+
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub enum EmitKind {
+    Executable(String),
+    QbeFile(String),
+    AsmFile(String),
+    None,
 }
 
 impl Warning {
@@ -36,8 +44,8 @@ impl Warning {
         Self::ImplicitCast as u32
             | Self::InvalidAlias as u32
             | Self::StructFieldsMissing as u32
-            | Self::TooManyGenerics as u32
-            | Self::MissingGenerics as u32
+            | Self::VariadicNoMeta as u32
+            | Self::CStyleVoid as u32
     }
 }
 
@@ -91,8 +99,8 @@ fn main() -> ExitCode {
             "-Wimplicit-cast" => warnings.set_warning(Warning::ImplicitCast),
             "-Wstruct-fields-missing" => warnings.set_warning(Warning::StructFieldsMissing),
             "-Winvalid-alias" => warnings.set_warning(Warning::InvalidAlias),
-            "-Wmissing-generics" => warnings.set_warning(Warning::MissingGenerics),
-            "-Wtoo-many-generics" => warnings.set_warning(Warning::TooManyGenerics),
+            "-Wvariadic-no-meta" => warnings.set_warning(Warning::VariadicNoMeta),
+            "-Wc-style-void" => warnings.set_warning(Warning::CStyleVoid),
             "-Wall" => warnings.set_all(),
             "--elapsed-time" | "-Dtime" => debug_time = true,
             "--emit-qbe" | "-Demit-qbe" | "-Demit-ssa" => emit_qbe = true,
@@ -243,13 +251,13 @@ fn main() -> ExitCode {
         tmp.to_str().unwrap().into()
     };
 
-    let success;
+    let out;
 
     if emit_qbe {
         let path = Path::new(&parsed_output_path).with_extension("ssa");
         fs::rename(path_to_qbe_dist, path.clone()).unwrap();
 
-        success = true;
+        out = EmitKind::QbeFile(path.to_str().unwrap().to_string());
     } else {
         let result = build(
             qbe_path,
@@ -260,12 +268,12 @@ fn main() -> ExitCode {
             linker_path,
         );
 
-        success = result;
+        out = result;
     }
 
     fs::remove_dir_all("./.build").expect("Failed to delete ./.build.");
 
-    if success {
+    if out != EmitKind::None {
         println!(
             "{GREEN}Finished compiling '{path}' successfully! ヽ(•ᴗ•)ﾉ{RESET}",
             path = input_path.split("/").last().unwrap()

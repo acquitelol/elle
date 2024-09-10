@@ -4,7 +4,7 @@ use crate::{
     compiler::enums::Type,
     lexer::enums::{Attribute, TokenKind, ValueKind},
     parser::statement::Shared,
-    Warning,
+    Warning, META_STRUCT_NAME,
 };
 
 use super::{
@@ -110,6 +110,7 @@ impl<'a> Function<'a> {
                         .unwrap(),
                 )
                 || self.parser.struct_pool.borrow().contains_key(&ty_name))
+            || self.parser.current_token().kind == TokenKind::Ellipsis
         {
             while self.parser.current_token().kind != TokenKind::RightParenthesis {
                 if self.parser.current_token().kind == TokenKind::Ellipsis {
@@ -127,10 +128,14 @@ impl<'a> Function<'a> {
                 if r#type == Type::Void
                     && self.parser.current_token().kind == TokenKind::RightParenthesis
                 {
-                    panic!(
-                        "{}",
-                        ty_loc.error("Elle does not support C-style explicit function prototypes.\nPlease remove the 'void' type from this function's signature.")
-                    )
+                    if self.parser.warnings.has_warning(Warning::CStyleVoid) {
+                        println!(
+                            "{}",
+                            ty_loc.warning("Elle does not support C-style explicit function prototypes.\nPlease remove the 'void' type from this function's signature.\nThis is a warning, which means the compiler will ignore this.")
+                        )
+                    }
+
+                    break;
                 }
 
                 let name = match self.parser.current_token().kind {
@@ -154,6 +159,19 @@ impl<'a> Function<'a> {
 
         self.parser.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.parser.advance();
+
+        if !external && variadic
+            && (arguments.is_empty()
+                || arguments[0].r#type != Type::Struct(META_STRUCT_NAME.into()))
+            && self.parser.warnings.has_warning(Warning::VariadicNoMeta)
+        {
+            println!("{}", location.warning(
+                format!(
+                    "Generating a variadic function named '{}' without the ElleMeta struct.\nThis internal structure provides you with arity, it may be useful.\nAre you sure you want to create this function without it?",
+                    name
+                )
+            ));
+        }
 
         let mut r#return = None;
         let mut unaliased = None;

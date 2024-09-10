@@ -66,6 +66,8 @@ pub enum TokenKind {
     BitwiseXor,
     Or,
     BitwiseOr,
+    Concat,
+    ConcatEqual,
     None,
     Constant,
     Store,
@@ -105,7 +107,7 @@ impl TokenKind {
         match self {
             // Self::Exponent => 9,
             Self::Multiply | Self::Divide | Self::Modulus => 8,
-            Self::Add | Self::Subtract => 7,
+            Self::Add | Self::Concat | Self::Subtract => 7,
             Self::ShiftLeft | Self::ShiftRight => 6,
             Self::LessThan | Self::LessThanEqual | Self::GreaterThan | Self::GreaterThanEqual => 5,
             Self::EqualTo | Self::NotEqualTo => 4,
@@ -123,6 +125,7 @@ impl TokenKind {
             | Self::Divide
             | Self::Modulus
             | Self::Add
+            | Self::Concat
             | Self::Subtract
             | Self::LessThan
             | Self::LessThanEqual
@@ -161,6 +164,7 @@ impl TokenKind {
     pub fn is_declarative(&self) -> bool {
         match self.to_owned() {
             Self::AddEqual
+            | Self::ConcatEqual
             | Self::SubtractEqual
             | Self::MultiplyEqual
             | Self::DivideEqual
@@ -222,6 +226,7 @@ impl TokenKind {
     pub fn to_non_declarative(&self) -> TokenKind {
         match self {
             Self::AddEqual => TokenKind::Add,
+            Self::ConcatEqual => TokenKind::Concat,
             Self::SubtractEqual => TokenKind::Subtract,
             Self::MultiplyEqual => TokenKind::Multiply,
             Self::DivideEqual => TokenKind::Divide,

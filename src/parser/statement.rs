@@ -324,6 +324,7 @@ impl<'a> Statement<'a> {
                 }),
                 right: Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0),
                 operator: mapping,
+                treat_as_string: true,
                 location: location.clone(),
             }),
             location,
@@ -359,6 +360,7 @@ impl<'a> Statement<'a> {
                 location: self.current_token().location,
             }),
             operator: TokenKind::Divide,
+            treat_as_string: false,
             location: self.current_token().location,
         }
     }
@@ -688,6 +690,7 @@ impl<'a> Statement<'a> {
             left: Box::new(Statement::new(left, 0, &self.body, self.shared).parse().0),
             right: Box::new(Statement::new(right, 0, &self.body, self.shared).parse().0),
             operator,
+            treat_as_string: true,
             location: self.current_token().location,
         }
     }
@@ -706,6 +709,7 @@ impl<'a> Statement<'a> {
                 left: Box::new(node),
                 right: Box::new(right),
                 operator,
+                treat_as_string: true,
                 location: self.current_token().location,
             };
         }
@@ -1507,6 +1511,7 @@ impl<'a> Statement<'a> {
             left: parsed,
             right: Box::new(AstNode::token_to_literal(token)),
             operator: TokenKind::Multiply,
+            treat_as_string: false,
             location,
         }
     }
@@ -1867,6 +1872,7 @@ impl<'a> Statement<'a> {
             left: Box::new(node.clone()),
             right: Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0),
             operator: mapping,
+            treat_as_string: true,
             location,
         }
     }
