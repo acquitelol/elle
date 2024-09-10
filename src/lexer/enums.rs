@@ -92,7 +92,7 @@ pub enum TokenKind {
     Global,
     Local,
     Attribute,
-    Let
+    Let,
 }
 
 impl TokenKind {
@@ -325,9 +325,15 @@ pub struct Location {
     pub ctx: String,
     pub above: Option<String>,
     pub length: usize,
+    pub extra_info: String,
 }
 
 impl Location {
+    pub fn with_extra_info(mut self, extra_info: String) -> Self {
+        self.extra_info = extra_info;
+        self
+    }
+
     pub fn display(&self, is_warning: bool) -> String {
         return format!(
             "{BOLD}{UNDERLINE}{GREEN}{}{RESET}:{UNDERLINE}{fmt}{}{RESET}:{UNDERLINE}{YELLOW}{}{RESET}",
@@ -428,11 +434,12 @@ impl Location {
         let line = format!("{} | ", self.row + 1);
 
         return format!(
-            "\n{upper}\n{user_mesage}\n\n{above}{line_number}{}{lhs}{BOLD}{fmt}{UNDERLINE}{issue}{RESET}{rhs}\n{}{}{BOLD}{GREEN}^{}{RESET}\n{fmt}{}{RESET}\n",
+            "\n{upper}\n{user_mesage}\n\n{above}{line_number}{}{lhs}{BOLD}{fmt}{UNDERLINE}{issue}{RESET}{rhs}\n{}{}{BOLD}{GREEN}^{}{}{RESET}\n{fmt}{}{RESET}\n",
             " ".repeat(padding),
             " ".repeat(padding + format!("{} | ", self.row + 1).len()),
             " ".repeat(left),
             "~".repeat(self.length.checked_sub(1).unwrap_or(0)),
+            if !self.extra_info.is_empty() { format!(" {}", self.extra_info) } else { "".into() },
             "―".repeat(upper_plain.len()),
             above = if !above.is_empty() {
                 format!(
@@ -466,6 +473,7 @@ impl Location {
             ctx: "".into(),
             above: None,
             length: 0,
+            extra_info: "".into(),
         }
     }
 }

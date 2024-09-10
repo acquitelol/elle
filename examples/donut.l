@@ -96,7 +96,7 @@ fn main() {
     f32 rotZ = 0;
 
     f32 *zBuffer = malloc(SIZE * #size(f32));
-    string output = malloc(SIZE * #size(char));
+    string output = (string)malloc(SIZE * #size(char));
     Vector3 lightDirection = Vector3 { x = 0, y = 1, z = -1 };
     io::print("\x1b[2J");
 

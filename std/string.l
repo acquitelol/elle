@@ -30,7 +30,7 @@ fn string::ends_with(string self, string suffix) -> bool {
         return false;
     }
 
-    return strncmp(self + self_length - suffix_length, suffix, suffix_length) == 0;
+    return strncmp(self + (string)self_length - (string)suffix_length, suffix, suffix_length) == 0;
 }
 
 fn string::equals(string self, string other) {
@@ -39,7 +39,7 @@ fn string::equals(string self, string other) {
 
 fn string::to_upper(string self) {
     i32 length = self.len();
-    string out = malloc((length + 1) * #size(char));
+    string out = (string)malloc((length + 1) * #size(char));
 
     for i32 i = 0; i < length; i += 1 {
         char c = self[i];
@@ -56,7 +56,7 @@ fn string::to_upper(string self) {
 
 fn string::to_lower(string self) {
     i32 length = self.len();
-    string out = malloc((length + 1) * #size(char));
+    string out = (string)malloc((length + 1) * #size(char));
 
     for i32 i = 0; i < length; i += 1 {
         char c = self[i];
@@ -81,7 +81,7 @@ fn string::slice(string self, i32 start, i32 end) -> string {
     }
 
     i32 new_length = end - start;
-    string sliced = malloc(new_length + 1);
+    string sliced = (string)malloc(new_length + 1);
 
     if !sliced {
         return nil;
@@ -114,7 +114,7 @@ fn string::concat(ElleMeta meta, ...) -> string {
         length += sizes[i];
     }
 
-    string result = malloc((length + 1) * #size(char));
+    string result = (string)malloc((length + 1) * #size(char));
 
     if !result {
         return nil;
@@ -153,7 +153,7 @@ fn string::extend(ElleMeta meta, string *self, ...) {
     string res = *self;
 
     for i32 i = 0; i < meta.arity - 1; i += 1 {
-        res = res.concat(args.yield(string));
+        res = res.concat((string)args.yield(string));
     }
 
     *self = res;
@@ -207,7 +207,7 @@ fn string::color(string self, string color) {
         return self;
     }
 
-    string formatting = malloc(fmt.len() + 1);
+    string formatting = (string)malloc(fmt.len() + 1);
     io::sprintf(formatting, fmt, code);
     string result = formatting.concat(self);
 
@@ -246,7 +246,7 @@ fn string::insert(string *self, i32 index, char c) {
     }
 
     // +1 for the new char, +1 for the null terminator
-    string result = malloc((length + 2) * #size(char));
+    string result = (string)malloc((length + 2) * #size(char));
 
     if !result {
         return nil;
@@ -254,7 +254,7 @@ fn string::insert(string *self, i32 index, char c) {
 
     strncpy(result, *self, index);
     result[index] = c;
-    strcpy(result + index + 1, *self + index);
+    strcpy(result + (string)index + (string)1, *self + (string)index);
 
     result[length + 1] = '\0';
     *self = result;
@@ -281,7 +281,7 @@ fn string::pop(string *self) -> char {
     }
 
     char last_char = (*self)[length - 1];
-    string result = malloc(length * #size(char));
+    string result = (string)malloc(length * #size(char));
 
     if !result {
         return '\0';
@@ -296,7 +296,7 @@ fn string::pop(string *self) -> char {
 
 fn string::push(string *self, char c) {
     i32 length = (*self).len();
-    string result = malloc((length + 2) * #size(char));
+    string result = (string)malloc((length + 2) * #size(char));
 
     if (!result) {
         return nil;
@@ -322,7 +322,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
         fmt = "%p";
 
         length = io::snprintf(nil, 0, fmt, arg);
-        res = malloc(length);
+        res = (string)malloc(length);
         io::sprintf(res, fmt, arg);
         return res;
     }
@@ -334,7 +334,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
             arg = string::concat("\"", arg, "\"");
         }
 
-        res = malloc(arg.len() + 1);
+        res = (string)malloc(arg.len() + 1);
         strcpy(res, arg);
         return res;
     }
@@ -344,7 +344,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
         fmt = "%d";
 
         length = io::snprintf(nil, 0, fmt, arg);
-        res = malloc(length);
+        res = (string)malloc(length);
         io::sprintf(res, fmt, arg);
     }
 
@@ -353,7 +353,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
         fmt = "%ld";
 
         length = io::snprintf(nil, 0, fmt, arg);
-        res = malloc(length);
+        res = (string)malloc(length);
         io::sprintf(res, fmt, arg);
     }
 
@@ -368,7 +368,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
         }
 
         length = io::snprintf(nil, 0, fmt, arg);
-        res = malloc(length);
+        res = (string)malloc(length);
         io::sprintf(res, fmt, arg);
     }
 
@@ -381,7 +381,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
             fmt = "%c";
         }
 
-        res = malloc(length);
+        res = (string)malloc(length);
         io::sprintf(res, fmt, arg);
     }
 
@@ -392,7 +392,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
         string arg = args.yield(bool).to_string();
         fmt = "%s";
 
-        res = malloc(arg.len() + 1);
+        res = (string)malloc(arg.len() + 1);
         io::sprintf(res, fmt, arg);
     }
 
@@ -401,7 +401,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
         fmt = "%p";
 
         length = io::snprintf(nil, 0, fmt, arg);
-        res = malloc(length);
+        res = (string)malloc(length);
         io::sprintf(res, fmt, arg);
         return res;
     }
@@ -423,7 +423,7 @@ fn string::as_string_wrapped(ElleMeta meta, ...) {
 // If you want to format arguments of arbitrary types
 // into a new string, use string::format() instead
 fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
-    string result = malloc(fmt.len());
+    string result = (string)malloc(fmt.len());
 
     i32 arg = 0;
     bool is_open = false;

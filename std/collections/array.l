@@ -59,7 +59,7 @@ fn Array::pop<T>(Array<T> *self) -> T {
         return (T)nil;
     }
 
-    T last = self.elements[self.size - 1];
+    T last = self.elements[(i32)self.size - 1];
     self.size -= 1;
     self.resize(self.size);
 

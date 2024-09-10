@@ -309,8 +309,8 @@ macro_rules! cast_warning {
                 "{}",
                 $location.warning(format!(
                     "Implicit casting from {} to {}",
-                    $first.display(),
-                    $second.display()
+                    $first,
+                    $second
                 ))
             );
         }

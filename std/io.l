@@ -102,7 +102,7 @@ fn io::dbg_typeof(ElleMeta meta, ...) {
 const i64 BUF_SIZE = 1024;
 
 fn io::input(string message) -> string {
-    string buf = malloc(BUF_SIZE * #size(char));
+    string buf = (string)malloc(BUF_SIZE * #size(char));
     defer free(buf);
 
     io::print(message);
@@ -112,7 +112,7 @@ fn io::input(string message) -> string {
     i32 length = buf.len();
 
     buf[buf.len() - 1] = '\0';
-    string result = malloc(buf.len() + 1);
+    string result = (string)malloc(buf.len() + 1);
     strcpy(result, buf);
 
     return result;

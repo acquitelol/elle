@@ -51,8 +51,8 @@ fn main() {
     i32 bounces = 0;
 
     // 10 = number of digits in INT_MAX
-    string bouncesString["Bounces: ".len() + 10];
-    string fpsString["FPS: ".len() + 10];
+    char bouncesString["Bounces: ".len() + 10];
+    char fpsString["FPS: ".len() + 10];
 
     while !raylib::window_should_close() {
         f32 deltaTime = raylib::get_frame_time();

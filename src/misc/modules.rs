@@ -297,6 +297,7 @@ pub fn lex_and_parse(
                                 ctx: "\"false\"".into(),
                                 length: 7, // Length of the ctx above
                                 above: None,
+                                extra_info: "".into(),
                             },
                         }),
                         location: Location {
@@ -306,6 +307,7 @@ pub fn lex_and_parse(
                             ctx: "return \"true\";".into(),
                             length: 14, // Length of the ctx above
                             above: None,
+                            extra_info: "".into(),
                         },
                     }],
                     else_body: vec![AstNode::ReturnStatement {
@@ -319,6 +321,7 @@ pub fn lex_and_parse(
                                 ctx: "\"true\"".into(),
                                 length: 6, // Length of the ctx above
                                 above: None,
+                                extra_info: "".into(),
                             },
                         }),
                         location: Location {
@@ -328,6 +331,7 @@ pub fn lex_and_parse(
                             ctx: "return \"false\";".into(),
                             length: 15, // Length of the ctx above
                             above: None,
+                            extra_info: "".into(),
                         },
                     }],
                     location: Location {
@@ -337,6 +341,7 @@ pub fn lex_and_parse(
                         ctx: "if self {".into(),
                         length: 9, // Length of the ctx above
                         above: None,
+                        extra_info: "".into(),
                     },
                 }],
                 location: Location {
@@ -346,6 +351,7 @@ pub fn lex_and_parse(
                     ctx: "fn bool::to_string(bool self) -> string {".into(),
                     length: 41, // Length of the ctx above
                     above: None,
+                    extra_info: "".into(),
                 },
                 return_location: Location {
                     file: input_path.clone(),
@@ -354,6 +360,7 @@ pub fn lex_and_parse(
                     ctx: "fn bool::to_string(bool self) -> string {".into(),
                     length: 6, // Length of the type
                     above: None,
+                    extra_info: "".into(),
                 },
             },
         )

@@ -714,6 +714,10 @@ impl Type {
         !self.is_float()
     }
 
+    pub fn is_strictly_int(&self) -> bool {
+        !self.is_float() && !self.is_string() && !self.is_void_pointer()
+    }
+
     pub fn is_struct(&self) -> bool {
         match self {
             Self::Struct(..) => true,
@@ -724,6 +728,13 @@ impl Type {
     pub fn is_string(&self) -> bool {
         match self {
             Self::Pointer(inner) => *inner.as_ref() == Self::Char,
+            _ => false,
+        }
+    }
+
+    pub fn is_void_pointer(&self) -> bool {
+        match self {
+            Self::Pointer(inner) => *inner.as_ref() == Self::Void,
             _ => false,
         }
     }

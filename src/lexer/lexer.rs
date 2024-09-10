@@ -474,6 +474,7 @@ impl Lexer {
                 self.get_line(self.row - 1)
             },
             length: self.position_no_whitespace - self.prev_position_no_whitespace,
+            extra_info: "".into(),
         }
     }
 

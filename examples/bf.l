@@ -6,7 +6,7 @@ fn skip(string *pc, i32 dir) -> string {
     i32 loop = 1;
 
     while loop > 0 {
-        *pc += dir;
+        *pc += (string)dir;
 
         if *(*pc) == '[' {
             loop += dir;

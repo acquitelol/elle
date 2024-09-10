@@ -417,6 +417,7 @@ impl<'a> Statement<'a> {
             };
         }
 
+        let location = self.current_token().location.clone();
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
         let res = if tokens.len() > 0 {
@@ -444,7 +445,7 @@ impl<'a> Statement<'a> {
 
         AstNode::ReturnStatement {
             value: Box::new(parsed_res),
-            location: self.current_token().location,
+            location,
         }
     }
 

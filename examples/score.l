@@ -4,7 +4,7 @@ use std/io;
 
 fn main() {
     i32 highestScore = 0;
-    string winner = malloc(BUF_SIZE * #size(char));
+    string winner = (string)malloc(BUF_SIZE * #size(char));
     defer free(winner);
 
     while true {

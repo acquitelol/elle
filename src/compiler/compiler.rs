@@ -262,9 +262,9 @@ impl Compiler {
         let mut first_ty: Option<Type> = None;
 
         macro_rules! ty_err_message {
-            ($first:expr, $second:expr, $location:expr $(,)?) => {{
+            ($first:expr, $second:expr, $location:expr, $extra:expr $(,)?) => {{
                 $location.error(format!(
-                    "Inconsistent return types in function '{}': {} and {}",
+                    "Inconsistent return types in function '{}': {} and {}.{}",
                     if is_generic!(func.name) {
                         let mut parts = func.name.split(".").map(|x| x.to_string()).peekable();
                         let mut name = parts.next().unwrap();
@@ -289,7 +289,12 @@ impl Compiler {
                     }
                     .replace(".", "::"),
                     $first,
-                    $second
+                    $second,
+                    if $extra.is_some() {
+                        format!("\n{}", $extra.unwrap())
+                    } else {
+                        "".into()
+                    }
                 ))
             }};
         }
@@ -312,33 +317,102 @@ impl Compiler {
             };
         }
 
+        macro_rules! handle_inconsistent_types {
+            ($return_type:expr, $first_type:expr, $location:expr $(,)?) => {
+                if $return_type != $first_type && !(maybe_void_pointer!($return_type, $first_type)) {
+                    if maybe_generic!($return_type, $first_type) {
+                        let (a, a_parts) =
+                            Type::from_internal_id($return_type.get_struct_inner().unwrap());
+
+                        let (b, b_parts) =
+                            Type::from_internal_id($first_type.get_struct_inner().unwrap());
+
+                        if a != b || a_parts != b_parts {
+                            panic!(
+                                "{}",
+                                ty_err_message!(
+                                    $return_type.display(),
+                                    $first_type.display(),
+                                    $location.with_extra_info(format!(
+                                        "This has the type '{}'",
+                                        $first_type.display()
+                                    )),
+                                    Some(
+                                        format!("This function's return type is {} but this statement returns {}",
+                                            $return_type.display(), $first_type.display()
+                                        )
+                                    )
+                                )
+                            )
+                        }
+                    } else {
+                        panic!(
+                            "{}",
+                            ty_err_message!(
+                                $return_type.display(),
+                                $first_type.display(),
+                                $location.with_extra_info(format!(
+                                    "This has the type '{}'",
+                                    $first_type.display()
+                                )),
+                                Some(
+                                    format!("This error was caused because the return type is {} but this statement returns {}",
+                                        $return_type.display(), $first_type.display()
+                                    )
+                                )
+                            )
+                        )
+                    }
+                }
+            };
+        }
+
         for block in func_ref.borrow().blocks.iter() {
             for statement in block.statements.clone() {
                 if let Statement::Volatile(Instruction::Return(val)) = statement {
                     if let Some((ty, val, location)) = val {
                         if first_ty.is_none() {
-                            first_ty = Some(ty)
+                            first_ty = Some(ty.clone());
+
+                            if let Some(real_return_type) = func_ref.borrow().return_type.clone() {
+                                handle_inconsistent_types!(real_return_type, ty, location)
+                            }
                         } else {
                             let return_type = ty.clone();
                             let first_type = first_ty.clone().unwrap();
+
+                            if let Some(real_return_type) = func_ref.borrow().return_type.clone() {
+                                handle_inconsistent_types!(real_return_type, return_type, location)
+                            }
 
                             if return_type != first_type
                                 && !matches!(val, Value::Const(_, _))
                                 && !(maybe_void_pointer!(return_type, first_type))
                             {
                                 if maybe_generic!(return_type, first_type) {
-                                    let (a, _) = Type::from_internal_id(
+                                    let (a, a_parts) = Type::from_internal_id(
                                         return_type.get_struct_inner().unwrap(),
                                     );
 
-                                    let (b, _) = Type::from_internal_id(
+                                    let (b, b_parts) = Type::from_internal_id(
                                         first_type.get_struct_inner().unwrap(),
                                     );
 
-                                    if a != b {
+                                    if a != b || a_parts != b_parts {
                                         panic!(
                                             "{}",
-                                            ty_err_message!(return_type, first_type, location)
+                                            ty_err_message!(
+                                                return_type.display(),
+                                                first_type.display(),
+                                                location.with_extra_info(format!(
+                                                    "This has the type '{}'",
+                                                    return_type.display()
+                                                )),
+                                                Some(format!(
+                                                    "This error was caused because you returned {} elsewhere, but returned {} here.",
+                                                    first_type.display(), return_type.display()
+                                                ))
+                                            )
                                         )
                                     }
                                 } else {
@@ -347,7 +421,8 @@ impl Compiler {
                                         ty_err_message!(
                                             ty.display(),
                                             first_ty.unwrap().display(),
-                                            location
+                                            location,
+                                            Some(format!("This error was caused because you returned '{}' elsewhere, but not here.", first_type.display()))
                                         )
                                     )
                                 }
@@ -367,30 +442,7 @@ impl Compiler {
                 let return_type = return_ty.clone().unwrap();
                 let first_type = first_ty.clone().unwrap();
 
-                if return_type != first_type && !(maybe_void_pointer!(return_type, first_type)) {
-                    if maybe_generic!(return_type, first_type) {
-                        let (a, _) =
-                            Type::from_internal_id(return_type.get_struct_inner().unwrap());
-
-                        let (b, _) = Type::from_internal_id(first_type.get_struct_inner().unwrap());
-
-                        if a != b {
-                            panic!(
-                                "{}",
-                                ty_err_message!(return_type, first_type, return_location)
-                            )
-                        }
-                    } else {
-                        panic!(
-                            "{}",
-                            ty_err_message!(
-                                return_ty.unwrap().display(),
-                                first_ty.unwrap().display(),
-                                return_location
-                            )
-                        )
-                    }
-                }
+                handle_inconsistent_types!(return_type, first_type, return_location)
             }
         }
 
@@ -1465,7 +1517,7 @@ impl Compiler {
                                 location: location.clone(),
                             }
                         },
-                        r#type,
+                        ty,
                         None,
                         false,
                     )
@@ -1501,14 +1553,14 @@ impl Compiler {
                 value_location,
             } => {
                 let (left_ty, _) = self
-                    .generate_statement(func, module, *left.clone(), ty.clone(), None, false)
+                    .generate_statement(func, module, *left.clone(), None, None, false)
                     .expect(&left_location.error(format!(
                         "Unexpected error when trying to compile the left side of a {} statement",
                         if value.is_some() { "store" } else { "load" }
                     )));
 
                 let (right_ty, _) = self
-                    .generate_statement(func, module, *right.clone(), ty.clone(), None, false)
+                    .generate_statement(func, module, *right.clone(), None, None, false)
                     .expect(&right_location.error(format!(
                         "Unexpected error when trying to compile the right side of a {} statement",
                         if value.is_some() { "store" } else { "load" }
@@ -2072,7 +2124,7 @@ impl Compiler {
                 let tmp = self.new_temporary(Some("array"), true);
 
                 let (_, converted_val) =
-                    self.convert_to_type(func, ty, Type::Long, val, &location, false);
+                    self.convert_to_type(func, ty, Type::Long, val, &location, true);
 
                 func.borrow_mut().assign_instruction(
                     &tmp,
@@ -2319,7 +2371,7 @@ impl Compiler {
                         "{}",
                         location.error(format!(
                             "Struct named '{}' was not imported and can't be used",
-                            name
+                            Type::Struct(name.clone()).display()
                         ))
                     )
                 }
@@ -2342,7 +2394,7 @@ impl Compiler {
                             "{}",
                             location.warning(format!(
                                 "Declaring struct '{}' without field '{}'",
-                                name, member
+                                Type::Struct(name.clone()).display(), member
                             ))
                         );
                     }
@@ -2928,7 +2980,21 @@ impl Compiler {
             panic!(
                 "{}",
                 location.error(format!(
-                    "Cannot convert to or from a struct type (trying to convert '{}' to '{}')",
+                    "Cannot convert from the type '{}' to the type '{}'.",
+                    first.display(),
+                    second.display()
+                ))
+            )
+        }
+
+        if ((first.is_strictly_int() && second.is_string())
+            || (second.is_strictly_int() && first.is_string()))
+            && !explicit
+        {
+            panic!(
+                "{}",
+                location.error(format!(
+                    "Cannot explicitly convert '{}' to '{}' or vice versa.\nTo explicitly convert, use the C-like '(type)variable' syntax.",
                     first.display(),
                     second.display()
                 ))
@@ -2947,8 +3013,8 @@ impl Compiler {
             cast_warning!(
                 explicit,
                 location,
-                first,
-                second,
+                first.display(),
+                second.display(),
                 self.warnings,
                 Warning::ImplicitCast
             );

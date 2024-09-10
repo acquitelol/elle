@@ -4,7 +4,7 @@ external fn memchr(string str, char character, i64 n) -> i64;
 external fn memcmp(string str1, string str2, i64 n) -> i32;
 external fn memcpy(void *dest, void *src, i64 n) -> i64;
 external fn memmove(void *dest, void *src, i64 n) -> i64;
-external fn memset(string str, char character, i64 n) -> i64;
+external fn memset(void *str, char character, i64 n) -> i64;
 
 external fn strcat(string dest, string src) -> string;
 external fn strncat(string dest, string src, i64 n) -> string;
