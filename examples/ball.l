@@ -50,10 +50,6 @@ fn main() {
     bool finished = false;
     i32 bounces = 0;
 
-    // 10 = number of digits in INT_MAX
-    char bouncesString["Bounces: ".len() + 10];
-    char fpsString["FPS: ".len() + 10];
-
     while !raylib::window_should_close() {
         f32 deltaTime = raylib::get_frame_time();
         i32 fps = math::round(1 / deltaTime);
@@ -117,16 +113,15 @@ fn main() {
         raylib::draw_text(title, (screenWidth - raylib::measure_text(title, fontSize)) / 2, 40, fontSize, BLUE);
 
         // Bounces
-        io::sprintf(bouncesString, "Bounces: %d", bounces);
+        string bouncesString = "Bounces: {}".format(bounces);
         raylib::draw_text(bouncesString, (screenWidth - raylib::measure_text(bouncesString, fontSize)) / 2, 100, fontSize, YELLOW);
 
         // Subtitle
         raylib::draw_text(subtitle, (screenWidth - raylib::measure_text(subtitle, fontSize / 2)) / 2, 160, fontSize / 2, PURPLE);
 
         // FPS
-        io::sprintf(fpsString, "FPS: %d", fps);
+        string fpsString = "FPS: {}".format(fps);
         raylib::draw_text(fpsString, screenWidth - raylib::measure_text(fpsString, fontSize / 2) - 30, screenHeight - 50, fontSize / 2, YELLOW);
-
 
         io::dbg(position.x, position.y, velocity.x, velocity.y, deltaTime);
         io::println("-----------------------");
