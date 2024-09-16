@@ -27,39 +27,102 @@ local fn is_valid(string str, string type) -> bool {
     }
 
     if strspn(str, valid_strspn[type_index]) != str.len() {
-        io::eprintln("Invalid input: '", str, "'. Falling back to 0.");
         return false;
     }
 
     return true;
 }
 
-fn i32_cast(string str) -> i32 {
-    bool valid = is_valid(str, "i32");
+local fn is_valid_with_err(string str, string type) -> bool {
+    bool res = is_valid(str, type);
+
+    if !res {
+        io::eprintln("Invalid input: '", str, "'. Falling back to 0.");
+    }
+
+    return res;
+}
+
+fn i32::parse(string str) -> i32 {
+    bool valid = is_valid_with_err(str, "i32");
 
     if valid {
         return atoi(str);
-    } else {
-        return 0;
     }
+
+    return 0;
 }
 
-fn i64_cast(string str) -> i64 {
-    bool valid = is_valid(str, "i64");
+fn i32::try_parse(i32 *res, string str) -> bool {
+    bool valid = is_valid(str, "i32");
+
+    if valid {
+        *res = atoi(str);
+        return true;
+    }
+
+    return false;
+}
+
+fn i64::parse(string str) -> i64 {
+    bool valid = is_valid_with_err(str, "i64");
 
     if valid {
         return atol(str);
-    } else {
-        return 0;
     }
+
+    return 0;
 }
 
-fn f64_cast(string str) -> f64 {
+fn i64::try_parse(i64 *res, string str) -> bool {
+    bool valid = is_valid(str, "i64");
+
+    if valid {
+        *res = atol(str);
+        return true;
+    }
+
+    return false;
+}
+
+fn f32::parse(string str) -> f32 {
+    bool valid = is_valid_with_err(str, "f64");
+
+    if valid {
+        return (f32)atof(str);
+    }
+
+    return 0;
+}
+
+fn f32::try_parse(f32 *res, string str) -> bool {
     bool valid = is_valid(str, "f64");
 
     if valid {
-        return atof(str);
-    } else {
-        return 0.0;
+        *res = (f32)atof(str);
+        return true;
     }
+
+    return false;
+}
+
+fn f64::parse(string str) -> f64 {
+    bool valid = is_valid_with_err(str, "f64");
+
+    if valid {
+        return atof(str);
+    }
+
+    return 0;
+}
+
+fn f64::try_parse(f64 *res, string str) -> bool {
+    bool valid = is_valid(str, "f64");
+
+    if valid {
+        *res = atof(str);
+        return true;
+    }
+
+    return false;
 }

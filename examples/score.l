@@ -15,7 +15,7 @@ fn main() {
             break;
         }
 
-        i32 score = i32_cast(io::input(string::format("Enter {}'s score: ", person)));
+        i32 score = i32::parse(io::input(string::format("Enter {}'s score: ", person)));
 
         if score > highestScore {
             highestScore = score;
