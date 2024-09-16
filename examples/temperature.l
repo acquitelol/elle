@@ -9,7 +9,7 @@ fn main() {
     string input = io::input("Enter a temperature in °F -> ");
     f64 fahrenheit;
 
-    if f64::try_parse(&fahrenheit, input) {
+    if f64::try_parse(input, &fahrenheit) {
         io::printf("{}°F = {}°C", fahrenheit, fahrenheit_to_celsius(fahrenheit));
     } else {
         io::printf("Invalid input (must be a number): {}", input);

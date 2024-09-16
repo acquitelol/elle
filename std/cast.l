@@ -53,7 +53,7 @@ fn i32::parse(string str) -> i32 {
     return 0;
 }
 
-fn i32::try_parse(i32 *res, string str) -> bool {
+fn i32::try_parse(string str, i32 *res) -> bool {
     bool valid = is_valid(str, "i32");
 
     if valid {
@@ -74,7 +74,7 @@ fn i64::parse(string str) -> i64 {
     return 0;
 }
 
-fn i64::try_parse(i64 *res, string str) -> bool {
+fn i64::try_parse(string str, i64 *res) -> bool {
     bool valid = is_valid(str, "i64");
 
     if valid {
@@ -95,7 +95,7 @@ fn f32::parse(string str) -> f32 {
     return 0;
 }
 
-fn f32::try_parse(f32 *res, string str) -> bool {
+fn f32::try_parse(string str, f32 *res) -> bool {
     bool valid = is_valid(str, "f64");
 
     if valid {
@@ -116,7 +116,7 @@ fn f64::parse(string str) -> f64 {
     return 0;
 }
 
-fn f64::try_parse(f64 *res, string str) -> bool {
+fn f64::try_parse(string str, f64 *res) -> bool {
     bool valid = is_valid(str, "f64");
 
     if valid {
