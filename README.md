@@ -21,7 +21,7 @@
 
 Writing a hello world program in Elle is super easy:
 
-```cpp
+```rs
 use std/io;
 
 fn main() {
@@ -48,7 +48,7 @@ Let's dissect the code:
 * There is currently no `else if` or similar. A workaround is to just define another `if statement` with your new condition.
 * Example:
 
-```cpp
+```rs
 i32 a = 0;
 
 if expression {
@@ -69,7 +69,7 @@ if expression {
 * There is no `do while` or `finally` functionality at the time of writing this.
 * Example:
 
-```cpp
+```rs
 while expression {
     // do code
 }
@@ -77,7 +77,7 @@ while expression {
 
 * You also have access to block scoped variables inside of this loop. This means you can create a pseudo `for loop` with the following code:
 
-```cpp
+```rs
 i32 i = 0;
 
 while i < 10 {
@@ -103,14 +103,14 @@ Essentially, the loop creates the variable defined in (1), and evaluates the blo
 * For loop expressions can be wrapped in `()` but this is not mandatory
 * Basic example of a for loop that prints the digits 0-9 to the stdout:
 
-```cpp
+```rs
 for i32 i = 0; i < 10; i += 1 {
     io::println(i);
 }
 ```
 
 * More advanced example:
-```cpp
+```rs
 use std/io;
 
 fn fact(i64 n) -> i64 {
@@ -147,7 +147,7 @@ Please keep in mind that you also have access to the `break` and `continue` keyw
 
 Here's a simple example:
 
-```cpp
+```rs
 fn main() {
     i32 a = 0;
 
@@ -161,7 +161,7 @@ fn main() {
 
 And it is relatively clear how this code is essentially equal to:
 
-```cpp
+```rs
 fn main() {
     i32 a = 0;
 
@@ -184,7 +184,7 @@ This is done by ensuring the 0th argument of your function is typed to use the E
 The compiler will automatically supply the struct to you when the function is called, you do not need to manually call it.
 
 This struct is not defined in Elle code, however its equivalent structure may look like:
-```cpp
+```rs
 struct ElleMeta {
     string *exprs; // An array of every argument's expression passed to the function as a string
     string *types; // An array of the type of every argument supplied to the function
@@ -198,7 +198,7 @@ struct ElleMeta {
 
 This means that here:
 
-```cpp
+```rs
 fn square(i32 a) {
     return a * 2;
 }
@@ -212,7 +212,7 @@ fn main() {
 
 However, here:
 
-```cpp
+```rs
 fn square(ElleMeta meta, i32 a) {
     return a * 2 + meta.arity;
 }
@@ -232,7 +232,7 @@ fn main() {
 
 Here's a basic example of a variadic function which takes in any amount of arguments and returns their sum:
 
-```cpp
+```rs
 fn add(ElleMeta meta, ...) {
     // Note: `i32` should be the same as the type
     // you are yielding from later.
@@ -258,7 +258,7 @@ Let's go through an explanation for how this works:
 
 At the call-site, using this function is easy. It can be done like this:
 
-```cpp
+```rs
 fn main() {
     i32 res = add(1, 2, 3, 4);
     io::println(res);
@@ -282,7 +282,7 @@ You can also use the manual return directive, which states that Elle should **NO
 
 Here is a basic example that dereferences an `i32 *` to the underlying `i32`:
 
-```cpp
+```rs
 use std/io;
 
 fn deref(i32 *ptr) -> i32 {
@@ -315,7 +315,7 @@ fn main() {
 * Assuming you wrote the above code, you would now have a variable in scope, defined with the name `buf`. This variable is a pointer to the type specified.
 * Example:
 
-```cpp
+```rs
 char out[128];
 out[0] = 'a'; // Keep in mind that `out` is a `char *`
 io::println(out[0]);
@@ -329,7 +329,7 @@ io::println(out[0]);
 
 A very simple example of this is declaring a variable and deferring printing its value, like this:
 
-```cpp
+```rs
 use std/io;
 
 fn main() {
@@ -347,7 +347,7 @@ fn main() {
 You can see how this only calls `io::print` right before it returns 0, which is indeed *after* the `i` variable has had changes made to it. This also works if you return in other scopes, such as if statements, while loops, standalone blocks, etc, as stated above. Any defer statements in inner blocks will not be called on any return, rather will only be called when the inner block is about to leave scope.
 
 This also means that if you, hypothetically, design a program like this
-```cpp
+```rs
 use std/io;
 
 fn main() {
@@ -367,7 +367,7 @@ The expected output is 2, then 4.
 This is because it will call `io::print` once when the standalone block will leave scope, at which point `i` is 2, then it will call `print_int` again when the function itself (`main`) will leave scope, at which point it will be 4 because `i` was squared (`i *= i`).
 
 You can also write something like this:
-```cpp
+```rs
 fn main() {
     i32 i = 0;
     defer io::print(i);
@@ -390,7 +390,7 @@ The most useful application of deferring is for memory management, however.
 
 Consider this code:
 
-```cpp
+```rs
 use std/io;
 
 fn main() {
@@ -451,7 +451,7 @@ You can cast a type in a similar manner to C.
 
 Here is an example that casts a float to an integer to add it to another integer:
 
-```cpp
+```rs
 fn main() {
     f32 a = 1.5;
     i32 b = (i32)a + 2;
@@ -465,7 +465,7 @@ Casting is not necessary here, because the Elle compiler is smart enough to auto
 You can also cast to pointer types, however note that, unlike C, casting to a pointer type when using `malloc` is *not* necessary because the Elle compiler automatically casts the `void *` into the type of the variable.
 
 This means you can write:
-```cpp
+```rs
 fn main() {
     f64 *a = malloc(1024 * #size(f64));
 }
@@ -490,7 +490,7 @@ Any identifier or literal can be prefixed by one of these operators.
 
 Example of using bitwise `NOT`:
 
-```cpp
+```rs
 use std/io;
 
 pub fn main() {
@@ -504,7 +504,7 @@ pub fn main() {
 
 This can also be used for negative or positive values:
 
-```cpp
+```rs
 const i64 MAX_SIGNED_LONG = 9_223_372_036_854_775_807;
 const i64 MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
 ```
@@ -513,7 +513,7 @@ Using unary `-` will multiply the expression by -1 while unary `+` will multiply
 
 The unary `&` operator is used to get the memory address of a local variable in a function. Here is an example:
 
-```cpp
+```rs
 use std/io;
 
 fn other(i32 *something) {
@@ -533,7 +533,7 @@ Here we declare `a` as 39, then we pass the "address" of `a` to `other` as a poi
 
 The unary `*` operator is used to dereference a pointer to a value:
 
-```cpp
+```rs
 use std/io;
 
 fn other(i32 *a, string *str) {
@@ -558,13 +558,13 @@ The example also implies that you can store values at those dereferenced address
 This means that if you want to manipulate the address before it is dereferenced, you can wrap it in `()`.
 
 This code:
-```cpp
+```rs
 io::println(*a + 1);
 ```
 will dereference `a` and then add 1 to the result.
 
 This code, however:
-```cpp
+```rs
 io::println(*(a + 1));
 ```
 will first add 1 to the address of `a`, and then will dereference that address.
@@ -594,7 +594,7 @@ This is the mapping defined by Elle:
 Keep in mind that you can also use these operators when doing a variable declaration.
 This means the following code is valid:
 
-```cpp
+```rs
 use std/io;
 
 fn main() {
@@ -610,7 +610,7 @@ Elle follows the standard [order of operations](https://github.com/acquitelol/el
 
 Example of a program that calculates the xor (`^`) and sum (`+`) of some values:
 
-```cpp
+```rs
 use std/io;
 
 fn main() {
@@ -625,7 +625,7 @@ fn main() {
 ```
 
 Here's another example, using the string concatenation operator:
-```cpp
+```rs
 use std/io; // std/io contains std/string so we don't need to import it
 
 fn main() {
@@ -641,7 +641,7 @@ fn main() {
 
 * An array literal is a simple and intuitive syntax to automatically allocate stack memory for a buffer and assign values at each offset based on the literal definition. Essentially, an expression like this:
 
-```cpp
+```rs
 i32 *some_arr = [512, 1, -3];
 ```
 
@@ -654,7 +654,7 @@ So it would first store `512` at `some_arr + 0`, then it would store `1` at `som
 You can view a more detailed example of array usage at [array.l](https://github.com/acquitelol/elle/blob/rewrite/examples/array.l).
 Array literals are not required to be assigned to a variable. Please look at this example:
 
-```cpp
+```rs
 use std/io;
 
 fn other(i64 *arr, i32 val) {
@@ -685,7 +685,7 @@ You can only place **expressions** inside of the `#arrlen()` directive as it ret
 
 For example, take this snippet:
 
-```cpp
+```rs
 use std/io;
 
 fn other(i32 *buf) {
@@ -713,7 +713,7 @@ fn main() {
 
 At this part:
 
-```cpp
+```rs
 io::printf(
     "(fn other)\n\t#size(buf) = {}\n\t#arrlen(buf) = {}",
     #size(buf),
@@ -727,7 +727,7 @@ Essentially, contextually this means that the `buf` variable is just an `i32 *` 
 
 In this example:
 
-```cpp
+```rs
 use std/io;
 
 fn other(i32 *buf) {
@@ -754,7 +754,7 @@ The code will compile successfully, because `#arrlen` is no longer used on a buf
 
 Finally, here is a basic example of using `#arrlen` to loop through an array of strings and print their values:
 
-```cpp
+```rs
 use std/io;
 
 fn main() {
@@ -776,7 +776,7 @@ fn main() {
 
 Consider this example that uses constants:
 
-```cpp
+```rs
 use std/io;
 
 const i32 WIDTH = 100;
@@ -808,7 +808,7 @@ These may include:
 
 Basic example:
 
-```cpp
+```rs
 use std/io;
 
 fn main() {
@@ -833,7 +833,7 @@ Elle's module system works in the following way:
 
 The syntax for importing is as follows:
 
-```cpp
+```rs
 use path/to/module;
 ```
 
@@ -841,7 +841,7 @@ where, in your current directory, there is a `./path/to/module.elle` or a `./pat
 
 The syntax to export a symbol from your current file is as follows:
 
-```cpp
+```rs
 // ./module.l
 pub const i32 myFavouriteNumber = 7;
 
@@ -851,7 +851,7 @@ pub fn foo() {
 ```
 
 which you can then import
-```cpp
+```rs
 use std/io;
 use module;
 
@@ -865,7 +865,7 @@ If you want to make a symbol private after declaring them all public, use the `l
 
 Example:
 
-```cpp
+```rs
 global pub;
 
 const i32 a = 100; // Public
@@ -909,7 +909,7 @@ Structs are allocations in memory with a defined layout. In Elle, these are defi
 
 Example:
 
-```cpp
+```rs
 struct Bar {
     f32 myFloat;
 };
@@ -923,7 +923,7 @@ struct Foo {
 
 You can then create these structures like this:
 
-```cpp
+```rs
 fn main() {
     Foo foo = Foo {
         a = 12,
@@ -939,7 +939,7 @@ fn main() {
 
 If taking a pointer to them from another function, you can do so like this:
 
-```cpp
+```rs
 use std/io;
 
 fn other(Foo *foo) {
@@ -957,7 +957,7 @@ fn main() {
 > There is no equivalent of the `a->b` operator in Elle. Any pointer to a struct will automatically be dereferenced before processing any fields in the struct.
 > You can still manually dereference the struct pointer manually if you like, but it will have no difference compared to directly using dot notation.
 > This means that the following code will accurately update the value inside the struct Foo:
-```cpp
+```rs
 use std/io;
 
 struct Foo {
@@ -977,7 +977,7 @@ fn main() {
 
 You can also define methods on structs (and primitive types):
 
-```cpp
+```rs
 use std/io;
 
 struct Foo {
@@ -1008,7 +1008,7 @@ In this case, `foo1.add(foo2)` is an identical expression to `Foo::add(foo1, foo
 For more examples, please view [vectors.l](https://github.com/acquitelol/elle/blob/rewrite/std/vectors.l)
 
 You may also specify that `self` is a `<ty> *` instead of a `<ty>` if you require editing it in-place:
-```cpp
+```rs
 use std/io;
 
 struct Foo {
@@ -1039,7 +1039,7 @@ In the case of a method that takes in a `self` pointer, the identical expression
 
 For example, here's a generic function which allows you to pass both integers and floats:
 
-```cpp
+```rs
 fn add<T>(T x, T y) {
     return x + y;
 }
@@ -1052,7 +1052,7 @@ fn main() {
 
 Notice how seamless using the generic was? Elle was able to infer 2 things here: T is whatever type `x` and `y` are, and the return type is *also* T. This means, even though you can, you usually don't *need* to explicitly specify all the generics. This is a more verbose but still correct way to do it:
 
-```cpp
+```rs
 fn add<T>(T x, T y) -> T {
     return x + y;
 }
@@ -1065,7 +1065,7 @@ fn main() {
 
 Generic structs are created as follows:
 
-```cpp
+```rs
 struct Foo<T> {
     T a;
 };
@@ -1079,7 +1079,7 @@ fn main() {
 In this struct, the `a` field can be of *any* type. Note that for structs, you cannot explicitly declare their inner type. You must do so via inference. Elle will infer the inner type based on the struct's variable declaration most of the time. Take the example above, where we declare `Foo<i32> x = Foo { a = 1 };`. The Elle compiler sees that the type of the left hand side and right hand side are both of Foo, however it sees that the right hand side is a struct declaration of a generic struct, so it uses the left hand side to infer the inner types of the right hand side.
 
 This allows for almost rust-like declarations of generic structs and their methods:
-```cpp
+```rs
 use std/io;
 
 struct Foo<T, U> {
@@ -1124,7 +1124,7 @@ Due to Elle's compilation to QBE which implements the C ABI, getting input from 
 
 Consider this function which accepts argv and prints them all to the console:
 
-```cpp
+```rs
 use std/io;
 
 fn main(i32 argc, string *argv) {
@@ -1151,7 +1151,7 @@ The current existing attributes are:
 
 Example:
 
-```cpp
+```rs
 // Attributes go BEFORE the return type
 // The alias attribute will be purposefully ignored
 // because this function is not external
@@ -1175,21 +1175,21 @@ If you specify an alias attribute on a non-external function, you will only be w
 <br/>
 
 You can do this with the following example:
-```cpp
+```rs
 external fn printf(string formatter, ...);
 ```
 
 It essentially tells Elle where it should put the variadic argument starter. You could exclude this, if you like, but you will have to explicitly declare where the variadic arguments begin, because Elle no longer has this context.
 
 You can also make these statements public:
-```cpp
+```rs
 pub external fn fprintf(FILE *fd, string formatter, ...);
 ```
 In fact the order of prefixes before `fn` is not enforced, you can write `external pub fn` and achieve the same result.
 
 You may also alias exported functions, and allow them to be accessible through a pseudo-namespace:
 
-```cpp
+```rs
 pub external fn InitWindow(i32 width, i32 height, string title) @alias("raylib::init_window");
 struct raylib {};
 
@@ -1216,7 +1216,7 @@ All contributions to this project are welcome and I love talking about this stuf
       $ cd elle
     ```
 
-    ```cpponsole
+    ```console
       $ sudo make
     ```
 
@@ -1224,7 +1224,7 @@ All contributions to this project are welcome and I love talking about this stuf
 
     **OR**
 
-    ```cpponsole
+    ```console
       $ make compile-release
     ```
 
@@ -1234,7 +1234,7 @@ All contributions to this project are welcome and I love talking about this stuf
 
 #### ♡ You can now run `ellec` to get a help message of how to use the compiler!
 Try compiling a simple example!
-  ```cpponsole
+  ```console
     $ ellec ./examples/donut.l && ./donut
   ```
 Try compiling an example with libraries!
