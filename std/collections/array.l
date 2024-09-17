@@ -95,7 +95,7 @@ fn Array::to_string<T>(Array<T> *self) -> string {
         }
     }
 
-    res.extend("]");
+    res.push(']');
     return res;
 }
 

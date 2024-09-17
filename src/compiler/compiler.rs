@@ -624,38 +624,63 @@ impl Compiler {
                     ));
                 }
 
-                let (left_ty_unparsed, left_val_unparsed) = self
+                let (mut left_ty, left_val_unparsed) = self
                     .generate_statement(func, module, *left.clone(), ty.clone(), None, is_return)
                     .expect(&location.error(
                         "Unexpected error when trying to parse left side of an arithmetic operation"
                     ));
 
-                let (right_ty_unparsed, right_val_unparsed) = self
+                let (mut right_ty, right_val_unparsed) = self
                     .generate_statement(func, module, *right.clone(), ty.clone(), None, is_return)
                     .expect(&location.error(
                         "Unexpected error when trying to parse right side of an arithmetic operation"
                     ));
 
-                let mut left_ty = left_ty_unparsed.clone();
                 let mut left_val = left_val_unparsed.clone();
                 let mut right_val = right_val_unparsed.clone();
 
-                if left_ty_unparsed.weight() > right_ty_unparsed.weight() {
+                if left_ty.is_string() && right_ty == Type::Char {
+                    let char_tmp = self.new_temporary(None, true);
+
+                    func.borrow_mut().assign_instruction(
+                        &char_tmp,
+                        &Type::Char,
+                        Instruction::Load(Type::Char, left_val),
+                    );
+
+                    left_ty = Type::Char;
+                    left_val = char_tmp;
+                }
+
+                if right_ty.is_string() && left_ty == Type::Char {
+                    let char_tmp = self.new_temporary(None, true);
+
+                    func.borrow_mut().assign_instruction(
+                        &char_tmp,
+                        &Type::Char,
+                        Instruction::Load(Type::Char, right_val),
+                    );
+
+                    right_ty = Type::Char;
+                    right_val = char_tmp;
+                }
+
+                if left_ty.weight() > right_ty.weight() {
                     let (_, val) = self.convert_to_type(
                         func,
-                        right_ty_unparsed.clone(),
-                        left_ty_unparsed,
+                        right_ty.clone(),
+                        left_ty.clone(),
                         right_val_unparsed,
                         &location,
                         false,
                     );
 
                     right_val = val;
-                } else if left_ty_unparsed.weight() < right_ty_unparsed.weight() {
+                } else if left_ty.weight() < right_ty.weight() {
                     let (ty, val) = self.convert_to_type(
                         func,
-                        left_ty_unparsed,
-                        right_ty_unparsed.clone(),
+                        left_ty,
+                        right_ty.clone(),
                         left_val_unparsed,
                         &location,
                         false,
@@ -665,7 +690,7 @@ impl Compiler {
                     left_val = val;
                 }
 
-                if left_ty.is_string() && right_ty_unparsed.is_string() && treat_as_string {
+                if left_ty.is_string() && right_ty.is_string() && treat_as_string {
                     let mut kind = None;
 
                     match operator {
@@ -694,7 +719,7 @@ impl Compiler {
                         }
 
                         let tmp_function = tmp_function_option.unwrap();
-                        let mut params = vec![(left_ty, left_val), (right_ty_unparsed, right_val)];
+                        let mut params = vec![(left_ty, left_val), (right_ty, right_val)];
 
                         if has_meta {
                             let meta = Compiler::generate_meta_struct(
@@ -749,7 +774,7 @@ impl Compiler {
                         location.error(format!(
                             "Cannot use the '<>' operator on non-string types {} and {}",
                             left_ty.display(),
-                            right_ty_unparsed.display()
+                            right_ty.display()
                         ))
                     )
                 }
