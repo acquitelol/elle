@@ -779,6 +779,21 @@ impl Compiler {
                     )
                 }
 
+                if operator == TokenKind::BitwiseXor && (left_ty.is_float() || right_ty.is_float())
+                {
+                    panic!(
+                        "{}",
+                        location.error(format!(
+                            "Cannot use the '^' operator on non-integer type '{}'.\nYou can cast it to an integer if you need this functionality.",
+                            if left_ty.is_float() {
+                                left_ty.display()
+                            } else {
+                                right_ty.display()
+                            }
+                        ))
+                    )
+                }
+
                 let instruction_ty = left_ty;
                 let cloned_ty = instruction_ty.clone();
 
@@ -2122,6 +2137,27 @@ impl Compiler {
                         val,
                         Value::Const(ty.clone(), 0),
                     ),
+                );
+
+                Some((ty, temp))
+            }
+            AstNode::BitwiseNotStatement { value, location } => {
+                let (ty, val) = self
+                    .generate_statement(func, module, *value, ty, None, false)
+                    .expect(&location.error(
+                        "Unexpected error when trying to compile the value of a not statement",
+                    ));
+
+                let temp = self.new_temporary(Some("negate"), true);
+
+                func.borrow_mut().assign_instruction(
+                    &temp,
+                    &ty,
+                    if ty.is_float() {
+                        Instruction::Negate(val)
+                    } else {
+                        Instruction::BitwiseNot(val)
+                    },
                 );
 
                 Some((ty, temp))

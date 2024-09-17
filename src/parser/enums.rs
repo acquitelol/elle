@@ -122,6 +122,11 @@ pub enum AstNode {
         value: Box<AstNode>,
         location: Location,
     },
+    /// Takes value `value` and flips all its bits
+    BitwiseNotStatement {
+        value: Box<AstNode>,
+        location: Location,
+    },
     /// Returns the address of a some `value`
     AddressStatement {
         value: Box<AstNode>,
@@ -288,6 +293,10 @@ fn modify_type_in_node(
             *body = modify_type_in_ast(body.clone(), generics, known_types);
         }
         AstNode::NotStatement { value, .. } => {
+            let new_value = modify_type_in_node(*value.clone(), generics, known_types);
+            *value = Box::new(new_value);
+        }
+        AstNode::BitwiseNotStatement { value, .. } => {
             let new_value = modify_type_in_node(*value.clone(), generics, known_types);
             *value = Box::new(new_value);
         }

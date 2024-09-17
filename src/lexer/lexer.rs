@@ -112,6 +112,10 @@ impl Lexer {
                 self.advance();
                 (TokenKind::Comma, ValueKind::Nil)
             }
+            '~' => {
+                self.advance();
+                (TokenKind::BitwiseNot, ValueKind::Nil)
+            }
             '!' => {
                 self.advance();
 

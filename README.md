@@ -470,7 +470,10 @@ fn main() {
     f64 *a = malloc(1024 * #size(f64));
 }
 ```
-and Elle will not complain. You can, if you wish, cast it, however it will have no effect.
+and Elle will not complain.
+
+> [!IMPORTANT]
+> Strings are different to regular pointers. Even though they are just `char*`, the compiler will not allow you to implicitly cast a `void*` to a `string`. You will need to explicitly cast it.
 
 <hr />
 
@@ -480,7 +483,8 @@ and Elle will not complain. You can, if you wish, cast it, however it will have 
 
 There are 5 unary operators in Elle:
 <br />
-- `!` - Bitwise NOT
+- `!` - Logical NOT
+- `~` - Bitwise NOT
 - `&` - Stack address
 - `-` - Negative number
 - `+` - Positive number
@@ -488,15 +492,29 @@ There are 5 unary operators in Elle:
 
 Any identifier or literal can be prefixed by one of these operators.
 
+Example of using logical `NOT`:
+
+```rs
+use std/io;
+
+fn main() {
+    bool myBool = false;
+
+    if !myBool {
+        io::println("Hello world!");
+    }
+}
+```
+
 Example of using bitwise `NOT`:
 
 ```rs
 use std/io;
 
-pub fn main() {
-    bool myBool = false;
+fn main() {
+    i32 a = 1;
 
-    if !myBool {
+    if ~a == -2 {
         io::println("Hello world!");
     }
 }

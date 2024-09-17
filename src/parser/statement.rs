@@ -1526,6 +1526,16 @@ impl<'a> Statement<'a> {
         AstNode::NotStatement { value, location }
     }
 
+    fn parse_bitwise_not(&mut self) -> AstNode {
+        self.advance();
+        let location = self.current_token().location.clone();
+
+        let tokens = self.yield_tokens_for_unary();
+        let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
+
+        AstNode::BitwiseNotStatement { value, location }
+    }
+
     fn parse_address(&mut self) -> AstNode {
         self.advance();
         let location = self.current_token().location.clone();
@@ -2066,6 +2076,7 @@ impl<'a> Statement<'a> {
             token if token.is_literal() => self.parse_literal(),
             TokenKind::Unary => self.parse_unary(),
             TokenKind::Not => self.parse_not(),
+            TokenKind::BitwiseNot => self.parse_bitwise_not(),
             TokenKind::Deref => self.parse_deref(),
             TokenKind::Address => self.parse_address(),
             TokenKind::Size => self.parse_size(),

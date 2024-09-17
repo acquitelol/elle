@@ -40,6 +40,8 @@ pub enum Instruction {
     BitwiseAnd(Value, Value),
     BitwiseOr(Value, Value),
     BitwiseXor(Value, Value),
+    BitwiseNot(Value),
+    Negate(Value),
     Compare(Type, Comparison, Value, Value),
     Copy(Value),
     // Location in AST for reporting inconsistent return types
@@ -95,7 +97,9 @@ impl Instruction {
             | Self::Literal(v)
             | Self::Copy(v)
             | Self::JumpNonZero(v, _, _)
-            | Self::Alloc8(v) => matches!(v, Value::Global(name) if name == global_name),
+            | Self::Alloc8(v)
+            | Self::Negate(v)
+            | Self::BitwiseNot(v) => matches!(v, Value::Global(name) if name == global_name),
             Self::Return(val) => match val {
                 Some((_, v, _)) => matches!(v, Value::Global(name) if name == global_name),
                 None => false,
@@ -167,6 +171,8 @@ impl fmt::Display for Instruction {
             Self::BitwiseAnd(lhs, rhs) => write!(formatter, "and {}, {}", lhs, rhs),
             Self::BitwiseOr(lhs, rhs) => write!(formatter, "or {}, {}", lhs, rhs),
             Self::BitwiseXor(lhs, rhs) => write!(formatter, "xor {}, {}", lhs, rhs),
+            Self::BitwiseNot(val) => write!(formatter, "xor {}, -1", val),
+            Self::Negate(val) => write!(formatter, "neg {}", val),
             Self::Copy(val) => write!(formatter, "copy {}", val),
             // Self::Cast(val) => write!(formatter, "cast {}", val),
             Self::VAArg(val) => write!(formatter, "vaarg {}", val),
