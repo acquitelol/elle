@@ -100,6 +100,7 @@ pub fn create_generic_struct(
         known_generics: parsed_generics,
         members: parsed_members.clone(),
         location: location.clone(),
+        ignore_empty: false,
     });
 
     struct_pool

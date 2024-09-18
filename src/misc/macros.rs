@@ -176,13 +176,9 @@ macro_rules! unknown_function {
         for func in $module.borrow_mut().functions.iter().filter(|func| {
             func.name != "nil" && func.name != "main" && (func.usable || func.imported)
         }) {
-            let contains_name = func.name.contains($name.as_str());
             let distance = levenshtein::levenshtein($name.as_str(), func.name.clone().as_str());
 
-            if contains_name && (distance <= lowest_distance || similar_name.is_none()) {
-                lowest_distance = distance;
-                similar_name = Some(func.name.clone());
-            } else if !contains_name && distance < lowest_distance && similar_name.is_none() {
+            if distance <= lowest_distance {
                 lowest_distance = distance;
                 similar_name = Some(func.name.clone());
             }
@@ -307,11 +303,7 @@ macro_rules! cast_warning {
         if !$explicit && $warnings.has_warning($warning) {
             println!(
                 "{}",
-                $location.warning(format!(
-                    "Implicit casting from {} to {}",
-                    $first,
-                    $second
-                ))
+                $location.warning(format!("Implicit casting from {} to {}", $first, $second))
             );
         }
     };

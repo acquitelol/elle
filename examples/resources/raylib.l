@@ -50,5 +50,6 @@ external fn PlaySound(Sound sound) @alias("raylib::play_sound");
 external fn InitAudioDevice() @alias("raylib::init_audio_device");
 external fn CloseAudioDevice() @alias("raylib::close_audio_device");
 external fn IsKeyDown(i32 key) @alias("raylib::is_key_down") -> bool;
+external fn DrawLineEx(Vector2 start_pos, Vector2 end_pos, f32 thickness, Color color) @alias("raylib::draw_line_ex");
 
-struct raylib {};
+struct raylib @namespace {};

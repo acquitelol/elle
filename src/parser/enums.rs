@@ -343,6 +343,7 @@ pub enum Primitive {
         known_generics: HashMap<String, Type>,
         members: Vec<Argument>,
         location: Location,
+        ignore_empty: bool,
     },
     Function {
         name: String,

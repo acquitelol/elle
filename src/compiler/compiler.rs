@@ -23,7 +23,6 @@ pub struct Compiler {
     tmp_counter: u32,
     scopes: Vec<HashMap<String, (Type, Value)>>,
     data_sections: Vec<Data>,
-    type_sections: Vec<TypeDef>,
     generic_functions: HashMap<String, Primitive>,
     // Struct Name => ((Field Name, Field Type)[], (Known Generic)[])
     struct_pool: HashMap<String, (Vec<String>, Vec<Argument>)>,
@@ -1056,7 +1055,7 @@ impl Compiler {
                 }
 
                 let tmp_function_option = module
-                    .borrow_mut()
+                    .borrow()
                     .functions
                     .iter()
                     .find(|function| function.name == name)
@@ -2585,9 +2584,10 @@ impl Compiler {
                         );
                     }
 
-                    let (_, offset) = self.member_to_offset(module, &name, &member_name).unwrap();
+                    let (member_ty, offset) =
+                        self.member_to_offset(module, &name, &member_name).unwrap();
 
-                    let (ty, val) = self
+                    let (mut ty, mut val) = self
                         .generate_statement(
                             func,
                             module,
@@ -2604,6 +2604,22 @@ impl Compiler {
                                 format!("Unexpected error when trying to compile the value of a field '{}' in struct '{}'", member_name, name)
                             ),
                         );
+
+                    if let Some(member_ty) = member_ty {
+                        if ty.weight() > member_ty.weight() || ty.weight() < member_ty.weight() {
+                            let (new_ty, new_val) = self.convert_to_type(
+                                func,
+                                ty.clone(),
+                                member_ty.clone(),
+                                val,
+                                &location,
+                                false,
+                            );
+
+                            ty = new_ty;
+                            val = new_val
+                        }
+                    }
 
                     let offset_tmp = self.new_temporary(Some("offset"), true);
 
@@ -2685,8 +2701,17 @@ impl Compiler {
         generics: Vec<String>,
         known_generics: HashMap<String, Type>,
         members: Vec<Argument>,
+        ignore_empty: bool,
+        location: Location,
     ) -> TypeDef {
         let mut items = vec![];
+
+        if members.is_empty() && !ignore_empty {
+            panic!(
+                "{}",
+                location.error("Cannot declare an empty struct (with no members).\nIf you intended to make a namespace use the '@namespace' attribute.")
+            )
+        }
 
         for member in members.iter().cloned() {
             items.push((member.r#type, 1));
@@ -3225,7 +3250,6 @@ impl Compiler {
             tmp_counter: 0,
             scopes: vec![],
             data_sections: vec![],
-            type_sections: vec![],
             generic_functions: hashmap![],
             struct_pool: hashmap![],
             loop_labels: vec![],
@@ -3348,7 +3372,8 @@ impl Compiler {
                     members,
                     generics,
                     known_generics,
-                    ..
+                    location,
+                    ignore_empty,
                 } if generics.len() == 0 => {
                     let td = generator.generate_struct(
                         name,
@@ -3358,9 +3383,19 @@ impl Compiler {
                         generics,
                         known_generics,
                         members,
+                        ignore_empty,
+                        location,
                     );
 
-                    module_ref.borrow_mut().add_type(td);
+                    if module_ref
+                        .borrow()
+                        .types
+                        .iter()
+                        .find(|other_td| **other_td == td)
+                        .is_none()
+                    {
+                        module_ref.borrow_mut().add_type(td);
+                    }
                 }
                 _ => {}
             }
@@ -3370,13 +3405,10 @@ impl Compiler {
             module_ref.borrow_mut().add_data(data);
         }
 
-        for def in generator.type_sections {
-            module_ref.borrow_mut().add_type(def);
-        }
-
         module_ref.borrow_mut().remove_unused_functions();
         module_ref.borrow_mut().remove_unused_data();
         module_ref.borrow_mut().remove_generics();
+        module_ref.borrow_mut().remove_empty_structs();
 
         let mut file = File::create(output_path).expect("Failed to create the file.");
         file.write_all(module_ref.borrow().to_string().as_bytes())

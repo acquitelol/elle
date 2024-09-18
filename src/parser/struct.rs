@@ -1,4 +1,7 @@
-use crate::{hashmap, lexer::enums::TokenKind};
+use crate::{
+    hashmap,
+    lexer::enums::{Attribute, TokenKind},
+};
 
 use super::{
     enums::{Argument, Primitive},
@@ -37,6 +40,23 @@ impl<'a> Struct<'a> {
 
             self.parser.expect_tokens(vec![TokenKind::GreaterThan]);
             self.parser.advance();
+        }
+
+        let mut ignore_empty = false;
+
+        if self.parser.match_token(TokenKind::Attribute, false) {
+            while self.parser.current_token().kind == TokenKind::Attribute {
+                self.parser.advance();
+                let attribute = self.parser.current_token().parse_attribute();
+
+                match attribute {
+                    Attribute::Namespace => {
+                        ignore_empty = true;
+                        self.parser.advance();
+                    }
+                    _ => todo!(),
+                }
+            }
         }
 
         self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
@@ -81,6 +101,7 @@ impl<'a> Struct<'a> {
             known_generics: hashmap![],
             members,
             location,
+            ignore_empty,
         }
     }
 }

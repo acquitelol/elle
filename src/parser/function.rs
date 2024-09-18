@@ -160,7 +160,8 @@ impl<'a> Function<'a> {
         self.parser.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.parser.advance();
 
-        if !external && variadic
+        if !external
+            && variadic
             && (arguments.is_empty()
                 || arguments[0].r#type != Type::Struct(META_STRUCT_NAME.into()))
             && self.parser.warnings.has_warning(Warning::VariadicNoMeta)
@@ -220,6 +221,7 @@ impl<'a> Function<'a> {
                         volatile = true;
                         self.parser.advance();
                     }
+                    _ => todo!(),
                 }
             }
         }

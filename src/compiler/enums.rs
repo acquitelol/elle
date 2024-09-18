@@ -592,6 +592,7 @@ impl Type {
                         known_generics: known_generics.clone(),
                         members: parsed_members.clone(),
                         location: location.clone(),
+                        ignore_empty: false,
                     });
 
                     struct_pool
@@ -1359,6 +1360,10 @@ impl Module {
                 })
                 .is_none()
         })
+    }
+
+    pub fn remove_empty_structs(&mut self) {
+        self.types.retain(|ty| !ty.items.is_empty())
     }
 }
 

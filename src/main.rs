@@ -213,6 +213,7 @@ fn main() -> ExitCode {
             known_generics: hashmap![],
             members: meta_members.clone(),
             location: Location::default(input_path.clone()),
+            ignore_empty: false,
         },
     );
 
