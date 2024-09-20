@@ -1888,8 +1888,22 @@ impl<'a> Statement<'a> {
     }
 
     fn yield_tokens_for_unary(&mut self) -> Vec<Token> {
+        let mut nesting = 0;
+
         self.yield_tokens_with_condition(|token, prev_token, next_token| {
             let ty_name = prev_token.value.get_string_inner().unwrap_or("".into());
+
+            if prev_token.kind == TokenKind::LeftParenthesis {
+                nesting += 1;
+            }
+
+            if prev_token.kind == TokenKind::RightParenthesis {
+                if nesting > 0 {
+                    nesting -= 1;
+                } else {
+                    return true;
+                }
+            }
 
             if token.kind.is_arithmetic() {
                 if token.kind == TokenKind::LessThan && next_token.is_some() {
@@ -1904,7 +1918,7 @@ impl<'a> Statement<'a> {
                         || self.shared.generics.contains(&ty_name)
                         || prev_token.value.is_base_type())
                 } else {
-                    true
+                    nesting == 0
                 }
             } else {
                 token.kind.is_declarative()
