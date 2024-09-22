@@ -27,11 +27,11 @@ fn interpret(string program) {
 
     while *pc {
         if *pc == '>' {
-            ptr += 1;
+            ptr += (string)1;
         }
 
         if *pc == '<' {
-            ptr -= 1;
+            ptr -= (string)1;
         }
 
         if *pc == '+' {
@@ -62,7 +62,7 @@ fn interpret(string program) {
             }
         }
 
-        pc += 1;
+        pc += (string)1;
     }
 }
 

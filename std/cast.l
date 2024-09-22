@@ -4,6 +4,25 @@ use std/io;
 
 global pub;
 
+fn bool::parse(string str) {
+    if str == "true" {
+        return true;
+    }
+
+    return false;
+}
+
+fn bool::try_parse(string str, bool *res) {
+    bool valid = str == "true" || str == "false";
+
+    if valid {
+        *res = bool::parse(str);
+        return true;
+    }
+
+    return false;
+}
+
 local fn is_valid(string str, string type) -> bool {
     string *valid_strspn = ["0123456789", "0123456789", "0123456789."];
     string *valid_types = ["i32", "i64", "f64"];

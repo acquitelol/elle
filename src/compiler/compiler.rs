@@ -243,6 +243,16 @@ impl Compiler {
                             .add_instruction(Instruction::Literal(value)),
                         _ => {}
                     },
+                    TokenKind::Break | TokenKind::Continue => {
+                        self.generate_statement(
+                            &func_ref,
+                            module,
+                            statement.clone(),
+                            None,
+                            None,
+                            false,
+                        );
+                    }
                     _ => {}
                 },
                 _ => match self.generate_statement(
@@ -581,10 +591,10 @@ impl Compiler {
                     func.borrow_mut().add_instruction(Instruction::Store(
                         final_ty.clone(),
                         addr_temp,
-                        final_val,
+                        final_val.clone(),
                     ));
 
-                    return Some((final_ty, temp));
+                    return Some((final_ty, final_val));
                 }
 
                 None
@@ -936,7 +946,11 @@ impl Compiler {
                             _ => Type::Word,
                         };
 
-                        let mut final_ty = ty.unwrap_or(num_ty);
+                        let mut final_ty = if ty.clone().is_some_and(|ty| !ty.is_string()) {
+                            ty.unwrap_or(num_ty)
+                        } else {
+                            num_ty
+                        };
 
                         if is_return {
                             final_ty = func.borrow_mut().return_type.clone().unwrap_or(final_ty);
@@ -1990,6 +2004,16 @@ impl Compiler {
                                     _ => {}
                                 }
                             }
+                            TokenKind::Break | TokenKind::Continue => {
+                                self.generate_statement(
+                                    func,
+                                    module,
+                                    statement.clone(),
+                                    None,
+                                    None,
+                                    false,
+                                );
+                            }
                             _ => {}
                         },
                         _ => match self.generate_statement(
@@ -2087,6 +2111,16 @@ impl Compiler {
                                         .add_instruction(Instruction::Literal(value)),
                                     _ => {}
                                 }
+                            }
+                            TokenKind::Break | TokenKind::Continue => {
+                                self.generate_statement(
+                                    func,
+                                    module,
+                                    statement.clone(),
+                                    None,
+                                    None,
+                                    false,
+                                );
                             }
                             _ => {}
                         },

@@ -487,7 +487,16 @@ impl<'a> Statement<'a> {
             self.advance();
         }
 
-        self.expect_tokens(vec![TokenKind::LeftParenthesis]);
+        if self.current_token().kind == TokenKind::Semicolon || self.is_eof() {
+            return AstNode::LiteralStatement {
+                kind: TokenKind::Identifier,
+                value: ValueKind::String(name),
+                location,
+            };
+        } else {
+            self.expect_tokens(vec![TokenKind::LeftParenthesis]);
+        }
+
         self.advance();
 
         let mut parameters = maybe_params.unwrap_or(vec![]);
@@ -876,8 +885,8 @@ impl<'a> Statement<'a> {
                 .0
         } else {
             AstNode::LiteralStatement {
-                kind: TokenKind::Not,
-                value: ValueKind::Nil,
+                kind: TokenKind::IntegerLiteral,
+                value: ValueKind::Number(0),
                 location: self.current_token().location,
             }
         };
@@ -2259,7 +2268,8 @@ impl<'a> Statement<'a> {
                 if other == TokenKind::Identifier
                     && (self.shared.struct_pool.borrow().contains_key(&ty_name)
                         || self.shared.generics.contains(&ty_name)
-                        || self.current_token().value.is_base_type()) =>
+                        || self.current_token().value.is_base_type())
+                    || self.current_token().kind == TokenKind::Function =>
             {
                 if let Some(token) = self.next_token() {
                     if token.kind == TokenKind::LeftCurlyBrace {

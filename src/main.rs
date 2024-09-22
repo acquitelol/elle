@@ -89,6 +89,7 @@ fn main() -> ExitCode {
     let mut debug_time = false;
     let mut emit_qbe = false;
     let mut emit_asm = false;
+    let mut hush = false;
 
     let mut linker_flags = None;
     let mut linker_path = "cc".into();
@@ -116,6 +117,9 @@ fn main() -> ExitCode {
             }
             "--qbe-path" | "-Cqbe-path" | "-Cssa-path" => {
                 qbe_path = args.next().unwrap_or("qbe".into())
+            }
+            "--hush" | "-Chush" => {
+                hush = true;
             }
             other if other.ends_with(".l") || other.ends_with(".elle") => {
                 if input_path.is_none() {
@@ -275,17 +279,21 @@ fn main() -> ExitCode {
     fs::remove_dir_all("./.build").expect("Failed to delete ./.build.");
 
     if out != EmitKind::None {
-        println!(
-            "{GREEN}Finished compiling '{path}' successfully! ヽ(•ᴗ•)ﾉ{RESET}",
-            path = input_path.split("/").last().unwrap()
-        );
+        if !hush {
+            println!(
+                "{GREEN}Finished compiling '{path}' successfully! ヽ(•ᴗ•)ﾉ{RESET}",
+                path = input_path.split("/").last().unwrap()
+            );
+        }
 
         ExitCode::SUCCESS
     } else {
-        println!(
-            "{RED}Compilation of '{path}' finished with errors. (っ◞‸◟ c){RESET}",
-            path = input_path.split("/").last().unwrap()
-        );
+        if !hush {
+            println!(
+                "{RED}Compilation of '{path}' finished with errors. (っ◞‸◟ c){RESET}",
+                path = input_path.split("/").last().unwrap()
+            );
+        }
 
         ExitCode::FAILURE
     }

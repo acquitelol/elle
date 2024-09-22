@@ -53,4 +53,8 @@ fn main() {
     // Test from_string
     Array<char> hello_world = Array::from_string("hello world!");
     io::dbg(hello_world.join(""));
+
+    // Test contains
+    Array<string> d = Array::new("a", "b", "c");
+    io::dbg(d.contains("a"), d.contains("foo"));
 }

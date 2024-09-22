@@ -114,6 +114,16 @@ fn Array::join<T>(Array<T> *self, string separator) {
     return res;
 }
 
+fn Array::contains<T>(Array<T> *self, T element) {
+    for i32 i = 0; i < self.len(); i += 1 {
+        if self.elements[i] == element {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // Alias for Array::join<T>()
 fn Array::implode<T>(Array<T> *self, string separator) {
     return self.join(separator);

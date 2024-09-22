@@ -37,6 +37,14 @@ fn string::equals(string self, string other) {
     return (i64)self == (i64)other || strcmp(self, other) == 0;
 }
 
+fn string::default(string self, string default) {
+    if ((i64)self) == 0 || self.is_empty() {
+        return default;
+    }
+
+    return self;
+}
+
 fn string::to_upper(string self) {
     i32 length = self.len();
     string out = (string)malloc((length + 1) * #size(char));

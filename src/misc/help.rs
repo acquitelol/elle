@@ -76,6 +76,10 @@ pub fn print_help(program: String) {
                     "--qbe-path, -Cqbe-path, -Cssa-path <path>",
                     "Allows you to pass a custom QBE installation path, the default is \"qbe\"",
                 ),
+                (
+                    "--hush, -Chush",
+                    "Hushes the message notifying you whether a target was compiled successfully",
+                ),
             ],
         ),
     ];
