@@ -14,7 +14,7 @@
 ### ♡ **How is this better than C?**
 
 - It's not. It never will be. As it stands, this is a project developed by a single person, me. I am neither smart enough nor efficient enough to mimic an enterprise programming language compiler such as clang.
-- Elle does, however, provide deferring, generic types, methods on structs (allowing for OOP-like semantics), pseudo-namespaces, and function call metadata. There are still many issues with the parser, compiler, and there is a huge lack of optimisations, but you may see these features as an improvement to C.
+- Elle does, however, provide deferring, generic types, methods on structs (allowing for OOP-like semantics), pseudo-namespaces, and function call metadata. There are still many issues with the parser, compiler, and there is a huge lack of optimisations, but you may view these features as an improvement to C.
 
 ### ✩ *If you like this project, consider giving it a star!* ✩
 
