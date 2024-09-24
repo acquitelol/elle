@@ -25,6 +25,7 @@ fn Foo::get_b<T, U>(Foo<T, U> self) -> U {
 fn main() {
     Foo<i32, f32> foo = Foo::new(10, 1.2);
     foo.double_all();
+
     io::dbg(foo.get_a());
     io::dbg(foo.get_b(), foo.b);
 }
