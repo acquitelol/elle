@@ -231,7 +231,7 @@ fn string::reset(string self) {
 // examples:
 //
 // ```
-// io::assert("a".repeat(4) == "aaaa")
+// io::assert("ab".repeat(4) == "abababab")
 // io::assert(string::repeat("e", 2) == "ee")
 // ```
 fn string::repeat(string self, i32 count) {
