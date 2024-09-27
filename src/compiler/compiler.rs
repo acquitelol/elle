@@ -1302,8 +1302,9 @@ impl Compiler {
 
                                 let diff: Vec<_> = a.difference(&b).cloned().collect();
 
+                                call_location.column -=
+                                    call_location.ctx.len() - call_location.ctx.trim().len();
                                 call_location.ctx = call_location.ctx.trim().into();
-                                call_location.column = 0;
                                 call_location.above = Some(format!(
                                     "In function:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
                                     " ".repeat(

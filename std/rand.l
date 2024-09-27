@@ -1,8 +1,10 @@
 global pub;
 
-external fn srand(i32 seed);
-external fn rand() -> i32;
+struct rand @namespace {};
 
-fn random(i32 lower, i32 upper) {
-    return rand() % (upper - lower + 1) + lower;
+external fn srand(i32 seed) @alias("rand::seed");
+external fn rand() @alias("rand::rand") -> i32;
+
+fn rand::random(i32 lower, i32 upper) {
+    return rand::rand() % (upper - lower + 1) + lower;
 }

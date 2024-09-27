@@ -22,7 +22,7 @@ fn loop<T>(T *array) {
 }
 
 fn main() {
-    i32 *array = new_array<i32>(4);
+    i32 *array = new_array(4);
     defer free_array(array);
 
     array[0] = 5;
