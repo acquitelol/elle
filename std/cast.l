@@ -24,11 +24,11 @@ fn bool::try_parse(string str, bool *res) {
 }
 
 local fn is_valid(string str, string type) -> bool {
-    string *valid_strspn = ["0123456789", "0123456789", "0123456789."];
+    string *valid_strspn = ["-0123456789", "-0123456789", "-0123456789."];
     string *valid_types = ["i32", "i64", "f64"];
     i32 type_index = -1;
 
-    for i32 i = 0; i < #arrlen(valid_types); i += 1 {
+    for i32 i = 0; i < #len(valid_types); i += 1 {
         if valid_types[i].equals(type) {
             type_index = i;
         }
@@ -38,7 +38,7 @@ local fn is_valid(string str, string type) -> bool {
         io::eprintln(type, " is not a valid type for casting. Falling back to 0", type);
         io::eprintln("Valid types:");
 
-        for (i32 i = 0; i < #arrlen(valid_types); i += 1) {
+        for (i32 i = 0; i < #len(valid_types); i += 1) {
             io::eprintln("-\t", valid_types[i]);
         }
 

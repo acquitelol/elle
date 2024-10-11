@@ -14,7 +14,7 @@ def repl():
         use std/math;
         use std/vectors;
 
-        fn main(){{
+        fn main() {{
             {";".join(lines)}{";" if len(lines) > 0 else ""}
             io::println({line});
         }}""";

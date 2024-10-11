@@ -12,7 +12,7 @@ fn roll(i32* results, i32 formattedEpsilon) {
 
     while roll > formattedEpsilon {
         attempts += 1;
-        roll = random(0, ACCURACY);
+        roll = rand::random(0, ACCURACY);
     }
 
     return attempts;
@@ -32,7 +32,7 @@ fn main() {
     i32 results[ITERATIONS];
     i32 formattedEpsilon = EPSILON * (ACCURACY / 100);
 
-    srand(time(nil));
+    rand::seed(time(nil));
 
     for i32 i = 0; i < ITERATIONS; i += 1 {
         results[i] = roll(results, formattedEpsilon);

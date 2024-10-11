@@ -226,6 +226,14 @@ fn string::reset(string self) {
     return self <> "\x1b[0m";
 }
 
+// Capitalizes the first character of a string, and lowercases the rest of the string
+fn string::capitalize(string self) {
+    string first = self.slice(0, 1);
+    string rest = self.slice(1, self.len());
+
+    return first.to_upper() <> rest.to_lower();
+}
+
 // Repeats a string `count` amount of times
 //
 // examples:
@@ -406,12 +414,11 @@ fn __to_string(string ty, i64 args, bool wrap) {
 
     if res == nil {
         i64 arg = args.yield(i64);
-        fmt = "%p";
+        fmt = "<%s at %p>";
 
-        length = io::snprintf(nil, 0, fmt, arg);
+        length = io::snprintf(nil, 0, fmt, ty, arg);
         res = (string)malloc(length);
-        io::sprintf(res, fmt, arg);
-        return res;
+        io::sprintf(res, fmt, ty, arg);
     }
 
     return res;
@@ -464,7 +471,6 @@ fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
 
             arg += 1;
             result.extend(__to_string(meta.types[arg], args, wrapped));
-
             is_open = false;
             wrapped = false;
             continue;

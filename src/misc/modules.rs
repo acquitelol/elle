@@ -118,12 +118,6 @@ pub fn lex_and_parse(
     let (imports, new_struct_pool, _) = parser.parse(&DoOnly::Imports, None);
     struct_pool.replace_with(|_| new_struct_pool);
 
-    // Structs
-    let (structs, new_struct_pool, _) =
-        parser.parse(&DoOnly::Structs, Some(struct_pool.borrow().to_owned()));
-    struct_pool.replace_with(|_| new_struct_pool);
-    tree.extend(structs);
-
     for import in imports.iter().cloned() {
         match import {
             Primitive::Use {
@@ -230,6 +224,12 @@ pub fn lex_and_parse(
         }
     }
 
+    // Structs
+    let (structs, new_struct_pool, _) =
+        parser.parse(&DoOnly::Structs, Some(struct_pool.borrow().to_owned()));
+    struct_pool.replace_with(|_| new_struct_pool);
+    tree.extend(structs);
+
     let (others, new_struct_pool, extra_structs) = parser.parse(
         &DoOnly::FunctionsAndConstants,
         Some(struct_pool.borrow().to_owned()),
@@ -278,6 +278,7 @@ pub fn lex_and_parse(
                 arguments: vec![Argument {
                     name: "self".into(),
                     r#type: Type::Boolean,
+                    manual: false,
                 }],
                 r#return: Some(Type::Pointer(Box::new(Type::Char))),
                 body: vec![AstNode::IfStatement {

@@ -88,6 +88,7 @@ pub fn create_generic_struct(
                 generics.clone(),
                 parsed_generics.clone(),
             ),
+            manual: false,
         })
         .collect::<Vec<Argument>>();
 
@@ -218,6 +219,7 @@ impl Parser {
 
     pub fn get_type(&mut self, generics: Option<&Vec<String>>) -> Type {
         let is_fn_pointer = self.current_token().kind == TokenKind::Function;
+
         let name = if is_fn_pointer {
             self.current_token().value.get_string_inner().unwrap()
         } else {
@@ -382,6 +384,13 @@ impl Parser {
                                 .location
                                 .error("Cannot specify a function as both private and public")
                         );
+                    }
+
+                    if let Some(next) = self.next_token() {
+                        if next.kind == TokenKind::Multiply {
+                            self.advance();
+                            continue;
+                        }
                     }
 
                     if self.position >= 2 && self.tokens.len() > 2 {

@@ -17,8 +17,9 @@ fn Array::is_empty<T>(Array<T> *self) -> bool {
     return self.size == 0;
 }
 
-fn Array::with_capacity<T>(i32 initialCapacity) -> Array<T> {
-    Array<T> array = Array {};
+fn Array::with_capacity<T>(i32 initialCapacity) -> Array<T> * {
+    Array<T> *array = malloc(#size(Array<T>));
+    *array = malloc(#size(Array<T>));
     array.elements = malloc(initialCapacity * #size(T));
     array.size = 0;
     array.capacity = initialCapacity;
@@ -26,8 +27,8 @@ fn Array::with_capacity<T>(i32 initialCapacity) -> Array<T> {
     return array;
 }
 
-fn Array::new<T>(ElleMeta meta, ...) -> Array<T> {
-    Array<T> array = Array::with_capacity(2);
+fn Array::new<T>(ElleMeta meta, ...) -> Array<T> * {
+    Array<T> *array = Array::with_capacity(2);
 
     if meta.arity > 0 {
         variadic args[meta.arity];
@@ -54,6 +55,22 @@ fn Array::push<T>(Array<T> *self, T element) {
     self.size += 1;
 }
 
+// from is inclusive, to is exclusive
+//
+// example:
+// Array::range(0, 4) -> [0, 1, 2, 3]
+// Array::range(0, 0) -> []
+// Array::range(2, 5) -> [2, 3, 4]
+fn Array::range(i32 from, i32 to) -> Array<i32> * {
+    Array<i32> *array = Array::with_capacity(to);
+
+    for i32 i = from; i < to; i += 1 {
+        array.push(i);
+    }
+
+    return array;
+}
+
 fn Array::pop<T>(Array<T> *self) -> T {
     if self.is_empty() {
         return (T)nil;
@@ -72,9 +89,9 @@ fn Array::clear<T>(Array<T> *self) {
 }
 
 // Creates a new sized array from a null terminated string
-fn Array::from_string(string str) -> Array<char> {
+fn Array::from_string(string str) -> Array<char> * {
     i32 length = str.len();
-    Array<char> array = Array::with_capacity(length);
+    Array<char> *array = Array::with_capacity(length);
 
     for i32 i = 0; i < length; i += 1 {
         array.push(str[i]);
@@ -130,29 +147,51 @@ fn Array::implode<T>(Array<T> *self, string separator) {
 }
 
 // Take all the elements of another Array<T> and push them into this Array<T>
-fn Array::extend<T>(Array<T> *self, Array<T> other) {
-    for i32 i = 0; i < other.size; i += 1 {
+fn Array::extend<T>(Array<T> *self, Array<T> *other) {
+    for i32 i = 0; i < other.len(); i += 1 {
         self.push(other.elements[i]);
     }
 }
 
+fn Array::remove<T>(Array<T> *self, i32 index) -> T {
+    if index < 0 || index >= self.size {
+        return (T)nil;
+    }
+
+    T removedElement = self.elements[index];
+
+    for i32 i = index; i < self.size - 1; i += 1 {
+        self.elements[i] = self.elements[i + 1];
+    }
+
+    self.size -= 1;
+
+    if self.size < self.capacity / 4 {
+        self.resize(self.capacity / 2);
+    }
+
+    return removedElement;
+}
+
 // Print all of the elements of this Array<T>
-fn Array::print<T>(Array<T> *self) {
+fn Array::dbg<T>(Array<T> *self) {
     for i32 i = 0; i < self.len(); i += 1 {
-        io::printf("{:}", self.elements[i]);
+        io::dbg(self.elements[i]);
     }
 }
 
-// Print all of the elements of this Array<T> with extra debug information
-fn Array::dbg<T>(Array<T> *self) {
+fn Array::map<T>(Array<T> *self, fn *mapping) {
+    Array<T> *new_self = Array::with_capacity(self.len());
+
     for i32 i = 0; i < self.len(); i += 1 {
-        io::printf("self[{}] = {:}", i, self.elements[i]);
+        new_self.push(mapping(self.elements[i]));
     }
+
+    return new_self;
 }
 
 fn Array::free<T>(Array<T> *self) {
     free(self.elements);
-    self.elements = nil;
-    self.size = 0;
-    self.capacity = 0;
+    free((void *)(*self));
+    free(self);
 }

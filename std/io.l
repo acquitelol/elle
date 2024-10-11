@@ -11,7 +11,10 @@ local fn __print(i64 args, ElleMeta meta, bool wrap, bool full, bool newline) {
         string res = __to_string(ty, args, wrap);
 
         if full {
-            io::cprintf("(%s) %s = %s\n", ty, expr, res);
+            io::cprintf(
+                "[%s:%d:%d] %s %s = %s\n",
+                meta.file, meta.line, meta.column, ty, expr, res
+            );
         } else {
             io::cprintf("%s", res);
         }

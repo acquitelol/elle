@@ -189,8 +189,11 @@ This struct is not defined in Elle code, however its equivalent structure may lo
 struct ElleMeta {
     string *exprs; // An array of every argument's expression passed to the function as a string
     string *types; // An array of the type of every argument supplied to the function
-    i32 arity; // The number of arguments supplied to the function. This does NOT include the metadata parameter.
+    i32 arity;     // The number of arguments supplied to the function. This does NOT include the metadata parameter.
     string caller; // The caller of the function as a string
+    string file;   // The file where the function was called from
+    i32 line;      // The line number of the function call + 1
+    i32 column;    // The column number of the function call + 1
 };
 ```
 
@@ -286,9 +289,9 @@ Here is a basic example that dereferences an `i32 *` to the underlying `i32`:
 ```rs
 use std/io;
 
-fn deref(i32 *ptr) -> i32 {
+fn deref(i32 *$$ptr$$) -> i32 {
     $$__MANUAL_RETURN__$$;
-    $$%deref.val =w loadsw %ptr.1$$;
+    $$%deref.val =w loadsw %ptr$$;
     $$ret %deref.val$$;
 }
 
@@ -687,7 +690,7 @@ fn main() {
 
 where we pass an array literal directly to another function or operation. An array literal, internally, will simply return the memory address of the start of the array. As these arrays has no variable declaration linked to them, there is no way to get their type, however we can infer this type based on the type of the values inside, so it can still be indexed correctly.
 
-You can also get the size and length of these arrays. Simply wrap them in `#size` or `#arrlen` just like if you wanted to get the size of an array that was declared to a variable. For more information, please read the size directives chapter.
+You can also get the size and length of these arrays. Simply wrap them in `#size` or `#len` just like if you wanted to get the size of an array that was declared to a variable. For more information, please read the size directives chapter.
 
 <hr />
 
@@ -696,11 +699,11 @@ You can also get the size and length of these arrays. Simply wrap them in `#size
 * A "size directive" is similar to a `sizeof` builtin in C. It returns the size of various definitions verbatim.
 
 There are currently 2 size directives in Elle:
-`#size()` and `#arrlen()`
+`#size()` and `#len()`
 
 You can put both **types** and **expressions** inside of the `#size()` directive and it returns the size of the statement provided.
 
-You can only place **expressions** inside of the `#arrlen()` directive as it returns the size of the buffer divided by the size of each type. This is exactly equivalent to `#size(arr) / #size(arr_type)`. It will crash if you try  to use it on a buffer that wasn't defined in the function that the directive is called from.
+You can only place **expressions** inside of the `#len()` directive as it returns the size of the buffer divided by the size of each type. This is exactly equivalent to `#size(arr) / #size(arr_type)`. It will crash if you try  to use it on a buffer that wasn't defined in the function that the directive is called from.
 
 For example, take this snippet:
 
@@ -709,9 +712,9 @@ use std/io;
 
 fn other(i32 *buf) {
     io::printf(
-        "(fn other)\n\t#size(buf) = {}\n\t#arrlen(buf) = {}",
+        "(fn other)\n\t#size(buf) = {}\n\t#len(buf) = {}",
         #size(buf),
-        #arrlen(buf)
+        #len(buf)
     );
 }
 
@@ -720,9 +723,9 @@ fn main() {
     buf[0] = 123;
 
     io::printf(
-        "(fn main)\n\t#size(buf) = {}\n\t#arrlen(buf) = {}",
+        "(fn main)\n\t#size(buf) = {}\n\t#len(buf) = {}",
         #size(buf),
-        #arrlen(buf)
+        #len(buf)
     );
 
     other(buf);
@@ -734,15 +737,15 @@ At this part:
 
 ```rs
 io::printf(
-    "(fn other)\n\t#size(buf) = {}\n\t#arrlen(buf) = {}",
+    "(fn other)\n\t#size(buf) = {}\n\t#len(buf) = {}",
     #size(buf),
-    #arrlen(buf)
+    #len(buf)
 );
 ```
 
 Elle will throw a compilation error. The `buf` buffer was not defined in the function called `other`, so therefore the compiler does not have enough context to get its length, as arguments in Elle are not fat (they don't contain extra metadata).
 
-Essentially, contextually this means that the `buf` variable is just an `i32 *` to the compiler. As it no longer has context to the size of the `buf` allocation, it cannot evaluate the `#arrlen` directive, and throws an error.
+Essentially, contextually this means that the `buf` variable is just an `i32 *` to the compiler. As it no longer has context to the size of the `buf` allocation, it cannot evaluate the `#len` directive, and throws an error.
 
 In this example:
 
@@ -758,20 +761,20 @@ fn main() {
     buf[0] = 123;
 
     io::printf(
-        "(fn main)\n\t#size(buf) = {}\n\t#arrlen(buf) = {}",
+        "(fn main)\n\t#size(buf) = {}\n\t#len(buf) = {}",
         #size(buf),
-        #arrlen(buf)
+        #len(buf)
     );
 
     other(buf);
 }
 ```
 
-The code will compile successfully, because `#arrlen` is no longer used on a buffer that isn't defined in the function where the directive was called.
+The code will compile successfully, because `#len` is no longer used on a buffer that isn't defined in the function where the directive was called.
 
 <hr/>
 
-Finally, here is a basic example of using `#arrlen` to loop through an array of strings and print their values:
+Finally, here is a basic example of using `#len` to loop through an array of strings and print their values:
 
 ```rs
 use std/io;
@@ -779,7 +782,7 @@ use std/io;
 fn main() {
     string *some_array = ["abc", "meow", "test"]";
 
-    for i32 i = 0; i < #arrlen(some_array); i += 1 {
+    for i32 i = 0; i < #len(some_array); i += 1 {
         io::printf("some_array[{}] = {}", i, some_array[i]);
     }
 }

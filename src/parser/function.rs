@@ -138,9 +138,13 @@ impl<'a> Function<'a> {
                     break;
                 }
 
+                let mut manual = false;
                 let name = match self.parser.current_token().kind {
                     TokenKind::Identifier => self.parser.get_identifier(),
-                    TokenKind::ExactLiteral => self.parser.get(TokenKind::ExactLiteral),
+                    TokenKind::ExactLiteral => {
+                        manual = true;
+                        self.parser.get(TokenKind::ExactLiteral)
+                    }
                     other => panic!(
                         "{}",
                         self.parser
@@ -153,7 +157,11 @@ impl<'a> Function<'a> {
                 self.parser.advance();
                 self.parser.match_token(TokenKind::Comma, true);
 
-                arguments.push(Argument { r#type, name })
+                arguments.push(Argument {
+                    r#type,
+                    name,
+                    manual,
+                })
             }
         }
 

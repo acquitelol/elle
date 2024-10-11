@@ -1,3 +1,4 @@
+#![allow(unused_assignments)]
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -31,6 +32,8 @@ pub struct Compiler {
     buf_metadata: HashMap<Value, (Type, Value)>,
     tree: Vec<Primitive>,
     warnings: Warnings,
+    // lambda functions that should be added as soon as possible
+    deferred_functions: Vec<Function>,
 }
 
 impl Compiler {
@@ -42,9 +45,9 @@ impl Compiler {
         }
     }
 
-    fn new_temporary(&mut self, name: Option<&str>, minify: bool) -> Value {
+    fn new_temporary(&mut self, name: Option<&str>, _minify: bool) -> Value {
         self.tmp_counter += 1;
-        Value::Temporary(self.tmp_name_with_debug_assertions(name.unwrap_or("tmp"), minify))
+        Value::Temporary(self.tmp_name_with_debug_assertions(name.unwrap_or("tmp"), false))
     }
 
     fn new_variable(
@@ -58,7 +61,7 @@ impl Compiler {
         let tmp = if new {
             self.new_temporary(Some(name), minify)
         } else {
-            let existing_var = self.get_variable(name, func);
+            let existing_var = self.get_variable(name, func, None);
 
             match existing_var {
                 Ok((_, val)) => match val {
@@ -78,10 +81,23 @@ impl Compiler {
         tmp
     }
 
+    fn new_manual_argument(&mut self, ty: &Type, name: &str) -> Value {
+        let tmp = Value::Temporary(name.into());
+
+        let scope = self
+            .scopes
+            .last_mut()
+            .expect("Expected last scope to exist");
+
+        scope.insert(name.to_owned(), (ty.to_owned(), tmp.to_owned()));
+        tmp
+    }
+
     fn get_variable(
         &mut self,
         name: &str,
         func: Option<&RefCell<Function>>,
+        module: Option<&RefCell<Module>>,
     ) -> Result<(Type, Value), String> {
         let var = self
             .scopes
@@ -89,7 +105,17 @@ impl Compiler {
             .rev()
             .filter_map(|s| s.get(name))
             .next()
-            .ok_or_else(|| format!("\nUndefined variable '{}'", name));
+            .ok_or_else(|| {
+                format!(
+                    "\nUndefined variable '{}'{}",
+                    name,
+                    if func.is_some_and(|func| func.borrow().lambda) {
+                        ". Lambdas do not capture variables in scope."
+                    } else {
+                        " "
+                    }
+                )
+            });
 
         if var.is_err() {
             for item in self.tree.iter().cloned() {
@@ -142,7 +168,16 @@ impl Compiler {
                             }
 
                             return Ok((
-                                Type::Pointer(Box::new(Type::Byte)),
+                                Type::Function(Box::new(if let Some(module) = module {
+                                    module
+                                        .borrow()
+                                        .functions
+                                        .iter()
+                                        .find(|func| func.name == name)
+                                        .map(|x| x.to_owned())
+                                } else {
+                                    None
+                                })),
                                 Value::Global(name.into()),
                             ));
                         }
@@ -155,6 +190,68 @@ impl Compiler {
         var.map(|item| item.to_owned())
     }
 
+    fn get_variable_lazy(
+        &mut self,
+        name: &String,
+        func: Option<&RefCell<Function>>,
+        module: Option<&RefCell<Module>>,
+        location: Location,
+        // (Ty, Val, Init)
+    ) -> Option<(Type, Value)> {
+        let var = self.get_variable(&name, func, module);
+
+        match var {
+            Ok((ty, val)) => {
+                let res = self.get_variable(&format!("{}.addr", name), func, module);
+
+                if res.is_ok() && func.is_some() {
+                    let (_, addr_val) = res.unwrap();
+
+                    func.unwrap().borrow_mut().assign_instruction(
+                        &val,
+                        &ty,
+                        Instruction::Load(ty.clone(), addr_val),
+                    );
+
+                    return Some((ty, val));
+                }
+
+                Some((ty, val))
+            }
+            Err(msg) => {
+                macro_rules! undefined_error {
+                    () => {
+                        panic!(
+                            "{}",
+                            location.error(format!(
+                                "Unexpected error when trying to get a variable called '{}': {}",
+                                name, msg
+                            ))
+                        )
+                    };
+                }
+
+                if !module.is_some() {
+                    undefined_error!();
+                }
+
+                // If it fails to get the variable from the current scope
+                // then attempt to get it from a global instead
+                let tmp_module = module.unwrap().borrow();
+                let global = tmp_module
+                    .data
+                    .iter()
+                    .find(|item| item.name == name.clone());
+
+                if let Some(item) = global {
+                    Some((Type::Long, Value::Global(item.name.clone())))
+                } else {
+                    undefined_error!()
+                }
+            }
+        }
+    }
+
     fn generate_function(
         &mut self,
         name: String,
@@ -164,6 +261,7 @@ impl Compiler {
         external: bool,
         builtin: bool,
         volatile: bool,
+        lambda: bool,
         unaliased: Option<String>,
         usable: bool,
         imported: bool,
@@ -182,7 +280,12 @@ impl Compiler {
 
         for argument in arguments {
             let ty = argument.r#type.clone();
-            let tmp = self.new_variable(&ty, &argument.name, None, false, false);
+
+            let tmp = if argument.manual {
+                self.new_manual_argument(&ty, &argument.name)
+            } else {
+                self.new_variable(&ty, &argument.name, None, false, false)
+            };
 
             args.push((ty.into_abi(), tmp));
         }
@@ -199,6 +302,7 @@ impl Compiler {
             external,
             builtin,
             volatile,
+            lambda,
             unaliased,
             usable,
             imported,
@@ -223,7 +327,11 @@ impl Compiler {
         // we need to forward-declare the function with an empty body
         //
         // TODO: Forward declare *all* functions without their bodies
-        module.borrow_mut().add_function(func.clone());
+        if !func_ref.borrow().lambda {
+            {
+                module.borrow_mut().add_function(func.clone());
+            }
+        }
 
         for statement in body.iter() {
             // Ignore plain literals that aren't assigned to anything
@@ -460,7 +568,7 @@ impl Compiler {
                 .borrow_mut()
                 .add_instruction(Instruction::Return(Some((
                     Type::Word,
-                    Value::Const(Type::Word, 0),
+                    Value::Const("".into(), 0),
                     location,
                 ))));
         }
@@ -477,10 +585,12 @@ impl Compiler {
 
         // Remove the empty function from the module
         // it will be added automatically when this function leaves scope
-        module
-            .borrow_mut()
-            .functions
-            .retain(|func| func.name != name);
+        if !func_ref.borrow().lambda {
+            module
+                .borrow_mut()
+                .functions
+                .retain(|func| func.name != name);
+        }
 
         owned_func
     }
@@ -501,19 +611,23 @@ impl Compiler {
                 value,
                 location,
             } => {
-                let existing = match self.get_variable(name.as_str(), Some(func)) {
+                let existing = match self.get_variable(name.as_str(), Some(func), Some(module)) {
                     Ok((ty, _)) => ty,
                     Err(_) => Type::Word,
                 };
 
-                if r#type.is_none() && self.get_variable(name.as_str(), Some(func)).is_err() {
+                if r#type.is_none()
+                    && self
+                        .get_variable(name.as_str(), Some(func), Some(module))
+                        .is_err()
+                {
                     panic!("{}", location.error(format!("Variable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.", name)));
                 }
 
-                let res = self.get_variable(&format!("{}.addr", name), Some(func));
-                let local_ty = r#type.unwrap_or(existing);
+                let res = self.get_variable(&format!("{}.addr", name), Some(func), Some(module));
+                let mut local_ty = r#type.unwrap_or(existing);
 
-                let temp = self.new_variable(&local_ty, &name, Some(func), false, false);
+                let mut temp = self.new_variable(&local_ty, &name, Some(func), false, false);
 
                 let parsed = self.generate_statement(
                     func,
@@ -525,6 +639,21 @@ impl Compiler {
                 );
 
                 if let Some((ret_ty, value)) = parsed {
+                    // in `fn *a = fn() -> 5;`
+                    // - fn *a has type Pointer(Fn)
+                    // - fn() -> 5 has type Function(...)
+                    // essentially the below sets the former
+                    // to the latter if necessary
+                    if ret_ty.is_function()
+                        && local_ty.get_pointer_inner().is_some_and(|ptr| {
+                            ptr.get_unknown_inner()
+                                .is_some_and(|inner| inner == "fn".to_string())
+                        })
+                    {
+                        local_ty = ret_ty.clone();
+                        temp = self.new_variable(&local_ty, &name, Some(func), false, false)
+                    }
+
                     let (final_ty, final_val) = if ret_ty != local_ty {
                         self.convert_to_type(
                             func,
@@ -550,8 +679,10 @@ impl Compiler {
                             panic!(
                                 "{}",
                                 location.error(format!(
-                                    "Cannot redeclare '{}' which has type {:?} to type {:?}",
-                                    name, addr_ty, final_ty
+                                    "Cannot redeclare '{}' which has type {} to type {}",
+                                    name,
+                                    addr_ty.display(),
+                                    final_ty.display()
                                 ))
                             )
                         }
@@ -582,10 +713,7 @@ impl Compiler {
                     func.borrow_mut().assign_instruction(
                         &addr_temp,
                         &Type::Pointer(Box::new(final_ty.clone())),
-                        Instruction::Alloc8(Value::Const(
-                            Type::Word,
-                            final_ty.size(module) as i128,
-                        )),
+                        Instruction::Alloc8(Value::Const("".into(), final_ty.size(module) as i128)),
                     );
 
                     func.borrow_mut().add_instruction(Instruction::Store(
@@ -716,18 +844,21 @@ impl Compiler {
                         // ideally add a .equals method on any primitive to make it equatable, and implement it for each
                         // same for any struct, define a .equals method to allow it to be ran with == directly
                         let func_name = format!("string.{kind}");
+                        let tmp_function;
 
-                        let module_ref = module.borrow();
-                        let tmp_function_option = module_ref
-                            .functions
-                            .iter()
-                            .find(|func| func.name == func_name);
+                        {
+                            let module_ref = module.borrow();
+                            let tmp_function_option = module_ref
+                                .functions
+                                .iter()
+                                .find(|func| func.name == func_name);
 
-                        if tmp_function_option.is_none() {
-                            panic!("{}", location.error(format!("Cannot use the '{}' operator because the string module is not imported.\nPlease import it with {GREEN}{BOLD}use std/string;{RESET} at the top of this file.", operator)))
+                            if tmp_function_option.is_none() {
+                                panic!("{}", location.error(format!("Cannot use the '{}' operator because the string module is not imported.\nPlease import it with {GREEN}{BOLD}use std/string;{RESET} at the top of this file.", operator)))
+                            }
+
+                            tmp_function = tmp_function_option.unwrap().clone();
                         }
-
-                        let tmp_function = tmp_function_option.unwrap();
                         let mut params = vec![(left_ty, left_val), (right_ty, right_val)];
 
                         if has_meta {
@@ -870,45 +1001,7 @@ impl Compiler {
             } => match kind {
                 TokenKind::Identifier => match value {
                     ValueKind::String(name) => {
-                        let var = self.get_variable(&name, Some(func));
-
-                        match var {
-                            Ok((ty, val)) => {
-                                let res = self.get_variable(&format!("{}.addr", name), Some(func));
-
-                                if res.is_ok() {
-                                    let (_, addr_val) = res.unwrap();
-
-                                    func.borrow_mut().assign_instruction(
-                                        &val,
-                                        &ty,
-                                        Instruction::Load(ty.clone(), addr_val),
-                                    );
-
-                                    return Some((ty, val));
-                                }
-
-                                Some((ty, val))
-                            }
-                            Err(msg) => {
-                                // If it fails to get the variable from the current scope
-                                // then attempt to get it from a global instead
-                                let tmp_module = module.borrow();
-                                let global = tmp_module.data.iter().find(|item| item.name == name);
-
-                                if let Some(item) = global {
-                                    Some((Type::Long, Value::Global(item.name.clone())))
-                                } else {
-                                    panic!(
-                                        "{}",
-                                        location.error(
-                                            format!("Unexpected error when trying to get a variable called '{}': {}",
-                                            name, msg
-                                        ))
-                                    );
-                                }
-                            }
-                        }
+                        self.get_variable_lazy(&name, Some(func), Some(module), location.clone())
                     }
                     _ => None,
                 },
@@ -956,7 +1049,20 @@ impl Compiler {
                             final_ty = func.borrow_mut().return_type.clone().unwrap_or(final_ty);
                         }
 
-                        Some((final_ty.clone(), Value::Const(final_ty, val)))
+                        Some((
+                            final_ty.clone(),
+                            Value::Const(
+                                if final_ty.clone() == Type::Double {
+                                    "d_"
+                                } else if final_ty.clone() == Type::Single {
+                                    "s_"
+                                } else {
+                                    ""
+                                }
+                                .into(),
+                                val,
+                            ),
+                        ))
                     }
                     ValueKind::String(val) => {
                         self.tmp_counter += 1;
@@ -976,7 +1082,7 @@ impl Compiler {
                         Some((Type::Pointer(Box::new(Type::Char)), Value::Global(name)))
                     }
                     ValueKind::Character(val) => {
-                        Some((Type::Char, Value::Const(Type::Word, val as i128)))
+                        Some((Type::Char, Value::Const("".into(), val as i128)))
                     }
                     ValueKind::Nil => {
                         self.tmp_counter += 1;
@@ -1074,12 +1180,13 @@ impl Compiler {
                     .iter()
                     .find(|function| function.name == name)
                     .map(|function| function.clone());
+                let mut is_callback = false;
 
                 let mut tmp_function = if let Some(func) = tmp_function_option {
                     func
                 } else {
                     // Function could be a callback pointer
-                    let callback = self.get_variable(name.as_str(), Some(func));
+                    let callback = self.get_variable(name.as_str(), Some(func), Some(module));
 
                     let fallback = Function {
                         linkage: Linkage::public(),
@@ -1089,6 +1196,7 @@ impl Compiler {
                         external: false,
                         builtin: false,
                         volatile: false,
+                        lambda: true,
                         unaliased: None,
                         usable: true,
                         imported: false,
@@ -1125,11 +1233,18 @@ impl Compiler {
                             || ignore_no_def
                             || self.generic_functions.contains_key(&name)
                         {
+                            is_callback = true;
                             fallback
+                        } else if ty.is_function() {
+                            is_callback = true;
+
+                            // We know the function exists
+                            ty.get_function_inner().unwrap().unwrap()
                         } else {
                             unknown_function!(call_location, name, module)
                         }
                     } else if ignore_no_def {
+                        is_callback = true;
                         fallback
                     } else {
                         unknown_function!(call_location, name, module)
@@ -1344,18 +1459,24 @@ impl Compiler {
                                     .join(".")
                             );
 
-                            let existing = module
-                                .borrow_mut()
-                                .functions
-                                .iter()
-                                .find(|function| function.name == generic_name)
-                                .map(|function| function.clone());
+                            let existing;
+
+                            {
+                                let mdl = module.borrow();
+
+                                existing = mdl
+                                    .functions
+                                    .iter()
+                                    .find(|function| function.name == generic_name)
+                                    .map(|function| function.clone());
+                            }
 
                             name = generic_name.clone();
 
                             if existing.is_none() {
-                                // Temporarily pop because this isn't a closure.
-                                let last = self.scopes.pop().expect("Last scope should exist");
+                                // Temporarily empty the scopes
+                                let scopes = self.scopes.clone();
+                                self.scopes = vec![hashmap![]];
 
                                 let function = self.generate_function(
                                     generic_name,
@@ -1365,6 +1486,7 @@ impl Compiler {
                                     external,
                                     builtin,
                                     volatile,
+                                    false,
                                     unaliased,
                                     usable,
                                     imported,
@@ -1381,6 +1503,7 @@ impl Compiler {
                                                 generics.clone(),
                                                 known_generics.clone(),
                                             ),
+                                            manual: arg.manual,
                                         })
                                         .collect::<Vec<Argument>>(),
                                     if r#return.is_some() {
@@ -1399,11 +1522,13 @@ impl Compiler {
                                     return_location,
                                 );
 
-                                module.borrow_mut().add_function(function.clone());
+                                {
+                                    module.borrow_mut().add_function(function.clone());
+                                }
                                 tmp_function = function;
 
-                                // Bring it back
-                                self.scopes.push(last);
+                                // Bring them back
+                                self.scopes = scopes;
                             } else {
                                 tmp_function = existing.unwrap();
                             }
@@ -1568,7 +1693,7 @@ impl Compiler {
                 }
 
                 if !tmp_function.variadic {
-                    let only = if tmp_function.arguments.len() > params.len() {
+                    let only = if tmp_function.arguments.len() > params.len() && params.len() != 0 {
                         "only "
                     } else {
                         ""
@@ -1622,12 +1747,30 @@ impl Compiler {
                     }
                 }
 
-                let temp =
-                    self.new_temporary(Some(&format!("{}.res", func.borrow_mut().name)), true);
+                let temp = self.new_temporary(None, true);
+                let val = if is_callback {
+                    let tmp = self.new_temporary(None, true);
+                    let res =
+                        self.get_variable(&format!("{}.addr", name), Some(func), Some(module));
 
-                let (_, val) = self
-                    .get_variable(&name, Some(func))
-                    .unwrap_or((Type::Long, Value::Global(name)));
+                    if let Ok((_, addr_val)) = res {
+                        func.borrow_mut().assign_instruction(
+                            &tmp,
+                            &Type::Long,
+                            Instruction::Load(Type::Long, addr_val),
+                        );
+
+                        tmp
+                    } else {
+                        self.get_variable(&name, Some(func), Some(module))
+                            .unwrap_or((Type::Long, Value::Global(name)))
+                            .1
+                    }
+                } else {
+                    self.get_variable(&name, Some(func), Some(module))
+                        .unwrap_or((Type::Long, Value::Global(name)))
+                        .1
+                };
 
                 func.borrow_mut()
                     .assign_instruction(&temp, &ty, Instruction::Call(val, params));
@@ -2072,7 +2215,7 @@ impl Compiler {
                 location,
             } => {
                 let ptr = self
-                    .get_variable(&name, Some(func))
+                    .get_variable_lazy(&name, Some(func), Some(module), location.clone())
                     .expect(&location.error(format!(
                         "Unexpected error when trying to get a variable named '{}'",
                         name
@@ -2082,8 +2225,11 @@ impl Compiler {
                 let ty = r#type.unwrap_or(Type::Long);
                 let tmp = self.new_temporary(Some("next"), true);
 
-                func.borrow_mut()
-                    .assign_instruction(&tmp, &ty, Instruction::VAArg(ptr));
+                func.borrow_mut().assign_instruction(
+                    &tmp,
+                    &ty.clone().into_base(),
+                    Instruction::VAArg(ptr),
+                );
 
                 Some((ty, tmp))
             }
@@ -2169,7 +2315,17 @@ impl Compiler {
                         Type::Boolean,
                         Comparison::Equal,
                         val,
-                        Value::Const(ty.clone(), 0),
+                        Value::Const(
+                            if ty.clone() == Type::Double {
+                                "d_"
+                            } else if ty.clone() == Type::Single {
+                                "s_"
+                            } else {
+                                ""
+                            }
+                            .into(),
+                            0,
+                        ),
                     ),
                 );
 
@@ -2195,6 +2351,94 @@ impl Compiler {
                 );
 
                 Some((ty, temp))
+            }
+            AstNode::ArrayLengthStatement { value, location } => {
+                let (_, val) = self
+                    .generate_statement(
+                        func,
+                        module,
+                        AstNode::ArithmeticOperation {
+                            left: value,
+                            right: Box::new(AstNode::LiteralStatement {
+                                kind: TokenKind::IntegerLiteral,
+                                value: ValueKind::Number(Type::Word.size(module) as i128),
+                                location: location.clone(),
+                            }),
+                            operator: TokenKind::Subtract,
+                            treat_as_string: false,
+                            location: location.clone(),
+                        },
+                        ty,
+                        None,
+                        false,
+                    )
+                    .expect(&location.error(
+                        "Unexpected error when trying to compile the formula for getting the array length",
+                    ));
+
+                let temp = self.new_temporary(Some("array.length"), true);
+
+                func.borrow_mut().assign_instruction(
+                    &temp,
+                    &Type::Word,
+                    Instruction::Load(Type::Word, val),
+                );
+
+                Some((Type::Word, temp))
+            }
+            AstNode::LambdaStatement {
+                arguments,
+                value,
+                location,
+            } => {
+                self.tmp_counter += 1;
+                let lambda_name = format!("lambda.{}", self.tmp_counter);
+
+                let scopes = self.scopes.clone();
+                self.scopes = vec![hashmap![]];
+
+                let mut args = vec![];
+
+                for argument in arguments.clone() {
+                    let ty = argument.r#type.clone();
+                    let tmp = if argument.manual {
+                        self.new_manual_argument(&ty, &argument.name)
+                    } else {
+                        self.new_variable(&ty, &argument.name, None, false, false)
+                    };
+
+                    args.push((ty.into_abi(), tmp));
+                }
+
+                let lambda_func = self.generate_function(
+                    lambda_name.clone(),
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    true,
+                    None,
+                    true,
+                    false,
+                    vec![],
+                    hashmap![],
+                    &arguments,
+                    None,
+                    value,
+                    module,
+                    location.clone(),
+                    location,
+                );
+
+                self.deferred_functions.push(lambda_func.clone());
+                self.scopes = scopes;
+
+                Some((
+                    Type::Function(Box::new(Some(lambda_func))),
+                    Value::Global(lambda_name),
+                ))
             }
             AstNode::ArrayStatement {
                 size,
@@ -2313,15 +2557,42 @@ impl Compiler {
                         "Unexpected error when trying to compile the size of an array"
                     )));
 
-                let tmp = self.new_temporary(Some("array"), true);
+                let tmp_full = self.new_temporary(Some("array.full"), true);
+                let tmp_with_offset = self.new_temporary(None, true);
 
                 let (_, converted_val) =
                     self.convert_to_type(func, ty, Type::Long, val, &location, true);
 
                 func.borrow_mut().assign_instruction(
+                    &tmp_with_offset,
+                    &Type::Long,
+                    Instruction::Add(
+                        converted_val.clone(),
+                        Value::Const("".into(), Type::Word.size(module) as i128),
+                    ),
+                );
+
+                func.borrow_mut().assign_instruction(
+                    &tmp_full,
+                    &buf_ty,
+                    Instruction::Alloc8(tmp_with_offset.clone()),
+                );
+
+                func.borrow_mut().add_instruction(Instruction::Store(
+                    Type::Word,
+                    tmp_full.clone(),
+                    Value::Const("".into(), results.len() as i128),
+                ));
+
+                let tmp = self.new_temporary(Some("array"), true);
+
+                func.borrow_mut().assign_instruction(
                     &tmp,
                     &buf_ty,
-                    Instruction::Alloc8(converted_val.clone()),
+                    Instruction::Add(
+                        tmp_full,
+                        Value::Const("".into(), Type::Word.size(module) as i128),
+                    ),
                 );
 
                 self.buf_metadata.insert(
@@ -2338,7 +2609,7 @@ impl Compiler {
                         Instruction::Add(
                             tmp.clone(),
                             Value::Const(
-                                Type::Word,
+                                "".into(),
                                 i as i128 * first_type.as_ref().unwrap().size(module) as i128,
                             ),
                         ),
@@ -2372,7 +2643,7 @@ impl Compiler {
                 let name = format!("{}.addr", parts.join("."));
 
                 let (ty, val) =
-                    self.get_variable(&name, Some(func))
+                    self.get_variable(&name, Some(func), Some(module))
                         .expect(&location.error(format!(
                             "Unexpected error when trying to get a variable named '{}'",
                             name
@@ -2380,11 +2651,7 @@ impl Compiler {
 
                 Some((Type::Pointer(Box::new(ty)), val))
             }
-            AstNode::SizeStatement {
-                value,
-                standalone,
-                location,
-            } => match value {
+            AstNode::SizeStatement { value, location } => match value {
                 Ok(ty) => {
                     let tmp_ty = Type::Long;
                     let temp = self.new_temporary(Some("size"), true);
@@ -2398,7 +2665,17 @@ impl Compiler {
                     func.borrow_mut().assign_instruction(
                         &temp,
                         &tmp_ty,
-                        Instruction::Copy(Value::Const(tmp_ty.clone(), ty.size(module) as i128)),
+                        Instruction::Copy(Value::Const(
+                            if tmp_ty.clone() == Type::Double {
+                                "d_"
+                            } else if tmp_ty.clone() == Type::Single {
+                                "s_"
+                            } else {
+                                ""
+                            }
+                            .into(),
+                            ty.size(module) as i128,
+                        )),
                     );
                     Some((tmp_ty, temp))
                 }
@@ -2416,44 +2693,22 @@ impl Compiler {
                         &Type::Pointer(_) => {
                             let ty = Type::Long;
 
-                            if let Some((buf_ty, buf_val)) =
+                            if let Some((_, buf_val)) =
                                 self.buf_metadata.get(&val).map(|item| item.to_owned())
                             {
                                 func.borrow_mut().assign_instruction(
                                     &size,
                                     &ty,
-                                    if standalone {
-                                        Instruction::Copy(buf_val)
-                                    } else {
-                                        Instruction::Divide(
-                                            buf_val,
-                                            Value::Const(Type::Long, buf_ty.size(module) as i128),
-                                        )
-                                    },
+                                    Instruction::Copy(buf_val),
                                 );
 
                                 return Some((ty, size));
                             }
 
-                            if !standalone {
-                                panic!(
-                                    "{}",
-                                    location.error(
-                                        format!(
-                                            "Cannot find the length of an array '{}' that isn't defined in the current function",
-                                            val.get_string_inner()
-                                        )
-                                    )
-                                );
-                            }
-
                             func.borrow_mut().assign_instruction(
                                 &size,
                                 &ty,
-                                Instruction::Copy(Value::Const(
-                                    Type::Long,
-                                    ty.size(module) as i128,
-                                )),
+                                Instruction::Copy(Value::Const("".into(), ty.size(module) as i128)),
                             );
 
                             Some((ty, size))
@@ -2463,7 +2718,14 @@ impl Compiler {
                                 &size,
                                 &other,
                                 Instruction::Copy(Value::Const(
-                                    other.clone(),
+                                    if other.clone() == Type::Double {
+                                        "d_"
+                                    } else if other.clone() == Type::Single {
+                                        "s_"
+                                    } else {
+                                        ""
+                                    }
+                                    .into(),
                                     ty.size(module) as i128,
                                 )),
                             );
@@ -2519,6 +2781,7 @@ impl Compiler {
                                     generics.clone(),
                                     parsed_generics.clone(),
                                 ),
+                                manual: member.manual,
                             })
                             .collect::<Vec<Argument>>();
 
@@ -2528,15 +2791,17 @@ impl Compiler {
                             items.push((member.r#type, 1));
                         }
 
-                        module.borrow_mut().add_type(TypeDef {
-                            name: generic_name.clone(),
-                            align: None,
-                            known_generics: parsed_generics,
-                            items,
-                            public: false,
-                            usable: true,
-                            imported: false,
-                        });
+                        {
+                            module.borrow_mut().add_type_front(TypeDef {
+                                name: generic_name.clone(),
+                                align: None,
+                                known_generics: parsed_generics,
+                                items,
+                                public: false,
+                                usable: true,
+                                imported: false,
+                            });
+                        }
 
                         self.struct_pool
                             .insert(generic_name.clone(), (vec![], parsed_members));
@@ -2544,17 +2809,18 @@ impl Compiler {
                         panic!(
                             "{}",
                             location.error(format!(
-                                "Could not find struct named '{}'. Did you spell it correctly?",
+                                "Could not find struct named '{}'. Did you spell it correctly?\nThis struct may be generic but missing generic parameters.",
                                 Type::Struct(name).display()
                             ))
                         )
                     }
                 }
 
-                let mdl = module.borrow();
-                let td = mdl
+                let td = module
+                    .borrow()
                     .types
-                    .iter()
+                    .clone()
+                    .into_iter()
                     .find(|td| td.name == name)
                     .expect(&format!("Unable to find struct named '{}'", name));
 
@@ -2605,7 +2871,7 @@ impl Compiler {
                 func.borrow_mut().assign_instruction(
                     &alloc_tmp,
                     &Type::Long,
-                    Instruction::Alloc8(Value::Const(Type::Word, size as i128)),
+                    Instruction::Alloc8(Value::Const("".into(), size as i128)),
                 );
 
                 for (member_name, value) in values.iter().cloned() {
@@ -2663,7 +2929,7 @@ impl Compiler {
                         &Type::Long,
                         Instruction::Add(
                             alloc_tmp.clone(),
-                            Value::Const(Type::Word, offset as i128),
+                            Value::Const("".into(), offset as i128),
                         ),
                     );
 
@@ -2719,7 +2985,7 @@ impl Compiler {
                     Instruction::Load(field_ty.clone(), offset_tmp),
                 );
 
-                Some((field_ty.into_base(), temp))
+                Some((field_ty.into_abi(), temp))
             }
             _ => todo!("statement: {:?}", stmt),
         };
@@ -2926,6 +3192,32 @@ impl Compiler {
                         location: location.clone(),
                     }),
                 ),
+                (
+                    "file".into(),
+                    Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::StringLiteral,
+                        value: ValueKind::String(
+                            location.file.clone().split("/").last().unwrap().to_string(),
+                        ),
+                        location: location.clone(),
+                    }),
+                ),
+                (
+                    "line".into(),
+                    Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number((location.row + 1) as i128),
+                        location: location.clone(),
+                    }),
+                ),
+                (
+                    "column".into(),
+                    Box::new(AstNode::LiteralStatement {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number((location.column + 1) as i128),
+                        location: location.clone(),
+                    }),
+                ),
             ],
             location,
         };
@@ -3012,7 +3304,7 @@ impl Compiler {
                         .member_to_offset(module, &ty.get_struct_inner().unwrap(), &field)
                         .expect(&unknown_field!(
                             self.struct_pool.get(&struct_name).unwrap(),
-                            struct_name,
+                            ty,
                             field,
                             location
                         ));
@@ -3022,7 +3314,7 @@ impl Compiler {
                     func.borrow_mut().assign_instruction(
                         &offset_tmp,
                         &Type::Long,
-                        Instruction::Add(left, Value::Const(Type::Word, offset as i128)),
+                        Instruction::Add(left, Value::Const("".into(), offset as i128)),
                     );
 
                     if load {
@@ -3086,7 +3378,17 @@ impl Compiler {
         func.borrow_mut().assign_instruction(
             &result_tmp,
             &left_ty,
-            Instruction::Copy(Value::Const(left_ty.clone(), 0)),
+            Instruction::Copy(Value::Const(
+                if left_ty.clone() == Type::Double {
+                    "d_"
+                } else if left_ty.clone() == Type::Single {
+                    "s_"
+                } else {
+                    ""
+                }
+                .into(),
+                0,
+            )),
         );
 
         func.borrow_mut().add_block(left_label);
@@ -3100,7 +3402,7 @@ impl Compiler {
                 Type::Boolean,
                 Comparison::Equal,
                 left_val.clone(),
-                Value::Const(Type::Word, 0),
+                Value::Const("".into(), 0),
             ),
         );
 
@@ -3145,7 +3447,7 @@ impl Compiler {
                 Type::Boolean,
                 Comparison::Equal,
                 right_val.clone(),
-                Value::Const(Type::Word, 0),
+                Value::Const("".into(), 0),
             ),
         );
 
@@ -3190,10 +3492,11 @@ impl Compiler {
                 return (second, val);
             }
 
-            if (first.is_struct() && second.is_pointer_like())
-                || (second.is_struct() && first.is_pointer_like())
+            if explicit
+                && ((first.is_struct() && second.is_pointer_like())
+                    || (second.is_struct() && first.is_pointer_like()))
             {
-                return (if first.is_struct() { first } else { second }, val);
+                return (second, val);
             }
 
             panic!(
@@ -3213,17 +3516,26 @@ impl Compiler {
             panic!(
                 "{}",
                 location.error(format!(
-                    "Cannot explicitly convert '{}' to '{}' or vice versa.\nTo explicitly convert, use the C-like '(type)variable' syntax.",
+                    "Cannot implicitly convert '{}' to '{}' or vice versa.\nTo explicitly convert, use the C-like '(type)variable' syntax.",
                     first.display(),
                     second.display()
                 ))
             )
         }
 
-        if (first.is_pointer() && first.get_pointer_inner().unwrap().is_void())
-            || (second.is_pointer() && second.get_pointer_inner().unwrap().is_void())
+        if first.is_pointer()
+            && second.is_pointer()
+            && (first.get_pointer_inner().unwrap().is_void()
+                || second.get_pointer_inner().unwrap().is_void())
         {
-            return (first, val);
+            return (
+                if first.get_pointer_inner().unwrap().is_void() {
+                    first
+                } else {
+                    second
+                },
+                val,
+            );
         }
 
         if first.weight() == second.weight() {
@@ -3291,6 +3603,7 @@ impl Compiler {
             buf_metadata: hashmap![],
             warnings,
             tree,
+            deferred_functions: vec![],
         };
 
         let module = Module::new();
@@ -3331,6 +3644,7 @@ impl Compiler {
                     let function = generator.generate_function(
                         name.clone(),
                         public,
+                        false,
                         false,
                         false,
                         false,
@@ -3381,6 +3695,7 @@ impl Compiler {
                             external,
                             builtin,
                             volatile,
+                            false,
                             unaliased,
                             usable,
                             imported,
@@ -3395,6 +3710,12 @@ impl Compiler {
                         );
 
                         module_ref.borrow_mut().add_function(function);
+
+                        for func in generator.deferred_functions.clone() {
+                            module_ref.borrow_mut().add_function(func);
+                        }
+
+                        generator.deferred_functions.clear();
                     } else {
                         generator.generic_functions.insert(name, primitive);
                     }
@@ -3411,7 +3732,7 @@ impl Compiler {
                     ignore_empty,
                 } if generics.len() == 0 => {
                     let td = generator.generate_struct(
-                        name,
+                        name.clone(),
                         public,
                         usable,
                         imported,
@@ -3429,7 +3750,11 @@ impl Compiler {
                         .find(|other_td| **other_td == td)
                         .is_none()
                     {
-                        module_ref.borrow_mut().add_type(td);
+                        if is_generic!(name.clone()) {
+                            module_ref.borrow_mut().add_type_front(td);
+                        } else {
+                            module_ref.borrow_mut().add_type(td);
+                        }
                     }
                 }
                 _ => {}

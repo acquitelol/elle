@@ -78,7 +78,11 @@ impl<'a> Struct<'a> {
             self.parser.expect_tokens(vec![TokenKind::Semicolon]);
             self.parser.advance();
 
-            members.push(Argument { name, r#type: ty })
+            members.push(Argument {
+                name,
+                r#type: ty,
+                manual: false,
+            })
         }
 
         self.parser.struct_pool.borrow_mut().insert(

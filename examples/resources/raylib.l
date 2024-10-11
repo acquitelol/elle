@@ -14,16 +14,37 @@ struct Sound {
     i32 frameCount;
 };
 
+struct Rectangle {
+    f32 x;                // Rectangle top-left corner position x
+    f32 y;                // Rectangle top-left corner position y
+    f32 width;            // Rectangle width
+    f32 height;           // Rectangle height
+};
+
 struct Vector2 {
     f32 x;
     f32 y;
 };
 
 struct Color {
-    u32 r;
-    u32 g;
-    u32 b;
-    u32 a;
+    i32 r;
+    i32 g;
+    i32 b;
+    i32 a;
+};
+
+struct Texture {
+    u32 id;                 // OpenGL texture id
+    i32 width;              // Texture base width
+    i32 height;             // Texture base height
+    i32 mipmaps;            // Mipmap levels, 1 by default
+    i32 format;             // Data format (PixelFormat type)
+};
+
+struct RenderTexture {
+    i32 id;                 // OpenGL framebuffer object id
+    Texture *texture;        // Color buffer attachment texture
+    Texture *depth;          // Depth buffer attachment texture
 };
 
 // Pseudo-namespace for Raylib functions
@@ -51,5 +72,11 @@ external fn InitAudioDevice() @alias("raylib::init_audio_device");
 external fn CloseAudioDevice() @alias("raylib::close_audio_device");
 external fn IsKeyDown(i32 key) @alias("raylib::is_key_down") -> bool;
 external fn DrawLineEx(Vector2 start_pos, Vector2 end_pos, f32 thickness, Color color) @alias("raylib::draw_line_ex");
+external fn DrawPixel(i32 posX, i32 poxY, Color color) @alias("raylib::draw_pixel");
+external fn LoadRenderTexture(i32 width, i32 height) @alias("raylib::load_render_texture") -> RenderTexture;
+external fn UnloadRenderTexture(RenderTexture texture) @alias("raylib::unload_render_texture");
+external fn BeginTextureMode(RenderTexture texture) @alias("raylib::begin_texture_mode");
+external fn EndTextureMode() @alias("raylib::end_texture_mode");
+external fn DrawTexturePro(Texture texture, Rectangle source, Rectangle dest, Vector2 origin, f32 rotation, Color tint) @alias("raylib::draw_texture_pro");
 
 struct raylib @namespace {};

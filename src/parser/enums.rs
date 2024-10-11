@@ -142,7 +142,19 @@ pub enum AstNode {
     /// The result is used to allow for getting the size of both expressions and types
     SizeStatement {
         value: Result<Type, Box<AstNode>>,
-        standalone: bool,
+        location: Location,
+    },
+    /// Creates a capturing closure that takes in some number of arguments
+    /// and returns a single line statement result
+    LambdaStatement {
+        arguments: Vec<Argument>,
+        value: Vec<AstNode>,
+        location: Location,
+    },
+    /// Calculates the array length of an Elle-generated array
+    /// Uses the formula *(array_ptr - #size(i32))
+    ArrayLengthStatement {
+        value: Box<AstNode>,
         location: Location,
     },
 }
@@ -179,8 +191,18 @@ fn modify_type_in_node(
             if let Some(ty) = r#type {
                 *ty = modify_type(ty.clone(), generics, known_types);
             }
+
             let new_value = modify_type_in_node(*value.clone(), generics, known_types);
             *value = Box::new(new_value);
+        }
+        AstNode::LambdaStatement {
+            arguments, value, ..
+        } => {
+            for arg in arguments.iter_mut() {
+                arg.r#type = modify_type(arg.r#type.clone(), generics, known_types);
+            }
+
+            *value = modify_type_in_ast(value.clone(), generics, known_types);
         }
         AstNode::ReturnStatement { value, .. } => {
             let new_value = modify_type_in_node(*value.clone(), generics, known_types);
@@ -194,6 +216,10 @@ fn modify_type_in_node(
         AstNode::VariadicStatement { size, .. } => {
             let new_size = modify_type_in_node(*size.clone(), generics, known_types);
             *size = Box::new(new_size);
+        }
+        AstNode::ArrayLengthStatement { value, .. } => {
+            let new_value = modify_type_in_node(*value.clone(), generics, known_types);
+            *value = Box::new(new_value);
         }
         AstNode::BufferStatement { r#type, size, .. } => {
             if let Some(ty) = r#type {
@@ -321,6 +347,7 @@ fn modify_type_in_node(
             }
         },
     }
+
     node
 }
 
@@ -384,4 +411,5 @@ pub struct Case {
 pub struct Argument {
     pub name: String,
     pub r#type: Type,
+    pub manual: bool,
 }

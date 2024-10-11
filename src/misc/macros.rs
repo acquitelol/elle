@@ -157,7 +157,7 @@ macro_rules! unknown_field {
         $location.error(format!(
             "Could not find a field named '{}' for struct '{}'{}",
             $name.clone(),
-            $struct_name,
+            $struct_name.display(),
             if let Some(similar) = similar_name {
                 format!("\nA field with a similar name exists: '{}'", similar)
             } else {

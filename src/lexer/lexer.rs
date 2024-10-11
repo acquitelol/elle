@@ -411,7 +411,7 @@ impl Lexer {
                 match value {
                     ValueKind::String(val) => match val.as_str() {
                         "size" => (TokenKind::Size, ValueKind::Nil),
-                        "arrlen" => (TokenKind::ArrayLength, ValueKind::Nil),
+                        "len" => (TokenKind::ArrayLength, ValueKind::Nil),
                         other => panic!(
                             "{}",
                             self.get_location()
@@ -537,9 +537,9 @@ impl Lexer {
             "store" => TokenKind::Store,
             "break" => TokenKind::Break,
             "continue" => TokenKind::Continue,
-            "to" => TokenKind::To,
+            // "to" => TokenKind::To,
             "yield" => TokenKind::Yield,
-            "step" => TokenKind::Step,
+            // "step" => TokenKind::Step,
             "variadic" => TokenKind::Variadic,
             "defer" => TokenKind::Defer,
             "external" => TokenKind::External,

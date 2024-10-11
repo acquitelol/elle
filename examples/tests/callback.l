@@ -14,7 +14,9 @@ fn main() {
     string test = "Hello World!";
 
     // Expected result: "H e l l o   W o r l d !"
-    loop(test, formattedPrint);
+    loop(test, fn(char character) -> io::print(character, " "));
+    io::print('\n');
 
+    loop(test, formattedPrint);
     io::print('\n');
 }

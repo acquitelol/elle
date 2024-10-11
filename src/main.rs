@@ -154,24 +154,49 @@ fn main() -> ExitCode {
             name: "exprs".into(),
             // string[]
             r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
+            manual: false,
         },
         // Holds an array of the type of arguments passed into the function as strings
         Argument {
             name: "types".into(),
             // string[]
             r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
+            manual: false,
         },
         // Holds the number of arguments that were passed into a function
         Argument {
             name: "arity".into(),
             // i32
             r#type: Type::Word,
+            manual: false,
         },
         // Holds the name of the caller method as a string
         Argument {
             name: "caller".into(),
             // string
             r#type: Type::Pointer(Box::new(Type::Char)),
+            manual: false,
+        },
+        // The name of the file that the struct was generated in
+        Argument {
+            name: "file".into(),
+            // string
+            r#type: Type::Pointer(Box::new(Type::Char)),
+            manual: false,
+        },
+        // The line number that the struct was generated on
+        Argument {
+            name: "line".into(),
+            // i32
+            r#type: Type::Word,
+            manual: false,
+        },
+        // The column number that the struct was generated on
+        Argument {
+            name: "column".into(),
+            // i32
+            r#type: Type::Word,
+            manual: false,
         },
     ];
 

@@ -9,9 +9,9 @@ fn main() {
     buf[0] = 123;
 
     io::printf(
-        "(fn main)\n\t#size(buf) = {}\n\t#arrlen(buf) = {}",
+        "(fn main)\n\t#size(buf) = {}\n\t#len(buf) = {}",
         #size(buf),
-        #arrlen(buf)
+        #len(buf)
     );
 
     other(buf);

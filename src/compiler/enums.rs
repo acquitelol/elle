@@ -30,7 +30,7 @@ pub enum Comparison {
     NotEqual,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Instruction {
     Add(Value, Value),
     Subtract(Value, Value),
@@ -284,7 +284,7 @@ impl fmt::Display for Instruction {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Type {
     UnsignedByte,
     UnsignedHalfword,
@@ -305,6 +305,7 @@ pub enum Type {
     Struct(String),
     // Unknown generic
     Unknown(String),
+    Function(Box<Option<Function>>),
 }
 
 impl Type {
@@ -347,6 +348,21 @@ impl Type {
                     td.into()
                 }
             }
+            Self::Function(inner) => {
+                if let Some(inner) = *inner.to_owned() {
+                    format!(
+                        "fn({})",
+                        inner
+                            .arguments
+                            .iter()
+                            .map(|arg| arg.0.clone().display())
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
+                } else {
+                    "<unknown function>".into()
+                }
+            }
             Self::Unknown(name) => name.into(),
         }
     }
@@ -384,6 +400,7 @@ impl Type {
                     td.into()
                 }
             }
+            Self::Function(_) => self.display(),
             _ => "".into(),
         }
     }
@@ -404,6 +421,7 @@ impl Type {
             Type::Char => 15,
             Type::Void => 16,
             Type::Null => 17,
+            Type::Function(_) => 18,
             _ => 100, // Invalid
         };
 
@@ -450,6 +468,7 @@ impl Type {
                     15 => Type::Char,
                     16 => Type::Void,
                     17 => Type::Null,
+                    18 => Type::Function(Box::new(None)),
                     _ => todo!("{}", id),
                 },
                 Err(_) => Type::Struct(id),
@@ -580,20 +599,24 @@ impl Type {
                                 generics.clone(),
                                 known_generics.clone(),
                             ),
+                            manual: member.manual,
                         })
                         .collect::<Vec<Argument>>();
 
-                    extra_structs.unwrap().borrow_mut().push(Primitive::Struct {
-                        name: generic_name.clone(),
-                        public: false,
-                        usable: true,
-                        imported: false,
-                        generics: vec![],
-                        known_generics: known_generics.clone(),
-                        members: parsed_members.clone(),
-                        location: location.clone(),
-                        ignore_empty: false,
-                    });
+                    extra_structs.unwrap().borrow_mut().insert(
+                        0,
+                        Primitive::Struct {
+                            name: generic_name.clone(),
+                            public: false,
+                            usable: true,
+                            imported: false,
+                            generics: vec![],
+                            known_generics: known_generics.clone(),
+                            members: parsed_members.clone(),
+                            location: location.clone(),
+                            ignore_empty: false,
+                        },
+                    );
 
                     struct_pool
                         .unwrap()
@@ -676,6 +699,13 @@ impl Type {
         }
     }
 
+    pub fn get_function_inner(&self) -> Option<Option<Function>> {
+        match self.clone() {
+            Self::Function(val) => Some(*val),
+            _ => None,
+        }
+    }
+
     pub fn into_abi(self) -> Self {
         match self {
             Self::Byte
@@ -753,6 +783,13 @@ impl Type {
         }
     }
 
+    pub fn is_function(&self) -> bool {
+        match self {
+            Self::Function(inner) => inner.is_some(),
+            _ => false,
+        }
+    }
+
     pub fn is_pointer(&self) -> bool {
         match self {
             Self::Pointer(_) => true,
@@ -775,7 +812,8 @@ impl Type {
             | Self::UnsignedHalfword
             | Self::UnsignedWord
             | Self::Boolean
-            | Self::Char => true,
+            | Self::Char
+            | Self::Void => true,
             _ => false,
         }
     }
@@ -794,7 +832,7 @@ impl Type {
         match self {
             Self::Double => 4,
             Self::Single => 3,
-            Self::Long | Self::UnsignedLong | Self::Pointer(..) => 2,
+            Self::Long | Self::UnsignedLong | Self::Pointer(..) | Self::Function(..) => 2,
             Self::Word => 1,
             other if other.is_map_to_int() => 1,
             _ => 0,
@@ -806,10 +844,13 @@ impl Type {
         match self {
             Self::UnsignedByte | Self::Byte | Self::Char => 1,
             Self::UnsignedHalfword | Self::Halfword => 2,
-            Self::UnsignedWord | Self::Word | Self::Single => 4,
+            Self::Boolean | Self::UnsignedWord | Self::Word | Self::Single | Self::Void => 4,
             Self::Double => 8,
             // Returns 4 on 32-bit and 8 on 64-bit
-            Self::UnsignedLong | Self::Long | Self::Pointer(..) => mem::size_of::<usize>() as u64,
+            // Functions are just pointers to the start of them
+            Self::UnsignedLong | Self::Long | Self::Pointer(..) | Self::Function(..) => {
+                mem::size_of::<usize>() as u64
+            }
             Self::Struct(val, ..) => {
                 let size = module
                     .borrow()
@@ -822,13 +863,9 @@ impl Type {
                     ))
                     .size(module) as u64;
 
-                if size < mem::size_of::<usize>() as u64 {
-                    mem::size_of::<usize>() as u64
-                } else {
-                    size
-                }
+                size
             }
-            _ => 0,
+            Self::Unknown(..) | Self::Null => 0,
         }
     }
 }
@@ -852,6 +889,7 @@ impl fmt::Display for Type {
             Self::Void => write!(formatter, "w"),
             Self::Null => write!(formatter, ""),
             Self::Struct(td) => write!(formatter, ":{}", td),
+            Self::Function(_) => write!(formatter, "l"),
             Self::Unknown(name) => panic!("Tried to compile with a generic type {name}"),
         }
     }
@@ -886,11 +924,7 @@ impl TypeDef {
                     ))
                     .size(module);
 
-                size += if tmp_size < mem::size_of::<usize>() {
-                    mem::size_of::<usize>()
-                } else {
-                    tmp_size
-                }
+                size += tmp_size
             } else {
                 size += ty.size(module) as usize;
             }
@@ -938,13 +972,13 @@ impl fmt::Display for TypeDef {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Value {
     Temporary(String),
     Global(String),
 
     /// Const(prefix, literal)
-    Const(Type, i128),
+    Const(String, i128),
     Literal(String),
 }
 
@@ -965,15 +999,7 @@ impl fmt::Display for Value {
         match self {
             Self::Temporary(name) => write!(formatter, "%{}", name),
             Self::Global(name) => write!(formatter, "${}", name),
-            Self::Const(ty, value) => {
-                let prefix = if ty.clone() == Type::Double {
-                    "d_"
-                } else if ty.clone() == Type::Single {
-                    "s_"
-                } else {
-                    ""
-                };
-
+            Self::Const(prefix, value) => {
                 write!(formatter, "{}", format!("{}{}", prefix, value))
             }
             Self::Literal(value) => write!(formatter, "{}", value),
@@ -981,7 +1007,7 @@ impl fmt::Display for Value {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Data {
     pub linkage: Linkage,
     pub name: String,
@@ -1039,7 +1065,7 @@ impl fmt::Display for DataItem {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Statement {
     Assign(Value, Type, Instruction),
     Volatile(Instruction),
@@ -1057,7 +1083,7 @@ impl fmt::Display for Statement {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Block {
     pub label: String,
     pub statements: Vec<Statement>,
@@ -1127,6 +1153,7 @@ pub struct Function {
     pub external: bool,
     pub builtin: bool,
     pub volatile: bool,
+    pub lambda: bool,
     pub unaliased: Option<String>,
     pub usable: bool,
     pub imported: bool,
@@ -1277,6 +1304,11 @@ impl Module {
 
     pub fn add_type(&mut self, def: TypeDef) -> &mut TypeDef {
         self.types.push(def);
+        self.types.last_mut().unwrap()
+    }
+
+    pub fn add_type_front(&mut self, def: TypeDef) -> &mut TypeDef {
+        self.types.insert(0, def);
         self.types.last_mut().unwrap()
     }
 

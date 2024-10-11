@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::iter::FromIterator;
 
-use super::enums::{AstNode, Primitive};
+use super::enums::{Argument, AstNode, Primitive};
 use super::parser::{create_generic_struct, StructPool};
 use crate::{
     compiler::enums::Type,
@@ -1275,6 +1275,82 @@ impl<'a> Statement<'a> {
         }
     }
 
+    fn parse_lambda(&mut self) -> AstNode {
+        let location = self.current_token().location.clone();
+
+        self.expect_tokens(vec![TokenKind::Function]);
+        self.advance();
+
+        self.expect_tokens(vec![TokenKind::LeftParenthesis]);
+        self.advance();
+
+        let mut arguments = vec![];
+
+        while self.current_token().kind != TokenKind::RightParenthesis {
+            if self.current_token().kind == TokenKind::Ellipsis {
+                panic!(
+                    "{}",
+                    self.current_token()
+                        .location
+                        .error("Cannot create a variadic lambda function...")
+                )
+            }
+
+            let ty = self.get_type(Some(self.shared.generics));
+            self.advance();
+
+            let name = self.get_identifier();
+            self.advance();
+
+            if self.current_token().kind == TokenKind::Comma {
+                self.advance();
+            }
+
+            arguments.push(Argument {
+                r#type: ty,
+                name,
+                manual: false,
+            });
+        }
+
+        self.expect_tokens(vec![TokenKind::RightParenthesis]);
+        self.advance();
+
+        self.expect_tokens(vec![TokenKind::RightArrow]);
+        self.advance();
+
+        let mut nesting = 0;
+        let tokens = self.yield_tokens_with_condition(|_, token, next_token| {
+            if token.kind == TokenKind::LeftParenthesis {
+                nesting += 1;
+            }
+
+            if token.kind == TokenKind::RightParenthesis {
+                if nesting > 0 {
+                    nesting -= 1;
+                } else {
+                    return true;
+                }
+            }
+
+            token.kind == TokenKind::Semicolon
+                || (nesting == 0
+                    && (token.kind == TokenKind::Comma
+                        || next_token.is_some_and(|next| next.kind == TokenKind::RightCurlyBrace)))
+        });
+
+        let value = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
+
+        AstNode::LambdaStatement {
+            arguments,
+            value: vec![AstNode::ReturnStatement {
+                value: Box::new(value),
+                location: location.clone(),
+            }],
+            location,
+        }
+    }
+
     fn parse_type_conversion(&mut self) -> AstNode {
         self.advance();
 
@@ -1429,11 +1505,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
-        AstNode::SizeStatement {
-            value,
-            standalone: true,
-            location,
-        }
+        AstNode::SizeStatement { value, location }
     }
 
     fn parse_array_length(&mut self) -> AstNode {
@@ -1501,11 +1573,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
-        AstNode::SizeStatement {
-            value: Err(value),
-            standalone: false,
-            location,
-        }
+        AstNode::ArrayLengthStatement { value, location }
     }
 
     fn parse_unary(&mut self) -> AstNode {
@@ -2229,22 +2297,18 @@ impl<'a> Statement<'a> {
                 || kind.is_brace()
                 || kind == TokenKind::Semicolon)
             {
-                let mut location = self
-                    .tokens
-                    .get(self.position - 2)
-                    .unwrap_or(&prev)
-                    .location
-                    .clone();
+                let token = self.tokens.get(self.position - 2).unwrap_or(&prev);
+                let mut location = token.location.clone();
+
+                if location.column == location.ctx.len() - 1 {
+                    location.column += 1;
+                }
 
                 location.ctx.push(' ');
-                location.column += 1;
 
                 panic!(
                     "{}",
-                    location.error(format!(
-                        "Expected semicolon here, but got {:?}",
-                        self.current_token().kind
-                    ))
+                    location.error(format!("Expected semicolon here, but got {:?}", token.kind))
                 )
             }
         }
@@ -2264,6 +2328,14 @@ impl<'a> Statement<'a> {
             TokenKind::While => self.parse_while_statement(),
             TokenKind::For => self.parse_for_statement(),
             TokenKind::Defer => self.parse_defer(),
+            // Lambda expression `fn(i32 a, i32 b) -> val`
+            TokenKind::Function
+                if self
+                    .next_token()
+                    .is_some_and(|next| next.kind == TokenKind::LeftParenthesis) =>
+            {
+                self.parse_lambda()
+            }
             other
                 if other == TokenKind::Identifier
                     && (self.shared.struct_pool.borrow().contains_key(&ty_name)

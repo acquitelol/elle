@@ -5,7 +5,7 @@ use std/io;
 
 fn main() {
     f64 price = 11.50;
-    Array<string> extras = Array::new();
+    Array<string> *extras = Array::new();
 
     string ticket_type = io::input("Enter the ticket type -> ").default("Adult");
     bool member = bool::parse(io::input("Is the ticket holder a member? (true or false) -> "));
