@@ -229,7 +229,6 @@ impl<'a> Function<'a> {
                         volatile = true;
                         self.parser.advance();
                     }
-                    _ => todo!(),
                 }
             }
         }

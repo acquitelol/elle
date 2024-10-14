@@ -273,6 +273,63 @@ Examples that contain variadic functions include [`concat.l`](https://github.com
 
 <hr />
 
+### ♡ **Lambda functions**
+
+Elle allows you to create single line lambda functions.
+
+Here is a basic example of how you can use them:
+
+```rs
+use std/collections/array;
+use std/io;
+
+fn main() {
+    Array<i32> *arr = Array::new(1, 2, 3);
+    Array<i32> *arr_doubled = arr.map(fn(i32 x) -> x * 2);
+
+    io::println(arr_doubled.to_string()); // [2, 4, 6]
+}
+```
+
+Please note the following:
+- These lambdas do **not** capture surrounding variables
+- They are not automatically passed ElleMeta by the compiler (because there is not enough context to do so)
+- You cannot create multi-line lambdas
+- You cannot declare the interface for a lambda on the type level
+
+This means that these examples won't work:
+
+```rs
+use std/collections/array;
+use std/io;
+
+fn main() {
+    Array<i32> *arr = Array::new(1, 2, 3);
+    i32 a = 5;
+
+    // The compiler will throw an error here
+    Array<i32> *arr_doubled = arr.map(fn(i32 x) -> x * a);
+    io::println(arr_doubled.to_string());
+}
+```
+
+```rs
+use std/collections/array;
+use std/io;
+
+fn main() {
+    Array<i32> *arr = Array::new(1, 2, 3);
+    i32 a = 5;
+
+    // The program will segfault here (for now)
+    // due to not being passed ElleMeta
+    Array<i32> *arr_doubled = arr.map(io::println);
+    io::println(arr_doubled.to_string());
+}
+```
+
+<hr />
+
 ### ♡ **Exact literals**
 
 > [!NOTE]

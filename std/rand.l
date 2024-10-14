@@ -1,6 +1,5 @@
 global pub;
-
-struct rand @namespace {};
+namespace rand;
 
 external fn srand(i32 seed) @alias("rand::seed");
 external fn rand() @alias("rand::rand") -> i32;

@@ -1,7 +1,5 @@
-use std/string;
 use std/core;
 use std/io;
-
 global pub;
 
 fn bool::parse(string str) {
@@ -29,7 +27,7 @@ local fn is_valid(string str, string type) -> bool {
     i32 type_index = -1;
 
     for i32 i = 0; i < #len(valid_types); i += 1 {
-        if valid_types[i].equals(type) {
+        if valid_types[i] == type {
             type_index = i;
         }
     }

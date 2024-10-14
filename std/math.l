@@ -1,4 +1,5 @@
 global pub;
+namespace math;
 
 fn i64::max() -> i64 {
     return 9_223_372_036_854_775_807;
@@ -18,8 +19,6 @@ fn i32::min() -> i32 {
 
 const f64 E = 2.7182818284590455348848081484902650117;
 const f64 PI = 3.1415926535897932384626433832795028841;
-
-struct math @namespace {};
 
 external fn acos(f64 x) @alias("math::acos") -> f64;
 external fn asin(f64 x) @alias("math::asin") -> f64;

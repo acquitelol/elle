@@ -95,7 +95,7 @@ pub enum TokenKind {
     Global,
     Local,
     Attribute,
-    Let,
+    Namespace,
 }
 
 impl TokenKind {
@@ -507,7 +507,6 @@ pub struct Token {
 pub enum Attribute {
     Alias,
     Volatile,
-    Namespace,
 }
 
 impl Token {
@@ -526,7 +525,6 @@ impl Token {
         match attribute.as_str() {
             "alias" => Attribute::Alias,
             "volatile" => Attribute::Volatile,
-            "namespace" => Attribute::Namespace,
             _ => todo!("more attributes"),
         }
     }

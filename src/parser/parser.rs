@@ -490,11 +490,29 @@ impl Parser {
 
                     let mut r#struct = Struct::new(self);
 
-                    let statement = r#struct.parse(if local {
-                        false
-                    } else {
-                        global_public || public
-                    });
+                    let statement = r#struct.parse(
+                        if local {
+                            false
+                        } else {
+                            global_public || public
+                        },
+                        false,
+                    );
+
+                    self.tree.borrow_mut().push(statement);
+
+                    public = false;
+                    local = false;
+                    external = false;
+                }
+                TokenKind::Namespace if do_only == &DoOnly::Structs => {
+                    if external {
+                        panic!("{}", self.current_token().location.error("Cannot have an external namespace. Please remove the `external` keyword."))
+                    }
+
+                    let mut r#struct = Struct::new(self);
+
+                    let statement = r#struct.parse(false, true);
 
                     self.tree.borrow_mut().push(statement);
 

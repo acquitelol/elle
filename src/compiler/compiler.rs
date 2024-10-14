@@ -776,30 +776,32 @@ impl Compiler {
                 let mut left_val = left_val_unparsed.clone();
                 let mut right_val = right_val_unparsed.clone();
 
-                if left_ty.is_string() && right_ty == Type::Char {
-                    let char_tmp = self.new_temporary(None, true);
+                if operator != TokenKind::Concat {
+                    if left_ty.is_string() && right_ty == Type::Char {
+                        let char_tmp = self.new_temporary(None, true);
 
-                    func.borrow_mut().assign_instruction(
-                        &char_tmp,
-                        &Type::Char,
-                        Instruction::Load(Type::Char, left_val),
-                    );
+                        func.borrow_mut().assign_instruction(
+                            &char_tmp,
+                            &Type::Char,
+                            Instruction::Load(Type::Char, left_val),
+                        );
 
-                    left_ty = Type::Char;
-                    left_val = char_tmp;
-                }
+                        left_ty = Type::Char;
+                        left_val = char_tmp;
+                    }
 
-                if right_ty.is_string() && left_ty == Type::Char {
-                    let char_tmp = self.new_temporary(None, true);
+                    if right_ty.is_string() && left_ty == Type::Char {
+                        let char_tmp = self.new_temporary(None, true);
 
-                    func.borrow_mut().assign_instruction(
-                        &char_tmp,
-                        &Type::Char,
-                        Instruction::Load(Type::Char, right_val),
-                    );
+                        func.borrow_mut().assign_instruction(
+                            &char_tmp,
+                            &Type::Char,
+                            Instruction::Load(Type::Char, right_val),
+                        );
 
-                    right_ty = Type::Char;
-                    right_val = char_tmp;
+                        right_ty = Type::Char;
+                        right_val = char_tmp;
+                    }
                 }
 
                 if left_ty.weight() > right_ty.weight() {

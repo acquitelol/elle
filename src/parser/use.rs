@@ -4,15 +4,11 @@ use super::{enums::Primitive, parser::Parser};
 
 pub struct Use<'a> {
     parser: &'a mut Parser,
-    pub has_generics: bool,
 }
 
 impl<'a> Use<'a> {
     pub fn new(parser: &'a mut Parser) -> Self {
-        Use {
-            parser,
-            has_generics: false,
-        }
+        Use { parser }
     }
 
     fn get_string(&self) -> String {

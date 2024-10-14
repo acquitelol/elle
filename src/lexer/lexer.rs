@@ -1,3 +1,5 @@
+use crate::RESERVED_KEYWORDS;
+
 use super::enums::{Location, ParseResult, Token, TokenKind, ValueKind};
 
 pub struct Lexer {
@@ -522,6 +524,16 @@ impl Lexer {
 
         let identifier: String = self.input[start..self.position].iter().collect();
 
+        if RESERVED_KEYWORDS.contains(&identifier.as_str()) {
+            panic!(
+                "{}",
+                self.get_location().error(format!(
+                    "Use of the reserved keyword '{}' is disallowed.\nThis keyword is currently not in use, but it is reserved\nbecause it may be used in the language in the future.",
+                    identifier
+                ))
+            )
+        }
+
         let kind = match identifier.as_str() {
             "use" => TokenKind::Use,
             "pub" => TokenKind::Public,
@@ -546,7 +558,9 @@ impl Lexer {
             "struct" => TokenKind::Struct,
             "global" => TokenKind::Global,
             "local" => TokenKind::Local,
-            "let" => TokenKind::Let,
+            "namespace" => TokenKind::Namespace,
+            // WHEN ADDING A KEYWORD HERE DON'T FORGET TO
+            // POTENTIALLY UPDATE THE RESERVED KEYWORD LIST
             _ => TokenKind::Identifier,
         };
 

@@ -44,4 +44,4 @@ external fn fclose(FILE *stream) @alias("io::fclose") -> i32;
 external fn fread(void *ptr, i64 size, i64 nmemb, FILE *stream) @alias("io::fread") -> i64;
 external fn fwrite(void *ptr, i64 size, i64 nmemb, FILE *stream) @alias("io::fwrite") -> i64;
 
-struct io @namespace {};
+namespace io;

@@ -1,7 +1,4 @@
-use crate::{
-    hashmap,
-    lexer::enums::{Attribute, TokenKind},
-};
+use crate::{hashmap, lexer::enums::TokenKind};
 
 use super::{
     enums::{Argument, Primitive},
@@ -17,12 +14,40 @@ impl<'a> Struct<'a> {
         Struct { parser }
     }
 
-    pub fn parse(&mut self, public: bool) -> Primitive {
+    pub fn parse(&mut self, public: bool, namespace: bool) -> Primitive {
         self.parser.advance();
 
         let name = self.parser.get_identifier();
         let location = self.parser.current_token().location.clone();
         self.parser.advance();
+
+        if namespace {
+            match self.parser.current_token().kind {
+                TokenKind::LeftCurlyBrace => panic!(
+                    "{}",
+                    self.parser.current_token().location.error("Cannot declare members on a namespaced-marked struct.\nTo declare members, remove the @namespace attribute.")
+                ),
+                _ => self.parser.expect_tokens(vec![TokenKind::Semicolon])
+            };
+
+            self.parser.advance();
+            self.parser
+                .struct_pool
+                .borrow_mut()
+                .insert(name.clone(), (vec![], vec![], location.clone()));
+
+            return Primitive::Struct {
+                name,
+                public,
+                usable: true,
+                imported: false,
+                generics: vec![],
+                known_generics: hashmap![],
+                members: vec![],
+                location,
+                ignore_empty: namespace,
+            };
+        }
 
         let mut generics = vec![];
 
@@ -40,23 +65,6 @@ impl<'a> Struct<'a> {
 
             self.parser.expect_tokens(vec![TokenKind::GreaterThan]);
             self.parser.advance();
-        }
-
-        let mut ignore_empty = false;
-
-        if self.parser.match_token(TokenKind::Attribute, false) {
-            while self.parser.current_token().kind == TokenKind::Attribute {
-                self.parser.advance();
-                let attribute = self.parser.current_token().parse_attribute();
-
-                match attribute {
-                    Attribute::Namespace => {
-                        ignore_empty = true;
-                        self.parser.advance();
-                    }
-                    _ => todo!(),
-                }
-            }
         }
 
         self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
@@ -105,7 +113,7 @@ impl<'a> Struct<'a> {
             known_generics: hashmap![],
             members,
             location,
-            ignore_empty,
+            ignore_empty: namespace,
         }
     }
 }

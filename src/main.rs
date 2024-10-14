@@ -22,6 +22,9 @@ static GENERIC_END: &str = "1"; // Allowing for nested generic structs
 static GENERIC_POINTER: &str = "2"; // Pointer to another type
 static GENERIC_UNKNOWN: &str = "3"; // Unknown type T
 static STD_LIB_PATH: &str = "/usr/local/include/elle";
+static RESERVED_KEYWORDS: &[&'static str] = &[
+    "as", "let", "mut", "enum", "match", "static", "super", "do", "macro", "in", "step",
+];
 
 pub enum Warning {
     ImplicitCast = 1 << 0,

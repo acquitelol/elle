@@ -445,7 +445,7 @@ impl Type {
             ]
             .contains(&id.as_str())
             {
-                "-1".parse::<u8>()
+                "-1".parse::<u8>() // Throw an artificial error
             } else {
                 id.parse::<u8>()
             }
@@ -1343,13 +1343,8 @@ impl Module {
 
             used_functions.insert("main".to_string());
 
-            self.functions.retain(|func| {
-                if !used_functions.contains(&func.name) && !func.volatile {
-                    false
-                } else {
-                    true
-                }
-            });
+            self.functions
+                .retain(|func| used_functions.contains(&func.name) || func.volatile);
         }
     }
 

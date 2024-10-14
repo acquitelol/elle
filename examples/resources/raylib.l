@@ -79,4 +79,4 @@ external fn BeginTextureMode(RenderTexture texture) @alias("raylib::begin_textur
 external fn EndTextureMode() @alias("raylib::end_texture_mode");
 external fn DrawTexturePro(Texture texture, Rectangle source, Rectangle dest, Vector2 origin, f32 rotation, Color tint) @alias("raylib::draw_texture_pro");
 
-struct raylib @namespace {};
+namespace raylib;

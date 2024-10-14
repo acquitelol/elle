@@ -402,6 +402,7 @@ pub enum Primitive {
 }
 
 #[derive(Debug, Clone)]
+#[allow(unused)]
 pub struct Case {
     pub condition: Vec<AstNode>,
     pub body: Box<AstNode>,

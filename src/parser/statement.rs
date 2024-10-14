@@ -13,6 +13,7 @@ use crate::{
 pub struct Shared<'a> {
     pub struct_pool: &'a RefCell<StructPool>,
     pub extra_structs: &'a RefCell<Vec<Primitive>>,
+    #[allow(unused)]
     pub tree: &'a RefCell<Vec<Primitive>>,
     pub generics: &'a Vec<String>,
 }
