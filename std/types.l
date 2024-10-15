@@ -3,7 +3,7 @@ global pub;
 external fn isalnum(char arg) @alias("char::is_alphanumeric") -> bool;
 external fn isalpha(char arg) @alias("char::is_alphabetic") -> bool;
 external fn iscntrl(char arg) @alias("char::is_control") -> bool;
-external fn isdigit(char arg) @alias("char::is_number") -> bool;
+external fn isdigit(char arg) @alias("char::is_digit") -> bool;
 external fn isgraph(char arg) @alias("char::is_graphic") -> bool;
 external fn islower(char arg) @alias("char::is_lowercase") -> bool;
 external fn isupper(char arg) @alias("char::is_uppercase")-> bool;

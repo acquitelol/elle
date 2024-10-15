@@ -32,7 +32,7 @@ fn RLE::from(string input) {
     for i32 i = 0; i < input.len(); i += 1 {
         string length = "";
 
-        while input[i].is_number() {
+        while input[i].is_digit() {
             length <>= "{}".format(input[i]);
             i += 1;
         }
@@ -40,7 +40,7 @@ fn RLE::from(string input) {
         i32 repeat = i32::parse(length) || 1;
 
         io::assert(
-            !input[i].is_number(),
+            !input[i].is_digit(),
             "Next character should not be numeric"
         );
 

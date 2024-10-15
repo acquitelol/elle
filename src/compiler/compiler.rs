@@ -314,6 +314,7 @@ impl Compiler {
         };
 
         if external {
+            self.scopes.pop();
             return func;
         }
 
