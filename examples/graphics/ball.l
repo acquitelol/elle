@@ -52,7 +52,6 @@ fn main() {
 
     while !raylib::window_should_close() {
         f32 deltaTime = raylib::get_frame_time();
-        i32 fps = math::round(1 / deltaTime);
 
         if finished {
             finished = false;
@@ -118,10 +117,7 @@ fn main() {
 
         // Subtitle
         raylib::draw_text(subtitle, (screenWidth - raylib::measure_text(subtitle, fontSize / 2)) / 2, 160, fontSize / 2, PURPLE);
-
-        // FPS
-        string fpsString = "FPS: {}".format(fps);
-        raylib::draw_text(fpsString, screenWidth - raylib::measure_text(fpsString, fontSize / 2) - 30, screenHeight - 50, fontSize / 2, YELLOW);
+        raylib::draw_fps(screenWidth - 80, screenHeight - 24);
 
         io::dbg(position.x, position.y, velocity.x, velocity.y, deltaTime);
         io::println("-----------------------");

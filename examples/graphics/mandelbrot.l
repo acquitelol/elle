@@ -20,6 +20,7 @@ fn main() {
     RenderTexture target = raylib::load_render_texture(textureWidth, textureHeight);
     defer raylib::unload_render_texture(target);
 
+    raylib::set_texture_filter(target.texture, 1); // TEXTURE_FILTER_BILINEAR
     raylib::set_target_fps(60);
 
     f32 zoom = 0.75;
@@ -32,20 +33,15 @@ fn main() {
     // will stack overflow due to stack allocating things over
     // and over again and never freeing them because its on the stack
     Vector2 zoomFactor;
-    f32 deltaTime;
     i32 iteration;
     f32 temp_x;
     Vector2 z;
     Vector2 c;
     Color out;
-    i32 fps;
     i32 x;
     i32 y;
 
     while !raylib::window_should_close() {
-        deltaTime = raylib::get_frame_time();
-        fps = math::round(1 / deltaTime);
-
         if raylib::is_key_down('1') {
             zoom *= 1.02;
         }
@@ -100,18 +96,10 @@ fn main() {
                     out.b = (iteration * 2) % 255;
                     out.a = 255;
 
-                    raylib::draw_pixel(x, y, raylib::get_color((out.r << 24) | (out.g << 16) | (out.b << 8) | out.a));
+                    raylib::draw_pixel(x, y, out);
                 }
             }
         }
-
-        string fpsString = "FPS: {}".format(fps);
-        raylib::draw_text(
-            fpsString,
-            textureWidth - raylib::measure_text(fpsString, fontSize) - (fontSize / 3 * 2),
-            textureHeight - (fontSize * 3 / 2), fontSize,
-            WHITE
-        );
 
         raylib::end_texture_mode();
 
@@ -131,6 +119,12 @@ fn main() {
             },
             Vector2 { x = 0, y = 0 },
             0, WHITE
+        );
+
+        raylib::draw_fps(screenWidth - 80, screenHeight - 24);
+        raylib::draw_text(
+            "1 - Zoom in\n2 - Zoom out\nW - Up\nA - Left\nS - Down\nD - Right",
+            12, screenHeight - 12 * 8, fontSize * 3, WHITE
         );
 
         raylib::end_drawing();

@@ -48,6 +48,7 @@ fn main() {
         raylib::begin_drawing();
             raylib::clear_background(BLACK);
             render_sierpinski(center, LENGTH, THICKNESS, DEPTH);
+            raylib::draw_fps(SCREEN_WIDTH - 80, SCREEN_HEIGHT - 24);
         raylib::end_drawing();
     }
 }

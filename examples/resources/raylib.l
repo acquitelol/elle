@@ -79,5 +79,8 @@ external fn BeginTextureMode(RenderTexture texture) @alias("raylib::begin_textur
 external fn EndTextureMode() @alias("raylib::end_texture_mode");
 external fn DrawTexturePro(Texture texture, Rectangle source, Rectangle dest, Vector2 origin, f32 rotation, Color tint) @alias("raylib::draw_texture_pro");
 external fn DrawTextureRec(Texture texture, Rectangle source, Vector2 position, Color tint) @alias("raylib::draw_texture_rec");
+external fn SetTextureFilter(Texture texture, i32 filter) @alias("raylib::set_texture_filter");
+external fn DrawFPS(i32 posX, i32 posY) @alias("raylib::draw_fps");
+external fn GetFPS() @alias("raylib::get_fps");
 
 namespace raylib;
