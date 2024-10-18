@@ -50,6 +50,12 @@ fn main() {
             zoom /= 1.02;
         }
 
+        if raylib::is_key_down('3') {
+            zoom = 0.75;
+            offsetX = -0.75;
+            offsetY = 0.0;
+        }
+
         if raylib::is_key_down('A') {
             offsetX -= baseZoomScale / zoom;
         }
@@ -123,8 +129,8 @@ fn main() {
 
         raylib::draw_fps(screenWidth - 80, screenHeight - 24);
         raylib::draw_text(
-            "1 - Zoom in\n2 - Zoom out\nW - Up\nA - Left\nS - Down\nD - Right",
-            12, screenHeight - 12 * 8, fontSize * 3, WHITE
+            "1 - Zoom in\n2 - Zoom out\n3 - Reset all\nW - Up\nA - Left\nS - Down\nD - Right",
+            18, screenHeight - 12 * 10, fontSize * 3, WHITE
         );
 
         raylib::end_drawing();
