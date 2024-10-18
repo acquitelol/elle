@@ -27,10 +27,10 @@ struct Vector2 {
 };
 
 struct Color {
-    i32 r;
-    i32 g;
-    i32 b;
-    i32 a;
+    u8 r;
+    u8 g;
+    u8 b;
+    u8 a;
 };
 
 struct Texture {
@@ -43,8 +43,8 @@ struct Texture {
 
 struct RenderTexture {
     i32 id;                 // OpenGL framebuffer object id
-    Texture *texture;        // Color buffer attachment texture
-    Texture *depth;          // Depth buffer attachment texture
+    Texture texture;        // Color buffer attachment texture
+    Texture depth;          // Depth buffer attachment texture
 };
 
 // Pseudo-namespace for Raylib functions
@@ -78,5 +78,6 @@ external fn UnloadRenderTexture(RenderTexture texture) @alias("raylib::unload_re
 external fn BeginTextureMode(RenderTexture texture) @alias("raylib::begin_texture_mode");
 external fn EndTextureMode() @alias("raylib::end_texture_mode");
 external fn DrawTexturePro(Texture texture, Rectangle source, Rectangle dest, Vector2 origin, f32 rotation, Color tint) @alias("raylib::draw_texture_pro");
+external fn DrawTextureRec(Texture texture, Rectangle source, Vector2 position, Color tint) @alias("raylib::draw_texture_rec");
 
 namespace raylib;

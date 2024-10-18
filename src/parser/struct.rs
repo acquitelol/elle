@@ -1,4 +1,4 @@
-use crate::{hashmap, lexer::enums::TokenKind};
+use crate::{hashmap, lexer::enums::TokenKind, misc::colors::*};
 
 use super::{
     enums::{Argument, Primitive},
@@ -15,6 +15,7 @@ impl<'a> Struct<'a> {
     }
 
     pub fn parse(&mut self, public: bool, namespace: bool) -> Primitive {
+        let keyword_location = self.parser.current_token().location.clone();
         self.parser.advance();
 
         let name = self.parser.get_identifier();
@@ -23,11 +24,18 @@ impl<'a> Struct<'a> {
 
         if namespace {
             match self.parser.current_token().kind {
-                TokenKind::LeftCurlyBrace => panic!(
-                    "{}",
-                    self.parser.current_token().location.error("Cannot declare members on a namespaced-marked struct.\nTo declare members, remove the @namespace attribute.")
-                ),
-                _ => self.parser.expect_tokens(vec![TokenKind::Semicolon])
+                TokenKind::LeftCurlyBrace => {
+                    let mut location = self.parser.current_token().location;
+                    location.length = location.ctx.len() - location.column + 1;
+                    location.column += location.ctx.len() - location.column;
+
+                    panic!(
+                        "{}",
+                        location.with_extra_info("Remove this part").error(format!(
+                            "Cannot declare members on a namespace.\nTo declare members, use the '{GREEN}struct{RESET}' keyword instead."))
+                    )
+                }
+                _ => self.parser.expect_tokens(vec![TokenKind::Semicolon]),
             };
 
             self.parser.advance();
@@ -44,6 +52,7 @@ impl<'a> Struct<'a> {
                 generics: vec![],
                 known_generics: hashmap![],
                 members: vec![],
+                keyword_location,
                 location,
                 ignore_empty: namespace,
             };
@@ -112,6 +121,7 @@ impl<'a> Struct<'a> {
             generics,
             known_generics: hashmap![],
             members,
+            keyword_location,
             location,
             ignore_empty: namespace,
         }

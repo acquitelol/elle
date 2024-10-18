@@ -244,6 +244,7 @@ fn main() -> ExitCode {
             generics: vec![],
             known_generics: hashmap![],
             members: meta_members.clone(),
+            keyword_location: Location::default(input_path.clone()),
             location: Location::default(input_path.clone()),
             ignore_empty: false,
         },

@@ -335,8 +335,8 @@ pub struct Location {
 }
 
 impl Location {
-    pub fn with_extra_info(mut self, extra_info: String) -> Self {
-        self.extra_info = extra_info;
+    pub fn with_extra_info(mut self, extra_info: impl Into<String>) -> Self {
+        self.extra_info = extra_info.into();
         self
     }
 

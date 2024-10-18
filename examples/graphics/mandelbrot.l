@@ -7,18 +7,25 @@ const Color BLACK = raylib::get_color(0x00000000);
 const Color WHITE = raylib::get_color(0xFFFFFFFF);
 
 fn main() {
-    i32 screenWidth = 300;
-    i32 screenHeight = 300;
+    i32 screenWidth = 900;
+    i32 screenHeight = 900;
+
+    f32 resolution = 1 / 3;
+    i32 textureWidth = screenWidth * resolution;
+    i32 textureHeight = screenHeight * resolution;
 
     raylib::init_window(screenWidth, screenHeight, "Mandelbrot Set");
     defer raylib::close_window();
+
+    RenderTexture target = raylib::load_render_texture(textureWidth, textureHeight);
+    defer raylib::unload_render_texture(target);
 
     raylib::set_target_fps(60);
 
     f32 zoom = 0.75;
     f32 offsetX = -0.75;
     f32 offsetY = 0.0;
-    i32 fontSize = 15;
+    f32 fontSize = 15 * resolution;
     f32 baseZoomScale = 0.02;
 
     // These must be declared out of the loop otherwise the program
@@ -63,18 +70,16 @@ fn main() {
             offsetY += baseZoomScale / zoom;
         }
 
-        raylib::begin_drawing();
-        defer raylib::end_drawing();
-
+        raylib::begin_texture_mode(target);
         raylib::clear_background(BLACK);
 
-        zoomFactor.x = 0.5 * zoom * screenWidth;
-        zoomFactor.y = 0.5 * zoom * screenHeight;
+        zoomFactor.x = 0.5 * zoom * textureWidth;
+        zoomFactor.y = 0.5 * zoom * textureHeight;
 
-        for x = 0; x < screenWidth; x += 1 {
-            for y = 0; y < screenHeight; y += 1 {
-                z.x = (x - screenWidth / 2.0) / zoomFactor.x + offsetX;
-                z.y = (y - screenHeight / 2.0) / zoomFactor.y + offsetY;
+        for x = 0; x < textureWidth; x += 1 {
+            for y = 0; y < textureHeight; y += 1 {
+                z.x = (x - textureWidth / 2.0) / zoomFactor.x + offsetX;
+                z.y = (y - textureHeight / 2.0) / zoomFactor.y + offsetY;
 
                 c.x = z.x;
                 c.y = z.y;
@@ -103,9 +108,31 @@ fn main() {
         string fpsString = "FPS: {}".format(fps);
         raylib::draw_text(
             fpsString,
-            screenWidth - raylib::measure_text(fpsString, fontSize) - (fontSize / 3 * 2),
-            screenHeight - (fontSize * 3 / 2), fontSize,
+            textureWidth - raylib::measure_text(fpsString, fontSize) - (fontSize / 3 * 2),
+            textureHeight - (fontSize * 3 / 2), fontSize,
             WHITE
         );
+
+        raylib::end_texture_mode();
+
+        raylib::begin_drawing();
+        raylib::clear_background(BLACK);
+
+        raylib::draw_texture_pro(target.texture,
+            Rectangle {
+                x = 0, y = 0,
+                width = target.texture.width,
+                height = -target.texture.height
+            },
+            Rectangle {
+                x = 0, y = 0,
+                width = screenWidth,
+                height = screenHeight
+            },
+            Vector2 { x = 0, y = 0 },
+            0, WHITE
+        );
+
+        raylib::end_drawing();
     }
 }

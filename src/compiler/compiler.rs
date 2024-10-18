@@ -2982,13 +2982,20 @@ impl Compiler {
 
                 let temp = self.new_temporary(Some("field"), true);
 
-                func.borrow_mut().assign_instruction(
-                    &temp,
-                    &field_ty,
-                    Instruction::Load(field_ty.clone(), offset_tmp),
-                );
+                // Structs are stored in contiguous memory.
+                // Any field that is a struct should not be dereferenced
+                // because that will break everything.
+                if field_ty.is_struct() {
+                    Some((field_ty.into_abi(), offset_tmp))
+                } else {
+                    func.borrow_mut().assign_instruction(
+                        &temp,
+                        &field_ty,
+                        Instruction::Load(field_ty.clone(), offset_tmp),
+                    );
 
-                Some((field_ty.into_abi(), temp))
+                    Some((field_ty.into_abi(), temp))
+                }
             }
             _ => todo!("statement: {:?}", stmt),
         };
@@ -3006,14 +3013,15 @@ impl Compiler {
         known_generics: HashMap<String, Type>,
         members: Vec<Argument>,
         ignore_empty: bool,
-        location: Location,
+        keyword_location: Location,
+        _location: Location,
     ) -> TypeDef {
         let mut items = vec![];
 
         if members.is_empty() && !ignore_empty {
             panic!(
                 "{}",
-                location.error("Cannot declare an empty struct (with no members).\nIf you intended to make a namespace use the '@namespace' attribute.")
+                keyword_location.with_extra_info("Replace this with 'namespace'").error(format!("Cannot declare an empty struct (with no members).\nIf you intended to make a namespace, use the '{GREEN}namespace{RESET}' keyword instead."))
             )
         }
 
@@ -3320,7 +3328,7 @@ impl Compiler {
                         Instruction::Add(left, Value::Const("".into(), offset as i128)),
                     );
 
-                    if load {
+                    if load && !member_ty.clone().unwrap().is_struct() {
                         let tmp = self.new_temporary(Some("load"), true);
 
                         func.borrow_mut().assign_instruction(
@@ -3504,11 +3512,14 @@ impl Compiler {
 
             panic!(
                 "{}",
-                location.error(format!(
-                    "Cannot convert from the type '{}' to the type '{}'.",
-                    first.display(),
-                    second.display()
-                ))
+                location
+                    .clone()
+                    .with_extra_info(format!("This has the type '{}'", first.display()))
+                    .error(format!(
+                        "Cannot convert from the type '{}' to the type '{}'.",
+                        first.display(),
+                        second.display()
+                    ))
             )
         }
 
@@ -3518,7 +3529,10 @@ impl Compiler {
         {
             panic!(
                 "{}",
-                location.error(format!(
+                location.clone().with_extra_info(format!(
+                    "This has the type '{}'",
+                    first.display()
+                )).error(format!(
                     "Cannot implicitly convert '{}' to '{}' or vice versa.\nTo explicitly convert, use the C-like '(type)variable' syntax.",
                     first.display(),
                     second.display()
@@ -3731,6 +3745,7 @@ impl Compiler {
                     members,
                     generics,
                     known_generics,
+                    keyword_location,
                     location,
                     ignore_empty,
                 } if generics.len() == 0 => {
@@ -3743,6 +3758,7 @@ impl Compiler {
                         known_generics,
                         members,
                         ignore_empty,
+                        keyword_location,
                         location,
                     );
 

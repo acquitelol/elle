@@ -100,6 +100,7 @@ pub fn create_generic_struct(
         generics: vec![],
         known_generics: parsed_generics,
         members: parsed_members.clone(),
+        keyword_location: Location::default(location.file.clone()),
         location: location.clone(),
         ignore_empty: false,
     });
@@ -511,7 +512,6 @@ impl Parser {
                     }
 
                     let mut r#struct = Struct::new(self);
-
                     let statement = r#struct.parse(false, true);
 
                     self.tree.borrow_mut().push(statement);

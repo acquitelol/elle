@@ -613,6 +613,7 @@ impl Type {
                             generics: vec![],
                             known_generics: known_generics.clone(),
                             members: parsed_members.clone(),
+                            keyword_location: Location::default(location.file.clone()),
                             location: location.clone(),
                             ignore_empty: false,
                         },

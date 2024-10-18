@@ -369,6 +369,7 @@ pub enum Primitive {
         generics: Vec<String>,
         known_generics: HashMap<String, Type>,
         members: Vec<Argument>,
+        keyword_location: Location,
         location: Location,
         ignore_empty: bool,
     },
