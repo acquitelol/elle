@@ -9,9 +9,8 @@ fn main() {
     buf[0] = 123;
 
     io::printf(
-        "(fn main)\n\t#size(buf) = {}\n\t#len(buf) = {}",
-        #size(buf),
-        #len(buf)
+        "(fn main)\n\t#size(buf) = {}",
+        #size(buf)
     );
 
     other(buf);
