@@ -416,6 +416,7 @@ impl<'a> Function<'a> {
                                 location: self.parser.current_token().location,
                             }),
                             location: self.parser.current_token().location,
+                            value_location: self.parser.current_token().location,
                         },
                     );
                 }

@@ -19,6 +19,7 @@ pub enum AstNode {
         r#type: Option<Type>,
         value: Box<AstNode>,
         location: Location,
+        value_location: Location,
     },
     /// Allocates stack memory of size `size`, assigns it to `name`, and calls `vastart` on it
     VariadicStatement {

@@ -271,13 +271,15 @@ impl<'a> Statement<'a> {
                         location: self.current_token().location,
                     }
                 }),
-                location,
+                location: location.clone(),
+                value_location: location,
             };
         }
 
         self.expect_tokens(vec![TokenKind::Equal]);
         self.advance();
 
+        let value_location = self.current_token().location.clone();
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
         let res = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
@@ -300,6 +302,7 @@ impl<'a> Statement<'a> {
             r#type,
             value: Box::new(parsed_res),
             location,
+            value_location,
         }
     }
 
@@ -328,7 +331,8 @@ impl<'a> Statement<'a> {
                 treat_as_string: true,
                 location: location.clone(),
             }),
-            location,
+            location: location.clone(),
+            value_location: location,
         }
     }
 

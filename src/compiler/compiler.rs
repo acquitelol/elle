@@ -611,6 +611,7 @@ impl Compiler {
                 r#type,
                 value,
                 location,
+                value_location,
             } => {
                 let existing = match self.get_variable(name.as_str(), Some(func), Some(module)) {
                     Ok((ty, _)) => ty,
@@ -662,6 +663,7 @@ impl Compiler {
                             local_ty.clone(),
                             value,
                             &location,
+                            &value_location,
                             false,
                         )
                     } else {
@@ -812,6 +814,7 @@ impl Compiler {
                         left_ty.clone(),
                         right_val_unparsed,
                         &location,
+                        &location,
                         false,
                     );
 
@@ -822,6 +825,7 @@ impl Compiler {
                         left_ty,
                         right_ty.clone(),
                         left_val_unparsed,
+                        &location,
                         &location,
                         false,
                     );
@@ -1645,6 +1649,7 @@ impl Compiler {
                             param_ty.unwrap(),
                             val,
                             &parameter.0,
+                            &parameter.0,
                             false,
                         )
                     });
@@ -1823,7 +1828,7 @@ impl Compiler {
                 let tmp = self.new_variable(&buf_ty, &name, Some(func), true, false);
 
                 let (_, converted_val) =
-                    self.convert_to_type(func, ty, Type::Long, val, &location, true);
+                    self.convert_to_type(func, ty, Type::Long, val, &location, &location, true);
 
                 func.borrow_mut().assign_instruction(
                     &tmp,
@@ -2199,7 +2204,7 @@ impl Compiler {
                     ));
 
                 let (_, final_val) =
-                    self.convert_to_type(func, ty, Type::Long, size, &location, false);
+                    self.convert_to_type(func, ty, Type::Long, size, &location, &location, false);
 
                 let var = self.new_variable(&Type::Long, &name, Some(func), false, false);
 
@@ -2300,7 +2305,15 @@ impl Compiler {
                     .generate_statement(func, module, *value, ty, None, false)
                     .expect(&location.error("Unexpected error when trying to compile the value of a conversion statement"));
 
-                Some(self.convert_to_type(func, first, second.unwrap(), val, &location, true))
+                Some(self.convert_to_type(
+                    func,
+                    first,
+                    second.unwrap(),
+                    val,
+                    &location,
+                    &location,
+                    true,
+                ))
             }
             AstNode::NotStatement { value, location } => {
                 let (ty, val) = self
@@ -2564,7 +2577,7 @@ impl Compiler {
                 let tmp_with_offset = self.new_temporary(None, true);
 
                 let (_, converted_val) =
-                    self.convert_to_type(func, ty, Type::Long, val, &location, true);
+                    self.convert_to_type(func, ty, Type::Long, val, &location, &location, true);
 
                 func.borrow_mut().assign_instruction(
                     &tmp_with_offset,
@@ -2916,6 +2929,7 @@ impl Compiler {
                                 ty.clone(),
                                 member_ty.clone(),
                                 val,
+                                &location,
                                 &location,
                                 false,
                             );
@@ -3495,7 +3509,8 @@ impl Compiler {
         first: Type,
         second: Type,
         val: Value,
-        location: &Location,
+        left_location: &Location,
+        right_location: &Location,
         explicit: bool,
     ) -> (Type, Value) {
         if first.is_struct() || second.is_struct() {
@@ -3512,7 +3527,7 @@ impl Compiler {
 
             panic!(
                 "{}",
-                location
+                left_location
                     .clone()
                     .with_extra_info(format!("This has the type '{}'", first.display()))
                     .error(format!(
@@ -3529,7 +3544,7 @@ impl Compiler {
         {
             panic!(
                 "{}",
-                location.clone().with_extra_info(format!(
+                right_location.clone().with_extra_info(format!(
                     "This has the type '{}'",
                     first.display()
                 )).error(format!(
@@ -3560,7 +3575,7 @@ impl Compiler {
         } else if (first.is_int() && second.is_int()) || (first.is_float() && second.is_float()) {
             cast_warning!(
                 explicit,
-                location,
+                left_location,
                 first.display(),
                 second.display(),
                 self.warnings,
@@ -3590,7 +3605,7 @@ impl Compiler {
         } else {
             cast_warning!(
                 explicit,
-                location,
+                left_location,
                 first,
                 second,
                 self.warnings,
