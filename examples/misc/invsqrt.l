@@ -3,17 +3,15 @@
 //
 // https://en.wikipedia.org/wiki/Fast_inverse_square_root
 use std/io;
-use std/math;
 
-fn fast_inv_sqrt(f32 number) {
-	f32 x2 = number * 0.5;
-	f32 y = number;
+fn fast_inv_sqrt(f32 x) {
+	f32 y = x;
+	i32 i = *(i32 *)(&y);        // Interpret the bits of a float as an integer
 
-	i64 i = *(i64 *)(&y);
-	i = 0x5f3759df - (i >> 1);
-
-	y = *(f32 *)(&i);
-	y *= (1.5 - (x2 * y * y));
+	i = 0x5f3759df - (i >> 1);   // "what the fuck?"
+	y = *(f32 *)(&i);            // Interpret the result as a float again
+	y *= 1.5 - 0.5 * x * y * y;  // 1st iteration of Newton-Raphson
+	y *= 1.5 - 0.5 * x * y * y;  // 2nd iteration, can be removed
 
 	return y;
 }
