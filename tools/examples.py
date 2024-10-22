@@ -7,6 +7,8 @@ from sys import stdout, stdin, argv
 
 TIMEOUT = 2 # seconds
 EXAMPLES_PATH = "./examples"
+SHORT_EXTENSION = ".le"
+LONG_EXTENSION = ".elle"
 
 def read_from_process(process):
     """Reads from both stdout and stderr until both streams are empty."""
@@ -42,7 +44,7 @@ def examples(kind):
         code = run(["ellec", "-Dtime", "-Clink-flags", "-lraylib", f"./examples/{kind}/{example}"]).returncode;
 
         if code == 0:
-            exec_path = f"./{example.replace(".l", "")}";
+            exec_path = f"./{example.replace(SHORT_EXTENSION, "").replace(LONG_EXTENSION, "")}";
 
             elapsed = 0
             process = Popen(

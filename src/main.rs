@@ -22,6 +22,8 @@ static GENERIC_END: &str = "1"; // Allowing for nested generic structs
 static GENERIC_POINTER: &str = "2"; // Pointer to another type
 static GENERIC_UNKNOWN: &str = "3"; // Unknown type T
 static STD_LIB_PATH: &str = "/usr/local/include/elle";
+static LONG_EXTENSION: &str = ".elle";
+static SHORT_EXTENSION: &str = ".le";
 static RESERVED_KEYWORDS: &[&'static str] = &[
     "as", "let", "mut", "enum", "match", "static", "super", "do", "macro", "in", "step",
 ];
@@ -124,7 +126,7 @@ fn main() -> ExitCode {
             "--hush" | "-Chush" => {
                 hush = true;
             }
-            other if other.ends_with(".l") || other.ends_with(".elle") => {
+            other if other.ends_with(SHORT_EXTENSION) || other.ends_with(LONG_EXTENSION) => {
                 if input_path.is_none() {
                     input_path = Some(other.to_string())
                 }

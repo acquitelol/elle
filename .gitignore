@@ -1,4 +1,4 @@
 /target
 .DS_Store
 /dist/*
-examples/test.l
+examples/test.le

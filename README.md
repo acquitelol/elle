@@ -189,7 +189,7 @@ This struct is not defined in Elle code, however its equivalent structure may lo
 struct ElleMeta {
     string *exprs; // An array of every argument's expression passed to the function as a string
     string *types; // An array of the type of every argument supplied to the function
-    i32 arity;     // The number of arguments supplied to the function. This does NOT include the metadata parameter.
+    i32 arity;     // The number of arguments. This does NOT include the ElleMeta argument.
     string caller; // The caller of the function as a string
     string file;   // The file where the function was called from
     i32 line;      // The line number of the function call + 1
@@ -269,7 +269,7 @@ fn main() {
 }
 ```
 
-Examples that contain variadic functions include [`concat.l`](https://github.com/acquitelol/elle/blob/rewrite/examples/concat.l) and [`variadic.l`](https://github.com/acquitelol/elle/blob/rewrite/examples/variadic.l).
+Examples that contain variadic functions include [`concat.le`](https://github.com/acquitelol/elle/blob/rewrite/examples/misc/concat.le) and [`variadic.le`](https://github.com/acquitelol/elle/blob/rewrite/examples/tests/variadic.le).
 
 <hr />
 
@@ -730,7 +730,7 @@ So it would first store `512` at `some_arr + 0`, then it would store `1` at `som
 
 <br />
 
-You can view a more detailed example of array usage at [array.l](https://github.com/acquitelol/elle/blob/rewrite/examples/array.l).
+You can view a more detailed example of array usage at [array.le](https://github.com/acquitelol/elle/blob/rewrite/examples/misc/array.le).
 Array literals are not required to be assigned to a variable. Please look at this example:
 
 ```rs
@@ -916,12 +916,12 @@ The syntax for importing is as follows:
 use path/to/module;
 ```
 
-where, in your current directory, there is a `./path/to/module.elle` or a `./path/to/module.l` file.
+where, in your current directory, there is a `./path/to/module.elle` or a `./path/to/module.le` file.
 
 The syntax to export a symbol from your current file is as follows:
 
 ```rs
-// ./module.l
+// ./module.le
 pub const i32 myFavouriteNumber = 7;
 
 pub fn foo() {
@@ -954,29 +954,6 @@ local const i32 c = 5; // Private
 // Private
 local fn increment(i32 a) {
     return a + 1;
-}
-```
-
-You can also create "generic modules" which are modules that contain a generic type which is specified at the import time.
-
-Example:
-
-```c
-// module/foo.l
-struct foo {}; // namespace
-generic T; // generic parameter
-
-pub fn foo::add(T x, T y) -> T {
-    return x + y;
-}
-```
-```c
-// main.l
-use module/foo<i32>; // i32 replaces T everywhere
-use std/io;
-
-fn main() {
-    io::println(foo::add(1, 2)); // 3
 }
 ```
 
@@ -1084,7 +1061,7 @@ You can then either call them through `instance.<method name>()` or `<Struct nam
 <br />
 In this case, `foo1.add(foo2)` is an identical expression to `Foo::add(foo1, foo2)`
 <br />
-For more examples, please view [vectors.l](https://github.com/acquitelol/elle/blob/rewrite/std/vectors.l)
+For more examples, please view [vectors.le](https://github.com/acquitelol/elle/blob/rewrite/std/vectors.le)
 
 You may also specify that `self` is a `<ty> *` instead of a `<ty>` if you require editing it in-place:
 ```rs
@@ -1314,11 +1291,11 @@ All contributions to this project are welcome and I love talking about this stuf
 #### ♡ You can now run `ellec` to get a help message of how to use the compiler!
 Try compiling a simple example!
   ```console
-    $ ellec ./examples/donut.l && ./donut
+    $ ellec ./examples/donut.le && ./donut
   ```
 Try compiling an example with libraries!
   ```
-    $ ellec ./examples/ball.l -Dtime -Clink-flags -lraylib && ./ball
+    $ ellec ./examples/ball.le -Dtime -Clink-flags -lraylib && ./ball
   ```
 
 <hr />

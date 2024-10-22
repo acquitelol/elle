@@ -63,6 +63,8 @@ fn main() {
     arr[0] = 5;
 
     io::dbg(*num, arr[0], region.heap.len());
+
+    io::printf("\nCleaning the region allocation...\n");
     region.clean();
 
     // Everything will be garbage data because it was freed

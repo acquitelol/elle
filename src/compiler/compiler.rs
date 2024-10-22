@@ -2638,7 +2638,7 @@ impl Compiler {
                     ));
                 }
 
-                Some((Type::Pointer(Box::new(buf_ty)), tmp))
+                Some((buf_ty, tmp))
             }
             AstNode::AddressStatement { value, location } => {
                 let (_, val) = self

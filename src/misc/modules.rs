@@ -18,7 +18,7 @@ use crate::{
         enums::{Argument, AstNode, Primitive},
         parser::{DoOnly, Parser, StructPool},
     },
-    Warnings, STD_LIB_PATH,
+    Warnings, LONG_EXTENSION, SHORT_EXTENSION, STD_LIB_PATH,
 };
 
 pub fn lex_and_parse(
@@ -32,7 +32,7 @@ pub fn lex_and_parse(
     _import_location: Location,
 ) -> Vec<Primitive> {
     let content = {
-        let with_elle = fs::metadata(format!("{}.elle", input_path)).is_ok();
+        let with_elle = fs::metadata(format!("{}{}", input_path, LONG_EXTENSION)).is_ok();
         let base = fs::metadata(input_path).is_ok();
 
         let file_path = &format!(
@@ -42,9 +42,9 @@ pub fn lex_and_parse(
                 ""
             } else {
                 if with_elle {
-                    ".elle"
+                    LONG_EXTENSION
                 } else {
-                    ".l"
+                    SHORT_EXTENSION
                 }
             }
         );

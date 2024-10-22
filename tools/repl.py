@@ -3,6 +3,7 @@ from time import time
 from os import remove
 
 lines = []
+SHORT_EXTENSION = ".le"
 
 def repl():
     while True:
@@ -20,8 +21,8 @@ def repl():
         }}""";
 
         lines.append(line);
-        path = f".repl-{int(time())}.l";
-        exec_path = f"./{path.replace(".l", "")}";
+        path = f".repl-{int(time())}{SHORT_EXTENSION}";
+        exec_path = f"./{path.replace(SHORT_EXTENSION, "")}";
 
         with open(path, "w") as fp:
             fp.write(code);
