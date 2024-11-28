@@ -17,7 +17,7 @@ use crate::{
         enums::{Argument, Primitive},
         parser::StructPool,
     },
-    GENERIC_END, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN,
+    GENERIC_END, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN, POINTER_ID, VOID_POINTER_ID,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Copy)]
@@ -373,6 +373,8 @@ impl Type {
             Self::Boolean => "bool".into(),
             Self::Word => "i32".into(),
             Self::Long => "i64".into(),
+            Self::UnsignedWord => "u32".into(),
+            Self::UnsignedLong => "u64".into(),
             Self::Pointer(inner) => {
                 if *inner.as_ref() == Type::Char {
                     "string".into()
@@ -402,6 +404,15 @@ impl Type {
             }
             Self::Function(_) => self.display(),
             _ => "".into(),
+        }
+    }
+
+    pub fn strict_id(&self) -> String {
+        match self {
+            x if x.is_string() => "string".into(),
+            x if x.is_void_pointer() => VOID_POINTER_ID.into(),
+            Type::Pointer(_) => POINTER_ID.into(),
+            _ => self.id(),
         }
     }
 
@@ -542,14 +553,14 @@ impl Type {
     pub fn unknown_to_known(
         self,
         struct_pool: Option<&RefCell<StructPool>>,
-        extra_structs: Option<&RefCell<Vec<Primitive>>>,
+        tree: Option<&RefCell<Vec<Primitive>>>,
         generics: Vec<String>,
         known_generics: HashMap<String, Type>,
     ) -> Type {
         match self.clone() {
             Type::Pointer(inner) => Type::Pointer(Box::new(inner.unknown_to_known(
                 struct_pool,
-                extra_structs,
+                tree,
                 generics,
                 known_generics,
             ))),
@@ -579,7 +590,7 @@ impl Type {
                 );
 
                 if struct_pool.is_some()
-                    && extra_structs.is_some()
+                    && tree.is_some()
                     && !struct_pool.unwrap().borrow().contains_key(&generic_name)
                 {
                     let (generics, members, location) = struct_pool
@@ -595,7 +606,7 @@ impl Type {
                             name: member.name.clone(),
                             r#type: member.r#type.clone().unknown_to_known(
                                 struct_pool,
-                                extra_structs,
+                                tree,
                                 generics.clone(),
                                 known_generics.clone(),
                             ),
@@ -603,7 +614,7 @@ impl Type {
                         })
                         .collect::<Vec<Argument>>();
 
-                    extra_structs.unwrap().borrow_mut().insert(
+                    tree.unwrap().borrow_mut().insert(
                         0,
                         Primitive::Struct {
                             name: generic_name.clone(),
@@ -629,6 +640,26 @@ impl Type {
             }
             other => other,
         }
+    }
+
+    // Primarily used to create methods that exist
+    // on every primitive type such as __fmt__
+    pub fn get_primitive_types() -> Vec<Type> {
+        vec![
+            Self::Word,
+            Self::UnsignedWord,
+            Self::Long,
+            Self::UnsignedLong,
+            Self::Char,
+            Self::Boolean,
+            Self::Halfword,
+            Self::UnsignedHalfword,
+            Self::Byte,
+            Self::UnsignedByte,
+            Self::Single,
+            Self::Double,
+            Self::Pointer(Box::new(Self::Char)),
+        ]
     }
 
     pub fn has_generic_type(self, ty: Type) -> bool {
@@ -859,7 +890,7 @@ impl Type {
                     .iter()
                     .find(|td| td.name == val.clone())
                     .expect(&format!(
-                        "Unable to find aggregate type named '{}'",
+                        "Unable to find aggregate type named '{}'.",
                         self.display()
                     ))
                     .size(module) as u64;
@@ -1154,6 +1185,7 @@ pub struct Function {
     pub external: bool,
     pub builtin: bool,
     pub volatile: bool,
+    pub format: bool,
     pub lambda: bool,
     pub unaliased: Option<String>,
     pub usable: bool,
@@ -1308,11 +1340,6 @@ impl Module {
         self.types.last_mut().unwrap()
     }
 
-    pub fn add_type_front(&mut self, def: TypeDef) -> &mut TypeDef {
-        self.types.insert(0, def);
-        self.types.last_mut().unwrap()
-    }
-
     pub fn add_data(&mut self, data: Data) -> &mut Data {
         self.data.push(data);
         self.data.last_mut().unwrap()
@@ -1379,13 +1406,10 @@ impl Module {
     }
 
     pub fn remove_generics(&mut self) {
-        self.types.retain(|ty| {
-            ty.known_generics
+        self.types.retain(|ty: &TypeDef| {
+            ty.items
                 .iter()
-                .find(|inner| match inner {
-                    (_, Type::Unknown(_)) => true,
-                    _ => false,
-                })
+                .find(|item| Type::Void.has_generic_type(item.0.clone()))
                 .is_none()
         })
     }

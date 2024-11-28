@@ -9,16 +9,24 @@ def repl():
     while True:
         line = input("⋆.ೃ࿔* -> ");
 
-        code = f"""
-        use std/io;
-        use std/cast;
-        use std/math;
-        use std/vectors;
+        if line.endswith(";"):
+            line = line[:-1]
 
-        fn main() {{
-            {";".join(lines)}{";" if len(lines) > 0 else ""}
-            io::println({line});
-        }}""";
+        code = "\n".join(list(map(lambda x: x.replace(" " * 12, ""),
+            f"""use std/io;
+            use std/cast;
+            use std/math;
+            use std/vectors;
+
+            fn main() {{
+                {f";\n{" " * 16}".join(lines)}{";" if len(lines) > 0 else ""}
+                io::println({line});
+            }}"""
+        .split("\n"))));
+
+        if line == "<!dbg>":
+            print(code)
+            continue
 
         lines.append(line);
         path = f".repl-{int(time())}{SHORT_EXTENSION}";

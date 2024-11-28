@@ -29,7 +29,7 @@ pub fn create_generic_struct(
     mut location: Location,
     known_generics: Vec<Type>,
     struct_pool: &RefCell<StructPool>,
-    extra_structs: &RefCell<Vec<Primitive>>,
+    tree: &RefCell<Vec<Primitive>>,
 ) {
     let (generics, members, struct_location) = struct_pool.borrow().get(&name).unwrap().clone();
 
@@ -84,7 +84,7 @@ pub fn create_generic_struct(
             name: member.name.clone(),
             r#type: member.r#type.clone().unknown_to_known(
                 Some(struct_pool),
-                Some(extra_structs),
+                Some(tree),
                 generics.clone(),
                 parsed_generics.clone(),
             ),
@@ -92,7 +92,7 @@ pub fn create_generic_struct(
         })
         .collect::<Vec<Argument>>();
 
-    extra_structs.borrow_mut().push(Primitive::Struct {
+    tree.borrow_mut().push(Primitive::Struct {
         name: generic_name.clone(),
         public: false,
         usable: true,
@@ -113,7 +113,6 @@ pub fn create_generic_struct(
 pub struct Parser {
     pub tokens: Vec<Token>,
     pub position: usize,
-    pub extra_structs: RefCell<Vec<Primitive>>,
     pub tree: RefCell<Vec<Primitive>>,
     // Map of struct name to members and generics
     pub struct_pool: RefCell<StructPool>,
@@ -126,7 +125,6 @@ impl Parser {
         Parser {
             tokens,
             position: 0,
-            extra_structs: RefCell::new(vec![]),
             tree: RefCell::new(vec![]),
             struct_pool: RefCell::new(struct_pool),
             global_public: false,
@@ -291,7 +289,7 @@ impl Parser {
                                 location,
                                 known_generics,
                                 &self.struct_pool,
-                                &self.extra_structs,
+                                &self.tree,
                             )
                         }
 
@@ -319,7 +317,7 @@ impl Parser {
         &mut self,
         do_only: &DoOnly,
         new_struct_pool: Option<StructPool>,
-    ) -> (Vec<Primitive>, StructPool, Vec<Primitive>) {
+    ) -> (Vec<Primitive>, StructPool) {
         if new_struct_pool.is_some() {
             self.struct_pool = RefCell::new(new_struct_pool.unwrap());
         }
@@ -398,7 +396,7 @@ impl Parser {
                         let mut position = self.position.clone();
 
                         // Skip over function meta
-                        while vec![
+                        while [
                             TokenKind::Function,
                             TokenKind::External,
                             TokenKind::Public,
@@ -410,7 +408,7 @@ impl Parser {
                         }
 
                         if position >= 1
-                            && !vec![TokenKind::Semicolon, TokenKind::RightCurlyBrace]
+                            && ![TokenKind::Semicolon, TokenKind::RightCurlyBrace]
                                 .contains(&self.tokens[position].kind)
                         {
                             let mut location = self
@@ -491,7 +489,7 @@ impl Parser {
 
                     let mut r#struct = Struct::new(self);
 
-                    let statement = r#struct.parse(
+                    let (statement, mut builtins) = r#struct.parse(
                         if local {
                             false
                         } else {
@@ -501,6 +499,7 @@ impl Parser {
                     );
 
                     self.tree.borrow_mut().push(statement);
+                    self.tree.borrow_mut().append(&mut builtins);
 
                     public = false;
                     local = false;
@@ -512,9 +511,10 @@ impl Parser {
                     }
 
                     let mut r#struct = Struct::new(self);
-                    let statement = r#struct.parse(false, true);
+                    let (statement, mut builtins) = r#struct.parse(false, true);
 
                     self.tree.borrow_mut().push(statement);
+                    self.tree.borrow_mut().append(&mut builtins);
 
                     public = false;
                     local = false;
@@ -530,7 +530,6 @@ impl Parser {
         return (
             self.tree.borrow_mut().to_owned(),
             self.struct_pool.borrow_mut().to_owned(),
-            self.extra_structs.borrow_mut().to_owned(),
         );
     }
 }

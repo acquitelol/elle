@@ -41,5 +41,5 @@ fn main() {
     foo.c = 14;
 
     other(&foo);
-    io::dbg(foo.c, foo.bar.meow, foo.ptr.nya);
+    io::println(foo);
 }

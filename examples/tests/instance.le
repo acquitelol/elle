@@ -28,5 +28,5 @@ fn main() {
         "Instance and struct methods should produce equal results."
     );
 
-    io::dbg(resWithInstance.a, resWithStruct.a);
+    io::dbg(resWithInstance, resWithStruct);
 }

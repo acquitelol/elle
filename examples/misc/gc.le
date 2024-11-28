@@ -29,11 +29,11 @@ struct GC {
 };
 
 fn GC::new() {
-    GC *pool = malloc(#size(GC));
-    *pool = malloc(#size(GC));
-    pool.heap = Array::new();
+    GC *gc = malloc(#size(GC));
+    *gc = malloc(#size(GC));
+    gc.heap = Array::new();
 
-    return pool;
+    return gc;
 }
 
 fn GC::free(GC *self) {
@@ -76,18 +76,22 @@ fn main() {
     i32 *arr = gc.alloc(10 * #size(i32));
     arr[0] = 5;
 
-    io::dbg(*num, arr[0], gc.heap.len());
+    io::dbg(num, arr, gc.heap);
+
+    io::println("\nMarking the number pointer...\n");
     gc.mark(num); // Will mark num, making it not be sweeped
 
-    io::printf("\nSweeping non-marked allocations...\n");
+    io::dbg(gc.heap);
+
+    io::println("\nSweeping non-marked allocations...\n");
     gc.sweep();
 
     // The array will be garbage because it was freed
-    io::dbg(*num, arr[0], gc.heap.len());
+    io::dbg(num, arr, gc.heap);
 
-    io::printf("\nSweeping non-marked allocations...\n");
+    io::println("\nSweeping non-marked allocations...\n");
     gc.sweep(); // Sweep without marking the num pointer
 
     // Everything will be garbage data because it was freed
-    io::dbg(*num, arr[0], gc.heap.len());
+    io::dbg(num, arr, gc.heap);
 }

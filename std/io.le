@@ -8,7 +8,7 @@ local fn __print(i64 args, ElleMeta meta, bool wrap, bool full, bool newline) {
     for i32 i = 0; i < meta.arity; i += 1 {
         string ty = meta.types[i];
         string expr = meta.exprs[i];
-        string res = __to_string(ty, args, wrap);
+        string res = __to_string("string", args, wrap && ty == "string");
 
         if full {
             io::cprintf(
@@ -35,7 +35,7 @@ local fn __err(i64 args, ElleMeta meta, bool newline) {
     for i32 i = 0; i < meta.arity; i += 1 {
         string ty = meta.types[i];
         string expr = meta.exprs[i];
-        string res = __to_string(ty, args, false);
+        string res = __to_string("string", args, false);
 
         error <>= res;
         free(res); // Don't leak memory
@@ -53,33 +53,38 @@ local fn __err(i64 args, ElleMeta meta, bool newline) {
     }
 }
 
-fn io::dbg(ElleMeta meta, ...) {
+fn io::dbg(ElleMeta meta, ...) @fmt {
     variadic args[meta.arity];
     __print(args, meta, true, true, false);
 }
 
-fn io::print(ElleMeta meta, ...) {
+fn io::print(ElleMeta meta, ...) @fmt {
     variadic args[meta.arity];
     __print(args, meta, false, false, false);
 }
 
-fn io::println(ElleMeta meta, ...) {
+fn io::println(ElleMeta meta, ...) @fmt {
     variadic args[meta.arity];
     __print(args, meta, false, false, true);
 }
 
-fn io::eprint(ElleMeta meta, ...) {
+fn io::eprint(ElleMeta meta, ...) @fmt {
     variadic args[meta.arity];
     __err(args, meta, false);
 }
 
-fn io::eprintln(ElleMeta meta, ...) {
+fn io::eprintln(ElleMeta meta, ...) @fmt {
     variadic args[meta.arity];
     __err(args, meta, true);
 }
 
-fn io::printf(ElleMeta meta, string fmt, ...) {
+fn io::printf(ElleMeta meta, string fmt, ...) @fmt {
     variadic args[meta.arity - 1];
+
+    for i32 i = 0; i < meta.arity; i += 1 {
+        meta.types[i] = "string";
+    }
+
     io::println(__internal_fmt(fmt, meta, args));
 }
 

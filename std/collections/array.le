@@ -20,6 +20,7 @@ fn Array::is_empty<T>(Array<T> *self) -> bool {
 fn Array::with_capacity<T>(i32 initialCapacity) -> Array<T> * {
     Array<T> *array = malloc(#size(Array<T>));
     *array = malloc(#size(Array<T>));
+
     array.elements = malloc(initialCapacity * #size(T));
     array.size = 0;
     array.capacity = initialCapacity;
@@ -101,11 +102,11 @@ fn Array::from_string(string str) -> Array<char> * {
 }
 
 // Turn an array into a string in format [1, 2, "xyz", 'y']
-fn Array::to_string<T>(Array<T> *self) -> string {
+fn Array::to_string<T>(ElleMeta meta, Array<T> *self) -> string {
     string res = "[";
 
     for i32 i = 0; i < self.len(); i += 1 {
-        res.extend(string::as_string_wrapped(self.elements[i]));
+        res.extend(self.elements[i].__fmt__(0));
 
         if i < self.len() - 1 {
             res.extend(", ");
@@ -114,6 +115,11 @@ fn Array::to_string<T>(Array<T> *self) -> string {
 
     res.push(']');
     return res;
+}
+
+fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
+    Array<T> temp = self;
+    return temp.to_string();
 }
 
 // Join an array's elements by a separator
@@ -173,13 +179,6 @@ fn Array::remove<T>(Array<T> *self, i32 index) -> T {
     return removedElement;
 }
 
-// Print all of the elements of this Array<T>
-fn Array::dbg<T>(Array<T> *self) {
-    for i32 i = 0; i < self.len(); i += 1 {
-        io::dbg(self.elements[i]);
-    }
-}
-
 fn Array::map<T>(Array<T> *self, fn *mapping) {
     Array<T> *new_self = Array::with_capacity(self.len());
 
@@ -188,6 +187,22 @@ fn Array::map<T>(Array<T> *self, fn *mapping) {
     }
 
     return new_self;
+}
+
+fn Array::first<T>(Array<T> *self) -> T {
+    if self.len() < 1 {
+        return (T)nil;
+    }
+
+    return (T)(self.elements[0]);
+}
+
+fn Array::last<T>(Array<T> *self) -> T {
+    if self.len() < 1 {
+        return (T)nil;
+    }
+
+    return (T)(self.elements[self.len() - 1]);
 }
 
 fn Array::free<T>(Array<T> *self) {

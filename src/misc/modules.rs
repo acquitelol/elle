@@ -6,6 +6,7 @@ use std::process::exit;
 use std::time::Instant;
 
 use crate::{
+    as_string_idx,
     compiler::enums::Type,
     elapsed_with_color,
     lexer::{
@@ -18,7 +19,8 @@ use crate::{
         enums::{Argument, AstNode, Primitive},
         parser::{DoOnly, Parser, StructPool},
     },
-    Warnings, LONG_EXTENSION, SHORT_EXTENSION, STD_LIB_PATH,
+    Warnings, INTERNAL_FORMATTER, LONG_EXTENSION, POINTER_ID, SHORT_EXTENSION, STD_LIB_PATH,
+    VOID_POINTER_ID,
 };
 
 pub fn lex_and_parse(
@@ -27,9 +29,12 @@ pub fn lex_and_parse(
     struct_pool: &RefCell<StructPool>,
     parsed_modules: &RefCell<HashSet<String>>,
     warnings: &Warnings,
+    is_string_module_disabled: bool,
     debug_time: bool,
+    object_output: bool,
     nesting: usize,
     _import_location: Location,
+    string_module_methods: &mut Vec<String>,
 ) -> Vec<Primitive> {
     let content = {
         let with_elle = fs::metadata(format!("{}{}", input_path, LONG_EXTENSION)).is_ok();
@@ -79,7 +84,7 @@ pub fn lex_and_parse(
         content
     };
 
-    if content.trim().is_empty() {
+    if content.trim().is_empty() && !object_output {
         panic!(
             "\n{}\nERROR: Could not load module \"{input_path}\"\n{}\n\n{}\n{}\n",
             "-".repeat(40),
@@ -115,8 +120,18 @@ pub fn lex_and_parse(
     let mut tree = existing_tree.unwrap_or(&mut fallback);
 
     // Non-generic imports and generic declarations
-    let (imports, new_struct_pool, _) = parser.parse(&DoOnly::Imports, None);
+    let (mut imports, new_struct_pool, ..) = parser.parse(&DoOnly::Imports, None);
     struct_pool.replace_with(|_| new_struct_pool);
+
+    if nesting == 0 && !is_string_module_disabled {
+        imports.insert(
+            0,
+            Primitive::Use {
+                module: "std/string".into(),
+                location: Location::default(input_path.clone()),
+            },
+        )
+    }
 
     for import in imports.iter().cloned() {
         match import {
@@ -152,9 +167,12 @@ pub fn lex_and_parse(
                     struct_pool,
                     parsed_modules,
                     warnings,
+                    is_string_module_disabled,
                     debug_time,
+                    object_output,
                     nesting + 1,
                     location,
+                    string_module_methods,
                 );
 
                 for symbol in nodes.iter().rev() {
@@ -189,7 +207,7 @@ pub fn lex_and_parse(
                                         &mut tree,
                                         &name,
                                         symbol,
-                                        public
+                                        public,
                                     );
                                 }
                             } else {
@@ -202,6 +220,18 @@ pub fn lex_and_parse(
                                 );
                             }
                         }
+                    }
+
+                    if module == "std/string" {
+                        *string_module_methods = tree
+                            .iter()
+                            .filter(|primitive| matches!(primitive, Primitive::Function { .. }))
+                            .map(|f| match f {
+                                Primitive::Function { name, .. } => name.clone(),
+                                _ => unreachable!(),
+                            })
+                            .filter(|x| x.starts_with("string."))
+                            .collect::<Vec<String>>();
                     }
                 }
 
@@ -225,23 +255,22 @@ pub fn lex_and_parse(
     }
 
     // Structs
-    let (structs, new_struct_pool, _) =
+    let (structs, new_struct_pool, ..) =
         parser.parse(&DoOnly::Structs, Some(struct_pool.borrow().to_owned()));
     struct_pool.replace_with(|_| new_struct_pool);
     tree.extend(structs);
 
-    let (others, new_struct_pool, extra_structs) = parser.parse(
+    let (others, new_struct_pool, ..) = parser.parse(
         &DoOnly::FunctionsAndConstants,
         Some(struct_pool.borrow().to_owned()),
     );
+
     struct_pool.replace_with(|_| new_struct_pool);
-    tree.extend(extra_structs);
     tree.extend(others);
 
     // Add global constants
     // - nil => 0 (nullptr)
     // - ElleMeta => Utility struct
-    // - bool::to_string
     if nesting == 0 {
         tree.insert(
             0,
@@ -261,6 +290,257 @@ pub fn lex_and_parse(
             },
         );
 
+        if !is_string_module_disabled {
+            // Primitive format functions
+            for primitive in Type::get_primitive_types() {
+                let idx = as_string_idx!(tree, INTERNAL_FORMATTER);
+
+                tree.insert(
+                    idx + 1,
+                    Primitive::Function {
+                        name: format!("{}.__fmt__", primitive.strict_id()),
+                        public: true,
+                        usable: true,
+                        imported: false,
+                        variadic: false,
+                        manual: false,
+                        external: false,
+                        builtin: true,
+                        volatile: false,
+                        format: false,
+                        unaliased: None,
+                        generics: vec![],
+                        arguments: vec![
+                            Argument {
+                                name: "self".into(),
+                                r#type: primitive.clone(),
+                                manual: false,
+                            },
+                            Argument {
+                                name: "nesting".into(),
+                                r#type: Type::Word,
+                                manual: false,
+                            },
+                        ],
+                        r#return: Some(Type::Pointer(Box::new(Type::Char))),
+                        body: vec![AstNode::ReturnStatement {
+                            value: Box::new(AstNode::FunctionCall {
+                                name: format!("string.{}", INTERNAL_FORMATTER),
+                                generics: vec![],
+                                parameters: vec![
+                                    (
+                                        Location::default(input_path.clone()),
+                                        AstNode::LiteralStatement {
+                                            kind: TokenKind::StringLiteral,
+                                            value: ValueKind::String(
+                                                match primitive {
+                                                    // x if x.is_string() => "\\\"{}\\\"",
+                                                    // Type::Char => "'{}'",
+                                                    _ => "{}",
+                                                }
+                                                .into(),
+                                            ),
+                                            location: Location::default(input_path.clone()),
+                                        },
+                                    ),
+                                    (
+                                        Location::default(input_path.clone()),
+                                        AstNode::LiteralStatement {
+                                            kind: TokenKind::Identifier,
+                                            value: ValueKind::String("self".into()),
+                                            location: Location::default(input_path.clone()),
+                                        },
+                                    ),
+                                ],
+                                type_method: false,
+                                ignore_no_def: false,
+                                location: Location::default(input_path.clone()),
+                            }),
+                            location: Location::default(input_path.clone()),
+                        }],
+                        location: Location::default(input_path.clone()),
+                        return_location: Location::default(input_path.clone()),
+                    },
+                )
+            }
+
+            // Special format for T*
+            let idx = as_string_idx!(tree, INTERNAL_FORMATTER);
+
+            tree.insert(
+                idx + 1,
+                Primitive::Function {
+                    name: format!("{}.__fmt__", POINTER_ID).into(),
+                    public: false,
+                    usable: true,
+                    imported: false,
+                    variadic: false,
+                    manual: false,
+                    external: false,
+                    builtin: true,
+                    volatile: false,
+                    format: false,
+                    unaliased: None,
+                    generics: vec!["T".into()],
+                    arguments: vec![
+                        Argument {
+                            name: "self".into(),
+                            r#type: Type::Pointer(Box::new(Type::Unknown("T".into()))),
+                            manual: false,
+                        },
+                        Argument {
+                            name: "nesting".into(),
+                            r#type: Type::Word,
+                            manual: false,
+                        },
+                    ],
+                    r#return: Some(Type::Pointer(Box::new(Type::Char))),
+                    body: vec![AstNode::ReturnStatement {
+                        value: Box::new(AstNode::FunctionCall {
+                            name: format!("string.{}", INTERNAL_FORMATTER).into(),
+                            generics: vec![],
+                            parameters: vec![
+                                (
+                                    Location::default(input_path.clone()),
+                                    AstNode::LiteralStatement {
+                                        kind: TokenKind::StringLiteral,
+                                        value: ValueKind::String("<{} at {}>".into()),
+                                        location: Location::default(input_path.clone()),
+                                    },
+                                ),
+                                (
+                                    Location::default(input_path.clone()),
+                                    AstNode::FunctionCall {
+                                        name: "__fmt__".into(),
+                                        generics: vec![],
+                                        parameters: vec![
+                                            (
+                                                Location::default(input_path.clone()),
+                                                AstNode::MemoryStatement {
+                                                    left: Box::new(AstNode::LiteralStatement {
+                                                        kind: TokenKind::Identifier,
+                                                        value: ValueKind::String("self".into()),
+                                                        location: Location::default(
+                                                            input_path.clone(),
+                                                        ),
+                                                    }),
+                                                    right: Box::new(AstNode::LiteralStatement {
+                                                        kind: TokenKind::IntegerLiteral,
+                                                        value: ValueKind::Number(0),
+                                                        location: Location::default(
+                                                            input_path.clone(),
+                                                        ),
+                                                    }),
+                                                    value: None,
+                                                    left_location: Location::default(
+                                                        input_path.clone(),
+                                                    ),
+                                                    right_location: Location::default(
+                                                        input_path.clone(),
+                                                    ),
+                                                    value_location: Location::default(
+                                                        input_path.clone(),
+                                                    ),
+                                                },
+                                            ),
+                                            (
+                                                Location::default(input_path.clone()),
+                                                AstNode::LiteralStatement {
+                                                    kind: TokenKind::Identifier,
+                                                    value: ValueKind::String("nesting".into()),
+                                                    location: Location::default(input_path.clone()),
+                                                },
+                                            ),
+                                        ],
+                                        type_method: true,
+                                        ignore_no_def: false,
+                                        location: Location::default(input_path.clone()),
+                                    },
+                                ),
+                                (
+                                    Location::default(input_path.clone()),
+                                    AstNode::LiteralStatement {
+                                        kind: TokenKind::Identifier,
+                                        value: ValueKind::String("self".into()),
+                                        location: Location::default(input_path.clone()),
+                                    },
+                                ),
+                            ],
+                            type_method: false,
+                            ignore_no_def: false,
+                            location: Location::default(input_path.clone()),
+                        }),
+                        location: Location::default(input_path.clone()),
+                    }],
+                    location: Location::default(input_path.clone()),
+                    return_location: Location::default(input_path.clone()),
+                },
+            );
+
+            // Special format for void pointer
+            let idx = as_string_idx!(tree, INTERNAL_FORMATTER);
+            tree.insert(
+                idx + 1,
+                Primitive::Function {
+                    name: format!("{}.__fmt__", VOID_POINTER_ID).into(),
+                    public: false,
+                    usable: true,
+                    imported: false,
+                    variadic: false,
+                    manual: false,
+                    external: false,
+                    builtin: true,
+                    volatile: false,
+                    format: false,
+                    unaliased: None,
+                    generics: vec![],
+                    arguments: vec![
+                        Argument {
+                            name: "self".into(),
+                            r#type: Type::Pointer(Box::new(Type::Void)),
+                            manual: false,
+                        },
+                        Argument {
+                            name: "nesting".into(),
+                            r#type: Type::Word,
+                            manual: false,
+                        },
+                    ],
+                    r#return: Some(Type::Pointer(Box::new(Type::Char))),
+                    body: vec![AstNode::ReturnStatement {
+                        value: Box::new(AstNode::FunctionCall {
+                            name: format!("string.{}", INTERNAL_FORMATTER).into(),
+                            generics: vec![],
+                            parameters: vec![
+                                (
+                                    Location::default(input_path.clone()),
+                                    AstNode::LiteralStatement {
+                                        kind: TokenKind::StringLiteral,
+                                        value: ValueKind::String("<unknown at {}>".into()),
+                                        location: Location::default(input_path.clone()),
+                                    },
+                                ),
+                                (
+                                    Location::default(input_path.clone()),
+                                    AstNode::LiteralStatement {
+                                        kind: TokenKind::Identifier,
+                                        value: ValueKind::String("self".into()),
+                                        location: Location::default(input_path.clone()),
+                                    },
+                                ),
+                            ],
+                            type_method: false,
+                            ignore_no_def: false,
+                            location: Location::default(input_path.clone()),
+                        }),
+                        location: Location::default(input_path.clone()),
+                    }],
+                    location: Location::default(input_path.clone()),
+                    return_location: Location::default(input_path.clone()),
+                },
+            );
+        }
+
         tree.insert(
             0,
             Primitive::Function {
@@ -273,6 +553,7 @@ pub fn lex_and_parse(
                 external: false,
                 builtin: true,
                 volatile: false,
+                format: false,
                 unaliased: None,
                 generics: vec![],
                 arguments: vec![Argument {

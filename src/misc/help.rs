@@ -5,7 +5,7 @@ const DIVIDER_SIZE: usize = 50;
 pub fn print_help(program: String) {
     println!("{GREEN}Welcome to the Elle compiler! (˶ᵔ ᵕ ᵔ˶){RESET}");
     println!("{}", "―".repeat(DIVIDER_SIZE));
-    println!("{GREEN}Usage: {program} [..options] <file>{RESET}");
+    println!("{GREEN}Usage: {program} [..options] <entry.le> [<file1.o>, <file2.o>...]{RESET}");
 
     let help_message_options = vec![
         (
@@ -16,23 +16,27 @@ pub fn print_help(program: String) {
                     "-o <output_path>",
                     "Emits the final result in <output_path>",
                 ),
+                (
+                    "--hush, --silent",
+                    "No longer tells you if a target was compiled successfully",
+                ),
             ],
         ),
         (
             "Debug flags",
             vec![
                 (
-                    "--elapsed-time, -Dtime",
+                    "-t, --time, --elapsed-time",
                     "Displays how long each compilation step takes",
                 ),
                 (
-                    "--emit-qbe, -Demit-qbe, -Demit-ssa",
+                    "-ssa, --emit-qbe, --emit-ssa",
                     "Emits the QBE IR file in the form of .ssa instead of an executable",
                 ),
                 (
-                    "--emit-asm, -Demit-asm, -Demit-s",
+                    "-asm, --emit-asm, --emit-s",
                     "Emits the Assembly file in the form of .s instead of an executable",
-                )
+                ),
             ],
         ),
         (
@@ -41,44 +45,48 @@ pub fn print_help(program: String) {
                 ("-Wall", "Enables all of the warnings the compiler provides"),
                 (
                     "-Wimplicit-cast",
-                    "Warns you when you implicitly cast a variable to another type",
+                    "Implicit casting of a variable to another type",
                 ),
                 (
                     "-Wstruct-fields-missing",
-                    "Warns you when you initialize a stack-allocated struct without all of its fields",
+                    "Initialization a stack-allocated struct without all of its fields",
                 ),
                 (
                     "-Winvalid-alias",
-                    "Warns you when you attempt to set an alias attribute on a non-external function",
+                    "Attempting to set an alias attribute on a non-external function",
                 ),
                 (
                     "-Wvariadic-no-meta",
-                    "Warns you when creating a variadic function without the ElleMeta struct as the 0th argument"
+                    "Creating a variadic function without ElleMeta as the 0th argument",
                 ),
                 (
                     "-Wc-style-void",
-                    "Warns you when you create a function with explicitly no arguments like 'fn foo(void) {}'"
-                )
+                    "Creating a function with no arguments like 'fn foo(void) {}'",
+                ),
             ],
         ),
         (
             "Compilation Flags",
             vec![
                 (
-                    "--link-flags, -Clink-flags, -Clinker-flags <flags>",
-                    "Allows you to pass the flags specified to the linker",
+                    "-c, --compile-only",
+                    "Compiles but does not link anything. Produces an object file.",
                 ),
                 (
-                    "--link-path, -Clink-path, -Clinker-path <path>",
+                    "-nsm, --no-string-module",
+                    "Does not import the string module by default. May break things.",
+                ),
+                (
+                    "-z, --link-flag <flag>",
+                    "Allows you to pass the flag specified to the linker",
+                ),
+                (
+                    "-Z, --link-path <path>",
                     "Allows you to pass a custom linker path, the default is \"cc\"",
                 ),
                 (
-                    "--qbe-path, -Cqbe-path, -Cssa-path <path>",
-                    "Allows you to pass a custom QBE installation path, the default is \"qbe\"",
-                ),
-                (
-                    "--hush, -Chush",
-                    "Hushes the message notifying you whether a target was compiled successfully",
+                    "-Q, --qbe-path <path>",
+                    "Allows you to pass a custom QBE path, the default is \"qbe\"",
                 ),
             ],
         ),

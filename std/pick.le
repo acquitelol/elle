@@ -1,0 +1,9 @@
+global pub;
+
+fn pick<T>(bool cond, T ift, T iff) -> T {
+    if cond {
+        return ift;
+    } else {
+        return iff;
+    }
+}

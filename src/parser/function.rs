@@ -185,6 +185,7 @@ impl<'a> Function<'a> {
         let mut r#return = None;
         let mut unaliased = None;
         let mut volatile = false;
+        let mut format = false;
 
         if self.parser.match_token(TokenKind::Attribute, false) {
             while self.parser.current_token().kind == TokenKind::Attribute {
@@ -229,6 +230,21 @@ impl<'a> Function<'a> {
                         volatile = true;
                         self.parser.advance();
                     }
+                    Attribute::Format => {
+                        format = true;
+                        self.parser.advance();
+                    }
+                    _ => panic!(
+                        "{}",
+                        self.parser.current_token().location.error(format!(
+                            "Unknown attribute for function '{}'",
+                            self.parser
+                                .current_token()
+                                .value
+                                .get_string_inner()
+                                .unwrap()
+                        ))
+                    ),
                 }
             }
         }
@@ -253,6 +269,7 @@ impl<'a> Function<'a> {
                 external,
                 builtin: false,
                 volatile: false,
+                format,
                 unaliased,
                 generics,
                 arguments,
@@ -286,7 +303,6 @@ impl<'a> Function<'a> {
                         &body,
                         &Shared {
                             struct_pool: &self.parser.struct_pool,
-                            extra_structs: &self.parser.extra_structs,
                             tree: &self.parser.tree,
                             generics: &generics,
                         },
@@ -432,6 +448,7 @@ impl<'a> Function<'a> {
             external,
             builtin: false,
             volatile,
+            format,
             unaliased,
             generics,
             arguments,

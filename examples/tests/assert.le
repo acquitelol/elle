@@ -1,5 +1,22 @@
 use std/io;
 
 fn main() {
-    io::assert(false, "meow");
+    // This test is supposed to fail.
+    // It's intention is to ensure that assertions actually work.
+    //
+    // If the `true` assert fails it'll fail before the `false` assert,
+    // and so we know that something has gone wrong.
+    //
+    // On the contrary, if neither of the asserts fail, then we know
+    // that something has definitely gone wrong, because the `false`
+    // assert is designed to fail.
+    //
+    // If this test fails then we cannot reason about any of the other tests
+    // because they will produce inaccurate results.
+    //
+    // The expected outcome is an assertion failure at the `false` assert.
+    io::assert(true, "This should not fail because it is `true`.\nSomething has gone terribly wrong.");
+    io::assert(false, "This assert has intentionally failed." <> "\nThis means that this test has passed.".color("green").reset());
+
+    io::println("This path should be unreachable.\nSomething has gone terribly wrong.".color("red").reset())
 }

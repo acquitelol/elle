@@ -57,6 +57,19 @@ macro_rules! is_generic {
     };
 }
 
+#[macro_export]
+macro_rules! as_string_idx {
+    ($tree:expr, $fn:expr) => {
+        $tree
+            .iter()
+            .position(|x| match x {
+                Primitive::Function { name, .. } if name == &format!("string.{}", $fn) => true,
+                _ => false,
+            })
+            .expect("The string module should already be imported")
+    };
+}
+
 /// Removes a symbol (function, constant, struct) named [`name`]
 ///
 /// Sets the [`usable`] and [`imported`] property on the path [`val`]

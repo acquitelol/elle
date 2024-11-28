@@ -1,5 +1,4 @@
 use std/vectors;
-use std/string;
 use std/math;
 use std/io;
 
@@ -67,11 +66,6 @@ fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 *lightDirecti
 
                 if lightingMapping < 0 {
                     output[offset] = lighting[0];
-                    continue;
-                }
-
-                if lightingMapping > lightingLength - 4 {
-                    output[offset] = lighting[lightingMapping - 4];
                     continue;
                 }
 

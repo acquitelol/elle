@@ -1,6 +1,6 @@
 global pub;
 
-struct FILE {
+struct FILE @nofmt {
     i32 fd;                 // File descriptor
     string buffer;          // Buffer for file I/O
     i64 buffer_size;        // Size of the buffer

@@ -1,4 +1,5 @@
 use std/io;
+use std/pick;
 
 fn direction(i32 *other) -> bool {
     i32 x = 0;
@@ -10,17 +11,9 @@ fn direction(i32 *other) -> bool {
     }
 }
 
-fn formattedDirection() -> string {
-    if direction(nil) {
-        return "up";
-    } else {
-        return "down";
-    }
-}
-
 fn main() {
     io::printf(
         "The stack is growing {}wards for your architecture.",
-        formattedDirection()
+        pick(direction(nil), "up", "down")
     );
 }

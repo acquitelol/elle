@@ -8,6 +8,9 @@ fn main() {
     a.push(39);
     a.push(-1);
 
+    io::assert(a.first() == 1, nil);
+    io::assert(a.last() == -1, nil);
+
     Array<string> *b = Array::new();
     defer b.free();
 
@@ -16,8 +19,7 @@ fn main() {
     b.push("meow");
     b.push("abcd");
 
-    a.dbg();
-    io::print('\n');
+    io::dbg(a);
 
     Array<i32> *c = Array::new(172);
     defer c.free();
@@ -26,15 +28,10 @@ fn main() {
     a.extend(c);
 
     // Test logging
-    a.dbg();
-    io::print('\n');
-
-    b.dbg();
-    io::print('\n');
+    io::dbg(a, b);
 
     // Test popping
-    io::dbg(b.pop(), b.len(), b.capacity);
-    io::print('\n');
+    io::dbg(b.pop(), b);
 
     // Test to_string
     io::println(b.to_string());
@@ -44,8 +41,7 @@ fn main() {
     // Test clearing
     b.clear();
     b.push("a");
-    io::dbg(b.to_string());
-    io::print('\n');
+    io::dbg(b);
 
     // Test from_string
     Array<char> *hello_world = Array::from_string("hello world!");
@@ -67,14 +63,12 @@ fn main() {
     Array<i32> *e_mapped = e.map(fn(i32 x) -> x * x);
     defer e_mapped.free();
 
-    io::print('\n');
-    e_mapped.dbg();
+    io::dbg(e_mapped);
 
     Array<i32> *empty = Array::range(0, 0);
     defer empty.free();
 
-    io::print('\n');
-    io::dbg(empty.len());
+    io::dbg(empty);
     io::assert(
         empty.len() == 0,
         "The length of Array::range(0, 0) should be 0"

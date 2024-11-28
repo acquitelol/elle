@@ -12,14 +12,5 @@ fn main() {
     list.add(42);
     list.add(39);
 
-    while list.head {
-        io::print(list.head.data);
-        list.head = list.head.next;
-
-        if list.head {
-            io::print(" -> ");
-        }
-    }
-
-    io::print('\n');
+    io::println(list);
 }

@@ -1,5 +1,4 @@
 use std/collections/array;
-use std/string;
 use std/cast;
 use std/io;
 

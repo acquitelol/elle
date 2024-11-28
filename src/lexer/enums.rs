@@ -476,9 +476,9 @@ impl Location {
             file,
             row: 0,
             column: 0,
-            ctx: "".into(),
+            ctx: "_".into(),
             above: None,
-            length: 0,
+            length: 1,
             extra_info: "".into(),
         }
     }
@@ -505,8 +505,14 @@ pub struct Token {
 
 #[derive(Debug, Clone)]
 pub enum Attribute {
+    // Allows an external function marked by this to be renamed to another symbol
     Alias,
+    // Ensures a function marked by this is not cleaned up if it is never used
     Volatile,
+    // Ensures no formatter is set by default on a struct marked by this
+    NoFormat,
+    // Automatically runs the formatter on every parameter of a function marked by this
+    Format,
 }
 
 impl Token {
@@ -525,7 +531,9 @@ impl Token {
         match attribute.as_str() {
             "alias" => Attribute::Alias,
             "volatile" => Attribute::Volatile,
-            _ => todo!("more attributes"),
+            "nofmt" => Attribute::NoFormat,
+            "fmt" => Attribute::Format,
+            _ => todo!("more attributes: {attribute}"),
         }
     }
 }

@@ -1202,8 +1202,10 @@ You can also accept `string *envp` (and `string *apple` on MacOS/Darwin platform
 
 The current existing attributes are:
 
-- Alias - Allows you to specify an alias for external functions
-- Volatile - Allows you to specify that Elle should not discard this function if it is unused.
+- Alias - Allows you to specify an alias for external functions `@alias("name")`
+- Volatile - Allows you to specify that Elle should not discard this function if it is unused. `@volatile`
+- Format - Puts every argument through its formatter before passing it to the function `@fmt`
+- NoFormat - Specifies that a struct should not have a format function automatically generated for it `@nofmt`
 
 Example:
 
@@ -1224,6 +1226,118 @@ If you specify an alias attribute on a non-external function, you will only be w
 
 <hr />
 
+### ♡ **Formatters**
+
+Elle allows you to specify how your structs should be formatted. By default, structs will automatically have a format function generated for them by the compiler. If you want to make your own, simply create it as a struct method:
+
+```rs
+struct Foo<T> {
+    T a;
+    T b;
+};
+
+fn Foo::__fmt__<T>(Foo<T> self, i32 nesting) {
+    return string::format("{}", self.a + self.b);
+}
+```
+
+Some things to keep in mind:
+- The format function *must* return a string.
+- The format function takes a `nesting` argument. This is used to determine the depth of nested structs when printed.
+
+If an automatically generated struct's format method is too much bloat and you need the size of your executable to be small, you can specify that a struct should not generate an automatic formatting method with the `@nofmt` attribute:
+
+```rs
+struct Foo<T> @nofmt {
+    T a;
+    T b;
+};
+```
+
+If you try to print Foo<T> however, you will get a compiler error.
+
+To create functions that use these formattings, you can specify the @fmt attribute:
+
+```rs
+use std/io;
+
+fn foo(ElleMeta meta, ...) @fmt {
+    variadic args[meta.arity];
+
+    for i32 i = 0; i < meta.arity; i += 1 {
+        string arg = args.yield(string); // The formatter will return a string
+        // Do something with it like printing it
+        io::println(arg);
+    }
+}
+
+fn main() {
+    foo(1, "hi", true);
+}
+```
+
+To the compiler, this signals that every argument should be ran through its formatter. The equivalent code without `@fmt` is:
+
+```rs
+use std/io;
+
+fn foo(ElleMeta meta, ...) {
+    variadic args[meta.arity];
+
+    for i32 i = 0; i < meta.arity; i += 1 {
+        string arg = args.yield(string); // The formatter will return a string
+        // Do something with it like printing it
+        io::println(arg);
+    }
+}
+
+fn main() {
+    // Keep in mind __fmt__ *must* return a string.
+    // The compiler will throw an error if it doesn't.
+    foo(i32::__fmt__(1, 0), string::__fmt__("hi", 0), bool::__fmt__(true, 0));
+}
+```
+
+<hr />
+
+### ♡ **Objects and linking**
+
+You may specify that Elle should emit an Object file instead of an executable by passing the `-c` flag.
+
+If you want to use an object file in your project, you can do so like this:
+
+```rs
+// foo.le
+//
+// `add` must be public so that it is exported
+// and must be volatile to prevent DCE from removing it
+pub fn add(i32 a, i32 b) @volatile {
+    return a + b;
+}
+```
+Then, compile it into an object file:
+```console
+$ ellec -c foo.le
+```
+which will emit foo.o
+
+Finally, use it:
+```rs
+// main.le
+use std/io;
+
+external fn add(i32 a, i32 b) -> i32;
+
+fn main() {
+    io::println(add(23, 16));
+}
+```
+and compile it:
+```console
+$ ellec main.le foo.o && ./main
+```
+
+<hr />
 
 ### ♡ **External symbols**
 

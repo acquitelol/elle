@@ -1,5 +1,4 @@
 use examples/resources/raylib;
-use std/string;
 use std/math;
 use std/io;
 
@@ -119,7 +118,7 @@ fn main() {
         raylib::draw_text(subtitle, (screenWidth - raylib::measure_text(subtitle, fontSize / 2)) / 2, 160, fontSize / 2, PURPLE);
         raylib::draw_fps(screenWidth - 80, screenHeight - 24);
 
-        io::dbg(position.x, position.y, velocity.x, velocity.y, deltaTime);
+        io::dbg(position, velocity, deltaTime);
         io::println("-----------------------");
 
         raylib::end_drawing();

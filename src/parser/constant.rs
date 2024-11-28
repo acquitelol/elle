@@ -72,7 +72,6 @@ impl<'a> Constant<'a> {
             &body,
             &Shared {
                 struct_pool: &self.parser.struct_pool,
-                extra_structs: &self.parser.extra_structs,
                 tree: &self.parser.tree,
                 generics: &vec![],
             },

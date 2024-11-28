@@ -7,7 +7,7 @@ struct Env {
 
 struct Function {
     Env *env;
-    fn *func;
+    void *func;
 };
 
 fn add(i32 a) {

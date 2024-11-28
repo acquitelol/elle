@@ -1,3 +1,4 @@
+#![warn(clippy::all, clippy::restriction, clippy::pedantic)]
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::path::Path;
@@ -24,8 +25,14 @@ static GENERIC_UNKNOWN: &str = "3"; // Unknown type T
 static STD_LIB_PATH: &str = "/usr/local/include/elle";
 static LONG_EXTENSION: &str = ".elle";
 static SHORT_EXTENSION: &str = ".le";
+static OBJECT_EXTENSION: &str = ".o";
+static VOID_POINTER_ID: &str = "__void_ptr__";
+static POINTER_ID: &str = "__ptr__";
+static INTERNAL_FORMATTER: &str =
+    "__internal_formatter_do_not_use_unless_you_know_what_youre_doing__";
 static RESERVED_KEYWORDS: &[&'static str] = &[
-    "as", "let", "mut", "enum", "match", "static", "super", "do", "macro", "in", "step",
+    "as", "let", "mut", "enum", "match", "static", "super", "do", "macro", "in", "step", "of",
+    "class", "var", "impl",
 ];
 
 pub enum Warning {
@@ -39,6 +46,7 @@ pub enum Warning {
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum EmitKind {
     Executable(String),
+    Object(String),
     QbeFile(String),
     AsmFile(String),
     None,
@@ -95,8 +103,11 @@ fn main() -> ExitCode {
     let mut emit_qbe = false;
     let mut emit_asm = false;
     let mut hush = false;
+    let mut object_output = false;
+    let mut strings_disabled = false;
+    let mut object_files: Vec<String> = vec![];
 
-    let mut linker_flags = None;
+    let mut linker_flags = vec![];
     let mut linker_path = "cc".into();
     let mut qbe_path = "qbe".into();
 
@@ -108,29 +119,32 @@ fn main() -> ExitCode {
             "-Wvariadic-no-meta" => warnings.set_warning(Warning::VariadicNoMeta),
             "-Wc-style-void" => warnings.set_warning(Warning::CStyleVoid),
             "-Wall" => warnings.set_all(),
-            "--elapsed-time" | "-Dtime" => debug_time = true,
-            "--emit-qbe" | "-Demit-qbe" | "-Demit-ssa" => emit_qbe = true,
-            "--emit-asm" | "-Demit-asm" | "-Demit-s" => emit_asm = true,
+            "-t" | "--time" | "--elapsed-time" => debug_time = true,
+            "-ssa" | "--emit-ssa" | "--emit-qbe" => emit_qbe = true,
+            "-asm" | "--emit-s" | "--emit-asm" => emit_asm = true,
             "-o" => output_path = args.next(),
             "-h" | "--help" => {
                 print_help(program);
                 exit(0);
             }
-            "--link-flags" | "-Clink-flags" | "-Clinker-flags" => linker_flags = args.next(),
-            "--link-path" | "-Clink-path" | "-Clinker-path" => {
-                linker_path = args.next().unwrap_or("cc".into())
+            "-c" | "--compile-only" => {
+                object_output = true;
             }
-            "--qbe-path" | "-Cqbe-path" | "-Cssa-path" => {
-                qbe_path = args.next().unwrap_or("qbe".into())
-            }
-            "--hush" | "-Chush" => {
+            "-z" | "--link-flag" => linker_flags.push(args.next()),
+            "-Z" | "--link-path" => linker_path = args.next().unwrap_or("cc".into()),
+            "-Q" | "--qbe-path" => qbe_path = args.next().unwrap_or("qbe".into()),
+            "--hush" | "--silent" => {
                 hush = true;
+            }
+            "--no-string-module" | "-nsm" => {
+                strings_disabled = true;
             }
             other if other.ends_with(SHORT_EXTENSION) || other.ends_with(LONG_EXTENSION) => {
                 if input_path.is_none() {
                     input_path = Some(other.to_string())
                 }
             }
+            other if other.ends_with(OBJECT_EXTENSION) => object_files.push(other.into()),
             other => {
                 println!("{RED}Invalid argument: {}", other);
                 println!("For help, please use the following command:");
@@ -224,6 +238,7 @@ fn main() -> ExitCode {
 
     let struct_pool = RefCell::new(pool);
     let parsed_modules = RefCell::new(HashSet::new());
+    let mut string_module_methods = vec![];
 
     let mut tree = lex_and_parse(
         &input_path,
@@ -231,9 +246,12 @@ fn main() -> ExitCode {
         &struct_pool,
         &parsed_modules,
         &warnings,
+        strings_disabled,
         debug_time,
+        object_output,
         0,
         Location::default(input_path.clone()),
+        &mut string_module_methods,
     );
 
     tree.insert(
@@ -271,7 +289,13 @@ fn main() -> ExitCode {
     fs::create_dir_all("./.build").expect("Failed to create ./.build.");
 
     let path_to_qbe_dist = "./.build/target.ssa".to_string();
-    Compiler::compile(tree, path_to_qbe_dist.clone(), warnings);
+    Compiler::compile(
+        tree,
+        path_to_qbe_dist.clone(),
+        warnings,
+        object_output,
+        string_module_methods,
+    );
 
     if debug_time {
         println!(
@@ -300,8 +324,10 @@ fn main() -> ExitCode {
             path_to_qbe_dist,
             parsed_output_path,
             emit_asm,
+            object_output,
             linker_flags,
             linker_path,
+            object_files,
         );
 
         out = result;

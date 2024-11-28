@@ -1,9 +1,11 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 
 use crate::{
     compiler::enums::Type,
     lexer::enums::{Location, Token, TokenKind, ValueKind},
 };
+
+use super::parser::StructPool;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
@@ -174,10 +176,12 @@ pub fn modify_type_in_ast(
     ast_nodes: Vec<AstNode>,
     generics: &Vec<String>,
     known_generics: &HashMap<String, Type>,
+    struct_pool: Option<&RefCell<StructPool>>,
+    tree: Option<&RefCell<Vec<Primitive>>>,
 ) -> Vec<AstNode> {
     ast_nodes
         .into_iter()
-        .map(|node| modify_type_in_node(node, generics, known_generics))
+        .map(|node| modify_type_in_node(node, generics, known_generics, struct_pool, tree))
         .collect()
 }
 
@@ -185,48 +189,56 @@ fn modify_type_in_node(
     mut node: AstNode,
     generics: &Vec<String>,
     known_types: &HashMap<String, Type>,
+    struct_pool: Option<&RefCell<StructPool>>,
+    tree: Option<&RefCell<Vec<Primitive>>>,
 ) -> AstNode {
     match &mut node {
         AstNode::LiteralStatement { .. } => {}
         AstNode::DeclareStatement { r#type, value, .. } => {
             if let Some(ty) = r#type {
-                *ty = modify_type(ty.clone(), generics, known_types);
+                *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }
 
-            let new_value = modify_type_in_node(*value.clone(), generics, known_types);
+            let new_value =
+                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
         AstNode::LambdaStatement {
             arguments, value, ..
         } => {
             for arg in arguments.iter_mut() {
-                arg.r#type = modify_type(arg.r#type.clone(), generics, known_types);
+                arg.r#type =
+                    modify_type(arg.r#type.clone(), generics, known_types, struct_pool, tree);
             }
 
-            *value = modify_type_in_ast(value.clone(), generics, known_types);
+            *value = modify_type_in_ast(value.clone(), generics, known_types, struct_pool, tree);
         }
         AstNode::ReturnStatement { value, .. } => {
-            let new_value = modify_type_in_node(*value.clone(), generics, known_types);
+            let new_value =
+                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
         AstNode::NextStatement { r#type, .. } => {
             if let Some(ty) = r#type {
-                *ty = modify_type(ty.clone(), generics, known_types);
+                *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }
         }
         AstNode::VariadicStatement { size, .. } => {
-            let new_size = modify_type_in_node(*size.clone(), generics, known_types);
+            let new_size =
+                modify_type_in_node(*size.clone(), generics, known_types, struct_pool, tree);
             *size = Box::new(new_size);
         }
         AstNode::ArrayLengthStatement { value, .. } => {
-            let new_value = modify_type_in_node(*value.clone(), generics, known_types);
+            let new_value =
+                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
         AstNode::BufferStatement { r#type, size, .. } => {
             if let Some(ty) = r#type {
-                *ty = modify_type(ty.clone(), generics, known_types);
+                *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }
-            let new_size = modify_type_in_node(*size.clone(), generics, known_types);
+            let new_size =
+                modify_type_in_node(*size.clone(), generics, known_types, struct_pool, tree);
             *size = Box::new(new_size);
         }
         AstNode::FunctionCall {
@@ -235,18 +247,21 @@ fn modify_type_in_node(
             ..
         } => {
             for (_, param) in parameters {
-                let new_param = modify_type_in_node(param.clone(), generics, known_types);
+                let new_param =
+                    modify_type_in_node(param.clone(), generics, known_types, struct_pool, tree);
                 *param = new_param;
             }
 
             for generic in base_generics {
-                *generic = modify_type(generic.clone(), generics, known_types);
+                *generic = modify_type(generic.clone(), generics, known_types, struct_pool, tree);
             }
         }
         AstNode::ArithmeticOperation { left, right, .. } => {
-            let new_left = modify_type_in_node(*left.clone(), generics, known_types);
+            let new_left =
+                modify_type_in_node(*left.clone(), generics, known_types, struct_pool, tree);
             *left = Box::new(new_left);
-            let new_right = modify_type_in_node(*right.clone(), generics, known_types);
+            let new_right =
+                modify_type_in_node(*right.clone(), generics, known_types, struct_pool, tree);
             *right = Box::new(new_right);
         }
         AstNode::IfStatement {
@@ -255,10 +270,12 @@ fn modify_type_in_node(
             else_body,
             ..
         } => {
-            let new_condition = modify_type_in_node(*condition.clone(), generics, known_types);
+            let new_condition =
+                modify_type_in_node(*condition.clone(), generics, known_types, struct_pool, tree);
             *condition = Box::new(new_condition);
-            *body = modify_type_in_ast(body.clone(), generics, known_types);
-            *else_body = modify_type_in_ast(else_body.clone(), generics, known_types);
+            *body = modify_type_in_ast(body.clone(), generics, known_types, struct_pool, tree);
+            *else_body =
+                modify_type_in_ast(else_body.clone(), generics, known_types, struct_pool, tree);
         }
         AstNode::WhileLoop {
             condition,
@@ -266,84 +283,111 @@ fn modify_type_in_node(
             body,
             ..
         } => {
-            let new_condition = modify_type_in_node(*condition.clone(), generics, known_types);
+            let new_condition =
+                modify_type_in_node(*condition.clone(), generics, known_types, struct_pool, tree);
             *condition = Box::new(new_condition);
             if let Some(step_node) = step {
-                let new_step = modify_type_in_node(*step_node.clone(), generics, known_types);
+                let new_step = modify_type_in_node(
+                    *step_node.clone(),
+                    generics,
+                    known_types,
+                    struct_pool,
+                    tree,
+                );
                 *step_node = Box::new(new_step);
             }
-            *body = modify_type_in_ast(body.clone(), generics, known_types);
+            *body = modify_type_in_ast(body.clone(), generics, known_types, struct_pool, tree);
         }
         AstNode::ArrayStatement { size, values, .. } => {
-            let new_size = modify_type_in_node(*size.clone(), generics, known_types);
+            let new_size =
+                modify_type_in_node(*size.clone(), generics, known_types, struct_pool, tree);
             *size = Box::new(new_size);
             for (_, value) in values {
-                let new_value = modify_type_in_node(value.clone(), generics, known_types);
+                let new_value =
+                    modify_type_in_node(value.clone(), generics, known_types, struct_pool, tree);
                 *value = new_value;
             }
         }
         AstNode::StructStatement { values, .. } => {
             for (_, value) in values {
-                let new_value = modify_type_in_node(*value.clone(), generics, known_types);
+                let new_value =
+                    modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
                 *value = Box::new(new_value);
             }
         }
         AstNode::FieldStatement {
             left, right, value, ..
         } => {
-            let new_left = modify_type_in_node(*left.clone(), generics, known_types);
+            let new_left =
+                modify_type_in_node(*left.clone(), generics, known_types, struct_pool, tree);
             *left = Box::new(new_left);
-            let new_right = modify_type_in_node(*right.clone(), generics, known_types);
+            let new_right =
+                modify_type_in_node(*right.clone(), generics, known_types, struct_pool, tree);
             *right = Box::new(new_right);
             if let Some(val) = value {
-                let new_value = modify_type_in_node(*val.clone(), generics, known_types);
+                let new_value =
+                    modify_type_in_node(*val.clone(), generics, known_types, struct_pool, tree);
                 *value = Some(Box::new(new_value));
             }
         }
         AstNode::MemoryStatement {
             left, right, value, ..
         } => {
-            let new_left = modify_type_in_node(*left.clone(), generics, known_types);
+            let new_left =
+                modify_type_in_node(*left.clone(), generics, known_types, struct_pool, tree);
             *left = Box::new(new_left);
-            let new_right = modify_type_in_node(*right.clone(), generics, known_types);
+            let new_right =
+                modify_type_in_node(*right.clone(), generics, known_types, struct_pool, tree);
             *right = Box::new(new_right);
             if let Some(val) = value {
-                let new_value = modify_type_in_node(*val.clone(), generics, known_types);
+                let new_value =
+                    modify_type_in_node(*val.clone(), generics, known_types, struct_pool, tree);
                 *value = Some(Box::new(new_value));
             }
         }
         AstNode::DeferStatement { value, .. } => {
-            let new_value = modify_type_in_node(*value.clone(), generics, known_types);
+            let new_value =
+                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
         AstNode::BlockStatement { body, .. } => {
-            *body = modify_type_in_ast(body.clone(), generics, known_types);
+            *body = modify_type_in_ast(body.clone(), generics, known_types, struct_pool, tree);
         }
         AstNode::NotStatement { value, .. } => {
-            let new_value = modify_type_in_node(*value.clone(), generics, known_types);
+            let new_value =
+                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
         AstNode::BitwiseNotStatement { value, .. } => {
-            let new_value = modify_type_in_node(*value.clone(), generics, known_types);
+            let new_value =
+                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
         AstNode::AddressStatement { value, .. } => {
-            let new_value = modify_type_in_node(*value.clone(), generics, known_types);
+            let new_value =
+                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
         AstNode::ConversionStatement { r#type, value, .. } => {
             if let Some(ty) = r#type {
-                *ty = modify_type(ty.clone(), generics, known_types);
+                *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }
-            let new_value = modify_type_in_node(*value.clone(), generics, known_types);
+            let new_value =
+                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
         AstNode::SizeStatement { value, .. } => match value {
             Ok(ty) => {
-                *ty = modify_type(ty.clone(), generics, known_types);
+                *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }
             Err(ast_node) => {
-                let new_ast_node = modify_type_in_node(*ast_node.clone(), generics, known_types);
+                let new_ast_node = modify_type_in_node(
+                    *ast_node.clone(),
+                    generics,
+                    known_types,
+                    struct_pool,
+                    tree,
+                );
                 *ast_node = Box::new(new_ast_node);
             }
         },
@@ -352,8 +396,14 @@ fn modify_type_in_node(
     node
 }
 
-fn modify_type(ty: Type, generics: &Vec<String>, known_types: &HashMap<String, Type>) -> Type {
-    ty.unknown_to_known(None, None, generics.clone(), known_types.clone())
+fn modify_type(
+    ty: Type,
+    generics: &Vec<String>,
+    known_types: &HashMap<String, Type>,
+    struct_pool: Option<&RefCell<StructPool>>,
+    tree: Option<&RefCell<Vec<Primitive>>>,
+) -> Type {
+    ty.unknown_to_known(struct_pool, tree, generics.clone(), known_types.clone())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -384,6 +434,7 @@ pub enum Primitive {
         external: bool,
         builtin: bool,
         volatile: bool,
+        format: bool,
         unaliased: Option<String>,
         generics: Vec<String>,
         arguments: Vec<Argument>,

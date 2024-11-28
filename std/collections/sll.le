@@ -9,6 +9,21 @@ struct LinkedList<T> {
     Node<T> *head;
 };
 
+fn LinkedList::__fmt__<T>(LinkedList<T> self, i32 nesting) {
+    string res = "";
+
+    while self.head {
+        res <>= self.head.data.__fmt__(0);
+        self.head = self.head.next;
+
+        if self.head {
+            res <>= " -> ";
+        }
+    }
+
+    return res;
+}
+
 fn LinkedList::new<T>() -> LinkedList<T> {
     return LinkedList { head = nil };
 }
