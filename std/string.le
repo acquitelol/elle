@@ -359,6 +359,24 @@ fn __to_string(string ty, i64 args, bool wrap) {
         return res;
     }
 
+    if ty.starts_with("i8") {
+        i32 arg = args.yield(i8);
+        fmt = "%d";
+
+        length = io::snprintf(nil, 0, fmt, arg);
+        res = (string)malloc(length);
+        io::sprintf(res, fmt, arg);
+    }
+
+    if ty.starts_with("i16") {
+        i32 arg = args.yield(i16);
+        fmt = "%d";
+
+        length = io::snprintf(nil, 0, fmt, arg);
+        res = (string)malloc(length);
+        io::sprintf(res, fmt, arg);
+    }
+
     if ty.starts_with("i32") {
         i32 arg = args.yield(i32);
         fmt = "%d";
@@ -371,6 +389,24 @@ fn __to_string(string ty, i64 args, bool wrap) {
     if ty.starts_with("i64") {
         i64 arg = args.yield(i64);
         fmt = "%ld";
+
+        length = io::snprintf(nil, 0, fmt, arg);
+        res = (string)malloc(length);
+        io::sprintf(res, fmt, arg);
+    }
+
+    if ty.starts_with("u8") {
+        i32 arg = args.yield(u8);
+        fmt = "%u";
+
+        length = io::snprintf(nil, 0, fmt, arg);
+        res = (string)malloc(length);
+        io::sprintf(res, fmt, arg);
+    }
+
+    if ty.starts_with("u16") {
+        i32 arg = args.yield(u16);
+        fmt = "%u";
 
         length = io::snprintf(nil, 0, fmt, arg);
         res = (string)malloc(length);

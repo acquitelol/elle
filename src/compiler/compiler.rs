@@ -588,8 +588,6 @@ impl Compiler {
             owned_func.return_type = Some(Type::Word)
         }
 
-        owned_func.return_type = owned_func.return_type.map(|ty| ty.into_abi());
-
         // Remove the empty function from the module
         // it will be added automatically when this function leaves scope
         if !func_ref.borrow().lambda {

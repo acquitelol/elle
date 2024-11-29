@@ -311,8 +311,8 @@ pub enum Type {
 impl Type {
     pub fn display(&self) -> String {
         match self {
-            Self::Byte => "byte".into(),
-            Self::UnsignedByte => "ubyte".into(),
+            Self::Byte => "i8".into(),
+            Self::UnsignedByte => "u8".into(),
             Self::Char => "char".into(),
             Self::Halfword => "i16".into(),
             Self::UnsignedHalfword => "u16".into(),
@@ -371,8 +371,12 @@ impl Type {
         match self {
             Self::Char => "char".into(),
             Self::Boolean => "bool".into(),
+            Self::Byte => "i8".into(),
+            Self::Halfword => "i16".into(),
             Self::Word => "i32".into(),
             Self::Long => "i64".into(),
+            Self::UnsignedByte => "u8".into(),
+            Self::UnsignedHalfword => "u16".into(),
             Self::UnsignedWord => "u32".into(),
             Self::UnsignedLong => "u64".into(),
             Self::Pointer(inner) => {
@@ -1241,7 +1245,7 @@ impl fmt::Display for Function {
         write!(formatter, "{}function", self.linkage)?;
 
         if let Some(r#type) = &self.return_type {
-            write!(formatter, " {}", r#type)?;
+            write!(formatter, " {}", r#type.clone().into_abi())?;
         }
 
         let mut arguments_clone = self
