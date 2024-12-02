@@ -90,28 +90,36 @@ fn Array::clear<T>(Array<T> *self) {
 }
 
 fn Array::sort<T>(Array<T> *self) {
-    if self.is_empty() || self.size == 1 {
+    if self.is_empty() || self.len() <= 1 {
         return;
     }
 
-    bool swapped;
-    for i32 i = 0; i < self.size - 1; i += 1 {
-        swapped = false;
+    __internal_qsort(self.elements, 0, self.len() - 1);
+}
 
-        for i32 j = 0; j < self.size - i - 1; j += 1 {
-            if self.elements[j] > self.elements[j + 1] {
-                T temp = self.elements[j];
-                self.elements[j] = self.elements[j + 1];
-                self.elements[j + 1] = temp;
+local fn __internal_qsort<T>(T *array, i32 low, i32 high) {
+    if low >= high {
+        return;
+    }
 
-                swapped = true;
-            }
-        }
+    T pivot = array[high];
+    i32 i = low;
 
-        if !swapped {
-            break;
+    for i32 j = low; j < high; j += 1 {
+        if array[j] < pivot {
+            T temp = array[i];
+            array[i] = array[j];
+            array[j] = temp;
+            i += 1;
         }
     }
+
+    T temp = array[i];
+    array[i] = array[high];
+    array[high] = temp;
+
+    __internal_qsort(array, low, i - 1);
+    __internal_qsort(array, i + 1, high);
 }
 
 fn Array::clone<T>(Array<T> *self) -> Array<T> * {
