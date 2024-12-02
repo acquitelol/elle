@@ -89,6 +89,41 @@ fn Array::clear<T>(Array<T> *self) {
     self.size = 0;
 }
 
+fn Array::sort<T>(Array<T> *self) {
+    if self.is_empty() || self.size == 1 {
+        return;
+    }
+
+    bool swapped;
+    for i32 i = 0; i < self.size - 1; i += 1 {
+        swapped = false;
+
+        for i32 j = 0; j < self.size - i - 1; j += 1 {
+            if self.elements[j] > self.elements[j + 1] {
+                T temp = self.elements[j];
+                self.elements[j] = self.elements[j + 1];
+                self.elements[j + 1] = temp;
+
+                swapped = true;
+            }
+        }
+
+        if !swapped {
+            break;
+        }
+    }
+}
+
+fn Array::clone<T>(Array<T> *self) -> Array<T> * {
+    Array<T> *clone = Array::with_capacity(self.len());
+
+    for i32 i = 0; i < self.len(); i += 1 {
+        clone.push(self.elements[i]);
+    }
+
+    return clone;
+}
+
 // Creates a new sized array from a null terminated string
 fn Array::from_string(string str) -> Array<char> * {
     i32 length = str.len();
@@ -183,7 +218,7 @@ fn Array::map<T>(Array<T> *self, fn *mapping) {
     Array<T> *new_self = Array::with_capacity(self.len());
 
     for i32 i = 0; i < self.len(); i += 1 {
-        new_self.push(mapping(self.elements[i]));
+        new_self.push(mapping(self.elements[i], i));
     }
 
     return new_self;

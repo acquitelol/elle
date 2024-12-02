@@ -102,6 +102,7 @@ fn io::assert(ElleMeta meta, bool condition, string message) {
 }
 
 const i64 BUF_SIZE = 1024;
+const i64 EOF = -1;
 
 fn io::input(string message) -> string {
     string buf = (string)malloc(BUF_SIZE * #size(char));
@@ -115,6 +116,44 @@ fn io::input(string message) -> string {
 
     buf[buf.len() - 1] = '\0';
     string result = (string)malloc(buf.len() + 1);
+    strcpy(result, buf);
+
+    return result;
+}
+
+fn io::read_to_string(string path) -> string {
+    FILE *file = io::fopen(path, "r");
+    i64 buf_size = 128;
+
+    string buf = (string)malloc(buf_size * #size(char));
+    defer free(buf);
+
+    if !file {
+        return nil;
+    }
+
+    i64 pos = 0;
+    char c;
+
+    while true {
+        c = io::getc(file);
+        if c == EOF {
+            break;
+        }
+
+        if pos >= buf_size - 1 {
+            buf_size *= 2;
+            buf = (string)realloc(buf, buf_size * #size(char));
+        }
+
+        buf[pos] = c;
+        pos += 1;
+    }
+
+    buf[pos] = '\0';
+    io::fclose(file);
+
+    string result = (string)malloc(pos + 1);
     strcpy(result, buf);
 
     return result;

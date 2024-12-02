@@ -1,0 +1,40 @@
+use std/collections/array;
+use std/string;
+
+global pub;
+
+fn string::split(string self, string delimiter) -> Array<string> * {
+    Array<string> *parts = Array::with_capacity(10);
+    i32 delimiter_length = delimiter.len();
+
+    if delimiter_length == 0 {
+        return parts;
+    }
+
+    i32 start = 0;
+    for i32 i = 0; i <= self.len() - delimiter_length; i += 1 {
+        bool is_match = true;
+
+        for i32 j = 0; j < delimiter_length; j += 1 {
+            if self[i + j] != delimiter[j] {
+                is_match = false;
+                break;
+            }
+        }
+
+        if is_match {
+            string part = self.slice(start, i);
+            parts.push(part);
+
+            start = i + delimiter_length;
+            i = start - 1;
+        }
+    }
+
+    if start < self.len() {
+        string part = self.slice(start, self.len());
+        parts.push(part);
+    }
+
+    return parts;
+}
