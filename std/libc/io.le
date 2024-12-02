@@ -9,6 +9,10 @@ struct FILE @nofmt {
     i32 mode;               // Mode in which the file is opened
 };
 
+const i32 SEEK_SET = 0;
+const i32 SEEK_CUR = 1;
+const i32 SEEK_END = 2;
+
 local external fn fdopen(i64 descriptor, string mode) -> FILE *;
 
 const FILE *stdin = fdopen(0, "r");
@@ -43,5 +47,7 @@ external fn fopen(string filename, string mode) @alias("io::fopen") -> i64;
 external fn fclose(FILE *stream) @alias("io::fclose") -> i32;
 external fn fread(void *ptr, i64 size, i64 nmemb, FILE *stream) @alias("io::fread") -> i64;
 external fn fwrite(void *ptr, i64 size, i64 nmemb, FILE *stream) @alias("io::fwrite") -> i64;
+external fn ftell(FILE *stream) @alias("io::ftell") -> i64;
+external fn fseek(FILE *stream, i64 offset, i32 whence) @alias("io::fseek") -> i32;
 
 namespace io;

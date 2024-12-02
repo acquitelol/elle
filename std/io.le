@@ -123,38 +123,45 @@ fn io::input(string message) -> string {
 
 fn io::read_to_string(string path) -> string {
     FILE *file = io::fopen(path, "r");
-    i64 buf_size = 128;
-
-    string buf = (string)malloc(buf_size * #size(char));
-    defer free(buf);
+    defer io::fclose(file);
 
     if !file {
         return nil;
     }
 
-    i64 pos = 0;
-    char c;
+    io::fseek(file, 0, SEEK_END);
+    i64 file_size = io::ftell(file);
+    io::fseek(file, 0, SEEK_SET);
+    i64 buf_size;
 
-    while true {
-        c = io::getc(file);
-        if c == EOF {
-            break;
-        }
+    if file_size > 0 {
+        buf_size = file_size + 1;
+    } else {
+        buf_size = 4096;
+    }
+
+    string buf = (string)malloc(buf_size * #size(char));
+
+    if !buf {
+        return nil;
+    }
+
+    i64 pos = 0;
+    i64 read_size;
+
+    while (read_size = io::fread(buf + pos, #size(char), buf_size - pos - 1, file)) > 0 {
+        pos += read_size;
 
         if pos >= buf_size - 1 {
             buf_size *= 2;
             buf = (string)realloc(buf, buf_size * #size(char));
-        }
 
-        buf[pos] = c;
-        pos += 1;
+            if !buf {
+                return nil;
+            }
+        }
     }
 
     buf[pos] = '\0';
-    io::fclose(file);
-
-    string result = (string)malloc(pos + 1);
-    strcpy(result, buf);
-
-    return result;
+    return buf;
 }
