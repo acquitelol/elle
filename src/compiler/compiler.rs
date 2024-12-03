@@ -14,8 +14,9 @@ use crate::{
         enums::{modify_type_in_ast, Argument, AstNode, Primitive},
         parser::StructPool,
     },
-    unknown_field, unknown_function, Warning, Warnings, GENERIC_END, GENERIC_IDENTIFIER,
-    META_STRUCT_NAME, POINTER_ID, VOID_POINTER_ID,
+    unknown_field, unknown_function, Warning, Warnings, FORMAT_CONSTANT, GENERIC_END,
+    GENERIC_IDENTIFIER, LOAD_CONSTANT, META_STRUCT_NAME, POINTER_ID, STORE_CONSTANT,
+    VOID_POINTER_ID,
 };
 
 use super::enums::{
@@ -1192,7 +1193,7 @@ impl Compiler {
                     } else if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_string() {
                         name = format!("string.{}", name)
                     // fmt access
-                    } else if ty.is_pointer() && &name == "__fmt__" && type_method {
+                    } else if ty.is_pointer() && &name == FORMAT_CONSTANT && type_method {
                         name = format!("{}.{}", POINTER_ID, name)
                     } else {
                         name = format!("{}.{}", ty.id(), name)
@@ -1446,7 +1447,7 @@ impl Compiler {
 
                         if ty.is_struct() {
                             let struct_name = ty.get_struct_inner().unwrap();
-                            func_name = format!("{struct_name}.__fmt__");
+                            func_name = format!("{struct_name}.{FORMAT_CONSTANT}");
 
                             fmt_tmp =
                                 self.new_temporary(Some(&format!("{struct_name}.fmt")), false);
@@ -1461,7 +1462,7 @@ impl Compiler {
 
                             if is_generic!(struct_name) {
                                 let (real_struct_name, _) = Type::from_internal_id(struct_name);
-                                func_name = format!("{real_struct_name}.__fmt__");
+                                func_name = format!("{real_struct_name}.{FORMAT_CONSTANT}");
 
                                 if self.generic_functions.contains_key(&func_name) {
                                     self.create_monomorphized_function(
@@ -1489,7 +1490,7 @@ impl Compiler {
                                 }
                             }
                         } else {
-                            func_name = format!("{}.__fmt__", ty.strict_id());
+                            func_name = format!("{}.{FORMAT_CONSTANT}", ty.strict_id());
 
                             fmt_tmp =
                                 self.new_temporary(Some(&format!("{}.fmt", ty.strict_id())), false);
@@ -1751,7 +1752,88 @@ impl Compiler {
                 left_location,
                 right_location,
                 value_location,
+                is_deref,
             } => {
+                let mut tmp_func = func.borrow().clone().to_owned();
+                tmp_func.add_block("start");
+
+                let (left_ty, _) = self
+                    .generate_statement(
+                        &RefCell::new(tmp_func.clone()),
+                        module,
+                        *left.clone(),
+                        None,
+                        None,
+                        false,
+                    )
+                    .expect(&left_location.error(format!(
+                        "Unexpected error when trying to compile the left side of a {} statement",
+                        if value.is_some() { "store" } else { "load" }
+                    )));
+
+                if !is_deref
+                    && (left_ty.is_struct()
+                        || left_ty.is_pointer() && left_ty.get_pointer_inner().unwrap().is_struct())
+                {
+                    let struct_name = if left_ty.is_struct() {
+                        left_ty.get_struct_inner().unwrap()
+                    } else {
+                        left_ty
+                            .get_pointer_inner()
+                            .unwrap()
+                            .get_struct_inner()
+                            .unwrap()
+                    };
+
+                    macro_rules! exists {
+                        ($constant:expr) => {
+                            module
+                                .borrow()
+                                .functions
+                                .iter()
+                                .find(|f| f.name == format!("{struct_name}.{}", $constant))
+                                .is_some()
+                                || (is_generic!(struct_name)
+                                    && self
+                                        .generic_functions
+                                        .keys()
+                                        .find(|f| {
+                                            **f == format!(
+                                                "{}.{}",
+                                                Type::from_internal_id(struct_name.clone()).0,
+                                                $constant
+                                            )
+                                        })
+                                        .is_some())
+                        };
+                    }
+
+                    if (value.is_some() && exists!(STORE_CONSTANT)) || exists!(LOAD_CONSTANT) {
+                        let mut parameters =
+                            vec![(left_location.clone(), *left), (right_location, *right)];
+
+                        if value.is_some() {
+                            parameters.push((value_location, *value.clone().unwrap()))
+                        }
+
+                        let node = AstNode::FunctionCall {
+                            name: if value.is_some() {
+                                STORE_CONSTANT
+                            } else {
+                                LOAD_CONSTANT
+                            }
+                            .into(),
+                            generics: vec![],
+                            parameters,
+                            type_method: true,
+                            ignore_no_def: false,
+                            location: left_location,
+                        };
+
+                        return self.generate_statement(func, module, node, None, None, false);
+                    }
+                }
+
                 let (left_ty, _) = self
                     .generate_statement(func, module, *left.clone(), None, None, false)
                     .expect(&left_location.error(format!(

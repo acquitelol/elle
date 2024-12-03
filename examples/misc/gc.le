@@ -50,18 +50,18 @@ fn GC::alloc(GC *self, i32 size) {
 
 fn GC::mark(GC *self, void *ptr) {
     for (i32 i = 0; i < self.heap.len(); i += 1) {
-        if self.heap.elements[i].data == ptr {
-            self.heap.elements[i].marked = true;
+        if self.heap[i].data == ptr {
+            self.heap[i].marked = true;
         }
     }
 }
 
 fn GC::sweep(GC *self) {
     for (i32 i = 0; i < self.heap.len(); i += 1) {
-        if !self.heap.elements[i].marked {
+        if !self.heap[i].marked {
             self.heap.remove(i).free();
         } else {
-            self.heap.elements[i].marked = false;
+            self.heap[i].marked = false;
         }
     }
 }

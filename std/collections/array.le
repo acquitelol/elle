@@ -9,6 +9,19 @@ struct Array<T> {
     T *elements;
 };
 
+fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
+    Array<T> temp = self;
+    return temp.to_string();
+}
+
+fn Array::__load__<T>(Array<T> *self, i64 i) {
+    return self.elements[i];
+}
+
+fn Array::__store__<T>(Array<T> *self, i64 i, T value) {
+    self.elements[i] = value;
+}
+
 fn Array::len<T>(Array<T> *self) -> i32 {
     return self.size;
 }
@@ -52,7 +65,7 @@ fn Array::push<T>(Array<T> *self, T element) {
         self.resize((self.capacity || 1) * 2);
     }
 
-    self.elements[self.size] = element;
+    self[self.size] = element;
     self.size += 1;
 }
 
@@ -77,7 +90,7 @@ fn Array::pop<T>(Array<T> *self) -> T {
         return (T)nil;
     }
 
-    T last = self.elements[(i32)self.size - 1];
+    T last = self[(i32)self.size - 1];
     self.size -= 1;
     self.resize(self.size);
 
@@ -126,7 +139,7 @@ fn Array::clone<T>(Array<T> *self) -> Array<T> * {
     Array<T> *clone = Array::with_capacity(self.len());
 
     for i32 i = 0; i < self.len(); i += 1 {
-        clone.push(self.elements[i]);
+        clone.push(self[i]);
     }
 
     return clone;
@@ -149,7 +162,7 @@ fn Array::to_string<T>(ElleMeta meta, Array<T> *self) -> string {
     string res = "[";
 
     for i32 i = 0; i < self.len(); i += 1 {
-        res.extend(self.elements[i].__fmt__(0));
+        res.extend(self[i].__fmt__(0));
 
         if i < self.len() - 1 {
             res.extend(", ");
@@ -160,17 +173,12 @@ fn Array::to_string<T>(ElleMeta meta, Array<T> *self) -> string {
     return res;
 }
 
-fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
-    Array<T> temp = self;
-    return temp.to_string();
-}
-
 // Join an array's elements by a separator
 fn Array::join<T>(Array<T> *self, string separator) {
     string res = "";
 
     for i32 i = 0; i < self.len(); i += 1 {
-        res.extend(string::as_string(self.elements[i]));
+        res.extend(string::as_string(self[i]));
 
         if i < self.len() - 1 {
             res.extend(separator);
@@ -182,7 +190,7 @@ fn Array::join<T>(Array<T> *self, string separator) {
 
 fn Array::contains<T>(Array<T> *self, T element) {
     for i32 i = 0; i < self.len(); i += 1 {
-        if self.elements[i] == element {
+        if self[i] == element {
             return true;
         }
     }
@@ -198,7 +206,7 @@ fn Array::implode<T>(Array<T> *self, string separator) {
 // Take all the elements of another Array<T> and push them into this Array<T>
 fn Array::extend<T>(Array<T> *self, Array<T> *other) {
     for i32 i = 0; i < other.len(); i += 1 {
-        self.push(other.elements[i]);
+        self.push(other[i]);
     }
 }
 
@@ -207,10 +215,10 @@ fn Array::remove<T>(Array<T> *self, i32 index) -> T {
         return (T)nil;
     }
 
-    T removedElement = self.elements[index];
+    T removedElement = self[index];
 
     for i32 i = index; i < self.size - 1; i += 1 {
-        self.elements[i] = self.elements[i + 1];
+        self[i] = self[i + 1];
     }
 
     self.size -= 1;
@@ -226,7 +234,7 @@ fn Array::map<T>(Array<T> *self, fn *mapping) {
     Array<T> *new_self = Array::with_capacity(self.len());
 
     for i32 i = 0; i < self.len(); i += 1 {
-        new_self.push(mapping(self.elements[i], i));
+        new_self.push(mapping(self[i], i));
     }
 
     return new_self;
@@ -237,7 +245,7 @@ fn Array::first<T>(Array<T> *self) -> T {
         return (T)nil;
     }
 
-    return (T)(self.elements[0]);
+    return self[0];
 }
 
 fn Array::last<T>(Array<T> *self) -> T {
@@ -245,7 +253,7 @@ fn Array::last<T>(Array<T> *self) -> T {
         return (T)nil;
     }
 
-    return (T)(self.elements[self.len() - 1]);
+    return (T)(self[self.len() - 1]);
 }
 
 fn Array::free<T>(Array<T> *self) {

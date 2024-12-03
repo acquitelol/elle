@@ -19,8 +19,8 @@ use crate::{
         enums::{Argument, AstNode, Primitive},
         parser::{DoOnly, Parser, StructPool},
     },
-    Warnings, INTERNAL_FORMATTER, LONG_EXTENSION, POINTER_ID, SHORT_EXTENSION, STD_LIB_PATH,
-    VOID_POINTER_ID,
+    Warnings, FORMAT_CONSTANT, INTERNAL_FORMATTER, LONG_EXTENSION, POINTER_ID, SHORT_EXTENSION,
+    STD_LIB_PATH, VOID_POINTER_ID,
 };
 
 pub fn lex_and_parse(
@@ -298,7 +298,7 @@ pub fn lex_and_parse(
                 tree.insert(
                     idx + 1,
                     Primitive::Function {
-                        name: format!("{}.__fmt__", primitive.strict_id()),
+                        name: format!("{}.{FORMAT_CONSTANT}", primitive.strict_id()),
                         public: true,
                         usable: true,
                         imported: false,
@@ -370,7 +370,7 @@ pub fn lex_and_parse(
             tree.insert(
                 idx + 1,
                 Primitive::Function {
-                    name: format!("{}.__fmt__", POINTER_ID).into(),
+                    name: format!("{}.{FORMAT_CONSTANT}", POINTER_ID).into(),
                     public: false,
                     usable: true,
                     imported: false,
@@ -411,7 +411,7 @@ pub fn lex_and_parse(
                                 (
                                     Location::default(input_path.clone()),
                                     AstNode::FunctionCall {
-                                        name: "__fmt__".into(),
+                                        name: FORMAT_CONSTANT.into(),
                                         generics: vec![],
                                         parameters: vec![
                                             (
@@ -441,6 +441,7 @@ pub fn lex_and_parse(
                                                     value_location: Location::default(
                                                         input_path.clone(),
                                                     ),
+                                                    is_deref: true,
                                                 },
                                             ),
                                             (
@@ -482,7 +483,7 @@ pub fn lex_and_parse(
             tree.insert(
                 idx + 1,
                 Primitive::Function {
-                    name: format!("{}.__fmt__", VOID_POINTER_ID).into(),
+                    name: format!("{VOID_POINTER_ID}.{FORMAT_CONSTANT}").into(),
                     public: false,
                     usable: true,
                     imported: false,

@@ -1,6 +1,6 @@
 use examples/resources/raylib;
 
-const i32 MAX_ITERATIONS = 1000;
+const i32 MAX_ITERATIONS = 100;
 const Color BLACK = raylib::get_color(0x00000000);
 const Color WHITE = raylib::get_color(0xFFFFFFFF);
 

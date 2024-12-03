@@ -107,6 +107,7 @@ pub enum AstNode {
         left_location: Location,
         right_location: Location,
         value_location: Location,
+        is_deref: bool,
     },
     /// Only executes code from value `value` when the current scope is about to exit
     /// This can be function return or an implicit scope exit through `break` or `continue`

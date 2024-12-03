@@ -1144,6 +1144,7 @@ impl<'a> Statement<'a> {
             left_location: left_location.clone(),
             right_location: right_location.clone(),
             value_location: value_location.clone(),
+            is_deref: false,
         };
 
         match self.current_token().kind {
@@ -1165,6 +1166,7 @@ impl<'a> Statement<'a> {
                     left_location: left_location.clone(),
                     right_location: right_location.clone(),
                     value_location,
+                    is_deref: false,
                 };
             }
             other if other.is_declarative() => {
@@ -1177,6 +1179,7 @@ impl<'a> Statement<'a> {
                     left_location: left_location.clone(),
                     right_location: right_location.clone(),
                     value_location,
+                    is_deref: false,
                 };
             }
             TokenKind::Dot => {
@@ -1666,6 +1669,7 @@ impl<'a> Statement<'a> {
                         left_location: left_location.clone(),
                         right_location: right_location.clone(),
                         value_location: value_location.clone(),
+                        is_deref: true,
                     },
                 )));
             }
@@ -1679,6 +1683,7 @@ impl<'a> Statement<'a> {
             left_location,
             right_location,
             value_location,
+            is_deref: true,
         }
     }
 

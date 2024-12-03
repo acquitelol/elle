@@ -28,6 +28,9 @@ static SHORT_EXTENSION: &str = ".le";
 static OBJECT_EXTENSION: &str = ".o";
 static VOID_POINTER_ID: &str = "__void_ptr__";
 static POINTER_ID: &str = "__ptr__";
+static FORMAT_CONSTANT: &str = "__fmt__";
+static LOAD_CONSTANT: &str = "__load__";
+static STORE_CONSTANT: &str = "__store__";
 static INTERNAL_FORMATTER: &str =
     "__internal_formatter_do_not_use_unless_you_know_what_youre_doing__";
 static RESERVED_KEYWORDS: &[&'static str] = &[

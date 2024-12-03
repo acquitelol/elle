@@ -64,7 +64,7 @@ fn i32::parse(string str) -> i32 {
     bool valid = is_valid_with_err(str, "i32");
 
     if valid {
-        return atoi(str);
+        return str.atoi();
     }
 
     return 0;
@@ -74,7 +74,7 @@ fn i32::try_parse(string str, i32 *res) -> bool {
     bool valid = is_valid(str, "i32");
 
     if valid {
-        *res = atoi(str);
+        *res = str.atoi();
         return true;
     }
 
@@ -85,7 +85,7 @@ fn i64::parse(string str) -> i64 {
     bool valid = is_valid_with_err(str, "i64");
 
     if valid {
-        return atol(str);
+        return str.atol();
     }
 
     return 0;
@@ -95,7 +95,7 @@ fn i64::try_parse(string str, i64 *res) -> bool {
     bool valid = is_valid(str, "i64");
 
     if valid {
-        *res = atol(str);
+        *res = str.atol();
         return true;
     }
 
@@ -106,7 +106,7 @@ fn f32::parse(string str) -> f32 {
     bool valid = is_valid_with_err(str, "f64");
 
     if valid {
-        return (f32)atof(str);
+        return (f32)str.atof();
     }
 
     return 0;
@@ -116,7 +116,7 @@ fn f32::try_parse(string str, f32 *res) -> bool {
     bool valid = is_valid(str, "f64");
 
     if valid {
-        *res = (f32)atof(str);
+        *res = (f32)str.atof();
         return true;
     }
 
@@ -127,7 +127,7 @@ fn f64::parse(string str) -> f64 {
     bool valid = is_valid_with_err(str, "f64");
 
     if valid {
-        return atof(str);
+        return str.atof();
     }
 
     return 0;
@@ -137,7 +137,7 @@ fn f64::try_parse(string str, f64 *res) -> bool {
     bool valid = is_valid(str, "f64");
 
     if valid {
-        *res = atof(str);
+        *res = str.atof();
         return true;
     }
 

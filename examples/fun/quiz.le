@@ -19,7 +19,7 @@ fn Question::new(Array<Operation *> *operators, i32 index) {
     i32 rhs = rand::random(1, LARGEST_INT);
     i32 operator = rand::random(0, operators.len() - 1);
 
-    Operation *operation = operators.elements[operator];
+    Operation *operation = operators[operator];
     fn *func = operation.func;
 
     Question *question = malloc(#size(Question));
@@ -82,7 +82,7 @@ fn main() {
     }
 
     for i32 i = 0; i < incorrect.len(); i += 1 {
-        Question *question = incorrect.elements[i];
+        Question *question = incorrect[i];
 
         io::printf(
             "{}) The correct answer was {}, you wrote {}.",

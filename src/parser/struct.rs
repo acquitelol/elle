@@ -3,7 +3,7 @@ use crate::{
     hashmap,
     lexer::enums::{Attribute, Location, TokenKind, ValueKind},
     misc::{colors::*, interleave_with},
-    GENERIC_END, GENERIC_IDENTIFIER, INTERNAL_FORMATTER,
+    FORMAT_CONSTANT, GENERIC_END, GENERIC_IDENTIFIER, INTERNAL_FORMATTER,
 };
 
 use super::{
@@ -174,7 +174,7 @@ impl<'a> Struct<'a> {
                     (
                         location.clone(),
                         AstNode::FunctionCall {
-                            name: "__fmt__".into(),
+                            name: FORMAT_CONSTANT.into(),
                             generics: vec![],
                             parameters: vec![
                                 (location.clone(), field),
@@ -248,7 +248,7 @@ impl<'a> Struct<'a> {
             ));
 
             builtins.push(Primitive::Function {
-                name: format!("{}.__fmt__", name),
+                name: format!("{}.{FORMAT_CONSTANT}", name),
                 public,
                 usable: true,
                 imported: false,
