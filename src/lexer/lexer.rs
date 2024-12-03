@@ -457,6 +457,10 @@ impl Lexer {
         self.input[self.position]
     }
 
+    fn next_char(&self) -> Option<char> {
+        self.input.get(self.position + 1).map(|x| x.to_owned())
+    }
+
     fn advance(&mut self) {
         if !self.is_eof() {
             let current = self.current_char();
@@ -601,6 +605,10 @@ impl Lexer {
             || vec!['x', 'o', 'b', 'e'].contains(&self.current_char())
         {
             if self.current_char() == '.' {
+                if self.next_char().is_some_and(|c| !c.is_digit(radix)) {
+                    break;
+                }
+
                 float = true;
             }
 

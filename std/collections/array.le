@@ -1,6 +1,7 @@
 use std/libc/mem;
 use std/libc/io;
 use std/string;
+use std/core;
 global pub;
 
 struct Array<T> {
@@ -14,11 +15,31 @@ fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
     return temp.to_string();
 }
 
-fn Array::__load__<T>(Array<T> *self, i64 i) {
+local fn __internal_out_of_bounds_check(i64 i, i64 len, ElleMeta meta) {
+    if i > len - 1 || i < 0 {
+        io::cprintf(
+            "[%s:%d:%d] In function %s:\n%sIndex %d is out of bounds (must be between 0 and %d)\n"
+                .color("red")
+                .reset(),
+            meta.file,
+            meta.line,
+            meta.column,
+            meta.caller,
+            " ".repeat(4),
+            i, len - 1
+        );
+
+        abort();
+    }
+}
+
+fn Array::__load__<T>(ElleMeta meta, Array<T> *self, i64 i) {
+    __internal_out_of_bounds_check(i, self.len(), meta);
     return self.elements[i];
 }
 
-fn Array::__store__<T>(Array<T> *self, i64 i, T value) {
+fn Array::__store__<T>(ElleMeta meta, Array<T> *self, i64 i, T value) {
+    __internal_out_of_bounds_check(i, self.len(), meta);
     self.elements[i] = value;
 }
 
@@ -65,7 +86,7 @@ fn Array::push<T>(Array<T> *self, T element) {
         self.resize((self.capacity || 1) * 2);
     }
 
-    self[self.size] = element;
+    self.elements[self.size] = element;
     self.size += 1;
 }
 
@@ -90,7 +111,7 @@ fn Array::pop<T>(Array<T> *self) -> T {
         return (T)nil;
     }
 
-    T last = self[(i32)self.size - 1];
+    T last = self.elements[(i32)self.size - 1];
     self.size -= 1;
     self.resize(self.size);
 

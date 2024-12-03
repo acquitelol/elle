@@ -88,6 +88,33 @@ fn io::printf(ElleMeta meta, string fmt, ...) @fmt {
     io::println(__internal_fmt(fmt, meta, args));
 }
 
+fn io::eprintf(ElleMeta meta, string fmt, ...) @fmt {
+    variadic args[meta.arity - 1];
+
+    for i32 i = 0; i < meta.arity; i += 1 {
+        meta.types[i] = "string";
+    }
+
+    io::eprintln(__internal_fmt(fmt, meta, args));
+}
+
+fn io::panic(ElleMeta meta, string fmt, ...) @fmt {
+    variadic args[meta.arity - 1];
+
+    for i32 i = 0; i < meta.arity; i += 1 {
+        meta.types[i] = "string";
+    }
+
+    io::println(
+        "Fatal error in function {}:\n[{}:{}:{}] "
+            .format(meta.caller, meta.file, meta.line, meta.column)
+            .color("red"),
+        __internal_fmt(fmt, meta, args)
+    );
+
+    abort();
+}
+
 fn io::assert(ElleMeta meta, bool condition, string message) {
     if !condition {
         string parsed = message || "No additional information was specified.";
