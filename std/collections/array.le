@@ -15,10 +15,10 @@ fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
     return temp.to_string();
 }
 
-local fn __internal_out_of_bounds_check(i64 i, i64 len, ElleMeta meta) {
-    if i > len - 1 || i < 0 {
+local fn __internal_out_of_bounds_check(i64 i, i64 min_i, i64 max_i, ElleMeta meta) {
+    if i < min_i || i > max_i {
         io::cprintf(
-            "[%s:%d:%d] In function %s:\n%sIndex %d is out of bounds (must be between 0 and %d)\n"
+            "[%s:%d:%d] In function %s:\n%sIndex %d is out of bounds (must be between %d and %d)\n"
                 .color("red")
                 .reset(),
             meta.file,
@@ -26,7 +26,7 @@ local fn __internal_out_of_bounds_check(i64 i, i64 len, ElleMeta meta) {
             meta.column,
             meta.caller,
             " ".repeat(4),
-            i, len - 1
+            i, min_i, max_i
         );
 
         abort();
@@ -34,12 +34,12 @@ local fn __internal_out_of_bounds_check(i64 i, i64 len, ElleMeta meta) {
 }
 
 fn Array::__load__<T>(ElleMeta meta, Array<T> *self, i64 i) {
-    __internal_out_of_bounds_check(i, self.len(), meta);
+    __internal_out_of_bounds_check(i, 0, self.len() - 1, meta);
     return self.elements[i];
 }
 
 fn Array::__store__<T>(ElleMeta meta, Array<T> *self, i64 i, T value) {
-    __internal_out_of_bounds_check(i, self.len(), meta);
+    __internal_out_of_bounds_check(i, 0, self.len() - 1, meta);
     self.elements[i] = value;
 }
 
