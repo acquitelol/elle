@@ -3,8 +3,8 @@ use std/io;
 
 fn Tuple::capitalize(Tuple<string, string> self) -> Tuple<string, string> {
     return Tuple {
-        first = self.first.capitalize(),
-        second = self.second.capitalize(),
+        x = self.x.capitalize(),
+        y = self.y.capitalize(),
     };
 }
 
@@ -15,8 +15,8 @@ struct Info {
 
 fn Info::to_space_name(Info self) {
     Tuple<string, string> name = Tuple {
-        first = self.name.second.slice(0, 3) <> self.name.first.slice(0, 2),
-        second = self.data.second.slice(0, 3) <> self.data.first.slice(0, 2)
+        x = self.name.y.slice(0, 3) <> self.name.x.slice(0, 2),
+        y = self.data.y.slice(0, 3) <> self.data.x.slice(0, 2)
     };
 
     return name.capitalize();
@@ -25,15 +25,15 @@ fn Info::to_space_name(Info self) {
 fn main() {
     Info info = Info {
         name = Tuple {
-            first = io::input("What is your first name? -> "),
-            second = io::input("What is your last name? -> ")
+            x = io::input("What is your first name? -> "),
+            y = io::input("What is your last name? -> ")
         },
         data = Tuple {
-            first = io::input("What is your birth month? -> "),
-            second = io::input("What is your favourite animal? -> ")
+            x = io::input("What is your birth month? -> "),
+            y = io::input("What is your favourite animal? -> ")
         }
     };
 
     Tuple<string, string> space_name = info.to_space_name();
-    io::printf("Your space name is {} {}", space_name.first, space_name.second);
+    io::printf("Your space name is {} {}", space_name.x, space_name.y);
 }

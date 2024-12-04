@@ -1,12 +1,22 @@
 global pub;
 
 struct Tuple<T, U> {
-    T first;
-    U second;
+    T x;
+    U y;
 };
 
+fn Tuple::new<T, U>(T x, U y) {
+    Tuple<T, U> *tuple = malloc(#size(Tuple<T, U>));
+    *tuple = malloc(#size(Tuple<T, U>));
+
+    tuple.x = x;
+    tuple.y = y;
+
+    return tuple;
+}
+
 struct Triple<T, U, V> {
-    T first;
-    U second;
-    V third;
+    T x;
+    U y;
+    V z;
 };
