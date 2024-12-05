@@ -15,17 +15,12 @@ fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
     return temp.to_string();
 }
 
-local fn __internal_out_of_bounds_check(i64 i, i64 min_i, i64 max_i, ElleMeta meta) {
+local fn __internal_out_of_bounds_check(i64 i, i64 min_i, i64 max_i) {
     if i < min_i || i > max_i {
         io::cprintf(
-            "[%s:%d:%d] In function %s:\n%sIndex %d is out of bounds (must be between %d and %d)\n"
+            "Index %d is out of bounds (must be between %d and %d)\n"
                 .color("red")
                 .reset(),
-            meta.file,
-            meta.line,
-            meta.column,
-            meta.caller,
-            " ".repeat(4),
             i, min_i, max_i
         );
 
@@ -33,13 +28,13 @@ local fn __internal_out_of_bounds_check(i64 i, i64 min_i, i64 max_i, ElleMeta me
     }
 }
 
-fn Array::__load__<T>(ElleMeta meta, Array<T> *self, i64 i) {
-    __internal_out_of_bounds_check(i, 0, self.len() - 1, meta);
+fn Array::__load__<T>(Array<T> *self, i64 i) {
+    __internal_out_of_bounds_check(i, 0, self.len() - 1);
     return self.elements[i];
 }
 
-fn Array::__store__<T>(ElleMeta meta, Array<T> *self, i64 i, T value) {
-    __internal_out_of_bounds_check(i, 0, self.len() - 1, meta);
+fn Array::__store__<T>(Array<T> *self, i64 i, T value) {
+    __internal_out_of_bounds_check(i, 0, self.len() - 1);
     self.elements[i] = value;
 }
 
@@ -259,6 +254,36 @@ fn Array::map<T>(Array<T> *self, fn *mapping) {
     }
 
     return new_self;
+}
+
+fn Array::includes<T>(Array<T> *self, T element) {
+    for i32 i = 0; i < self.len(); i += 1 {
+        if self[i] == element {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+fn Array::index<T>(Array<T> *self, T element) {
+    for i32 i = 0; i < self.len(); i += 1 {
+        if self[i] == element {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+fn Array::sum<T>(Array<T> *self) {
+    T sum = 0;
+
+    for i32 i = 0; i < self.len(); i += 1 {
+        sum += self.elements[i];
+    }
+
+    return sum;
 }
 
 fn Array::first<T>(Array<T> *self) -> T {
