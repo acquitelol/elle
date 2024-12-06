@@ -18,6 +18,29 @@ fn string::contains(string self, string needle) -> bool {
     return strstr(self, needle) != nil;
 }
 
+fn string::find(string self, string needle) -> i64 {
+    string result = strstr(self, needle);
+
+    if result == nil {
+        return -1;
+    }
+
+    return (i64)result - (i64)self;
+}
+
+fn string::count(string self, char needle) -> i32 {
+    i32 length = self.len();
+    i32 count = 0;
+
+    for i32 i = 0; i < length; i += 1 {
+        if self[i] == needle {
+            count += 1;
+        }
+    }
+
+    return count;
+}
+
 fn string::starts_with(string self, string prefix) -> bool {
     return strncmp(prefix, self, prefix.len()) == 0;
 }
@@ -232,6 +255,51 @@ fn string::capitalize(string self) {
     string rest = self.slice(1, self.len());
 
     return first.to_upper() <> rest.to_lower();
+}
+
+fn string::replace(string self, string needle, string replacement) -> string {
+    i32 needle_len = needle.len();
+    i32 replacement_len = replacement.len();
+    i32 self_len = self.len();
+
+    if needle_len == 0 || self_len == 0 {
+        return self;
+    }
+
+    i32 buf_size = self_len;
+    string res = (string)malloc(buf_size + 1);
+
+    if !res {
+        return nil;
+    }
+
+    i32 res_index = 0;
+    i32 i = 0;
+
+    while i < self_len {
+        if strncmp((string)((i64)self + i), needle, needle_len) == 0 {
+            if res_index + replacement_len > buf_size {
+                buf_size += replacement_len;
+                res = (string)realloc(res, buf_size + 1);
+            }
+
+            strcpy((string)((i64)res + res_index), replacement);
+            res_index += replacement_len;
+            i += needle_len;
+        } else {
+            if res_index + 1 > buf_size {
+                buf_size += 1;
+                res = (string)realloc(res, buf_size + 1);
+            }
+
+            res[res_index] = self[i];
+            res_index += 1;
+            i += 1;
+        }
+    }
+
+    res[res_index] = '\0';
+    return res;
 }
 
 // Repeats a string `count` amount of times
