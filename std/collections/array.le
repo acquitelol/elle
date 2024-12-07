@@ -18,7 +18,7 @@ fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
 local fn __internal_out_of_bounds_check(i64 i, i64 min_i, i64 max_i) {
     if i < min_i || i > max_i {
         io::cprintf(
-            "Index %d is out of bounds (must be between %d and %d)\n"
+            "Index %ld is out of bounds (must be between %ld and %ld)\n"
                 .color("red")
                 .reset(),
             i, min_i, max_i
@@ -149,6 +149,35 @@ local fn __internal_qsort<T>(T *array, i32 low, i32 high) {
 
     __internal_qsort(array, low, i - 1);
     __internal_qsort(array, i + 1, high);
+}
+
+fn Array::product<T>(Array<T> *self, i32 n) {
+    Array<void *> *results = Array::new<void *>();
+    Array<T> *current = Array::new();
+    defer current.free();
+
+    if n == 0 {
+        Array<T> *comb = Array::new();
+        results.push((T)comb);
+        return results;
+    }
+
+    __internal_generate(self, current, n, results);
+    return results;
+}
+
+local fn __internal_generate<T>(Array<T> *self, Array<T> *current, i32 n, Array<void *> *results) {
+    if current.len() == n {
+        Array<T> *combination = current.clone();
+        results.push((T)combination);
+        return;
+    }
+
+    for i32 i = 0; i < self.len(); i += 1 {
+        current.push(self[i]);
+        __internal_generate(self, current, n, results);
+        current.pop();
+    }
 }
 
 fn Array::clone<T>(Array<T> *self) -> Array<T> * {
