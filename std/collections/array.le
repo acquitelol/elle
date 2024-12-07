@@ -151,7 +151,7 @@ local fn __internal_qsort<T>(T *array, i32 low, i32 high) {
     __internal_qsort(array, i + 1, high);
 }
 
-fn Array::product<T>(Array<T> *self, i32 n) {
+fn Array::cartesian_product<T>(Array<T> *self, i32 n) {
     Array<void *> *results = Array::new<void *>();
     Array<T> *current = Array::new();
     defer current.free();
@@ -162,11 +162,11 @@ fn Array::product<T>(Array<T> *self, i32 n) {
         return results;
     }
 
-    __internal_generate(self, current, n, results);
+    __internal_cartesian_product_generate(self, current, n, results);
     return results;
 }
 
-local fn __internal_generate<T>(Array<T> *self, Array<T> *current, i32 n, Array<void *> *results) {
+local fn __internal_cartesian_product_generate<T>(Array<T> *self, Array<T> *current, i32 n, Array<void *> *results) {
     if current.len() == n {
         Array<T> *combination = current.clone();
         results.push((T)combination);
@@ -175,7 +175,7 @@ local fn __internal_generate<T>(Array<T> *self, Array<T> *current, i32 n, Array<
 
     for i32 i = 0; i < self.len(); i += 1 {
         current.push(self[i]);
-        __internal_generate(self, current, n, results);
+        __internal_cartesian_product_generate(self, current, n, results);
         current.pop();
     }
 }
@@ -310,6 +310,16 @@ fn Array::sum<T>(Array<T> *self) {
 
     for i32 i = 0; i < self.len(); i += 1 {
         sum += self.elements[i];
+    }
+
+    return sum;
+}
+
+fn Array::product<T>(Array<T> *self) {
+    T sum = 0;
+
+    for i32 i = 0; i < self.len(); i += 1 {
+        sum *= self.elements[i];
     }
 
     return sum;
