@@ -783,8 +783,82 @@ impl<'a> Statement<'a> {
 
         while self.current_token().kind != TokenKind::RightBlockBrace && !self.is_eof() {
             let location = self.current_token().location.clone();
-            let tmp_tokens = self
-                .yield_tokens_with_delimiters(vec![TokenKind::Comma, TokenKind::RightBlockBrace]);
+            let mut tmp_tokens = vec![];
+            let mut paren_nesting = 0;
+            let mut block_nesting = 0;
+            let mut curly_nesting = 0;
+
+            loop {
+                // Wrapped statement, deref, nested function call
+                if self.current_token().kind == TokenKind::LeftParenthesis {
+                    paren_nesting += 1;
+                }
+
+                // Inline array
+                if self.current_token().kind == TokenKind::LeftBlockBrace {
+                    block_nesting += 1;
+                }
+
+                // Struct init
+                if self.current_token().kind == TokenKind::LeftCurlyBrace {
+                    curly_nesting += 1;
+                }
+
+                tmp_tokens.push(self.current_token());
+                self.advance();
+
+                if self.current_token().kind == TokenKind::Comma {
+                    if paren_nesting > 0 || block_nesting > 0 || curly_nesting > 0 {
+                        // Comma in an inner function should just be added to the
+                        // token list to be parsed
+                        tmp_tokens.push(self.current_token());
+                        self.advance();
+                        continue;
+                    } else {
+                        // Continue to the next parameter in the outer function
+                        self.advance();
+                        break;
+                    }
+                }
+
+                if self.current_token().kind == TokenKind::RightParenthesis {
+                    if paren_nesting > 0 {
+                        paren_nesting -= 1;
+                    } else {
+                        panic!(
+                            "{}",
+                            self.current_token()
+                                .location
+                                .error("Invalid balance of parenthesis")
+                        )
+                    }
+                }
+
+                if self.current_token().kind == TokenKind::RightBlockBrace {
+                    if block_nesting > 0 {
+                        block_nesting -= 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                if self.current_token().kind == TokenKind::RightCurlyBrace {
+                    if curly_nesting > 0 {
+                        curly_nesting -= 1;
+                    } else {
+                        panic!(
+                            "{}",
+                            self.current_token()
+                                .location
+                                .error("Invalid balance of curly braces")
+                        )
+                    }
+                }
+
+                if self.is_eof() {
+                    break;
+                }
+            }
 
             if self.current_token().kind == TokenKind::Comma {
                 self.advance();
@@ -1115,9 +1189,18 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let mut right_location = self.current_token().location.clone();
+        let mut nesting = 0;
         let right_tokens = self.yield_tokens_with_condition(|token, _, _| {
+            if token.kind == TokenKind::LeftBlockBrace {
+                nesting += 1;
+            }
+
             if token.kind == TokenKind::RightBlockBrace {
-                return true;
+                if nesting > 0 {
+                    nesting -= 1;
+                } else {
+                    return true;
+                }
             }
 
             right_location.column += token.location.length;
