@@ -41,12 +41,11 @@ def examples(kind):
 
     for example in examples:
         run(["clear"])
-        code = run(["ellec", "-t", "-z", "-lraylib", f"examples/{kind}/{example}"]).returncode;
+        code = run(["ellec", "-t", "-z", "-lraylib", "-z", "-O3", f"examples/{kind}/{example}"]).returncode;
 
         if code == 0:
             exec_path = f"./{example.replace(SHORT_EXTENSION, "").replace(LONG_EXTENSION, "")}";
 
-            elapsed = 0
             process = Popen(
                 [exec_path, "some argv", "to ensure", "that it", "works!"],
                 stdin=PIPE, stdout=PIPE, stderr=PIPE, text=True

@@ -3507,14 +3507,7 @@ impl Compiler {
             && (first.get_pointer_inner().unwrap().is_void()
                 || second.get_pointer_inner().unwrap().is_void())
         {
-            return (
-                if first.get_pointer_inner().unwrap().is_void() {
-                    first
-                } else {
-                    second
-                },
-                val,
-            );
+            return (second, val);
         }
 
         if first.weight() == second.weight() {
