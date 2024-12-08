@@ -15,7 +15,7 @@ fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
     return temp.to_string();
 }
 
-local fn __internal_out_of_bounds_check(i64 i, i64 min_i, i64 max_i) {
+local fn __internal_array_bounds_check(i64 i, i64 min_i, i64 max_i) {
     if i < min_i || i > max_i {
         io::cprintf(
             "Index %ld is out of bounds (must be between %ld and %ld)\n"
@@ -29,12 +29,12 @@ local fn __internal_out_of_bounds_check(i64 i, i64 min_i, i64 max_i) {
 }
 
 fn Array::__load__<T>(Array<T> *self, i64 i) {
-    __internal_out_of_bounds_check(i, 0, self.len() - 1);
+    __internal_array_bounds_check(i, 0, self.len() - 1);
     return self.elements[i];
 }
 
 fn Array::__store__<T>(Array<T> *self, i64 i, T value) {
-    __internal_out_of_bounds_check(i, 0, self.len() - 1);
+    __internal_array_bounds_check(i, 0, self.len() - 1);
     self.elements[i] = value;
 }
 

@@ -5,7 +5,7 @@ struct Tuple<T, U> {
     U y;
 };
 
-local fn __internal_out_of_bounds_check(i64 i, i64 min_i, i64 max_i) {
+local fn __internal_tuple_bounds_check(i64 i, i64 min_i, i64 max_i) {
     if i < min_i || i > max_i {
         io::cprintf(
             "Index %ld is out of bounds (must be between %ld and %ld)\n"
@@ -19,14 +19,14 @@ local fn __internal_out_of_bounds_check(i64 i, i64 min_i, i64 max_i) {
 }
 
 fn Tuple::__load__<T, U>(Tuple<T, U> *self, i32 i) {
-    __internal_out_of_bounds_check(i, 0, 1);
+    __internal_tuple_bounds_check(i, 0, 1);
 
     if i == 0 { return self.x; }
     if i == 1 { return self.y; }
 }
 
 fn Tuple::__store__<T, U>(Tuple<T, U> *self, i32 i, void *value) {
-    __internal_out_of_bounds_check(i, 0, 1);
+    __internal_tuple_bounds_check(i, 0, 1);
 
     if i == 0 { self.x = (T)value; }
     if i == 1 { self.y = (U)value; }
@@ -57,20 +57,4 @@ fn Triple::new<T, U, V>(T x, U y, V z) {
     triple.z = z;
 
     return triple;
-}
-
-fn Triple::__load__<T, U, V>(Tuple<T, U, V> *self, i32 i) {
-    __internal_out_of_bounds_check(i, 0, 2);
-
-    if i == 0 { return self.x; }
-    if i == 1 { return self.y; }
-    if i == 2 { return self.z; }
-}
-
-fn Triple::__store__<T, U, V>(Tuple<T, U, V> *self, i32 i, void *value) {
-    __internal_out_of_bounds_check(i, 0, 2);
-
-    if i == 0 { self.x = (T)value; }
-    if i == 1 { self.y = (U)value; }
-    if i == 2 { self.z = (V)value; }
 }

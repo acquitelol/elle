@@ -596,7 +596,11 @@ fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
             }
 
             arg += 1;
-            result.extend(__to_string(meta.types[arg], args, wrapped));
+
+            string out = __to_string(meta.types[arg], args, wrapped);
+            result.extend(out);
+            free(out);
+
             is_open = false;
             wrapped = false;
             continue;

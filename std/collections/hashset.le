@@ -1,0 +1,148 @@
+use std/collections/array;
+
+global pub;
+
+struct HashSet<T> {
+    Array<T> *table;
+    i32 size;
+    i32 capacity;
+};
+
+fn HashSet::with_capacity<T>(i32 initial_capacity) -> HashSet<T> * {
+    HashSet<T> *set = malloc(#size(HashSet<T>));
+    *set = malloc(#size(HashSet<T>));
+
+    set.table = Array::with_capacity(initial_capacity);
+    set.capacity = initial_capacity;
+    set.size = 0;
+
+    for i32 i = 0; i < initial_capacity; i += 1 {
+        set.table.push((T)nil);
+    }
+
+    return set;
+}
+
+fn HashSet::new<T>(ElleMeta meta, ...) -> HashSet<T> * {
+    HashSet<T> *set = HashSet::with_capacity(10);
+
+    if meta.arity > 0 {
+        variadic args[meta.arity];
+
+        for i32 i = 0; i < meta.arity; i += 1 {
+            set.add(args.yield(T));
+        }
+    }
+
+    return set;
+}
+
+fn HashSet::free<T>(HashSet<T> *self) {
+    self.table.free();
+    free((void *)(*self));
+    free(self);
+}
+
+local fn hash<T>(T value, i32 capacity) -> i32 {
+    return (i32)value % capacity;
+}
+
+fn HashSet::add<T>(HashSet<T> *self, T value) -> bool {
+    if self.contains(value) {
+        return;
+    }
+
+    if self.size >= self.capacity / 2 {
+        self.resize(self.capacity * 2);
+    }
+
+    i32 idx = hash(value, self.capacity);
+    i32 start_idx = idx;
+
+    while (self.table[idx] != (T)nil) && (self.table[idx] != value) {
+        idx = (idx + 1) % self.capacity;
+
+        if idx == start_idx {
+            return false;
+        }
+    }
+
+    self.table[idx] = value;
+    self.size += 1;
+    return true;
+}
+
+fn HashSet::remove<T>(HashSet<T> *self, T value) -> bool {
+    i32 idx = hash(value, self.capacity);
+    i32 start_idx = idx;
+
+    while self.table[idx] != (T)nil {
+        if self.table[idx] == value {
+            self.table[idx] = (T)nil;
+            self.size -= 1;
+            return true;
+        }
+
+        idx = (idx + 1) % self.capacity;
+
+        if idx == start_idx {
+            break;
+        }
+    }
+
+    return false;
+}
+
+fn HashSet::contains<T>(HashSet<T> *self, T value) -> bool {
+    i32 idx = hash(value, self.capacity);
+    i32 start_idx = idx;
+
+    while self.table[idx] != (T)nil {
+        if self.table[idx] == value {
+            return true;
+        }
+
+        idx = (idx + 1) % self.capacity;
+
+        if idx == start_idx {
+            break;
+        }
+    }
+
+    return false;
+}
+
+fn HashSet::size<T>(HashSet<T> *self) -> i32 {
+    return self.size;
+}
+
+fn HashSet::is_empty<T>(HashSet<T> *self) -> bool {
+    return self.size == 0;
+}
+
+fn HashSet::resize<T>(HashSet<T> *self, i32 new_capacity) {
+    Array<T> *old_table = self.table;
+    defer old_table.free();
+
+    self.table = Array::with_capacity(new_capacity);
+    self.capacity = new_capacity;
+    self.size = 0;
+
+    for i32 i = 0; i < new_capacity; i += 1 {
+        self.table.push((T)nil);
+    }
+
+    for i32 i = 0; i < old_table.len(); i += 1 {
+        if old_table[i] != (T)nil {
+            self.add(old_table[i]);
+        }
+    }
+}
+
+fn HashSet::clear<T>(HashSet<T> *self) {
+    self.size = 0;
+
+    for i32 i = 0; i < self.capacity; i += 1 {
+        self.table[i] = (T)nil;
+    }
+}
