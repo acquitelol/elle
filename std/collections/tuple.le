@@ -42,6 +42,11 @@ fn Tuple::new<T, U>(T x, U y) {
     return tuple;
 }
 
+fn Tuple::free<T, U>(Tuple<T, U> *self) {
+    free((void *)(*self));
+    free(self);
+}
+
 struct Triple<T, U, V> {
     T x;
     U y;

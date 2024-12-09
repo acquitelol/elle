@@ -341,6 +341,38 @@ fn Array::last<T>(Array<T> *self) -> T {
     return (T)(self[self.len() - 1]);
 }
 
+fn Array::max<T>(Array<T> *self) -> T {
+    if self.len() == 0 {
+        return (T)nil;
+    }
+
+    T max = self[0];
+
+    for i32 i = 1; i < self.len(); i += 1 {
+        if self[i] > max {
+            max = self[i];
+        }
+    }
+
+    return max;
+}
+
+fn Array::min<T>(Array<T> *self) -> T {
+    if self.len() == 0 {
+        return (T)nil;
+    }
+
+    T min = self[0];
+
+    for i32 i = 1; i < self.len(); i += 1 {
+        if self[i] < max {
+            min = self[i];
+        }
+    }
+
+    return min;
+}
+
 fn Array::free<T>(Array<T> *self) {
     free(self.elements);
     free((void *)(*self));
