@@ -1,0 +1,25 @@
+use std/cast;
+use std/io;
+
+fn main() {
+    i32 input = i32::parse(io::input("Enter a number -> "));
+
+    if input < 1 {
+        io::eprintf("Invalid input: {}", input);
+        return 1;
+    }
+
+    for i32 i = 1; i <= input; i += 1 {
+        string res = "";
+
+        if i % 3 == 0 {
+            res <>= "Fizz";
+        }
+
+        if i % 5 == 0 {
+            res <>= "Buzz";
+        }
+
+        io::println(res.default("{}".format(i)));
+    }
+}
