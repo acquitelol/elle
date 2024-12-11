@@ -1,10 +1,9 @@
 use std/libc/mem;
 use std/libc/io;
-use std/string;
 use std/core;
 global pub;
 
-struct Array<T> {
+struct Array<T> @nofmt {
     i32 size;
     i32 capacity;
     T *elements;
@@ -273,6 +272,29 @@ fn Array::remove<T>(Array<T> *self, i32 index) -> T {
     }
 
     return removedElement;
+}
+
+fn Array::insert<T>(Array<T> *self, i32 index, T element) {
+    if index < 0 || index > self.size {
+        io::cprintf(
+            "Index %ld is out of bounds (must be between 0 and %ld inclusive)\n"
+                .color("red")
+                .reset(),
+            index, self.size
+        );
+        abort();
+    }
+
+    if self.size >= self.capacity {
+        self.resize((self.capacity || 1) * 2);
+    }
+
+    for i32 i = self.size; i > index; i -= 1 {
+        self.elements[i] = self.elements[i - 1];
+    }
+
+    self.elements[index] = element;
+    self.size += 1;
 }
 
 fn Array::map<T>(Array<T> *self, fn *mapping) {

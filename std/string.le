@@ -397,22 +397,32 @@ fn string::push(string *self, char c) {
     *self = result;
 }
 
+local fn __internal_to_string<T>(i64 args, string fmt) {
+    T arg = args.yield(T);
+
+    i32 length = io::snprintf(nil, 0, fmt, arg);
+    string res = (string)malloc(length);
+    io::sprintf(res, fmt, arg);
+
+    return res;
+}
+
+local fn __internal_to_string_split<T, U>(i64 args, string fmt) {
+    T arg = args.yield(U);
+
+    i32 length = io::snprintf(nil, 0, fmt, arg);
+    string res = (string)malloc(length);
+    io::sprintf(res, fmt, arg);
+
+    return res;
+}
+
 // !! Do not use this unless you know what you're doing !!
 // If you want to turn a value of arbitrary type to a string
 // please use string::as_string or string::as_string_wrapped
 fn __to_string(string ty, i64 args, bool wrap) {
-    string res = nil;
-    string fmt = nil;
-    i32 length = 0;
-
     if ty.contains("*") {
-        i64 arg = args.yield(i64);
-        fmt = "%p";
-
-        length = io::snprintf(nil, 0, fmt, arg);
-        res = (string)malloc(length);
-        io::sprintf(res, fmt, arg);
-        return res;
+        return __internal_to_string<i64>(args, "%p");
     }
 
     if ty.starts_with("string") {
@@ -422,100 +432,54 @@ fn __to_string(string ty, i64 args, bool wrap) {
             arg = string::concat("\"", arg, "\"");
         }
 
-        res = (string)malloc(arg.len() + 1);
+        string res = (string)malloc(arg.len() + 1);
         strcpy(res, arg);
         return res;
     }
 
     if ty.starts_with("i8") {
-        i32 arg = args.yield(i8);
-        fmt = "%d";
-
-        length = io::snprintf(nil, 0, fmt, arg);
-        res = (string)malloc(length);
-        io::sprintf(res, fmt, arg);
+        return __internal_to_string<i8>(args, "%d");
     }
 
     if ty.starts_with("i16") {
-        i32 arg = args.yield(i16);
-        fmt = "%d";
-
-        length = io::snprintf(nil, 0, fmt, arg);
-        res = (string)malloc(length);
-        io::sprintf(res, fmt, arg);
+        return __internal_to_string<i16>(args, "%d");
     }
 
     if ty.starts_with("i32") {
-        i32 arg = args.yield(i32);
-        fmt = "%d";
-
-        length = io::snprintf(nil, 0, fmt, arg);
-        res = (string)malloc(length);
-        io::sprintf(res, fmt, arg);
+        return __internal_to_string<i32>(args, "%d");
     }
 
     if ty.starts_with("i64") {
-        i64 arg = args.yield(i64);
-        fmt = "%ld";
-
-        length = io::snprintf(nil, 0, fmt, arg);
-        res = (string)malloc(length);
-        io::sprintf(res, fmt, arg);
+        return __internal_to_string<i64>(args, "%ld");
     }
 
     if ty.starts_with("u8") {
-        i32 arg = args.yield(u8);
-        fmt = "%u";
-
-        length = io::snprintf(nil, 0, fmt, arg);
-        res = (string)malloc(length);
-        io::sprintf(res, fmt, arg);
+        return __internal_to_string_split<i32, u8>(args, "%u");
     }
 
     if ty.starts_with("u16") {
-        i32 arg = args.yield(u16);
-        fmt = "%u";
-
-        length = io::snprintf(nil, 0, fmt, arg);
-        res = (string)malloc(length);
-        io::sprintf(res, fmt, arg);
+        return __internal_to_string_split<i32, u16>(args, "%u");
     }
 
     if ty.starts_with("u32") {
-        i32 arg = args.yield(u32);
-        fmt = "%u";
-
-        length = io::snprintf(nil, 0, fmt, arg);
-        res = (string)malloc(length);
-        io::sprintf(res, fmt, arg);
+        return __internal_to_string_split<i32, u32>(args, "%u");
     }
 
     if ty.starts_with("u64") {
-        i64 arg = args.yield(u64);
-        fmt = "%lu";
-
-        length = io::snprintf(nil, 0, fmt, arg);
-        res = (string)malloc(length);
-        io::sprintf(res, fmt, arg);
+        return __internal_to_string_split<i64, u64>(args, "%lu");
     }
 
     if ty.starts_with("f32") || ty.starts_with("f64") {
-        f64 arg = 0;
-        fmt = "%f";
-
         if ty.starts_with("f32") {
-            arg = (f64)args.yield(f32);
+            return __internal_to_string_split<f64, f32>(args, "%f");
         } else {
-            arg = args.yield(f64);
+            return __internal_to_string<f64>(args, "%f");
         }
-
-        length = io::snprintf(nil, 0, fmt, arg);
-        res = (string)malloc(length);
-        io::sprintf(res, fmt, arg);
     }
 
     if ty.starts_with("char") {
         char arg = args.yield(char);
+        string fmt = "";
 
         if wrap {
             fmt = "'%c'";
@@ -523,8 +487,9 @@ fn __to_string(string ty, i64 args, bool wrap) {
             fmt = "%c";
         }
 
-        res = (string)malloc(length);
+        string res = (string)malloc(1);
         io::sprintf(res, fmt, arg);
+        return res;
     }
 
     if ty.starts_with("bool") {
@@ -532,20 +497,18 @@ fn __to_string(string ty, i64 args, bool wrap) {
         // copy it into a heap-allocated string
         // so that the caller can reliably free it
         string arg = args.yield(bool).to_string();
-        fmt = "%s";
+        string fmt = "%s";
 
-        res = (string)malloc(arg.len() + 1);
+        string res = (string)malloc(arg.len() + 1);
         io::sprintf(res, fmt, arg);
+        return res;
     }
 
-    if res == nil {
-        i64 arg = args.yield(i64);
-        fmt = "<%s at %p>";
-
-        length = io::snprintf(nil, 0, fmt, ty, arg);
-        res = (string)malloc(length);
-        io::sprintf(res, fmt, ty, arg);
-    }
+    i64 arg = args.yield(i64);
+    string fmt = "<%s at %p>";
+    i32 length = io::snprintf(nil, 0, fmt, ty, arg);
+    string res = (string)malloc(length);
+    io::sprintf(res, fmt, ty, arg);
 
     return res;
 }

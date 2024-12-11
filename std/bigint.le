@@ -1,0 +1,244 @@
+use std/collections/array;
+use std/libc/mem;
+use std/libc/io;
+use std/pick;
+global pub;
+
+struct BigInt {
+    Array<i8> *digits; // Starts with least significant digit
+    bool is_negative;
+};
+
+fn BigInt::new(string value) -> BigInt * {
+    BigInt *bigint = malloc(#size(BigInt));
+    *bigint = malloc(#size(BigInt));
+
+    bigint.is_negative = false;
+    bigint.digits = Array::new<i32>();
+
+    if value.is_empty() {
+        bigint.digits.push(0);
+        return bigint;
+    }
+
+    i32 start_index = 0;
+    if value[0] == '-' {
+        bigint.is_negative = true;
+        start_index = 1;
+    }
+
+    for i32 i = value.len() - 1; i >= start_index; i -= 1 {
+        bigint.digits.push(value[i] - '0');
+    }
+
+    return bigint;
+}
+
+fn BigInt::to_string(BigInt *self) -> string {
+    string result = pick(self.is_negative, "-", "");
+
+    for i32 i = self.digits.len() - 1; i >= 0; i -= 1 {
+        result.push(self.digits[i] + '0');
+    }
+
+    return result;
+}
+
+fn BigInt::to<T>(BigInt *self) -> T {
+    T result = 0;
+    T multiplier = 1;
+
+    for i32 i = 0; i < self.digits.len(); i += 1 {
+        result += self.digits[i] * multiplier;
+        multiplier *= 10;
+    }
+
+    return pick(self.is_negative, -result, result);
+}
+
+fn BigInt::__fmt__(BigInt self, i32 nesting) {
+    BigInt tmp = self;
+    return tmp.to_string();
+}
+
+// Forward declare
+external fn BigInt::sub(BigInt *self, BigInt *other) -> BigInt *;
+
+fn BigInt::add(BigInt *self, BigInt *other) -> BigInt * {
+    if self.is_negative != other.is_negative {
+        if self.is_negative {
+            self.is_negative = false;
+            BigInt *a = other.sub(self);
+            self.is_negative = true;
+            return a;
+        } else {
+            other.is_negative = false;
+            BigInt *b = self.sub(other);
+            other.is_negative = true;
+            return b;
+        }
+    }
+
+    BigInt *result = malloc(#size(BigInt));
+    *result = malloc(#size(BigInt));
+
+    result.digits = Array::new();
+    result.is_negative = self.is_negative;
+
+    i32 carry = 0;
+    i32 max_len = pick(
+        self.digits.len() > other.digits.len(),
+        self.digits.len(),
+        other.digits.len()
+    );
+
+    for i32 i = 0; (i < max_len) || (carry != 0); i += 1 {
+        i32 a; i32 b;
+
+        // Can't use pick<T> here because
+        // of a lack of lazy evaluation
+        if i < self.digits.len() {
+            a = self.digits[i];
+        } else {
+            a = 0;
+        }
+
+        if i < other.digits.len() {
+            b = other.digits[i];
+        } else {
+            b = 0;
+        }
+
+        i32 sum = a + b + carry;
+        result.digits.push(sum % 10);
+        carry = sum / 10;
+    }
+
+    return result;
+}
+
+fn BigInt::sub(BigInt *self, BigInt *other) -> BigInt * {
+    if self.is_negative != other.is_negative {
+        other.is_negative = !other.is_negative;
+        BigInt *a = self.add(other);
+        other.is_negative = !other.is_negative;
+        return a;
+    }
+
+    if self.is_negative {
+        other.is_negative = false;
+        self.is_negative = false;
+        BigInt *b = other.sub(self);
+        self.is_negative = true;
+        other.is_negative = true;
+        return b;
+    }
+
+    if BigInt::compare(self, other) < 0 {
+        BigInt *c = other.sub(self);
+        c.is_negative = true;
+        return c;
+    }
+
+    BigInt *result = malloc(#size(BigInt));
+    *result = malloc(#size(BigInt));
+
+    result.digits = Array::new<i32>();
+    result.is_negative = false;
+
+    i32 borrow = 0;
+    for i32 i = 0; i < self.digits.len(); i += 1 {
+        i32 a = self.digits[i];
+        i32 b;
+
+        // Can't use pick<T> here because
+        // of a lack of lazy evaluation
+        if i < other.digits.len() {
+            b = other.digits[i];
+        } else {
+            b = 0;
+        }
+
+        i32 diff = a - b - borrow;
+        if diff < 0 {
+            diff += 10;
+            borrow = 1;
+        } else {
+            borrow = 0;
+        }
+
+        result.digits.push(diff);
+    }
+
+    while result.digits.len() > 1 && result.digits.last() == 0 {
+        result.digits.pop();
+    }
+
+    return result;
+}
+
+fn BigInt::compare(BigInt *self, BigInt *other) -> i32 {
+    if self.is_negative != other.is_negative {
+        return pick(self.is_negative, -1, 1);
+    }
+
+    if self.digits.len() != other.digits.len() {
+        return pick(self.digits.len() < other.digits.len() == self.is_negative, 1, -1);
+    }
+
+    for i32 i = self.digits.len() - 1; i >= 0; i -= 1 {
+        if self.digits[i] != other.digits[i] {
+            return pick(self.digits[i] < other.digits[i] == self.is_negative, 1, -1);
+        }
+    }
+
+    return 0;
+}
+
+fn BigInt::equals(BigInt *self, BigInt *other) {
+    return self.compare(other) == 0;
+}
+
+fn BigInt::mul(BigInt *self, BigInt *other) -> BigInt * {
+    BigInt *result = malloc(#size(BigInt));
+    *result = malloc(#size(BigInt));
+
+    result.digits = Array::with_capacity(self.digits.len() + other.digits.len());
+
+    for i32 i = 0; i < result.digits.capacity; i += 1 {
+        result.digits.push(0);
+    }
+
+    result.is_negative = self.is_negative != other.is_negative;
+
+    for i32 i = 0; i < self.digits.len(); i += 1 {
+        i32 carry = 0;
+        for i32 j = 0; j < other.digits.len() || carry != 0; j += 1 {
+            i32 b;
+
+            // Can't use pick<T> here because
+            // of a lack of lazy evaluation
+            if j < other.digits.len() {
+                b = other.digits[j];
+            } else {
+                b = 0;
+            }
+
+            i32 prod = result.digits[i + j] + self.digits[i] * b + carry;
+            result.digits[i + j] = prod % 10;
+            carry = prod / 10;
+        }
+    }
+
+    while result.digits.len() > 1 && result.digits.last() == 0 {
+        result.digits.pop();
+    }
+
+    return result;
+}
+
+fn BigInt::free(BigInt *self) {
+    self.digits.free();
+    free((void *)(*self));
+    free(self);
+}

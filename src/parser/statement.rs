@@ -459,6 +459,7 @@ impl<'a> Statement<'a> {
         &mut self,
         maybe_name: Option<(Location, String)>,
         maybe_params: Option<Vec<(Location, AstNode)>>,
+        maybe_generics: Option<Vec<Type>>,
         maybe_position: Option<usize>,
         type_method: bool,
     ) -> AstNode {
@@ -473,23 +474,29 @@ impl<'a> Statement<'a> {
             (location, tmp)
         };
 
-        let mut generics = vec![];
+        let generics = if let Some(generics) = maybe_generics {
+            generics
+        } else {
+            let mut tmp = vec![];
 
-        if self.current_token().kind == TokenKind::LessThan {
-            self.advance();
-
-            while self.current_token().kind != TokenKind::GreaterThan {
-                generics.push(self.get_type(Some(self.shared.generics)));
+            if self.current_token().kind == TokenKind::LessThan {
                 self.advance();
 
-                if self.current_token().kind == TokenKind::Comma {
+                while self.current_token().kind != TokenKind::GreaterThan {
+                    tmp.push(self.get_type(Some(self.shared.generics)));
                     self.advance();
+
+                    if self.current_token().kind == TokenKind::Comma {
+                        self.advance();
+                    }
                 }
+
+                self.expect_tokens(vec![TokenKind::GreaterThan]);
+                self.advance();
             }
 
-            self.expect_tokens(vec![TokenKind::GreaterThan]);
-            self.advance();
-        }
+            tmp
+        };
 
         if self.current_token().kind == TokenKind::Semicolon || self.is_eof() {
             return AstNode::LiteralStatement {
@@ -1916,10 +1923,41 @@ impl<'a> Statement<'a> {
 
         self.advance();
 
+        let mut tmp = vec![];
+
+        if self.current_token().kind == TokenKind::LessThan
+            && self.next_token().is_some_and(|token| {
+                if token.kind != TokenKind::Identifier {
+                    return false;
+                }
+
+                let ty_name = token.value.get_string_inner().unwrap();
+
+                self.shared.struct_pool.borrow().contains_key(&ty_name)
+                    || self.shared.generics.contains(&ty_name)
+                    || token.value.is_base_type()
+            })
+        {
+            self.advance();
+
+            while self.current_token().kind != TokenKind::GreaterThan {
+                tmp.push(self.get_type(Some(self.shared.generics)));
+                self.advance();
+
+                if self.current_token().kind == TokenKind::Comma {
+                    self.advance();
+                }
+            }
+
+            self.expect_tokens(vec![TokenKind::GreaterThan]);
+            self.advance();
+        }
+
         if self.current_token().kind == TokenKind::LeftParenthesis {
             return self.parse_function(
                 Some((location.clone(), name)),
                 Some(vec![(location.clone(), *left)]),
+                if !tmp.is_empty() { Some(tmp) } else { None },
                 Some(position),
                 true,
             );
@@ -1949,6 +1987,7 @@ impl<'a> Statement<'a> {
                             location,
                         },
                     )]),
+                    if !tmp.is_empty() { Some(tmp) } else { None },
                     Some(position),
                     true,
                 );
@@ -1998,6 +2037,7 @@ impl<'a> Statement<'a> {
                 return self.parse_function(
                     Some((location.clone(), name)),
                     Some(vec![(location.clone(), *left)]),
+                    if !tmp.is_empty() { Some(tmp) } else { None },
                     Some(position),
                     true,
                 )
@@ -2309,7 +2349,7 @@ impl<'a> Statement<'a> {
                     );
 
                     if next.kind == TokenKind::LeftParenthesis {
-                        self.parse_function(None, None, None, false)
+                        self.parse_function(None, None, None, None, false)
                     } else if next.kind == TokenKind::LeftBlockBrace {
                         self.parse_offset_store(None)
                     } else if next.kind == TokenKind::LeftCurlyBrace {
@@ -2345,7 +2385,7 @@ impl<'a> Statement<'a> {
                                 || self.shared.struct_pool.borrow().contains_key(&ty_name)
                                 || self.shared.generics.contains(&ty_name)
                             {
-                                self.parse_function(None, None, None, false)
+                                self.parse_function(None, None, None, None, false)
                             } else {
                                 self.parse_arithmetic()
                             }
@@ -2483,6 +2523,7 @@ impl<'a> Statement<'a> {
                                     method.value.get_string_inner().unwrap()
                                 ),
                             )),
+                            None,
                             None,
                             Some(position),
                             false,

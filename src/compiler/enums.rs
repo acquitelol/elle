@@ -426,7 +426,7 @@ impl Type {
             Type::UnsignedHalfword => 5,
             Type::UnsignedWord => 6,
             Type::UnsignedLong => 7,
-            Type::Byte => 9,
+            Type::Byte => 8,
             Type::Halfword => 9,
             Type::Boolean => 10,
             Type::Word => 11,

@@ -1,0 +1,28 @@
+use std/bigint;
+use std/io;
+
+fn main() {
+    BigInt *a = BigInt::new("1111111111111111111111111111111111111111111111");
+
+    io::assert(a
+        .mul(BigInt::new("2"))
+        .sub(BigInt::new("22222222222222222222"))
+        .equals(BigInt::new("2222222222222222222222222200000000000000000000")),
+        nil
+    );
+
+    BigInt *b = BigInt::new("1000000000000000000000000");
+
+    io::assert(b
+        .mul(BigInt::new("16"))
+        .add(BigInt::new("12345679111121314151617181920"))
+        .equals(BigInt::new("12361679111121314151617181920")),
+        nil
+    );
+
+    BigInt *c = BigInt::new("123456");
+
+    io::assert(c.to<i32>() == 123456, nil);
+    io::assert(c.to<i32>() == c.to<i64>(), nil);
+    io::println("All BigInt tests have passed!".color("green").reset());
+}
