@@ -875,8 +875,7 @@ impl Type {
         }
     }
 
-    /// Returns number of bytes
-    pub fn size(&self, module: &RefCell<Module>) -> u64 {
+    pub fn size_base(&self) -> u64 {
         match self {
             Self::UnsignedByte | Self::Byte | Self::Char => 1,
             Self::UnsignedHalfword | Self::Halfword => 2,
@@ -887,6 +886,13 @@ impl Type {
             Self::UnsignedLong | Self::Long | Self::Pointer(..) | Self::Function(..) => {
                 mem::size_of::<usize>() as u64
             }
+            _ => 0,
+        }
+    }
+
+    /// Returns number of bytes
+    pub fn size(&self, module: &RefCell<Module>) -> u64 {
+        match self {
             Self::Struct(val, ..) => {
                 let size = module
                     .borrow()
@@ -902,6 +908,7 @@ impl Type {
                 size
             }
             Self::Unknown(..) | Self::Null => 0,
+            _ => self.size_base(),
         }
     }
 }

@@ -39,11 +39,10 @@ static RESERVED_KEYWORDS: &[&'static str] = &[
 ];
 
 pub enum Warning {
-    ImplicitCast = 1 << 0,
-    StructFieldsMissing = 1 << 1,
-    InvalidAlias = 1 << 2,
-    VariadicNoMeta = 1 << 3,
-    CStyleVoid = 1 << 4,
+    StructFieldsMissing = 1 << 0,
+    InvalidAlias = 1 << 1,
+    VariadicNoMeta = 1 << 2,
+    CStyleVoid = 1 << 3,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
@@ -57,8 +56,7 @@ pub enum EmitKind {
 
 impl Warning {
     pub const fn all() -> u32 {
-        Self::ImplicitCast as u32
-            | Self::InvalidAlias as u32
+        Self::InvalidAlias as u32
             | Self::StructFieldsMissing as u32
             | Self::VariadicNoMeta as u32
             | Self::CStyleVoid as u32
@@ -105,6 +103,7 @@ fn main() -> ExitCode {
     let mut debug_time = false;
     let mut emit_qbe = false;
     let mut emit_asm = false;
+    let mut ast = false;
     let mut hush = false;
     let mut object_output = false;
     let mut strings_disabled = false;
@@ -116,7 +115,6 @@ fn main() -> ExitCode {
 
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "-Wimplicit-cast" => warnings.set_warning(Warning::ImplicitCast),
             "-Wstruct-fields-missing" => warnings.set_warning(Warning::StructFieldsMissing),
             "-Winvalid-alias" => warnings.set_warning(Warning::InvalidAlias),
             "-Wvariadic-no-meta" => warnings.set_warning(Warning::VariadicNoMeta),
@@ -125,6 +123,7 @@ fn main() -> ExitCode {
             "-t" | "--time" | "--elapsed-time" => debug_time = true,
             "-ssa" | "--emit-ssa" | "--emit-qbe" => emit_qbe = true,
             "-asm" | "--emit-s" | "--emit-asm" => emit_asm = true,
+            "-ast" | "--emit-ast" | "--emit-tree" => ast = true,
             "-o" => output_path = args.next(),
             "-h" | "--help" => {
                 print_help(program);
@@ -272,6 +271,11 @@ fn main() -> ExitCode {
             ignore_empty: false,
         },
     );
+
+    if ast {
+        dbg!(tree);
+        return ExitCode::SUCCESS;
+    }
 
     if debug_time {
         println!(

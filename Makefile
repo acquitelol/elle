@@ -27,6 +27,10 @@ compile-debug:
 compile-release:
 	cargo build --release && mv ./target/release/ellec ./ellec
 
+.PHONY: test
+test:
+	pypy3 tools/examples.py all
+
 clean:
 	rm -rf dist
 	@make compile-release

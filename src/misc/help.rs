@@ -37,16 +37,16 @@ pub fn print_help(program: String) {
                     "-asm, --emit-asm, --emit-s",
                     "Emits the Assembly file in the form of .s instead of an executable",
                 ),
+                (
+                    "-ast, --emit-ast, --emit-tree",
+                    "Prints the AST representation of the program to standard output",
+                ),
             ],
         ),
         (
             "Warning Flags",
             vec![
                 ("-Wall", "Enables all of the warnings the compiler provides"),
-                (
-                    "-Wimplicit-cast",
-                    "Implicit casting of a variable to another type",
-                ),
                 (
                     "-Wstruct-fields-missing",
                     "Initialization a stack-allocated struct without all of its fields",

@@ -93,6 +93,12 @@ if __name__ == "__main__":
         print("CTRL+C twice in rapid succession to exit the program")
         exit(0)
 
+    if argv[1] == "all":
+        for kind in sorted(kinds, reverse=True):
+            if kind in ["all", "fun"]:
+                continue
+            examples(kind)
+
     kinds.append("help");
 
     if not (argv[1] in kinds):

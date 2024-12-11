@@ -366,6 +366,7 @@ pub fn lex_and_parse(
 
             // Special format for T*
             let idx = as_string_idx!(tree, INTERNAL_FORMATTER);
+            let loc = Location::default(input_path.clone());
 
             tree.insert(
                 idx + 1,
@@ -395,86 +396,149 @@ pub fn lex_and_parse(
                         },
                     ],
                     r#return: Some(Type::Pointer(Box::new(Type::Char))),
-                    body: vec![AstNode::ReturnStatement {
-                        value: Box::new(AstNode::FunctionCall {
-                            name: format!("string.{}", INTERNAL_FORMATTER).into(),
-                            generics: vec![],
-                            parameters: vec![
-                                (
-                                    Location::default(input_path.clone()),
-                                    AstNode::LiteralStatement {
-                                        kind: TokenKind::StringLiteral,
-                                        value: ValueKind::String("<{} at {}>".into()),
-                                        location: Location::default(input_path.clone()),
-                                    },
-                                ),
-                                (
-                                    Location::default(input_path.clone()),
-                                    AstNode::FunctionCall {
-                                        name: FORMAT_CONSTANT.into(),
-                                        generics: vec![],
-                                        parameters: vec![
-                                            (
-                                                Location::default(input_path.clone()),
-                                                AstNode::MemoryStatement {
-                                                    left: Box::new(AstNode::LiteralStatement {
-                                                        kind: TokenKind::Identifier,
-                                                        value: ValueKind::String("self".into()),
-                                                        location: Location::default(
-                                                            input_path.clone(),
-                                                        ),
-                                                    }),
-                                                    right: Box::new(AstNode::LiteralStatement {
-                                                        kind: TokenKind::IntegerLiteral,
-                                                        value: ValueKind::Number(0),
-                                                        location: Location::default(
-                                                            input_path.clone(),
-                                                        ),
-                                                    }),
-                                                    value: None,
-                                                    left_location: Location::default(
-                                                        input_path.clone(),
-                                                    ),
-                                                    right_location: Location::default(
-                                                        input_path.clone(),
-                                                    ),
-                                                    value_location: Location::default(
-                                                        input_path.clone(),
-                                                    ),
-                                                    is_deref: true,
-                                                },
-                                            ),
-                                            (
-                                                Location::default(input_path.clone()),
-                                                AstNode::LiteralStatement {
-                                                    kind: TokenKind::Identifier,
-                                                    value: ValueKind::String("nesting".into()),
-                                                    location: Location::default(input_path.clone()),
-                                                },
-                                            ),
-                                        ],
-                                        type_method: true,
-                                        ignore_no_def: false,
-                                        location: Location::default(input_path.clone()),
-                                    },
-                                ),
-                                (
-                                    Location::default(input_path.clone()),
-                                    AstNode::LiteralStatement {
+                    body: vec![
+                        AstNode::DeclareStatement {
+                            name: "res".into(),
+                            r#type: Some(Type::Pointer(Box::new(Type::Char))),
+                            value: Box::new(AstNode::LiteralStatement {
+                                kind: TokenKind::StringLiteral,
+                                value: ValueKind::String("invalid".into()),
+                                location: loc.clone(),
+                            }),
+                            location: loc.clone(),
+                            value_location: loc.clone(),
+                        },
+                        AstNode::IfStatement {
+                            condition: Box::new(AstNode::ArithmeticOperation {
+                                left: Box::new(AstNode::ArithmeticOperation {
+                                    left: Box::new(AstNode::LiteralStatement {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("self".into()),
-                                        location: Location::default(input_path.clone()),
-                                    },
-                                ),
-                            ],
-                            type_method: false,
-                            ignore_no_def: false,
-                            location: Location::default(input_path.clone()),
-                        }),
-                        location: Location::default(input_path.clone()),
-                    }],
-                    location: Location::default(input_path.clone()),
-                    return_location: Location::default(input_path.clone()),
+                                        location: loc.clone(),
+                                    }),
+                                    right: Box::new(AstNode::LiteralStatement {
+                                        kind: TokenKind::IntegerLiteral,
+                                        value: ValueKind::Number(0),
+                                        location: loc.clone()
+                                    }),
+                                    operator: TokenKind::NotEqualTo,
+                                    treat_as_string: false,
+                                    location: loc.clone()
+                                }),
+                                right: Box::new(AstNode::ArithmeticOperation {
+                                    left: Box::new(AstNode::ArithmeticOperation {
+                                        left: Box::new(AstNode::LiteralStatement {
+                                            kind: TokenKind::Identifier,
+                                            value: ValueKind::String("self".into()),
+                                            location: loc.clone(),
+                                        }),
+                                        right: Box::new(AstNode::LiteralStatement {
+                                            kind: TokenKind::IntegerLiteral,
+                                            value: ValueKind::Number(Type::Word.size_base() as i128),
+                                            location: loc.clone(),
+                                        }),
+                                        operator: TokenKind::Modulus,
+                                        treat_as_string: false,
+                                        location: loc.clone(),
+                                    }),
+                                    right: Box::new(AstNode::LiteralStatement {
+                                        kind: TokenKind::IntegerLiteral,
+                                        value: ValueKind::Number(0),
+                                        location: loc.clone()
+                                    }),
+                                    operator: TokenKind::EqualTo,
+                                    treat_as_string: false,
+                                    location: loc.clone(),
+                                }),
+                                operator: TokenKind::And,
+                                treat_as_string: false,
+                                location: loc.clone(),
+                            }),
+                            body: vec![AstNode::DeclareStatement {
+                                name: "res".into(),
+                                r#type: None,
+                                value: Box::new(AstNode::FunctionCall {
+                                    name: FORMAT_CONSTANT.into(),
+                                    generics: vec![],
+                                    parameters: vec![
+                                        (
+                                            loc.clone(),
+                                            AstNode::MemoryStatement {
+                                                left: Box::new(AstNode::LiteralStatement {
+                                                    kind: TokenKind::Identifier,
+                                                    value: ValueKind::String("self".into()),
+                                                    location: loc.clone(),
+                                                }),
+                                                right: Box::new(AstNode::LiteralStatement {
+                                                    kind: TokenKind::IntegerLiteral,
+                                                    value: ValueKind::Number(0),
+                                                    location: loc.clone(),
+                                                }),
+                                                value: None,
+                                                left_location: loc.clone(),
+                                                right_location: loc.clone(),
+                                                value_location: loc.clone(),
+                                                is_deref: true,
+                                            },
+                                        ),
+                                        (
+                                            loc.clone(),
+                                            AstNode::LiteralStatement {
+                                                kind: TokenKind::Identifier,
+                                                value: ValueKind::String("nesting".into()),
+                                                location: loc.clone(),
+                                            },
+                                        ),
+                                    ],
+                                    type_method: true,
+                                    ignore_no_def: false,
+                                    location: loc.clone(),
+                                }),
+                                location: loc.clone(),
+                                value_location: loc.clone(),
+                            }],
+                            else_body: vec![],
+                            location: loc.clone(),
+                        },
+                        AstNode::ReturnStatement {
+                            value: Box::new(AstNode::FunctionCall {
+                                name: format!("string.{}", INTERNAL_FORMATTER).into(),
+                                generics: vec![],
+                                parameters: vec![
+                                    (
+                                        loc.clone(),
+                                        AstNode::LiteralStatement {
+                                            kind: TokenKind::StringLiteral,
+                                            value: ValueKind::String("<{} at {}>".into()),
+                                            location: loc.clone(),
+                                        },
+                                    ),
+                                    (
+                                        loc.clone(),
+                                        AstNode::LiteralStatement {
+                                            kind: TokenKind::Identifier,
+                                            value: ValueKind::String("res".into()),
+                                            location: loc.clone(),
+                                        },
+                                    ),
+                                    (
+                                        loc.clone(),
+                                        AstNode::LiteralStatement {
+                                            kind: TokenKind::Identifier,
+                                            value: ValueKind::String("self".into()),
+                                            location: loc.clone(),
+                                        },
+                                    ),
+                                ],
+                                type_method: false,
+                                ignore_no_def: false,
+                                location: loc.clone(),
+                            }),
+                            location: loc.clone(),
+                        },
+                    ],
+                    location: loc.clone(),
+                    return_location: loc.clone(),
                 },
             );
 

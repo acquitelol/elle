@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    advance, cast_warning, hashmap, is_generic,
+    advance, hashmap, is_generic,
     lexer::enums::{Location, TokenKind, ValueKind},
     misc::colors::*,
     parser::{
@@ -3513,15 +3513,6 @@ impl Compiler {
         if first.weight() == second.weight() {
             return (second, val);
         } else if (first.is_int() && second.is_int()) || (first.is_float() && second.is_float()) {
-            cast_warning!(
-                explicit,
-                left_location,
-                first.display(),
-                second.display(),
-                self.warnings,
-                Warning::ImplicitCast
-            );
-
             let conv = self.new_temporary(Some("conv"), true);
             let is_first_higher = first.weight() > second.weight();
 
@@ -3543,15 +3534,6 @@ impl Compiler {
 
             return (second, conv);
         } else {
-            cast_warning!(
-                explicit,
-                left_location,
-                first,
-                second,
-                self.warnings,
-                Warning::ImplicitCast
-            );
-
             let conv = self.new_temporary(Some("conv"), true);
 
             func.borrow_mut().assign_instruction(
