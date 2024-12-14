@@ -1,4 +1,5 @@
 use std/collections/array;
+use std/hashes;
 use std/math;
 
 global pub;
@@ -78,7 +79,7 @@ fn HashSet::add<T>(HashSet<T> *self, T value) -> bool {
         self.resize(self.capacity * 2);
     }
 
-    i32 idx = hash(value, self.capacity);
+    i32 idx = value.__hash__(self.capacity);
     i32 start_idx = idx;
 
     while true {
@@ -103,7 +104,7 @@ fn HashSet::add<T>(HashSet<T> *self, T value) -> bool {
 }
 
 fn HashSet::remove<T>(HashSet<T> *self, T value) -> bool {
-    i32 idx = hash(value, self.capacity);
+    i32 idx = value.__hash__(self.capacity);
     i32 start_idx = idx;
 
     while self.table[idx] != (T)EMPTY {
@@ -124,7 +125,7 @@ fn HashSet::remove<T>(HashSet<T> *self, T value) -> bool {
 }
 
 fn HashSet::contains<T>(HashSet<T> *self, T value) -> bool {
-    i32 idx = hash(value, self.capacity);
+    i32 idx = value.__hash__(self.capacity);
     i32 start_idx = idx;
 
     while true {

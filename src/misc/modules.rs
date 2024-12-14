@@ -272,6 +272,8 @@ pub fn lex_and_parse(
     // - nil => 0 (nullptr)
     // - ElleMeta => Utility struct
     if nesting == 0 {
+        let loc = Location::default(input_path.clone());
+
         tree.insert(
             0,
             Primitive::Constant {
@@ -284,9 +286,9 @@ pub fn lex_and_parse(
                 value: Box::new(AstNode::LiteralStatement {
                     kind: TokenKind::LongLiteral,
                     value: ValueKind::Number(0),
-                    location: Location::default(input_path.clone()),
+                    location: loc.clone(),
                 }),
-                location: Location::default(input_path.clone()),
+                location: loc.clone(),
             },
         );
 
@@ -294,6 +296,79 @@ pub fn lex_and_parse(
             // Primitive format functions
             for primitive in Type::get_primitive_types() {
                 let idx = as_string_idx!(tree, INTERNAL_FORMATTER);
+
+                let mut body = vec![AstNode::ReturnStatement {
+                    value: Box::new(AstNode::FunctionCall {
+                        name: format!("string.{}", INTERNAL_FORMATTER),
+                        generics: vec![],
+                        parameters: vec![
+                            (
+                                loc.clone(),
+                                AstNode::LiteralStatement {
+                                    kind: TokenKind::StringLiteral,
+                                    value: ValueKind::String(
+                                        match primitive {
+                                            // x if x.is_string() => "\\\"{}\\\"",
+                                            // Type::Char => "'{}'",
+                                            _ => "{}",
+                                        }
+                                        .into(),
+                                    ),
+                                    location: loc.clone(),
+                                },
+                            ),
+                            (
+                                loc.clone(),
+                                AstNode::LiteralStatement {
+                                    kind: TokenKind::Identifier,
+                                    value: ValueKind::String("self".into()),
+                                    location: loc.clone(),
+                                },
+                            ),
+                        ],
+                        type_method: false,
+                        ignore_no_def: false,
+                        location: loc.clone(),
+                    }),
+                    location: loc.clone(),
+                }];
+
+                if primitive.is_string() {
+                    body.insert(
+                        0,
+                        AstNode::IfStatement {
+                            condition: Box::new(AstNode::ArithmeticOperation {
+                                left: Box::new(AstNode::ConversionStatement {
+                                    r#type: Some(Type::Long),
+                                    value: Box::new(AstNode::LiteralStatement {
+                                        kind: TokenKind::Identifier,
+                                        value: ValueKind::String("self".into()),
+                                        location: loc.clone(),
+                                    }),
+                                    location: loc.clone(),
+                                }),
+                                right: Box::new(AstNode::LiteralStatement {
+                                    kind: TokenKind::IntegerLiteral,
+                                    value: ValueKind::Number(0),
+                                    location: loc.clone(),
+                                }),
+                                operator: TokenKind::EqualTo,
+                                treat_as_string: false,
+                                location: loc.clone(),
+                            }),
+                            body: vec![AstNode::ReturnStatement {
+                                value: Box::new(AstNode::LiteralStatement {
+                                    kind: TokenKind::StringLiteral,
+                                    value: ValueKind::String("(nil)".into()),
+                                    location: loc.clone(),
+                                }),
+                                location: loc.clone(),
+                            }],
+                            else_body: vec![],
+                            location: loc.clone(),
+                        },
+                    );
+                }
 
                 tree.insert(
                     idx + 1,
@@ -323,41 +398,7 @@ pub fn lex_and_parse(
                             },
                         ],
                         r#return: Some(Type::Pointer(Box::new(Type::Char))),
-                        body: vec![AstNode::ReturnStatement {
-                            value: Box::new(AstNode::FunctionCall {
-                                name: format!("string.{}", INTERNAL_FORMATTER),
-                                generics: vec![],
-                                parameters: vec![
-                                    (
-                                        Location::default(input_path.clone()),
-                                        AstNode::LiteralStatement {
-                                            kind: TokenKind::StringLiteral,
-                                            value: ValueKind::String(
-                                                match primitive {
-                                                    // x if x.is_string() => "\\\"{}\\\"",
-                                                    // Type::Char => "'{}'",
-                                                    _ => "{}",
-                                                }
-                                                .into(),
-                                            ),
-                                            location: Location::default(input_path.clone()),
-                                        },
-                                    ),
-                                    (
-                                        Location::default(input_path.clone()),
-                                        AstNode::LiteralStatement {
-                                            kind: TokenKind::Identifier,
-                                            value: ValueKind::String("self".into()),
-                                            location: Location::default(input_path.clone()),
-                                        },
-                                    ),
-                                ],
-                                type_method: false,
-                                ignore_no_def: false,
-                                location: Location::default(input_path.clone()),
-                            }),
-                            location: Location::default(input_path.clone()),
-                        }],
+                        body,
                         location: Location::default(input_path.clone()),
                         return_location: Location::default(input_path.clone()),
                     },
@@ -366,7 +407,6 @@ pub fn lex_and_parse(
 
             // Special format for T*
             let idx = as_string_idx!(tree, INTERNAL_FORMATTER);
-            let loc = Location::default(input_path.clone());
 
             tree.insert(
                 idx + 1,
@@ -578,30 +618,30 @@ pub fn lex_and_parse(
                             generics: vec![],
                             parameters: vec![
                                 (
-                                    Location::default(input_path.clone()),
+                                    loc.clone(),
                                     AstNode::LiteralStatement {
                                         kind: TokenKind::StringLiteral,
                                         value: ValueKind::String("<unknown at {}>".into()),
-                                        location: Location::default(input_path.clone()),
+                                        location: loc.clone(),
                                     },
                                 ),
                                 (
-                                    Location::default(input_path.clone()),
+                                    loc.clone(),
                                     AstNode::LiteralStatement {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("self".into()),
-                                        location: Location::default(input_path.clone()),
+                                        location: loc.clone(),
                                     },
                                 ),
                             ],
                             type_method: false,
                             ignore_no_def: false,
-                            location: Location::default(input_path.clone()),
+                            location: loc.clone(),
                         }),
-                        location: Location::default(input_path.clone()),
+                        location: loc.clone(),
                     }],
-                    location: Location::default(input_path.clone()),
-                    return_location: Location::default(input_path.clone()),
+                    location: loc.clone(),
+                    return_location: loc.clone(),
                 },
             );
         }
@@ -631,7 +671,7 @@ pub fn lex_and_parse(
                     condition: Box::new(AstNode::LiteralStatement {
                         kind: TokenKind::Identifier,
                         value: ValueKind::String("self".into()),
-                        location: Location::default(input_path.clone()),
+                        location: loc.clone(),
                     }),
                     body: vec![AstNode::ReturnStatement {
                         value: Box::new(AstNode::LiteralStatement {

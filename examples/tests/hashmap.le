@@ -47,5 +47,18 @@ fn main() {
     io::assert(!map.contains_key(98), nil);
     io::assert(!map.contains_key(1000), nil);
 
+    HashMap<string, i32> *string_map = HashMap::new();
+
+    for char c = 'a'; c < 'f'; c += 1 {
+        string_map["{}".format(c)] = c - 'a';
+    }
+
+    io::dbg(
+        string_map.contains_key("b"),
+        string_map.contains_key("foo"),
+        string_map["d"],
+        string_map
+    );
+
     io::println("All HashMap tests have passed!".color("green").reset());
 }
