@@ -11,7 +11,7 @@ use std::{
 };
 
 use crate::{
-    hashmap, is_generic,
+    hashmap, is_generic, is_unknown,
     lexer::enums::Location,
     parser::{
         enums::{Argument, Primitive},
@@ -526,7 +526,20 @@ impl Type {
                     } else if &part == GENERIC_END {
                         None
                     } else {
-                        Some(Type::Struct(part))
+                        Some(Type::Struct(
+                            if parts.peek().is_some_and(|part| part == GENERIC_IDENTIFIER) {
+                                let mut res = vec![];
+                                res.push(parts.next().unwrap());
+
+                                while parts.peek().is_some_and(|part| part != GENERIC_END) {
+                                    res.push(parts.next().unwrap());
+                                }
+
+                                format!("{part}.{}", res.join("."))
+                            } else {
+                                part
+                            },
+                        ))
                     }
                 }
             }
@@ -575,7 +588,7 @@ impl Type {
                     known_generics.get(&name).unwrap().to_owned()
                 }
             }
-            Type::Struct(name) if is_generic!(name) => {
+            Type::Struct(name) if is_unknown!(name) => {
                 let (original_name, _) = Type::from_internal_id(name.clone());
 
                 let generic_name = format!(
@@ -700,7 +713,7 @@ impl Type {
                     todo!()
                 }
 
-                assert_eq!(known_parts.len(), unknown_parts.len());
+                // assert_eq!(known_parts.len(), unknown_parts.len());
 
                 Some(HashMap::from_iter(
                     unknown_parts

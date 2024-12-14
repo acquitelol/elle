@@ -1,0 +1,269 @@
+use std/collections/array;
+use std/math;
+global pub;
+
+const void *EMPTY = i32::min();
+
+struct Pair {
+    void *key;
+    void *value;
+    bool full;
+};
+
+fn Pair::new(void *key, void *value, bool full) {
+    Pair *pair = malloc(#size(Pair));
+    *pair = malloc(#size(Pair));
+
+    pair.key = key;
+    pair.value = value;
+    pair.full = full;
+
+    return pair;
+}
+
+fn Pair::free(Pair *self) {
+    free((void *)(*self));
+    free(self);
+}
+
+struct HashMap<T, U> {
+    Array<Pair *> *table;
+    i32 size;
+    i32 capacity;
+};
+
+fn HashMap::__load__<T, U>(HashMap<T, U> *self, T key) {
+    return self.get(key);
+}
+
+fn HashMap::__store__<T, U>(HashMap<T, U> *self, T key, U value) {
+    self.put(key, value);
+}
+
+fn HashMap::__fmt__<T, U>(HashMap<T, U> self, i32 nesting) {
+    string res = "{\n";
+
+    for i32 i = 0; i < self.table.len(); i += 1 {
+        T key = self.table[i].key;
+        U value = self.table[i].value;
+
+        if key == EMPTY {
+            continue;
+        }
+
+        res.extend(" ".repeat(4));
+        res.extend(key.__fmt__(0));
+        res.extend(" => ");
+        res.extend(value.__fmt__(0));
+        res.push('\n');
+    }
+
+    res.push('}');
+    return res;
+}
+
+local fn hash<T>(T key, i32 capacity) {
+    return (key % capacity + capacity) % capacity;
+}
+
+fn HashMap::with_capacity<T, U>(i32 initial_capacity) -> HashMap<T, U> * {
+    HashMap<T, U> *map = malloc(#size(HashMap<T, U>));
+    *map = malloc(#size(HashMap<T, U>));
+
+    map.table = Array::with_capacity(initial_capacity);
+    map.capacity = initial_capacity;
+    map.size = 0;
+
+    for i32 i = 0; i < initial_capacity; i += 1 {
+        map.table.push(Pair::new(EMPTY, EMPTY, false));
+    }
+
+    return map;
+}
+
+fn HashMap::new<T, U>(ElleMeta meta, ...) -> HashMap<T, U> * {
+    HashMap<T, U> *map = HashMap::with_capacity(4);
+
+    if meta.arity > 0 {
+        variadic args[meta.arity];
+
+        for i32 i = 0; i < meta.arity; i += 2 {
+            T key = args.yield(T);
+            U value = args.yield(U);
+
+            map[key] = value;
+        }
+    }
+
+    return map;
+}
+
+fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
+    if self.size >= self.capacity / 2 {
+        self.resize(self.capacity * 2);
+    }
+
+    i32 idx = hash(key, self.capacity);
+    i32 start_idx = idx;
+
+    while true {
+        if (!self.table[idx].full) || ((T)(self.table[idx].key) == key) {
+            if !self.table[idx].full {
+                self.size += 1;
+            }
+
+            self.table[idx].key = (void *)key;
+            self.table[idx].value = (void *)value;
+            self.table[idx].full = true;
+            return true;
+        }
+
+        idx = (idx + 1) % self.capacity;
+
+        if idx == start_idx {
+            return false;
+        }
+    }
+
+    return false;
+}
+
+// Alias for HashMap::put
+fn HashMap::set<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
+    return self.put(key, value);
+}
+
+fn HashMap::get<T, U>(HashMap<T, U> *self, T key) -> U {
+    i32 idx = hash(key, self.capacity);
+    i32 start_idx = idx;
+
+    while self.table[idx].full {
+        if (T)(self.table[idx].key) == key {
+            return (U)(self.table[idx].value);
+        }
+
+        idx = (idx + 1) % self.capacity;
+
+        if idx == start_idx {
+            break;
+        }
+    }
+
+    return (U)nil;
+}
+
+fn HashMap::remove<T, U>(HashMap<T, U> *self, T key) -> U {
+    i32 idx = hash(key, self.capacity);
+    i32 start_idx = idx;
+
+    while self.table[idx].full {
+        if self.table[idx].key == key {
+            U value = self.table[idx].value;
+
+            self.table[idx].full = false;
+            self.table[idx].key = nil;
+            self.table[idx].value = nil;
+            self.size -= 1;
+
+            return value;
+        }
+
+        idx = (idx + 1) % self.capacity;
+
+        if idx == start_idx {
+            break;
+        }
+    }
+
+    return (U)nil;
+}
+
+fn HashMap::contains_key<T, U>(HashMap<T, U> *self, T key) -> bool {
+    i32 idx = hash(key, self.capacity);
+    i32 start_idx = idx;
+
+    while self.table[idx].full {
+        if self.table[idx].key == key {
+            return true;
+        }
+
+        idx = (idx + 1) % self.capacity;
+
+        if idx == start_idx {
+            break;
+        }
+    }
+
+    return false;
+}
+
+fn HashMap::keys<T, U>(HashMap<T, U> *self) -> Array<T> * {
+    Array<T> *array = Array::with_capacity(self.size);
+
+    for i32 i = 0; i < self.capacity; i += 1 {
+        if self.table[i].full && self.table[i].key != EMPTY {
+            array.push(self.table[i].key);
+        }
+    }
+
+    return array;
+}
+
+fn HashMap::values<T, U>(HashMap<T, U> *self) -> Array<U> * {
+    Array<U> *array = Array::with_capacity(self.size);
+
+    for i32 i = 0; i < self.capacity; i += 1 {
+        if self.table[i].full && self.table[i].value != EMPTY {
+            array.push(self.table[i].value);
+        }
+    }
+
+    return array;
+}
+
+fn HashMap::resize<T, U>(HashMap<T, U> *self, i32 new_capacity) {
+    Array<Pair *> *old_table = self.table;
+    defer old_table.free();
+
+    self.table = Array::with_capacity(new_capacity);
+    self.capacity = new_capacity;
+    self.size = 0;
+
+    for i32 i = 0; i < new_capacity; i += 1 {
+        self.table.push(Pair::new(EMPTY, EMPTY, false));
+    }
+
+    for i32 i = 0; i < old_table.len(); i += 1 {
+        if old_table[i].full {
+            self.put((T)(old_table[i].key), (U)(old_table[i].value));
+        }
+    }
+}
+
+fn HashMap::size<T, U>(HashMap<T, U> *self) -> i32 {
+    return self.size;
+}
+
+fn HashMap::is_empty<T, U>(HashMap<T, U> *self) -> bool {
+    return self.size == 0;
+}
+
+fn HashMap::clear<T, U>(HashMap<T, U> *self) {
+    self.size = 0;
+
+    for i32 i = 0; i < self.capacity; i += 1 {
+        self.table[i].full = false;
+        self.table[i].key = EMPTY;
+        self.table[i].value = EMPTY;
+    }
+}
+
+fn HashMap::free<T, U>(HashMap<T, U> *self) {
+    for i32 i = 0; i < self.table.len(); i += 1 {
+        self.table[i].free();
+    }
+
+    self.table.free();
+    free((void *)(*self));
+    free(self);
+}

@@ -58,6 +58,13 @@ macro_rules! is_generic {
 }
 
 #[macro_export]
+macro_rules! is_unknown {
+    ($name:expr $(,)?) => {
+        $name.contains(&format!(".{}.", crate::GENERIC_UNKNOWN))
+    };
+}
+
+#[macro_export]
 macro_rules! as_string_idx {
     ($tree:expr, $fn:expr) => {
         $tree

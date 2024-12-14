@@ -1,0 +1,51 @@
+use std/collections/hashmap;
+use std/io;
+
+fn main() {
+    HashMap<i32, string> *map = HashMap::new();
+
+    io::assert(map.is_empty(), nil);
+
+    map[1000] = "foo";
+    io::assert(map.get(1000) == "foo", nil);
+    io::assert(map[1000] == "foo", nil);
+    io::assert(map.size() == 1, nil);
+
+    map.put(1000, "abc");
+    io::assert(map.get(1000) == "abc", nil);
+    io::assert(map[1000] == "abc", nil);
+    io::assert(map.size() == 1, nil);
+
+    io::assert(map.contains_key(1000), nil);
+
+    map[5] = "meow";
+    map[0] = "nya";
+    map[-40] = "meep";
+    map[98] = ":3";
+
+    io::assert(map.size() == 5, nil);
+    io::assert(map.contains_key(5), nil);
+    io::assert(map.contains_key(0), nil);
+    io::assert(map.contains_key(-40), nil);
+    io::assert(map.contains_key(98), nil);
+
+    io::dbg(map);
+    map.remove(5);
+    map.remove(-40);
+
+    io::assert(map.size() == 3, nil);
+    io::assert(!map.contains_key(5), nil);
+    io::assert(!map.contains_key(-40), nil);
+
+    map.clear();
+
+    io::assert(map.size() == 0, nil);
+    io::assert(map.is_empty(), nil);
+    io::assert(!map.contains_key(5), nil);
+    io::assert(!map.contains_key(0), nil);
+    io::assert(!map.contains_key(-40), nil);
+    io::assert(!map.contains_key(98), nil);
+    io::assert(!map.contains_key(1000), nil);
+
+    io::println("All HashMap tests have passed!".color("green").reset());
+}

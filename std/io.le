@@ -115,6 +115,15 @@ fn io::panic(ElleMeta meta, string fmt, ...) @fmt {
     abort();
 }
 
+fn die(ElleMeta meta) {
+    io::eprintf(
+        "[{}:{}:{}] Something has gone extremely wrong with no explanation.",
+        meta.file, meta.line, meta.column
+    );
+
+    abort();
+}
+
 fn io::assert(ElleMeta meta, bool condition, string message) {
     if !condition {
         string parsed = message || "No additional information was specified.";
