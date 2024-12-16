@@ -359,27 +359,13 @@ impl Lexer {
                     _ => (TokenKind::LessThan, ValueKind::Nil),
                 }
             }
-            '$' => {
-                self.advance();
-
-                match self.current_char() {
-                    '$' => {
-                        let res = self.consume_exact_literal();
-                        (TokenKind::ExactLiteral, ValueKind::String(res))
-                    }
-                    other => {
-                        let mut location = self.get_location();
-                        location.column += 1;
-
-                        panic!(
-                            "{}",
-                            location.error(
-                                format!("Invalid token: expected '$$' for exact literal opening but got '{}'", other)
-                            )
-                        )
-                    }
+            '$' => match self.next_char() {
+                Some('$') => {
+                    let res = self.consume_exact_literal();
+                    (TokenKind::ExactLiteral, ValueKind::String(res))
                 }
-            }
+                _ => self.consume_identifier(),
+            },
             '.' => {
                 self.advance();
 
@@ -521,7 +507,9 @@ impl Lexer {
         let start = self.position;
 
         while !self.is_eof()
-            && (self.current_char().is_alphanumeric() || self.current_char() == '_')
+            && (self.current_char().is_alphanumeric()
+                || self.current_char() == '_'
+                || self.current_char() == '$')
         {
             self.advance();
         }
