@@ -161,6 +161,13 @@ pub enum AstNode {
         value: Box<AstNode>,
         location: Location,
     },
+    /// An expression which allows you to declare a value to something conditionally.
+    TernaryStatement {
+        condition: Box<AstNode>,
+        if_true: Box<AstNode>,
+        if_false: Box<AstNode>,
+        location: Location,
+    },
 }
 
 impl AstNode {
@@ -264,6 +271,22 @@ fn modify_type_in_node(
             let new_right =
                 modify_type_in_node(*right.clone(), generics, known_types, struct_pool, tree);
             *right = Box::new(new_right);
+        }
+        AstNode::TernaryStatement {
+            condition,
+            if_true,
+            if_false,
+            ..
+        } => {
+            let new_condition =
+                modify_type_in_node(*condition.clone(), generics, known_types, struct_pool, tree);
+            *condition = Box::new(new_condition);
+            let new_if_true =
+                modify_type_in_node(*if_true.clone(), generics, known_types, struct_pool, tree);
+            *if_true = Box::new(new_if_true);
+            let new_if_false =
+                modify_type_in_node(*if_false.clone(), generics, known_types, struct_pool, tree);
+            *if_false = Box::new(new_if_false);
         }
         AstNode::IfStatement {
             condition,

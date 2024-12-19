@@ -106,17 +106,27 @@ impl TokenKind {
 
     pub fn precedence(&self) -> i8 {
         match self {
-            // Self::Exponent => 9,
-            Self::Multiply | Self::Divide | Self::Modulus => 8,
-            Self::Add | Self::Concat | Self::Subtract => 7,
-            Self::ShiftLeft | Self::ShiftRight => 6,
-            Self::LessThan | Self::LessThanEqual | Self::GreaterThan | Self::GreaterThanEqual => 5,
-            Self::EqualTo | Self::NotEqualTo => 4,
-            Self::And | Self::BitwiseAnd => 3,
-            Self::BitwiseXor => 2,
-            Self::Or | Self::BitwiseOr => 1,
+            // Self::Exponent => 11,
+            Self::Multiply | Self::Divide | Self::Modulus => 10,
+            Self::Add | Self::Concat | Self::Subtract => 9,
+            Self::ShiftLeft | Self::ShiftRight => 8,
+            Self::LessThan | Self::LessThanEqual | Self::GreaterThan | Self::GreaterThanEqual => 7,
+            Self::EqualTo | Self::NotEqualTo => 6,
+            Self::BitwiseAnd => 5,
+            Self::BitwiseXor => 4,
+            Self::BitwiseOr => 3,
+            Self::And => 2,
+            Self::Or => 1,
             _ => 0,
         }
+    }
+
+    pub fn is_ternary_start(&self) -> bool {
+        self == &TokenKind::Question
+    }
+
+    pub fn is_ternary_end(&self) -> bool {
+        self == &TokenKind::Colon
     }
 
     pub fn is_arithmetic(&self) -> bool {
@@ -217,7 +227,8 @@ impl TokenKind {
             | Self::While
             | Self::For
             | Self::If
-            | Self::Equal => true,
+            | Self::Equal
+            | Self::Question => true,
             other if other.is_declarative() => true,
             other if other.is_arithmetic() => true,
             _ => false,

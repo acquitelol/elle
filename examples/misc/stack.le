@@ -1,19 +1,13 @@
 use std/io;
-use std/pick;
 
 fn direction(i32 *other) -> bool {
-    i32 x = 0;
-
-    if !other {
-        return direction(&x);
-    } else {
-        return &x > other;
-    }
+    i32 x;
+    return !other ? direction(&x) : &x > other;
 }
 
 fn main() {
     io::printf(
         "The stack is growing {}wards for your architecture.",
-        pick(direction(nil), "up", "down")
+        direction(nil) ? "up" : "down"
     );
 }

@@ -52,27 +52,15 @@ external fn fmax(f64 x, f64 y) @alias("math::fmax") -> f64;
 external fn round(f64 x) @alias("math::round") -> f64;
 
 fn math::fact(i64 n) -> i64 {
-    if n <= 1 {
-        return 1;
-    }
-
-    return n * math::fact(n - 1);
+    return n <= 1 ? 1 : n * math::fact(n - 1);
 }
 
 fn math::min(i64 a, i64 b) -> i64 {
-    if a < b {
-        return a;
-    }
-
-    return b;
+    return a < b ? a : b;
 }
 
 fn math::max(i64 a, i64 b) -> i64 {
-    if a > b {
-        return a;
-    }
-
-    return b;
+    return a > b ? a : b;
 }
 
 fn math::clamp(i64 value, i64 min_value, i64 max_value) -> i64 {
@@ -94,17 +82,9 @@ fn math::next_power_of_2(i64 x) {
 }
 
 fn math::sign<T>(T x) -> bool {
-    if x > 0 {
-        return 1;
-    }
-
-    return -1;
+    return x > 0 ? 1 : -1;
 }
 
 fn math::abs<T>(T x) -> T {
-    if x > 0 {
-        return x;
-    } else {
-        return -x;
-    }
+    return x > 0 ? x : -x;
 }

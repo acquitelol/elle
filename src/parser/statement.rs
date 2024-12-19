@@ -402,6 +402,11 @@ impl<'a> Statement<'a> {
                             location,
                         )))
                     }
+                    TokenKind::Question => {
+                        let current = self.current_token();
+                        self.advance();
+                        self.parse_ternary_node(token_to_node!(current, self))
+                    }
                     _ => self.parse_arithmetic(),
                 },
                 None => unreachable!(),
@@ -623,6 +628,7 @@ impl<'a> Statement<'a> {
             TokenKind::LeftBlockBrace => {
                 expression = self.parse_offset_store(Some((position, expression, location)))
             }
+            other if other.is_ternary_start() => return self.parse_ternary_node(expression),
             other if other.is_arithmetic() => {
                 self.position = position;
                 return self.parse_arithmetic();
@@ -693,9 +699,13 @@ impl<'a> Statement<'a> {
 
         let right_end_index = if let Some(index) = raw_right
             .iter()
-            .position(|token| token.kind == TokenKind::Semicolon)
+            .position(|token| token.kind == TokenKind::Semicolon || token.kind.is_ternary_start())
         {
-            index + 1
+            if raw_right[index].kind.is_ternary_start() {
+                index
+            } else {
+                index + 1
+            }
         } else {
             raw_right.len()
         };
@@ -706,12 +716,22 @@ impl<'a> Statement<'a> {
         // Shift the position across the size of the expression
         self.position += left.len() + right_end_index;
 
-        AstNode::ArithmeticOperation {
+        let node = AstNode::ArithmeticOperation {
             left: Box::new(Statement::new(left, 0, &self.body, self.shared).parse().0),
             right: Box::new(Statement::new(right, 0, &self.body, self.shared).parse().0),
             operator,
             treat_as_string: true,
             location: self.current_token().location,
+        };
+
+        if self
+            .next_token()
+            .is_some_and(|token| token.kind.is_ternary_start())
+        {
+            self.advance();
+            self.parse_ternary_node(node)
+        } else {
+            node
         }
     }
 
@@ -1151,6 +1171,7 @@ impl<'a> Statement<'a> {
             TokenKind::LeftBlockBrace => {
                 expression = self.parse_offset_store(Some((position, expression, location)))
             }
+            TokenKind::Question => expression = self.parse_ternary_node(expression),
             _ => {}
         }
 
@@ -1278,6 +1299,7 @@ impl<'a> Statement<'a> {
             TokenKind::LeftBlockBrace => {
                 expression = self.parse_offset_store(Some((position, expression, location)));
             }
+            other if other.is_ternary_start() => return self.parse_ternary_node(expression),
             other if other.is_arithmetic() => {
                 self.position = position;
                 return self.parse_arithmetic();
@@ -1680,13 +1702,18 @@ impl<'a> Statement<'a> {
 
         let tokens = self.yield_tokens_for_unary();
         let parsed = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
-
-        AstNode::ArithmeticOperation {
+        let node = AstNode::ArithmeticOperation {
             left: parsed,
             right: Box::new(AstNode::token_to_literal(token)),
             operator: TokenKind::Multiply,
             treat_as_string: false,
             location,
+        };
+
+        if self.current_token().kind.is_ternary_start() {
+            self.parse_ternary_node(node)
+        } else {
+            node
         }
     }
 
@@ -1696,8 +1723,13 @@ impl<'a> Statement<'a> {
 
         let tokens = self.yield_tokens_for_unary();
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
+        let node = AstNode::NotStatement { value, location };
 
-        AstNode::NotStatement { value, location }
+        if self.current_token().kind.is_ternary_start() {
+            self.parse_ternary_node(node)
+        } else {
+            node
+        }
     }
 
     fn parse_bitwise_not(&mut self) -> AstNode {
@@ -1706,8 +1738,13 @@ impl<'a> Statement<'a> {
 
         let tokens = self.yield_tokens_for_unary();
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
+        let node = AstNode::BitwiseNotStatement { value, location };
 
-        AstNode::BitwiseNotStatement { value, location }
+        if self.current_token().kind.is_ternary_start() {
+            self.parse_ternary_node(node)
+        } else {
+            node
+        }
     }
 
     fn parse_address(&mut self) -> AstNode {
@@ -1716,8 +1753,13 @@ impl<'a> Statement<'a> {
 
         let tokens = self.yield_tokens_for_unary();
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
+        let node = AstNode::AddressStatement { value, location };
 
-        AstNode::AddressStatement { value, location }
+        if self.current_token().kind.is_ternary_start() {
+            self.parse_ternary_node(node)
+        } else {
+            node
+        }
     }
 
     fn parse_deref(&mut self) -> AstNode {
@@ -1750,6 +1792,7 @@ impl<'a> Statement<'a> {
                         .0,
                 ));
             }
+
             other if other.is_declarative() => {
                 value = Some(Box::new(self.parse_declarative_node(
                     AstNode::MemoryStatement {
@@ -2064,6 +2107,14 @@ impl<'a> Statement<'a> {
                     },
                 )));
             }
+            other if other.is_ternary_start() => {
+                return self.parse_ternary_node(AstNode::FieldStatement {
+                    left,
+                    right,
+                    value,
+                    location,
+                })
+            }
             other if other.is_arithmetic() => {
                 self.position = position;
                 return self.parse_arithmetic();
@@ -2075,6 +2126,51 @@ impl<'a> Statement<'a> {
             left,
             right,
             value,
+            location,
+        }
+    }
+
+    fn parse_ternary_node(&mut self, condition: AstNode) -> AstNode {
+        self.expect_tokens(vec![TokenKind::Question]);
+        self.advance();
+
+        let location = self.current_token().location.clone();
+
+        let if_true = Box::new(if self.current_token().kind == TokenKind::Colon {
+            self.advance();
+            condition.clone()
+        } else {
+            let mut nesting = 0;
+
+            let tokens = self.yield_tokens_with_condition(|current, _, _| {
+                if current.kind.is_ternary_start() {
+                    nesting += 1;
+                }
+
+                if current.kind.is_ternary_end() {
+                    if nesting > 0 {
+                        nesting -= 1;
+                    } else {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+
+            self.advance();
+            Statement::new(tokens, 0, &self.body, self.shared).parse().0
+        });
+
+        let if_false = Box::new({
+            let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
+            Statement::new(tokens, 0, &self.body, self.shared).parse().0
+        });
+
+        AstNode::TernaryStatement {
+            condition: Box::new(condition),
+            if_true,
+            if_false,
             location,
         }
     }
@@ -2133,6 +2229,7 @@ impl<'a> Statement<'a> {
                 token.kind.is_declarative()
                     || token.kind == TokenKind::Semicolon
                     || token.kind == TokenKind::Equal
+                    || token.kind == TokenKind::Question
             }
         })
     }

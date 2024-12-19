@@ -166,8 +166,8 @@ fn Array::cartesian_product<T>(Array<T> *self, i32 n) {
     defer current.free();
 
     if n == 0 {
-        Array<T> *comb = Array::new();
-        results.push((T)comb);
+        Array<T> *combination = Array::new();
+        results.push((T)combination);
         return results;
     }
 

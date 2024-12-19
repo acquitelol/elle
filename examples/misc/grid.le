@@ -1,0 +1,32 @@
+use std/collections/array;
+use std/split;
+use std/io;
+
+struct Point { i32 x; i32 y; };
+
+fn Point::new(i32 x, i32 y) {
+    return Point { x = x, y = y };
+}
+
+external fn Point::new(i32 x, i32 y) @alias("$") -> Point;
+
+struct Grid<T> {
+    Array<T> *data;
+    i32 width;
+};
+
+fn Grid::from_str(string input) -> Grid<char> {
+    return Grid {
+        data = Array::from_string(input),
+        width = input.split("\n")[0].len()
+    };
+}
+
+fn Grid::__load__<T>(Grid<T> self, Point coords) {
+    return self.data[coords.y * self.width + coords.x];
+}
+
+fn main() {
+    Grid<char> grid = Grid::from_str("A159\nB260\nC371\nD482");
+    io::dbg(grid[$(0, 0)], grid[$(2, 1)]);
+}
