@@ -1,4 +1,5 @@
 use std::fmt;
+use std::rc::Rc;
 
 use crate::compiler::enums::Type;
 use crate::misc::colors::*;
@@ -336,18 +337,18 @@ impl fmt::Display for ValueKind {
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Location {
-    pub file: String,
+    pub file: Rc<String>,
     pub row: usize,
     pub column: usize,
-    pub ctx: String,
-    pub above: Option<String>,
+    pub ctx: Rc<String>,
+    pub above: Option<Rc<String>>,
     pub length: usize,
-    pub extra_info: String,
+    pub extra_info: Rc<String>,
 }
 
 impl Location {
     pub fn with_extra_info(mut self, extra_info: impl Into<String>) -> Self {
-        self.extra_info = extra_info.into();
+        self.extra_info = Rc::new(extra_info.into());
         self
     }
 
@@ -377,7 +378,7 @@ impl Location {
         self.ctx.trim_start().split_at(left).1.into()
     }
 
-    fn trim_indentation(&self, ctx: String, above: String) -> (String, String) {
+    fn trim_indentation(&self, ctx: Rc<String>, above: Rc<String>) -> (String, String) {
         let lines: Vec<&str> = ctx.lines().chain(above.lines()).collect();
 
         let min_indent = lines
@@ -387,7 +388,7 @@ impl Location {
             .min()
             .unwrap_or(0);
 
-        let trim_string = |input: String| {
+        let trim_string = |input: Rc<String>| {
             input
                 .lines()
                 .map(|line| {
@@ -484,13 +485,13 @@ impl Location {
 
     pub fn default(file: String) -> Location {
         Location {
-            file,
+            file: Rc::new(file),
             row: 0,
             column: 0,
-            ctx: "_".into(),
+            ctx: Rc::new("_".into()),
             above: None,
             length: 1,
-            extra_info: "".into(),
+            extra_info: Rc::new("".into()),
         }
     }
 }

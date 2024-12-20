@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::RESERVED_KEYWORDS;
 
 use super::enums::{Location, ParseResult, Token, TokenKind, ValueKind};
@@ -471,17 +473,17 @@ impl Lexer {
 
     fn get_location(&mut self) -> Location {
         Location {
-            file: self.file.clone(),
+            file: Rc::new(self.file.clone()),
             row: self.row,
             column: self.position - self.bol,
-            ctx: self.get_line(self.row).unwrap_or("".into()),
+            ctx: Rc::new(self.get_line(self.row).unwrap_or("".into())),
             above: if self.row == 0 {
                 None
             } else {
-                self.get_line(self.row - 1)
+                self.get_line(self.row - 1).map(Rc::new)
             },
             length: self.position_no_whitespace - self.prev_position_no_whitespace,
-            extra_info: "".into(),
+            extra_info: Rc::new("".into()),
         }
     }
 

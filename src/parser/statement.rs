@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::iter::FromIterator;
+use std::rc::Rc;
 
 use super::enums::{Argument, AstNode, Primitive};
 use super::parser::{create_generic_struct, StructPool};
@@ -2544,7 +2545,7 @@ impl<'a> Statement<'a> {
                     location.column += 1;
                 }
 
-                location.ctx.push(' ');
+                location.ctx = Rc::new(format!("{} ", location.ctx));
 
                 panic!(
                     "{}",

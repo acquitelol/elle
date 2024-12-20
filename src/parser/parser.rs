@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
     compiler::enums::Type,
@@ -45,10 +45,10 @@ pub fn create_generic_struct(
             .collect::<Vec<String>>();
 
         location.column -= location.ctx.len() - location.ctx.trim().len();
-        location.ctx = location.ctx.trim().into();
+        location.ctx = Rc::new(location.ctx.trim().into());
         location.length = location.column;
         location.column = 0;
-        location.above = Some(format!(
+        location.above = Some(Rc::new(format!(
             "In struct:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
             " ".repeat(
                 location.ctx.len() - location.ctx.trim().len()
@@ -56,7 +56,7 @@ pub fn create_generic_struct(
                     + 8
             ),
             struct_location.ctx
-        ));
+        )));
 
         panic!(
             "{}",
@@ -100,7 +100,7 @@ pub fn create_generic_struct(
         generics: vec![],
         known_generics: parsed_generics,
         members: parsed_members.clone(),
-        keyword_location: Location::default(location.file.clone()),
+        keyword_location: location.clone(),
         location: location.clone(),
         ignore_empty: false,
     });
@@ -418,7 +418,7 @@ impl Parser {
                                 .location
                                 .clone();
 
-                            location.ctx.push(' ');
+                            location.ctx = Rc::new(format!("{} ", location.ctx));
                             location.column += 1;
 
                             panic!(

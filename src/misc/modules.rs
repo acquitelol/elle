@@ -677,78 +677,22 @@ pub fn lex_and_parse(
                         value: Box::new(AstNode::LiteralStatement {
                             kind: TokenKind::StringLiteral,
                             value: ValueKind::String("true".into()),
-                            location: Location {
-                                file: input_path.clone(),
-                                row: 0,
-                                column: 0,
-                                ctx: "\"false\"".into(),
-                                length: 7, // Length of the ctx above
-                                above: None,
-                                extra_info: "".into(),
-                            },
+                            location: loc.clone(),
                         }),
-                        location: Location {
-                            file: input_path.clone(),
-                            row: 0,
-                            column: 0,
-                            ctx: "return \"true\";".into(),
-                            length: 14, // Length of the ctx above
-                            above: None,
-                            extra_info: "".into(),
-                        },
+                        location: loc.clone(),
                     }],
                     else_body: vec![AstNode::ReturnStatement {
                         value: Box::new(AstNode::LiteralStatement {
                             kind: TokenKind::StringLiteral,
                             value: ValueKind::String("false".into()),
-                            location: Location {
-                                file: input_path.clone(),
-                                row: 0,
-                                column: 0,
-                                ctx: "\"true\"".into(),
-                                length: 6, // Length of the ctx above
-                                above: None,
-                                extra_info: "".into(),
-                            },
+                            location: loc.clone(),
                         }),
-                        location: Location {
-                            file: input_path.clone(),
-                            row: 0,
-                            column: 0,
-                            ctx: "return \"false\";".into(),
-                            length: 15, // Length of the ctx above
-                            above: None,
-                            extra_info: "".into(),
-                        },
+                        location: loc.clone(),
                     }],
-                    location: Location {
-                        file: input_path.clone(),
-                        row: 0,
-                        column: 0,
-                        ctx: "if self {".into(),
-                        length: 9, // Length of the ctx above
-                        above: None,
-                        extra_info: "".into(),
-                    },
+                    location: loc.clone(),
                 }],
-                location: Location {
-                    file: input_path.clone(),
-                    row: 0,
-                    column: 0,
-                    ctx: "fn bool::to_string(bool self) -> string {".into(),
-                    length: 41, // Length of the ctx above
-                    above: None,
-                    extra_info: "".into(),
-                },
-                return_location: Location {
-                    file: input_path.clone(),
-                    row: 0,
-                    column: 33,
-                    ctx: "fn bool::to_string(bool self) -> string {".into(),
-                    length: 6, // Length of the type
-                    above: None,
-                    extra_info: "".into(),
-                },
+                location: loc.clone(),
+                return_location: loc.clone(),
             },
         )
     }

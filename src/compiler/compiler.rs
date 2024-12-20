@@ -4,6 +4,7 @@ use std::{
     collections::{HashMap, HashSet},
     fs::File,
     io::Write,
+    rc::Rc,
 };
 
 use crate::{
@@ -3818,8 +3819,8 @@ impl Compiler {
 
                     call_location.column -=
                         call_location.ctx.len() - call_location.ctx.trim().len();
-                    call_location.ctx = call_location.ctx.trim().into();
-                    call_location.above = Some(format!(
+                    call_location.ctx = Rc::new(call_location.ctx.trim().into());
+                    call_location.above = Some(Rc::new(format!(
                         "In function:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
                         " ".repeat(
                             call_location.ctx.len() - call_location.ctx.trim().len()
@@ -3827,7 +3828,7 @@ impl Compiler {
                                 + 8
                         ),
                         location.ctx
-                    ));
+                    )));
 
                     panic!(
                         "{}",
