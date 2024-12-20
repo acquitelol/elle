@@ -644,6 +644,7 @@ impl<'a> Statement<'a> {
         let mut precedence = TokenKind::highest_precedence();
         let mut precedence_index = 0;
         let mut nesting = 0;
+        let mut ternary_nesting = 0;
         let mut index = self.position.clone();
 
         loop {
@@ -660,6 +661,12 @@ impl<'a> Statement<'a> {
                 TokenKind::RightParenthesis => {
                     nesting -= 1;
                 }
+                _ if token.kind.is_ternary_start() => {
+                    ternary_nesting += 1;
+                }
+                _ if token.kind.is_ternary_end() => {
+                    ternary_nesting -= 1;
+                }
                 TokenKind::Semicolon => {
                     break;
                 }
@@ -669,7 +676,11 @@ impl<'a> Statement<'a> {
             // Set the precedence to the last lowest precedence found.
             // If the expression is 1 + 2 * 3 + 4 * 5 for example,
             // it'll return the position of the second '+' token
-            if token.kind.is_arithmetic() && token.kind.precedence() <= precedence && nesting == 0 {
+            if token.kind.is_arithmetic()
+                && token.kind.precedence() <= precedence
+                && nesting == 0
+                && ternary_nesting == 0
+            {
                 precedence_index = index;
                 precedence = token.kind.precedence();
             }
