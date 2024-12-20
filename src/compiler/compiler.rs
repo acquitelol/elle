@@ -1965,11 +1965,7 @@ impl Compiler {
 
                 for statement in body.iter() {
                     match statement {
-                        AstNode::LiteralStatement {
-                            kind,
-                            value: literal_value,
-                            location,
-                        } => match kind {
+                        AstNode::LiteralStatement { kind, .. } => match kind {
                             TokenKind::ExactLiteral => {
                                 match self.generate_statement(
                                     func,
@@ -1979,19 +1975,9 @@ impl Compiler {
                                     None,
                                     false,
                                 ) {
-                                    Some((_, value)) => match literal_value {
-                                        ValueKind::String(val) => match val.as_str() {
-                                            "__MANUAL_RETURN__" => {
-                                                func.borrow_mut().manual = true;
-                                            }
-                                            _ => func
-                                                .borrow_mut()
-                                                .add_instruction(Instruction::Literal(value)),
-                                        },
-                                        _ => {
-                                            panic!("{}", location.error("Unexpected error"))
-                                        }
-                                    },
+                                    Some((_, value)) => func
+                                        .borrow_mut()
+                                        .add_instruction(Instruction::Literal(value)),
                                     _ => {}
                                 }
                             }

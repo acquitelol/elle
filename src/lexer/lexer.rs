@@ -361,13 +361,11 @@ impl Lexer {
                     _ => (TokenKind::LessThan, ValueKind::Nil),
                 }
             }
-            '$' => match self.next_char() {
-                Some('$') => {
-                    let res = self.consume_exact_literal();
-                    (TokenKind::ExactLiteral, ValueKind::String(res))
-                }
-                _ => self.consume_identifier(),
-            },
+            '$' => self.consume_identifier(),
+            '`' => (
+                TokenKind::ExactLiteral,
+                ValueKind::String(self.consume_exact_literal()),
+            ),
             '.' => {
                 self.advance();
 
@@ -756,17 +754,7 @@ impl Lexer {
             string.push(self.current_char());
             self.advance();
 
-            if self.current_char() == '$' {
-                self.advance();
-
-                if self.current_char() == '$' {
-                    break;
-                } else {
-                    string.push('$');
-                }
-            }
-
-            if self.is_eof() {
+            if self.current_char() == '`' || self.is_eof() {
                 break;
             }
         }

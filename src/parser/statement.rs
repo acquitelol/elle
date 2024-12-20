@@ -138,7 +138,7 @@ impl<'a> Statement<'a> {
     }
 
     pub fn get_identifier(&mut self) -> String {
-        self.get(vec![TokenKind::Identifier])
+        self.get(vec![TokenKind::Identifier, TokenKind::ExactLiteral])
     }
 
     pub fn get_type(&mut self, generics: Option<&Vec<String>>) -> Type {
@@ -2405,7 +2405,17 @@ impl<'a> Statement<'a> {
 
     fn parse_primary(&mut self) -> AstNode {
         match self.current_token().kind {
-            token if token.is_literal() => self.parse_literal(),
+            token if token.is_literal() => {
+                if let Some(next) = self.next_token() {
+                    if next.kind == TokenKind::LeftParenthesis {
+                        self.parse_function(None, None, None, None, false)
+                    } else {
+                        self.parse_literal()
+                    }
+                } else {
+                    self.parse_literal()
+                }
+            }
             TokenKind::Unary => self.parse_unary(),
             TokenKind::Not => self.parse_not(),
             TokenKind::BitwiseNot => self.parse_bitwise_not(),
@@ -2446,7 +2456,7 @@ impl<'a> Statement<'a> {
             }
             TokenKind::LeftCurlyBrace => self.parse_block(),
             TokenKind::LeftBlockBrace => self.parse_array(),
-            TokenKind::Identifier => {
+            TokenKind::Identifier | TokenKind::ExactLiteral => {
                 if self.is_eof() {
                     self.parse_literal()
                 } else {

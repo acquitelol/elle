@@ -192,8 +192,27 @@ impl Parser {
         }
     }
 
-    pub fn get(&self, expected: TokenKind) -> String {
-        self.expect_tokens(vec![expected.clone()]);
+    pub fn get(&self, expected: Vec<TokenKind>) -> String {
+        let mut found = false;
+
+        for kind in expected.clone().iter() {
+            if &self.current_token().kind == kind {
+                found = true;
+                break;
+            }
+        }
+
+        let token = self.current_token();
+
+        if !found {
+            panic!(
+                "{}",
+                token.location.error(format!(
+                    "Expected one of {:?} but got {:?}",
+                    expected, token.kind
+                ))
+            )
+        }
 
         let identifier = if let Token {
             value: ValueKind::String(identifier),
@@ -203,7 +222,7 @@ impl Parser {
             identifier.clone()
         } else {
             panic!(
-                "Expected {:?} for function name, got {:?}",
+                "Expected one of {:?} for function name, got {:?}",
                 expected.clone(),
                 self.current_token()
             );
@@ -213,7 +232,7 @@ impl Parser {
     }
 
     pub fn get_identifier(&self) -> String {
-        self.get(TokenKind::Identifier)
+        self.get(vec![TokenKind::Identifier, TokenKind::ExactLiteral])
     }
 
     pub fn get_type(&mut self, generics: Option<&Vec<String>>) -> Type {
@@ -222,7 +241,7 @@ impl Parser {
         let name = if is_fn_pointer {
             self.current_token().value.get_string_inner().unwrap()
         } else {
-            self.get(TokenKind::Identifier)
+            self.get(vec![TokenKind::Identifier])
         };
 
         let is_struct = self.struct_pool.borrow().contains_key(&name);

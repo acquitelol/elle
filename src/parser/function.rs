@@ -90,7 +90,6 @@ impl<'a> Function<'a> {
 
         let mut arguments = vec![];
         let mut variadic = false;
-        let mut manual = false;
 
         let ty_name = self
             .parser
@@ -143,7 +142,7 @@ impl<'a> Function<'a> {
                     TokenKind::Identifier => self.parser.get_identifier(),
                     TokenKind::ExactLiteral => {
                         manual = true;
-                        self.parser.get(TokenKind::ExactLiteral)
+                        self.parser.get_identifier()
                     }
                     other => panic!(
                         "{}",
@@ -186,6 +185,7 @@ impl<'a> Function<'a> {
         let mut unaliased = None;
         let mut volatile = false;
         let mut format = false;
+        let mut manual = false;
 
         if self.parser.match_token(TokenKind::Attribute, false) {
             while self.parser.current_token().kind == TokenKind::Attribute {
@@ -232,6 +232,10 @@ impl<'a> Function<'a> {
                     }
                     Attribute::Format => {
                         format = true;
+                        self.parser.advance();
+                    }
+                    Attribute::Manual => {
+                        manual = true;
                         self.parser.advance();
                     }
                     _ => panic!(
@@ -398,47 +402,6 @@ impl<'a> Function<'a> {
         }
 
         insert_deferred_statements(&mut res, &deferred, true);
-
-        res.retain(|node| match node.clone() {
-            AstNode::LiteralStatement { kind, value, .. } => match kind {
-                TokenKind::ExactLiteral => match value {
-                    ValueKind::String(val) => match val.as_str() {
-                        "__MANUAL_RETURN__" => {
-                            manual = true;
-                            false
-                        }
-                        _ => true,
-                    },
-                    _ => true,
-                },
-                _ => true,
-            },
-            _ => true,
-        });
-
-        for (i, item) in self.parser.tree.borrow().iter().cloned().rev().enumerate() {
-            match item {
-                Primitive::Constant { name, r#type, .. } => {
-                    res.insert(
-                        0,
-                        AstNode::DeclareStatement {
-                            // Variable names in Elle cannot contain "."
-                            // so this name is valid
-                            name: format!("constant.{}", i),
-                            r#type,
-                            value: Box::new(AstNode::LiteralStatement {
-                                kind: TokenKind::Identifier,
-                                value: ValueKind::String(name),
-                                location: self.parser.current_token().location,
-                            }),
-                            location: self.parser.current_token().location,
-                            value_location: self.parser.current_token().location,
-                        },
-                    );
-                }
-                _ => {}
-            }
-        }
 
         Primitive::Function {
             public,

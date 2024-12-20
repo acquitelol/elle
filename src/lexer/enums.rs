@@ -525,6 +525,8 @@ pub enum Attribute {
     NoFormat,
     // Automatically runs the formatter on every parameter of a function marked by this
     Format,
+    // Will not automatically return for you, you must return from the function yourself using inline IR or similar
+    Manual,
 }
 
 impl Token {
@@ -545,6 +547,7 @@ impl Token {
             "volatile" => Attribute::Volatile,
             "nofmt" => Attribute::NoFormat,
             "fmt" => Attribute::Format,
+            "manual" => Attribute::Manual,
             _ => todo!("more attributes: {attribute}"),
         }
     }
