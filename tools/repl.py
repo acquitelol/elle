@@ -14,9 +14,12 @@ def repl():
 
         code = "\n".join(list(map(lambda x: x.replace(" " * 12, ""),
             f"""use std/io;
-            use std/cast;
             use std/math;
+            use std/cast;
             use std/vectors;
+            use std/types;
+            use std/split;
+            use std/collections/array;
 
             fn main() {{
                 {f";\n{" " * 16}".join(lines)}{";" if len(lines) > 0 else ""}
@@ -28,7 +31,6 @@ def repl():
             print(code)
             continue
 
-        lines.append(line);
         path = f".repl-{int(time())}{SHORT_EXTENSION}";
         exec_path = f"./{path.replace(SHORT_EXTENSION, "")}";
 
@@ -39,8 +41,11 @@ def repl():
         remove(path);
 
         if code == 0:
-            run([exec_path])
+            res = run([exec_path])
             remove(exec_path);
+
+            if res.returncode == 0:
+                lines.append(line);
 
 if __name__ == "__main__":
     repl()

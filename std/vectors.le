@@ -22,6 +22,13 @@ fn Vector2::zero() {
     };
 }
 
+fn Vector2::clone(Vector2 self) {
+    return Vector2 {
+        x = self.x,
+        y = self.y
+    };
+}
+
 fn Vector2::dot(Vector2 self, Vector2 v2) {
     return self.x * v2.x + self.y * v2.y;
 }
@@ -85,6 +92,14 @@ fn Vector3::zero() {
         x = 0,
         y = 0,
         z = 0
+    };
+}
+
+fn Vector3::clone(Vector3 self) {
+    return Vector3 {
+        x = self.x,
+        y = self.y,
+        z = self.z
     };
 }
 

@@ -79,9 +79,8 @@ pub enum AstNode {
         size: Box<AstNode>,
         location: Location,
     },
-    /// Declares an array literal of size `size` and values `values` and returns a pointer to the start of it
+    /// Declares an array literal of size `values.len()` and values `values` and returns a pointer to the start of it
     ArrayStatement {
-        size: Box<AstNode>,
         values: Vec<(Location, AstNode)>,
         location: Location,
     },
@@ -322,10 +321,7 @@ fn modify_type_in_node(
             }
             *body = modify_type_in_ast(body.clone(), generics, known_types, struct_pool, tree);
         }
-        AstNode::ArrayStatement { size, values, .. } => {
-            let new_size =
-                modify_type_in_node(*size.clone(), generics, known_types, struct_pool, tree);
-            *size = Box::new(new_size);
+        AstNode::ArrayStatement { values, .. } => {
             for (_, value) in values {
                 let new_value =
                     modify_type_in_node(value.clone(), generics, known_types, struct_pool, tree);

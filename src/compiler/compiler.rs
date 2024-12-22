@@ -39,6 +39,8 @@ pub struct Compiler {
     warnings: Warnings,
     // lambda functions that should be added as soon as possible
     deferred_functions: Vec<Function>,
+    // Map from temporary to its stack allocated address
+    address_pool: HashMap<Value, Value>,
     output_path: String,
 }
 
@@ -667,7 +669,7 @@ impl Compiler {
                             func,
                             ret_ty,
                             local_ty.clone(),
-                            value,
+                            value.clone(),
                             &location,
                             &value_location,
                             false,
@@ -699,19 +701,20 @@ impl Compiler {
                         func.borrow_mut().add_instruction(Instruction::Store(
                             addr_ty.clone(),
                             addr_val.clone(),
-                            final_val,
+                            final_val.clone(),
                         ));
 
                         func.borrow_mut().assign_instruction(
                             &tmp,
                             &addr_ty,
-                            Instruction::Load(addr_ty.clone(), addr_val),
+                            Instruction::Load(addr_ty.clone(), addr_val.clone()),
                         );
 
+                        self.address_pool.insert(temp.clone(), addr_val.clone());
                         return Some((addr_ty, tmp));
                     }
 
-                    let addr_temp = self.new_variable(
+                    let addr_val = self.new_variable(
                         &local_ty,
                         &format!("{}.addr", name),
                         Some(func),
@@ -719,18 +722,19 @@ impl Compiler {
                         false,
                     );
 
-                    func.borrow_mut().assign_instruction(
-                        &addr_temp,
+                    func.borrow_mut().assign_instruction_front(
+                        &addr_val,
                         &Type::Pointer(Box::new(final_ty.clone())),
                         Instruction::Alloc8(Value::Const("".into(), final_ty.size(module) as i128)),
                     );
 
                     func.borrow_mut().add_instruction(Instruction::Store(
                         final_ty.clone(),
-                        addr_temp,
+                        addr_val.clone(),
                         final_val.clone(),
                     ));
 
+                    self.address_pool.insert(temp.clone(), addr_val.clone());
                     return Some((final_ty, final_val));
                 }
 
@@ -2427,11 +2431,7 @@ impl Compiler {
                     Value::Global(lambda_name),
                 ))
             }
-            AstNode::ArrayStatement {
-                size,
-                values,
-                location,
-            } => {
+            AstNode::ArrayStatement { values, location } => {
                 let mut first_type: Option<Type> = None;
                 let mut results: Vec<Value> = vec![];
 
@@ -2513,56 +2513,19 @@ impl Compiler {
                 }
 
                 let buf_ty = Type::Pointer(Box::new(first_type.clone().unwrap_or(Type::Void)));
-                let (ty, val) = self
-                    .generate_statement(
-                        func,
-                        module,
-                        if let Some(ref ty) = first_type {
-                            AstNode::ArithmeticOperation {
-                                left: Box::new(AstNode::LiteralStatement {
-                                    kind: TokenKind::LongLiteral,
-                                    value: ValueKind::Number(ty.size(module) as i128),
-                                    location: location.clone(),
-                                }),
-                                right: size,
-                                operator: TokenKind::Multiply,
-                                treat_as_string: false,
-                                location: location.clone(),
-                            }
-                        } else {
-                            AstNode::LiteralStatement {
-                                kind: TokenKind::LongLiteral,
-                                value: ValueKind::Number(0),
-                                location: location.clone(),
-                            }
-                        },
-                        first_type.clone(),
-                        None,
-                        false,
-                    )
-                    .expect(&location.error(format!(
-                        "Unexpected error when trying to compile the size of an array"
-                    )));
-
+                let array_size = if let Some(ref ty) = first_type {
+                    values.len() as u64 * ty.size(module)
+                } else {
+                    0
+                };
+                let array_size_val =
+                    Value::Const("".into(), (array_size + Type::Word.size_base()) as i128);
                 let tmp_full = self.new_temporary(Some("array.full"), true);
-                let tmp_with_offset = self.new_temporary(None, true);
 
-                let (_, converted_val) =
-                    self.convert_to_type(func, ty, Type::Long, val, &location, &location, true);
-
-                func.borrow_mut().assign_instruction(
-                    &tmp_with_offset,
-                    &Type::Long,
-                    Instruction::Add(
-                        converted_val.clone(),
-                        Value::Const("".into(), Type::Word.size(module) as i128),
-                    ),
-                );
-
-                func.borrow_mut().assign_instruction(
+                func.borrow_mut().assign_instruction_front(
                     &tmp_full,
                     &buf_ty,
-                    Instruction::Alloc8(tmp_with_offset.clone()),
+                    Instruction::Alloc8(array_size_val.clone()),
                 );
 
                 func.borrow_mut().add_instruction(Instruction::Store(
@@ -2584,7 +2547,7 @@ impl Compiler {
 
                 self.buf_metadata.insert(
                     value.unwrap_or(tmp.clone()),
-                    (buf_ty.get_pointer_inner().unwrap(), converted_val),
+                    (buf_ty.get_pointer_inner().unwrap(), array_size_val),
                 );
 
                 for (i, value) in results.iter().enumerate() {
@@ -2612,31 +2575,32 @@ impl Compiler {
                 Some((buf_ty, tmp))
             }
             AstNode::AddressStatement { value, location } => {
-                let (_, val) = self
+                let (ty, val) = self
                     .generate_statement(func, module, *value, ty, None, false)
                     .expect(&location.error(
                         "Unexpected error when trying to compile the value of an address statement",
                     ));
 
-                let mut parts = val
-                    .get_string_inner()
-                    .split('.')
-                    .collect::<Vec<&str>>()
-                    .iter()
-                    .map(|item| item.to_string())
-                    .collect::<Vec<String>>();
+                if let Some(addr_val) = self.address_pool.get(&val) {
+                    Some((Type::Pointer(Box::new(ty)), addr_val.clone()))
+                } else {
+                    let addr_val = self.new_temporary(Some("tmp.addr"), true);
+                    let addr_ty = Type::Pointer(Box::new(ty.clone()));
 
-                parts.pop();
-                let name = format!("{}.addr", parts.join("."));
+                    func.borrow_mut().assign_instruction_front(
+                        &addr_val,
+                        &addr_ty,
+                        Instruction::Alloc8(Value::Const("".into(), ty.size(module) as i128)),
+                    );
 
-                let (ty, val) =
-                    self.get_variable(&name, Some(func), Some(module))
-                        .expect(&location.error(format!(
-                            "Unexpected error when trying to get a variable named '{}'",
-                            name
-                        )));
+                    func.borrow_mut().add_instruction(Instruction::Store(
+                        ty.clone(),
+                        addr_val.clone(),
+                        val.clone(),
+                    ));
 
-                Some((Type::Pointer(Box::new(ty)), val))
+                    Some((addr_ty, addr_val))
+                }
             }
             AstNode::TernaryStatement {
                 condition,
@@ -2853,7 +2817,7 @@ impl Compiler {
                 func.borrow_mut()
                     .add_instruction(Instruction::Comment(format!("size of :{}", name)));
 
-                func.borrow_mut().assign_instruction(
+                func.borrow_mut().assign_instruction_front(
                     &alloc_tmp,
                     &Type::Long,
                     Instruction::Alloc8(Value::Const("".into(), size as i128)),
@@ -3051,11 +3015,6 @@ impl Compiler {
                 (
                     "exprs".into(),
                     Box::new(AstNode::ArrayStatement {
-                        size: Box::new(AstNode::LiteralStatement {
-                            kind: TokenKind::IntegerLiteral,
-                            value: ValueKind::Number(params.len() as i128),
-                            location: location.clone(),
-                        }),
                         values: params
                             .iter()
                             .enumerate()
@@ -3161,11 +3120,6 @@ impl Compiler {
                 (
                     "types".into(),
                     Box::new(AstNode::ArrayStatement {
-                        size: Box::new(AstNode::LiteralStatement {
-                            kind: TokenKind::IntegerLiteral,
-                            value: ValueKind::Number(params.len() as i128),
-                            location: location.clone(),
-                        }),
                         values: params
                             .iter()
                             .map(|param| {
@@ -3940,6 +3894,7 @@ impl Compiler {
             warnings,
             tree,
             deferred_functions: vec![],
+            address_pool: hashmap![],
             output_path: output_path.clone(),
         };
 

@@ -914,11 +914,6 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let array = AstNode::ArrayStatement {
-            size: Box::new(AstNode::LiteralStatement {
-                kind: TokenKind::LongLiteral,
-                value: ValueKind::Number(values.len() as i128),
-                location: self.current_token().location,
-            }),
             values,
             location: self.current_token().location,
         };
@@ -2457,7 +2452,11 @@ impl<'a> Statement<'a> {
             TokenKind::LeftCurlyBrace => self.parse_block(),
             TokenKind::LeftBlockBrace => self.parse_array(),
             TokenKind::Identifier | TokenKind::ExactLiteral => {
-                if self.is_eof() {
+                if self.is_eof()
+                    || self
+                        .next_token()
+                        .is_some_and(|token| token.kind == TokenKind::Semicolon)
+                {
                     self.parse_literal()
                 } else {
                     let next = self.next_token().expect(

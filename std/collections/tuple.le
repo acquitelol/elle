@@ -5,13 +5,13 @@ struct Tuple<T, U> {
     U y;
 };
 
-local fn __internal_tuple_bounds_check(i64 i, i64 min_i, i64 max_i) {
+local fn __internal_tuple_bounds_check(i64 i, i64 min_i, i64 max_i, ElleMeta meta) {
     if i < min_i || i > max_i {
         io::cprintf(
-            "Index %ld is out of bounds (must be between %ld and %ld)\n"
+            "[%s:%d:%d] ERROR: Index %ld is out of bounds (must be between %ld and %ld)\n"
                 .color("red")
                 .reset(),
-            i, min_i, max_i
+            meta.file, meta.line, meta.column, i, min_i, max_i
         );
 
         abort();

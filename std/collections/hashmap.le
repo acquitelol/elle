@@ -35,7 +35,23 @@ struct HashMap<T, U> {
     i32 capacity;
 };
 
-fn HashMap::__load__<T, U>(HashMap<T, U> *self, T key) {
+local fn __internal_key_exists_check<T, U>(HashMap<T, U> *self, T key, ElleMeta meta) {
+    if !self.contains_key(key) {
+        io::cprintf(
+            "[%s:%d%d] ERROR: Key '%s' does not exist in this HashMap.\n"
+                .color("red")
+                .reset(),
+            meta.file,
+            meta.line,
+            meta.column
+            key.__fmt__(0)
+        );
+        abort();
+    }
+}
+
+fn HashMap::__load__<T, U>(ElleMeta meta, HashMap<T, U> *self, T key) {
+    __internal_key_exists_check(self, key, meta);
     return self.get(key);
 }
 
@@ -152,17 +168,8 @@ local fn __internal_hashmap_get<T, U>(HashMap<T, U> *self, T key) -> U {
 }
 
 // Panics if the key does not exist
-fn HashMap::get<T, U>(HashMap<T, U> *self, T key) -> U {
-    if !self.contains_key(key) {
-        io::cprintf(
-            "[ERROR] Key '%s' does not exist in this HashMap.\n"
-                .color("red")
-                .reset(),
-            key.__fmt__(0)
-        );
-        abort();
-    }
-
+fn HashMap::get<T, U>(ElleMeta meta, HashMap<T, U> *self, T key) -> U {
+    __internal_key_exists_check(self, key, meta);
     return __internal_hashmap_get(self, key);
 }
 

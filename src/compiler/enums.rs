@@ -1158,6 +1158,18 @@ impl Block {
         ));
     }
 
+    pub fn assign_instruction_front(
+        &mut self,
+        temp: &Value,
+        r#type: &Type,
+        instruction: Instruction,
+    ) {
+        self.statements.insert(
+            0,
+            Statement::Assign(temp.to_owned(), r#type.to_owned().into_abi(), instruction),
+        );
+    }
+
     /// Returns true if the block's last instruction is a jump
     pub fn jumps(&self) -> bool {
         let last = self.statements.last();
@@ -1249,6 +1261,18 @@ impl Function {
             .last_mut()
             .expect("Couldn't find last block!")
             .assign_instruction(temp, r#type, instruction);
+    }
+
+    pub fn assign_instruction_front(
+        &mut self,
+        temp: &Value,
+        r#type: &Type,
+        instruction: Instruction,
+    ) {
+        self.blocks
+            .first_mut()
+            .expect("Couldn't find last block!")
+            .assign_instruction_front(temp, r#type, instruction);
     }
 
     pub fn returns(&self) -> bool {

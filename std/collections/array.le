@@ -14,38 +14,28 @@ fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
     return temp.to_string();
 }
 
-local fn __internal_array_bounds_check(string file, i32 line, i32 col, i64 i, i64 min_i, i64 max_i) {
-    if i < min_i || i > max_i {
+local fn __internal_array_bounds_check(string file, i32 line, i32 col, i64 i, i64 length) {
+    if i < 0 || i > length - 1 {
         io::cprintf(
-            "[%s:%d:%d] Index %ld is out of bounds (must be between %ld and %ld)\n"
+            "[%s:%d:%d] ERROR: Index %ld is out of bounds for array length %ld\n"
                 .color("red")
                 .reset(),
-            file, line, col, i, min_i, max_i
+            file, line, col, i, length
         );
 
         abort();
     }
 }
 
-fn Array::__load__<T>(Array<T> *self, i64 i) {
-    __internal_array_bounds_check("", 0, 0, i, 0, self.len() - 1);
+fn Array::__load__<T>(ElleMeta meta, Array<T> *self, i64 i) {
+    __internal_array_bounds_check(meta.file, meta.line, meta.column, i, self.len());
     return self.elements[i];
 }
 
-fn Array::__store__<T>(Array<T> *self, i64 i, T value) {
-    __internal_array_bounds_check("", 0, 0, i, 0, self.len() - 1);
+fn Array::__store__<T>(ElleMeta meta, Array<T> *self, i64 i, T value) {
+    __internal_array_bounds_check(meta.file, meta.line, meta.column, i, self.len());
     self.elements[i] = value;
 }
-
-// fn Array::__load__<T>(ElleMeta meta, Array<T> *self, i64 i) {
-//     __internal_array_bounds_check(meta.file, meta.line, meta.column, i, 0, self.len() - 1);
-//     return self.elements[i];
-// }
-
-// fn Array::__store__<T>(ElleMeta meta, Array<T> *self, i64 i, T value) {
-//     __internal_array_bounds_check(meta.file, meta.line, meta.column, i, 0, self.len() - 1);
-//     self.elements[i] = value;
-// }
 
 fn Array::len<T>(Array<T> *self) -> i32 {
     return self.size;
