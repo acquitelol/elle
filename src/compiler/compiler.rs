@@ -1148,11 +1148,8 @@ impl Compiler {
                             "Tried to get the 0th parameter to parse struct call but failed",
                         ));
 
-                    let mut tmp_func = Function::default();
-                    tmp_func.add_block("start");
-
-                    let (mut ty, _) = self.generate_statement(
-                        &RefCell::new(tmp_func),
+                    let (mut ty, val) = self.generate_statement(
+                        func,
                         module,
                         parameter.1.clone(),
                         None,
@@ -1165,6 +1162,14 @@ impl Compiler {
                             name
                         ))
                     );
+
+                    // The first param needs to be compiled to get its type
+                    // however if the first param is mutating (ie `yield()`)
+                    // then there will be a double yield causing many issues.
+                    // Therefore, we store the first param here to be
+                    // used later when compiling all of the params instead
+                    // of compiling the first parameter again
+                    first_param = Some((ty.clone(), val));
 
                     if ty.is_pointer() {
                         let inner = ty.get_pointer_inner().unwrap();
@@ -1326,48 +1331,23 @@ impl Compiler {
                 }
 
                 if type_method {
-                    let parameter =
-                        parameters.get(0).expect(&call_location.error(
-                            "Tried to get the 0th parameter to parse struct call but failed",
-                        ));
+                    if let Some((ty, _)) = first_param.clone() {
+                        let parsed_ty = if ty.is_struct()
+                            && is_generic!(ty.get_struct_inner().unwrap())
+                        {
+                            Type::Struct(Type::from_internal_id(ty.get_struct_inner().unwrap()).0)
+                        } else {
+                            ty.clone()
+                        };
 
-                    let (ty, val) = self.generate_statement(
-                        func,
-                        module,
-                        parameter.1.clone(),
-                        None,
-                        None,
-                        false,
-                    )
-                    .expect(&parameter.0.error(
-                        format!(
-                            "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
-                            name
-                        ))
-                    );
-
-                    let parsed_ty = if ty.is_struct() && is_generic!(ty.get_struct_inner().unwrap())
-                    {
-                        Type::Struct(Type::from_internal_id(ty.get_struct_inner().unwrap()).0)
-                    } else {
-                        ty.clone()
-                    };
-
-                    // struct access
-                    if parsed_ty.is_struct() {
-                        should_get_address = true;
-                    // string access
-                    } else if parsed_ty.is_string() {
-                        should_get_address = true;
+                        // struct access
+                        if parsed_ty.is_struct() {
+                            should_get_address = true;
+                        // string access
+                        } else if parsed_ty.is_string() {
+                            should_get_address = true;
+                        }
                     }
-
-                    // The first param needs to be compiled to get its type
-                    // however if the first param is mutating (ie `yield()`)
-                    // then there will be a double yield causing many issues.
-                    // Therefore, we store the first param here to be
-                    // used later when compiling all of the params instead
-                    // of compiling the first parameter again
-                    first_param = Some((ty, val));
                 }
 
                 for (i, mut parameter) in parameters.iter().cloned().enumerate() {

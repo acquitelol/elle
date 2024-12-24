@@ -1,0 +1,41 @@
+use std/io;
+
+struct _Counter {
+    i32 value;
+};
+
+fn _Counter::increment(_Counter *self) {
+    self.value += 1;
+    return self;
+}
+
+fn Counter(i32 initial) {
+    return _Counter { value = initial };
+}
+
+fn main() {
+    // Call a nested function lots of times to test the capabilities of
+    // the compiler speeds for such operations
+    //
+    // Internally this is represented as:
+    // _Counter::increment(_Counter::increment(..._Counter::increment(Counter(0)))).value
+    //
+    // If the compiler does this the old way, this will take very long to compile
+    // With the new way it should compile much faster
+    io::dbg(Counter(0)
+        .increment().increment().increment()
+        .increment().increment().increment()
+        .increment().increment().increment()
+        .increment().increment().increment()
+        .increment().increment().increment()
+        .increment().increment().increment()
+        .increment().increment().increment()
+        .increment().increment().increment()
+        .increment().increment().increment()
+        .increment().increment().increment()
+        .increment().increment().increment()
+        .increment().increment().increment()
+        .increment().increment().increment()
+        .value
+    );
+}
