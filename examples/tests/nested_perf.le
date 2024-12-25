@@ -14,7 +14,7 @@ fn main() {
     // the compiler speeds for such operations
     //
     // Internally this is represented as:
-    // _Counter::increment(_Counter::increment(..._Counter::increment(Counter(0)))).value
+    // Counter::increment(Counter::increment(...Counter::increment(&Counter(0)))).value
     //
     // If the compiler does this the old way, this will take very long to compile
     // With the new way it should compile much faster (several magnitudes faster)
