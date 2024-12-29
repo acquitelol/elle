@@ -4,6 +4,8 @@ use std/vectors;
 const i32 MAX_ITERATIONS = 100;
 const i32 SCREEN_WIDTH = 800;
 const i32 SCREEN_HEIGHT = 800;
+const f32 RESET_SPEED = 0.08;
+const f32 EPSILON = 0.001;
 const Color BLACK = raylib::get_color(0x00000000);
 const Color WHITE = raylib::get_color(0xFFFFFFFF);
 
@@ -27,6 +29,11 @@ fn main() {
     let fontSize = 15 * resolution;
     let baseZoomScale = 0.02;
 
+    let targetZoom = 0.75;
+    let targetOffsetX = -0.75;
+    let targetOffsetY = 0.0;
+    let isReset = false;
+
     while !raylib::window_should_close() {
         if raylib::is_key_down('1') {
             zoom *= 1.02;
@@ -37,9 +44,7 @@ fn main() {
         }
 
         if raylib::is_key_down('3') {
-            zoom = 0.75;
-            offsetX = -0.75;
-            offsetY = 0.0;
+            isReset = true;
         }
 
         if raylib::is_key_down('A') {
@@ -56,6 +61,26 @@ fn main() {
 
         if raylib::is_key_down('S') {
             offsetY += baseZoomScale / zoom;
+        }
+
+        if isReset {
+            let diff_zoom = targetZoom - zoom;
+            let diff_x = targetOffsetX - offsetX;
+            let diff_y = targetOffsetY - offsetY;
+
+            zoom += diff_zoom * RESET_SPEED;
+            offsetX += diff_x * RESET_SPEED;
+            offsetY += diff_y * RESET_SPEED;
+
+            if (math::abs(diff_zoom) < EPSILON) &&
+                (math::abs(diff_x) < EPSILON) &&
+                (math::abs(diff_y) < EPSILON)
+            {
+                zoom = targetZoom;
+                offsetX = targetOffsetX;
+                offsetY = targetOffsetY;
+                isReset = false;
+            }
         }
 
         raylib::begin_texture_mode(target);
