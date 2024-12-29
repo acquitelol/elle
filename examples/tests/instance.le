@@ -14,17 +14,21 @@ fn Foo::divideBy(Foo *self, i32 num) {
     self.a /= num;
 }
 
+fn Foo::__equals__(Foo self, Foo other) {
+    return self.a == other.a;
+}
+
 fn main() {
-    Foo foo1 = Foo { a = 10 };
-    Foo foo2 = Foo { a = 30 };
+    let foo1 = Foo { a = 10 };
+    let foo2 = Foo { a = 30 };
 
     // The compiler automatically passes a reference to Foo if the function needs `Foo *` and not `Foo`
     foo2.divideBy(15);
-    Foo resWithInstance = foo1.add(foo2);
-    Foo resWithStruct = Foo::add(foo1, foo2);
+    let resWithInstance = foo1.add(foo2);
+    let resWithStruct = Foo::add(foo1, foo2);
 
     io::assert(
-        resWithInstance.a == resWithStruct.a,
+        resWithInstance == resWithStruct,
         "Instance and struct methods should produce equal results."
     );
 

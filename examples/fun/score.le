@@ -1,3 +1,5 @@
+// This file is not best practices or using any modern Elle semantics
+// It simply lives here as a relic of the past
 use std/string;
 use std/cast;
 use std/io;

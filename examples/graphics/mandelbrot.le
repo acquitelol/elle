@@ -2,31 +2,30 @@ use examples/resources/raylib;
 use std/vectors;
 
 const i32 MAX_ITERATIONS = 100;
+const i32 SCREEN_WIDTH = 800;
+const i32 SCREEN_HEIGHT = 800;
 const Color BLACK = raylib::get_color(0x00000000);
 const Color WHITE = raylib::get_color(0xFFFFFFFF);
 
 fn main() {
-    i32 screenWidth = 800;
-    i32 screenHeight = 800;
-
     f32 resolution = 1 / 4;
-    i32 textureWidth = screenWidth * resolution;
-    i32 textureHeight = screenHeight * resolution;
+    i32 textureWidth = SCREEN_WIDTH * resolution;
+    i32 textureHeight = SCREEN_HEIGHT * resolution;
 
-    raylib::init_window(screenWidth, screenHeight, "Mandelbrot Set");
+    raylib::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Mandelbrot Set");
     defer raylib::close_window();
 
-    RenderTexture target = raylib::load_render_texture(textureWidth, textureHeight);
+    let target = raylib::load_render_texture(textureWidth, textureHeight);
     defer raylib::unload_render_texture(target);
 
     raylib::set_texture_filter(target.texture, 1); // TEXTURE_FILTER_BILINEAR
     raylib::set_target_fps(60);
 
-    f32 zoom = 0.75;
-    f32 offsetX = -0.75;
-    f32 offsetY = 0.0;
-    f32 fontSize = 15 * resolution;
-    f32 baseZoomScale = 0.02;
+    let zoom = 0.75;
+    let offsetX = -0.75;
+    let offsetY = 0.0;
+    let fontSize = 15 * resolution;
+    let baseZoomScale = 0.02;
 
     while !raylib::window_should_close() {
         if raylib::is_key_down('1') {
@@ -62,23 +61,23 @@ fn main() {
         raylib::begin_texture_mode(target);
         raylib::clear_background(BLACK);
 
-        Vector2 zoomFactor = Vector2 {
+        let zoomFactor = Vector2 {
             x = 0.5 * zoom * textureWidth,
             y = 0.5 * zoom * textureHeight
         };
 
-        for i32 x = 0; x < textureWidth; x += 1 {
-            for i32 y = 0; y < textureHeight; y += 1 {
-                Vector2 z = Vector2 {
+        for let x = 0; x < textureWidth; x += 1 {
+            for let y = 0; y < textureHeight; y += 1 {
+                let z = Vector2 {
                     x = (x - textureWidth / 2.0) / zoomFactor.x + offsetX,
                     y = (y - textureHeight / 2.0) / zoomFactor.y + offsetY
                 };
 
-                Vector2 c = z.clone();
-                i32 iteration = 0;
+                let c = z.clone();
+                let iteration = 0;
 
                 while (z.x * z.x + z.y * z.y) < 4 && iteration < MAX_ITERATIONS {
-                    f32 temp_x = z.x * z.x - z.y * z.y + c.x;
+                    let temp_x = z.x * z.x - z.y * z.y + c.x;
                     z.y = 2.0 * z.x * z.y + c.y;
                     z.x = temp_x;
                     iteration += 1;
@@ -87,7 +86,7 @@ fn main() {
                 if iteration == MAX_ITERATIONS {
                     raylib::draw_pixel(x, y, BLACK);
                 } else {
-                    Color out = Color {
+                    let out = Color {
                         r = (iteration * 8) % 255,
                         g = (iteration * 4) % 255,
                         b = (iteration * 2) % 255,
@@ -112,17 +111,17 @@ fn main() {
             },
             Rectangle {
                 x = 0, y = 0,
-                width = screenWidth,
-                height = screenHeight
+                width = SCREEN_WIDTH,
+                height = SCREEN_HEIGHT
             },
             Vector2 { x = 0, y = 0 },
             0, WHITE
         );
 
-        raylib::draw_fps(screenWidth - 80, screenHeight - 24);
+        raylib::draw_fps(SCREEN_WIDTH - 80, SCREEN_HEIGHT - 24);
         raylib::draw_text(
             "1 - Zoom in\n2 - Zoom out\n3 - Reset all\nW - Up\nA - Left\nS - Down\nD - Right",
-            18, screenHeight - 12 * 10, fontSize * 3, WHITE
+            18, SCREEN_HEIGHT - 12 * 10, fontSize * 3, WHITE
         );
 
         raylib::end_drawing();

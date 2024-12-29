@@ -7,8 +7,8 @@ const i32 ACCURACY = 1e6;
 const f64 EPSILON = 0.1305;
 
 fn roll(i32* results, i32 formattedEpsilon) {
-    i32 attempts = 0;
-    i32 roll = ACCURACY;
+    let attempts = 0;
+    let roll = ACCURACY;
 
     while roll > formattedEpsilon {
         attempts += 1;
@@ -19,7 +19,7 @@ fn roll(i32* results, i32 formattedEpsilon) {
 }
 
 fn calculateAverage(i32* results) {
-    i32 sum = 0;
+    let sum = 0;
 
     for i32 i = 0; i < ITERATIONS; i += 1 {
         sum += results[i];
@@ -30,11 +30,11 @@ fn calculateAverage(i32* results) {
 
 fn main() {
     i32 results[ITERATIONS];
-    i32 formattedEpsilon = EPSILON * (ACCURACY / 100);
+    let formattedEpsilon = EPSILON * (ACCURACY / 100);
 
     rand::seed(time(nil));
 
-    for i32 i = 0; i < ITERATIONS; i += 1 {
+    for let i = 0; i < ITERATIONS; i += 1 {
         results[i] = roll(results, formattedEpsilon);
     }
 

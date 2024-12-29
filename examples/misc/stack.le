@@ -1,8 +1,7 @@
 use std/io;
 
 fn direction(i32 *other) -> bool {
-    i32 x;
-    return !other ? direction(&x) : &x > other;
+    return !other ? direction(&0) : &0 > other;
 }
 
 fn main() {

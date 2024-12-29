@@ -74,6 +74,7 @@ impl<'a> Constant<'a> {
                 struct_pool: &self.parser.struct_pool,
                 tree: &self.parser.tree,
                 generics: &vec![],
+                known_generics: &vec![],
             },
         )
         .parse()

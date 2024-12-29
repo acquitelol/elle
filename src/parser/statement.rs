@@ -8,14 +8,18 @@ use crate::{
     compiler::enums::Type,
     ensure_fn_pointer,
     lexer::enums::{Location, Token, TokenKind, ValueKind},
+    misc::colors::*,
     not_valid_struct_or_type, token_to_node, GENERIC_END, GENERIC_IDENTIFIER,
 };
+use crate::{get_type, INTERNAL_IDX_FORMAT, INTERNAL_ITERATOR_FORMAT, LEN_CONSTANT};
 
+#[derive(Clone, Copy)]
 pub struct Shared<'a> {
     pub struct_pool: &'a RefCell<StructPool>,
     #[allow(unused)]
     pub tree: &'a RefCell<Vec<Primitive>>,
     pub generics: &'a Vec<String>,
+    pub known_generics: &'a Vec<Type>,
 }
 
 pub struct Statement<'a> {
@@ -142,101 +146,12 @@ impl<'a> Statement<'a> {
     }
 
     pub fn get_type(&mut self, generics: Option<&Vec<String>>) -> Type {
-        let is_fn_pointer = self.current_token().kind == TokenKind::Function;
-        let name = if is_fn_pointer {
-            self.current_token().value.get_string_inner().unwrap()
-        } else {
-            self.get(vec![TokenKind::Identifier])
-        };
-
-        let is_struct = self.shared.struct_pool.borrow().contains_key(&name);
-
-        let is_valid = is_fn_pointer
-            || is_struct
-            || generics.unwrap_or(&vec![]).contains(&name)
-            || ValueKind::String(name.clone()).is_base_type();
-
-        if !is_valid {
-            panic!(
-                "{}",
-                self.current_token().location.error(format!(
-                    "Type or struct named '{}' could not be found. Are you sure you spelt it correctly?",
-                    name
-                ))
-            )
-        }
-
-        let mut ty = ValueKind::String(name.clone())
-            .to_type_string(is_struct)
-            .unwrap();
-        let mut found_ptr = false;
-
-        loop {
-            let tmp = self.next_token();
-
-            if tmp.is_some() {
-                match tmp.unwrap().kind {
-                    TokenKind::Multiply | TokenKind::Deref => {
-                        found_ptr = true;
-                        ty = Type::Pointer(Box::new(ty));
-                        self.advance();
-                    }
-                    TokenKind::LessThan if is_struct => {
-                        self.advance();
-                        self.advance();
-
-                        let mut known_generics = vec![];
-
-                        while self.current_token().kind != TokenKind::GreaterThan {
-                            known_generics.push(self.get_type(generics));
-                            self.advance();
-
-                            if self.current_token().kind == TokenKind::Comma {
-                                self.advance();
-                            }
-                        }
-
-                        let location = self.current_token().location;
-
-                        let generic_name = format!(
-                            "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
-                            known_generics
-                                .iter()
-                                .map(|known| known.to_internal_id().to_string())
-                                .collect::<Vec<String>>()
-                                .join(".")
-                        );
-
-                        if !self.shared.struct_pool.borrow().contains_key(&generic_name) {
-                            create_generic_struct(
-                                name.clone(),
-                                generic_name.clone(),
-                                location,
-                                known_generics,
-                                &self.shared.struct_pool,
-                                &self.shared.tree,
-                            )
-                        }
-
-                        ty = Type::Struct(generic_name);
-                        self.expect_tokens(vec![TokenKind::GreaterThan]);
-                    }
-                    // Crashes if it hasn't got at least 1 nested pointer for
-                    // function pointers, ie `fn main(fn a)` is invalid
-                    // you must have `fn main(fn *a)` instead.
-                    _ => ensure_fn_pointer!(self, is_fn_pointer, found_ptr),
-                }
-            } else {
-                ensure_fn_pointer!(self, is_fn_pointer, found_ptr)
-            }
-        }
-
-        ty
+        get_type!(self, generics, self.shared.struct_pool, self.shared.tree)
     }
 
     fn parse_declare(&mut self, ty: Option<Option<Type>>) -> AstNode {
-        let r#type = if ty.is_some() {
-            ty.clone().unwrap()
+        let r#type = if let Some(ty) = ty {
+            ty.clone()
         } else {
             let tmp = self.get_type(Some(self.shared.generics));
             self.advance();
@@ -250,6 +165,13 @@ impl<'a> Statement<'a> {
         self.advance();
 
         if self.current_token().kind == TokenKind::LeftBlockBrace {
+            if r#type.as_ref().is_some_and(|x| x == &Type::Infer) {
+                panic!(
+                    "{}",
+                    location.error("Cannot declare a buffer with an inferred inner type.")
+                );
+            }
+
             return self.parse_buffer(Some(name), r#type);
         }
 
@@ -258,19 +180,7 @@ impl<'a> Statement<'a> {
                 name,
                 r#type: r#type.clone(),
                 // If the type is a struct create 'Struct {}' otherwise 0
-                value: Box::new(if r#type.clone().is_some_and(|ty| ty.is_struct()) {
-                    AstNode::StructStatement {
-                        name: r#type.unwrap().get_struct_inner().unwrap(),
-                        values: vec![],
-                        location: self.current_token().location,
-                    }
-                } else {
-                    AstNode::LiteralStatement {
-                        kind: TokenKind::IntegerLiteral,
-                        value: ValueKind::Number(0),
-                        location: self.current_token().location,
-                    }
-                }),
+                value: None,
                 location: location.clone(),
                 value_location: location,
             };
@@ -300,7 +210,7 @@ impl<'a> Statement<'a> {
         AstNode::DeclareStatement {
             name,
             r#type,
-            value: Box::new(parsed_res),
+            value: Some(Box::new(parsed_res)),
             location,
             value_location,
         }
@@ -320,7 +230,7 @@ impl<'a> Statement<'a> {
         AstNode::DeclareStatement {
             name: name.clone(),
             r#type: None,
-            value: Box::new(AstNode::ArithmeticOperation {
+            value: Some(Box::new(AstNode::ArithmeticOperation {
                 left: Box::new(AstNode::LiteralStatement {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
@@ -329,8 +239,9 @@ impl<'a> Statement<'a> {
                 right: Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0),
                 operator: mapping,
                 treat_as_string: true,
+                dunder_methods: true,
                 location: location.clone(),
-            }),
+            })),
             location: location.clone(),
             value_location: location,
         }
@@ -366,6 +277,7 @@ impl<'a> Statement<'a> {
             }),
             operator: TokenKind::Divide,
             treat_as_string: false,
+            dunder_methods: true,
             location: self.current_token().location,
         }
     }
@@ -499,6 +411,8 @@ impl<'a> Statement<'a> {
 
                 self.expect_tokens(vec![TokenKind::GreaterThan]);
                 self.advance();
+            } else {
+                tmp = self.shared.known_generics.clone();
             }
 
             tmp
@@ -733,6 +647,7 @@ impl<'a> Statement<'a> {
             right: Box::new(Statement::new(right, 0, &self.body, self.shared).parse().0),
             operator,
             treat_as_string: true,
+            dunder_methods: true,
             location: self.current_token().location,
         };
 
@@ -762,6 +677,7 @@ impl<'a> Statement<'a> {
                 right: Box::new(right),
                 operator,
                 treat_as_string: true,
+                dunder_methods: true,
                 location: self.current_token().location,
             };
         }
@@ -812,7 +728,7 @@ impl<'a> Statement<'a> {
         }
     }
 
-    fn parse_array(&mut self) -> AstNode {
+    fn parse_array(&mut self, dynamic: bool) -> AstNode {
         let position = self.position.clone();
         let location = self.current_token().location.clone();
         self.expect_tokens(vec![TokenKind::LeftBlockBrace]);
@@ -915,11 +831,24 @@ impl<'a> Statement<'a> {
 
         let array = AstNode::ArrayStatement {
             values,
+            known_generics: self.shared.known_generics.clone(),
             location: self.current_token().location,
+            dynamic,
         };
 
-        if self.current_token().kind == TokenKind::LeftBlockBrace {
-            return self.parse_offset_store(Some((position, array, location)));
+        match self.current_token().kind {
+            TokenKind::Dot => {
+                return self.parse_field_access(Some((position, array, location)));
+            }
+            TokenKind::LeftBlockBrace => {
+                return self.parse_offset_store(Some((position, array, location)));
+            }
+            other if other.is_ternary_start() => return self.parse_ternary_node(array),
+            other if other.is_arithmetic() => {
+                self.position = position;
+                return self.parse_arithmetic();
+            }
+            _ => {}
         }
 
         array
@@ -980,16 +909,55 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let mut wrapped = false;
+        let position = self.position.clone();
+
         if self.current_token().kind == TokenKind::LeftParenthesis {
-            wrapped = true;
+            let mut i = self.position;
+
+            wrapped = 'x: {
+                while !self.is_eof() && self.tokens[i].kind != TokenKind::LeftCurlyBrace {
+                    if self.tokens[i].kind == TokenKind::In {
+                        break 'x false;
+                    }
+
+                    i += 1;
+                }
+
+                true
+            };
+
             self.advance();
         }
 
+        let location = self.current_token().location.clone();
+
         let declare_tokens = if self.current_token().kind != TokenKind::Semicolon {
-            self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon])
+            self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon, TokenKind::In])
         } else {
             vec![]
         };
+
+        if self.current_token().kind == TokenKind::In {
+            self.position = position;
+
+            if self
+                .next_token()
+                .is_some_and(|token| token.kind == TokenKind::In)
+            {
+                let name = self.get_identifier();
+                self.advance();
+
+                return self.parse_foreach_statement(Type::Infer, name, location);
+            }
+
+            let ty = self.get_type(Some(&self.shared.generics));
+            self.advance();
+
+            let name = self.get_identifier();
+            self.advance();
+
+            return self.parse_foreach_statement(ty, name, location);
+        }
 
         let declare = if declare_tokens.len() > 0 {
             Statement::new(declare_tokens.clone(), 0, &self.body, self.shared)
@@ -1030,7 +998,13 @@ impl<'a> Statement<'a> {
         let mut step_tokens = vec![];
         let mut nesting = 0;
 
-        if self.current_token().kind != TokenKind::RightParenthesis {
+        if self.current_token().kind
+            != if wrapped {
+                TokenKind::RightParenthesis
+            } else {
+                TokenKind::LeftCurlyBrace
+            }
+        {
             loop {
                 if wrapped && self.current_token().kind == TokenKind::LeftParenthesis {
                     nesting += 1;
@@ -1092,6 +1066,140 @@ impl<'a> Statement<'a> {
         AstNode::WhileLoop {
             condition: Box::new(condition),
             step: Some(Box::new(step)),
+            body,
+            location: self.current_token().location,
+        }
+    }
+
+    /// for i32 x in Array::new<i32>(1, 2, 3) {}
+    fn parse_foreach_statement(&mut self, ty: Type, name: String, location: Location) -> AstNode {
+        self.advance(); // in
+
+        let mut nesting = 0;
+        let tokens = self.yield_tokens_with_condition(|token, _, _| {
+            if token.kind == TokenKind::LeftCurlyBrace {
+                if nesting == 0 {
+                    return true;
+                } else {
+                    nesting += 1;
+                }
+            }
+
+            if token.kind == TokenKind::RightCurlyBrace {
+                nesting -= 1;
+            }
+
+            return false;
+        });
+
+        let mut new_shared = (*self.shared).clone();
+        let known_generics = if ty != Type::Infer {
+            vec![ty.clone()]
+        } else {
+            vec![]
+        };
+        new_shared.known_generics = &known_generics;
+
+        let iterator = Statement::new(tokens, 0, &self.body, &new_shared).parse().0;
+        let index = format!(INTERNAL_IDX_FORMAT!(), name);
+        let iter = format!(INTERNAL_ITERATOR_FORMAT!(), name);
+
+        self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
+        self.advance();
+
+        let mut body = self.yield_block();
+
+        self.position -= 1;
+
+        let index_node = AstNode::LiteralStatement {
+            kind: TokenKind::Identifier,
+            value: ValueKind::String(index.clone()),
+            location: location.clone(),
+        };
+
+        let iterator_node = AstNode::LiteralStatement {
+            kind: TokenKind::Identifier,
+            value: ValueKind::String(iter.clone()),
+            location: location.clone(),
+        };
+
+        let element_access = AstNode::MemoryStatement {
+            left: Box::new(iterator_node.clone()),
+            right: Box::new(index_node.clone()),
+            value: None,
+            left_location: location.clone(),
+            right_location: location.clone(),
+            value_location: location.clone(),
+            is_deref: false,
+        };
+
+        let element_node = AstNode::DeclareStatement {
+            name,
+            r#type: Some(ty),
+            value: Some(Box::new(element_access)),
+            location: location.clone(),
+            value_location: location.clone(),
+        };
+
+        let condition_node = AstNode::ArithmeticOperation {
+            left: Box::new(index_node.clone()),
+            right: Box::new(AstNode::FunctionCall {
+                name: LEN_CONSTANT.into(),
+                generics: vec![],
+                parameters: vec![(location.clone(), iterator_node)],
+                type_method: true,
+                ignore_no_def: false,
+                location: location.clone(),
+            }),
+            operator: TokenKind::LessThan,
+            treat_as_string: false,
+            dunder_methods: true,
+            location: location.clone(),
+        };
+
+        let step_node = AstNode::DeclareStatement {
+            name: index.clone(),
+            r#type: None,
+            value: Some(Box::new(AstNode::ArithmeticOperation {
+                left: Box::new(index_node),
+                right: Box::new(AstNode::LiteralStatement {
+                    kind: TokenKind::IntegerLiteral,
+                    value: ValueKind::Number(1),
+                    location: location.clone(),
+                }),
+                operator: TokenKind::Add,
+                treat_as_string: false,
+                dunder_methods: true,
+                location: location.clone(),
+            })),
+            location: location.clone(),
+            value_location: location.clone(),
+        };
+
+        self.body.borrow_mut().push(AstNode::DeclareStatement {
+            name: index,
+            r#type: Some(Type::Word),
+            value: Some(Box::new(AstNode::LiteralStatement {
+                kind: TokenKind::IntegerLiteral,
+                value: ValueKind::Number(0),
+                location: location.clone(),
+            })),
+            location: location.clone(),
+            value_location: location.clone(),
+        });
+
+        self.body.borrow_mut().push(AstNode::DeclareStatement {
+            name: iter,
+            r#type: Some(Type::Infer),
+            value: Some(Box::new(iterator)),
+            location: location.clone(),
+            value_location: location.clone(),
+        });
+        body.insert(0, element_node);
+
+        AstNode::WhileLoop {
+            condition: Box::new(condition_node),
+            step: Some(Box::new(step_node)),
             body,
             location: self.current_token().location,
         }
@@ -1478,12 +1586,19 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_type_conversion(&mut self) -> AstNode {
+        let position = self.position;
         self.advance();
 
         let location = self.current_token().location.clone();
         let r#type = self.get_type(Some(self.shared.generics));
 
         self.advance();
+
+        if self.current_token().kind == TokenKind::Comma {
+            self.position = position;
+            return self.parse_declare(None);
+        }
+
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
@@ -1552,6 +1667,7 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_size(&mut self) -> AstNode {
+        let position = self.position;
         self.expect_tokens(vec![TokenKind::Size]);
         self.advance();
 
@@ -1568,7 +1684,8 @@ impl<'a> Statement<'a> {
         let value = if self.current_token().kind == TokenKind::Identifier
             && (self.shared.struct_pool.borrow().contains_key(&ty_name)
                 || self.shared.generics.contains(&ty_name)
-                || self.current_token().value.is_base_type())
+                || self.current_token().value.is_base_type()
+                || self.current_token().kind == TokenKind::LeftParenthesis)
         {
             Ok(self.get_type(Some(&self.shared.generics)))
         } else {
@@ -1631,10 +1748,24 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
-        AstNode::SizeStatement { value, location }
+        let mut expression = AstNode::SizeStatement { value, location };
+
+        match self.current_token().kind {
+            other if other.is_ternary_start() => {
+                expression = self.parse_ternary_node(expression);
+            }
+            other if other.is_arithmetic() => {
+                self.position = position;
+                expression = self.parse_arithmetic();
+            }
+            _ => {}
+        }
+
+        expression
     }
 
     fn parse_array_length(&mut self) -> AstNode {
+        let position = self.position;
         self.expect_tokens(vec![TokenKind::ArrayLength]);
         self.advance();
 
@@ -1699,7 +1830,20 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
-        AstNode::ArrayLengthStatement { value, location }
+        let mut expression = AstNode::ArrayLengthStatement { value, location };
+
+        match self.current_token().kind {
+            other if other.is_ternary_start() => {
+                expression = self.parse_ternary_node(expression);
+            }
+            other if other.is_arithmetic() => {
+                self.position = position;
+                expression = self.parse_arithmetic();
+            }
+            _ => {}
+        }
+
+        expression
     }
 
     fn parse_unary(&mut self) -> AstNode {
@@ -1714,6 +1858,7 @@ impl<'a> Statement<'a> {
             right: Box::new(AstNode::token_to_literal(token)),
             operator: TokenKind::Multiply,
             treat_as_string: false,
+            dunder_methods: true,
             location,
         };
 
@@ -1977,7 +2122,7 @@ impl<'a> Statement<'a> {
 
         if self.current_token().kind == TokenKind::LessThan
             && self.next_token().is_some_and(|token| {
-                if token.kind != TokenKind::Identifier {
+                if ![TokenKind::Identifier, TokenKind::LeftParenthesis].contains(&token.kind) {
                     return false;
                 }
 
@@ -1986,6 +2131,7 @@ impl<'a> Statement<'a> {
                 self.shared.struct_pool.borrow().contains_key(&ty_name)
                     || self.shared.generics.contains(&ty_name)
                     || token.value.is_base_type()
+                    || token.kind == TokenKind::LeftParenthesis
             })
         {
             self.advance();
@@ -2001,6 +2147,8 @@ impl<'a> Statement<'a> {
 
             self.expect_tokens(vec![TokenKind::GreaterThan]);
             self.advance();
+        } else {
+            tmp = self.shared.known_generics.clone();
         }
 
         if self.current_token().kind == TokenKind::LeftParenthesis {
@@ -2182,6 +2330,65 @@ impl<'a> Statement<'a> {
         }
     }
 
+    fn parse_indexof(&mut self) -> AstNode {
+        let position = self.position;
+        self.advance();
+        self.expect_tokens(vec![TokenKind::LeftParenthesis]);
+        self.advance();
+
+        let name = self.get_identifier();
+
+        self.advance();
+        self.expect_tokens(vec![TokenKind::RightParenthesis]);
+        self.advance();
+
+        let location = self.current_token().location.clone();
+
+        let mut expression = AstNode::LiteralStatement {
+            kind: TokenKind::Identifier,
+            value: ValueKind::String(format!(INTERNAL_IDX_FORMAT!(), name)),
+            location: location.clone(),
+        };
+
+        match self.current_token().kind {
+            TokenKind::Equal => {
+                self.advance();
+                let value_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
+
+                expression = AstNode::DeclareStatement {
+                    name: format!(INTERNAL_IDX_FORMAT!(), name),
+                    r#type: None,
+                    value: Some(Box::new(
+                        Statement::new(value_tokens, 0, &self.body, self.shared)
+                            .parse()
+                            .0,
+                    )),
+                    location: location.clone(),
+                    value_location: location.clone(),
+                }
+            }
+            other if other.is_declarative() => {
+                expression = AstNode::DeclareStatement {
+                    name: format!(INTERNAL_IDX_FORMAT!(), name),
+                    r#type: None,
+                    value: Some(Box::new(self.parse_declarative_node(expression))),
+                    location: location.clone(),
+                    value_location: location.clone(),
+                }
+            }
+            other if other.is_ternary_start() => {
+                expression = self.parse_ternary_node(expression);
+            }
+            other if other.is_arithmetic() => {
+                self.position = position;
+                expression = self.parse_arithmetic();
+            }
+            _ => {}
+        }
+
+        expression
+    }
+
     fn parse_declarative_node(&mut self, node: AstNode) -> AstNode {
         let operation = self.current_token();
         let location = self.current_token().location.clone();
@@ -2195,6 +2402,7 @@ impl<'a> Statement<'a> {
             right: Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0),
             operator: mapping,
             treat_as_string: true,
+            dunder_methods: true,
             location,
         }
     }
@@ -2224,11 +2432,13 @@ impl<'a> Statement<'a> {
 
                     !(self.shared.struct_pool.borrow().contains_key(&next_name)
                         || self.shared.generics.contains(&next_name)
-                        || next.value.is_base_type())
+                        || next.value.is_base_type()
+                        || next.kind == TokenKind::LeftParenthesis)
                 } else if token.kind == TokenKind::GreaterThan {
                     !(self.shared.struct_pool.borrow().contains_key(&ty_name)
                         || self.shared.generics.contains(&ty_name)
-                        || prev_token.value.is_base_type())
+                        || prev_token.value.is_base_type()
+                        || prev_token.kind == TokenKind::LeftParenthesis)
                 } else {
                     nesting == 0
                 }
@@ -2418,6 +2628,11 @@ impl<'a> Statement<'a> {
             TokenKind::Address => self.parse_address(),
             TokenKind::Size => self.parse_size(),
             TokenKind::ArrayLength => self.parse_array_length(),
+            TokenKind::IndexOf => self.parse_indexof(),
+            TokenKind::Let => {
+                self.advance();
+                self.parse_declare(Some(Some(Type::Infer)))
+            }
             TokenKind::LeftParenthesis => {
                 let next = self.next_token();
 
@@ -2427,7 +2642,8 @@ impl<'a> Statement<'a> {
                     if token.kind == TokenKind::Identifier
                         && (self.shared.struct_pool.borrow().contains_key(&ty_name)
                             || self.shared.generics.contains(&ty_name)
-                            || token.value.is_base_type())
+                            || token.value.is_base_type()
+                            || token.kind == TokenKind::LeftParenthesis)
                     {
                         let next = self.next_token_seek(2);
 
@@ -2449,8 +2665,22 @@ impl<'a> Statement<'a> {
                     self.parse_wrapped_statement()
                 }
             }
+            TokenKind::Hashtag => {
+                self.advance();
+
+                match self.current_token().kind {
+                    TokenKind::LeftBlockBrace => self.parse_array(false),
+                    _ => panic!(
+                        "{}",
+                        self.current_token().location.error(format!(
+                            "Expected left block brace or identifier, got {:?}",
+                            self.current_token().kind
+                        )),
+                    ),
+                }
+            }
             TokenKind::LeftCurlyBrace => self.parse_block(),
-            TokenKind::LeftBlockBrace => self.parse_array(),
+            TokenKind::LeftBlockBrace => self.parse_array(true),
             TokenKind::Identifier | TokenKind::ExactLiteral => {
                 if self.is_eof()
                     || self
@@ -2502,6 +2732,7 @@ impl<'a> Statement<'a> {
                             if token.value.is_base_type()
                                 || self.shared.struct_pool.borrow().contains_key(&ty_name)
                                 || self.shared.generics.contains(&ty_name)
+                                || token.kind == TokenKind::LeftParenthesis
                             {
                                 self.parse_function(None, None, None, None, false)
                             } else {
@@ -2512,6 +2743,10 @@ impl<'a> Statement<'a> {
                         }
                     } else if next.kind.is_arithmetic() {
                         self.parse_arithmetic()
+                    } else if next.kind.is_ternary_start() {
+                        let condition = AstNode::token_to_literal(self.current_token());
+                        self.advance();
+                        self.parse_ternary_node(condition)
                     } else if next.kind == TokenKind::Identifier {
                         not_valid_struct_or_type!(self)
                     } else if next.kind == TokenKind::DoubleColon {
@@ -2578,6 +2813,10 @@ impl<'a> Statement<'a> {
             TokenKind::While => self.parse_while_statement(),
             TokenKind::For => self.parse_for_statement(),
             TokenKind::Defer => self.parse_defer(),
+            TokenKind::Let => {
+                self.advance();
+                self.parse_declare(Some(Some(Type::Infer)))
+            }
             // Lambda expression `fn(i32 a, i32 b) -> val`
             TokenKind::Function
                 if self
@@ -2590,7 +2829,8 @@ impl<'a> Statement<'a> {
                 if other == TokenKind::Identifier
                     && (self.shared.struct_pool.borrow().contains_key(&ty_name)
                         || self.shared.generics.contains(&ty_name)
-                        || self.current_token().value.is_base_type())
+                        || self.current_token().value.is_base_type()
+                        || self.current_token().kind == TokenKind::LeftParenthesis)
                     || self.current_token().kind == TokenKind::Function =>
             {
                 if let Some(token) = self.next_token() {

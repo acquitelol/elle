@@ -10,18 +10,26 @@ fn string::len(string self) {
     return strlen(self);
 }
 
+external fn string::len(string self) @alias("string::__len__") -> i64;
+
 fn string::is_empty(string self) {
     return self.len() == 0;
 }
 
+fn string::equals(string self, string other) {
+    return (i64)self == (i64)other || strcmp(self, other) == 0;
+}
+
+external fn string::equals(string self, string other) @alias("string::__equals__") -> bool;
+
 fn string::contains(string self, string needle) -> bool {
-    return strstr(self, needle) != nil;
+    return (void *)strstr(self, needle) != nil;
 }
 
 fn string::find(string self, string needle) -> i64 {
-    string result = strstr(self, needle);
+    let result = strstr(self, needle);
 
-    if result == nil {
+    if (void *)result == nil {
         return -1;
     }
 
@@ -29,10 +37,9 @@ fn string::find(string self, string needle) -> i64 {
 }
 
 fn string::count(string self, char needle) -> i32 {
-    i32 length = self.len();
-    i32 count = 0;
+    let count = 0;
 
-    for i32 i = 0; i < length; i += 1 {
+    for let i = 0; i < self.len(); i += 1 {
         if self[i] == needle {
             count += 1;
         }
@@ -46,8 +53,8 @@ fn string::starts_with(string self, string prefix) -> bool {
 }
 
 fn string::ends_with(string self, string suffix) -> bool {
-    i32 self_length = self.len();
-    i32 suffix_length = suffix.len();
+    let self_length = self.len();
+    let suffix_length = suffix.len();
 
     if (suffix_length > self_length) {
         return false;
@@ -56,12 +63,8 @@ fn string::ends_with(string self, string suffix) -> bool {
     return strncmp((string)((i64)self + (i64)self_length - suffix_length), suffix, suffix_length) == 0;
 }
 
-fn string::equals(string self, string other) {
-    return (i64)self == (i64)other || strcmp(self, other) == 0;
-}
-
 fn string::default(string self, string default) {
-    if ((i64)self) == 0 || self.is_empty() {
+    if ((void *)self) == 0 || self.is_empty() {
         return default;
     }
 
@@ -69,16 +72,13 @@ fn string::default(string self, string default) {
 }
 
 fn string::to_upper(string self) {
-    i32 length = self.len();
-    string out = (string)malloc((length + 1) * #size(char));
+    let out = (string)malloc((self.len() + 1) * #size(char));
 
-    for i32 i = 0; i < length; i += 1 {
-        char c = self[i];
-
+    for c in self {
         if c >= 'a' && c <= 'z' {
-            out[i] = c - ('a' - 'A');
+            out[#i(c)] = c - ('a' - 'A');
         } else {
-            out[i] = c;
+            out[#i(c)] = c;
         }
     }
 
@@ -86,16 +86,13 @@ fn string::to_upper(string self) {
 }
 
 fn string::to_lower(string self) {
-    i32 length = self.len();
-    string out = (string)malloc((length + 1) * #size(char));
+    let out = (string)malloc((self.len() + 1) * #size(char));
 
-    for i32 i = 0; i < length; i += 1 {
-        char c = self[i];
-
+    for c in self {
         if c >= 'A' && c <= 'Z' {
-            out[i] = c + ('a' - 'A');
+            out[#i(c)] = c + ('a' - 'A');
         } else {
-            out[i] = c;
+            out[#i(c)] = c;
         }
     }
 
@@ -105,20 +102,20 @@ fn string::to_lower(string self) {
 // Note: these are null terminated strings, which means this
 // function returns a CLONE of the slice, NOT a string view
 fn string::slice(string self, i32 start, i32 end) -> string {
-    i32 length = self.len();
+    let length = self.len();
 
     if start < 0 || end > length || start > end {
         return nil;
     }
 
-    i32 new_length = end - start;
-    string sliced = (string)malloc(new_length + 1);
+    let new_length = end - start;
+    let sliced = (string)malloc(new_length + 1);
 
     if !sliced {
         return nil;
     }
 
-    for i32 i = 0; i < new_length; i += 1 {
+    for let i = 0; i < new_length; i += 1 {
         sliced[i] = self[start + i];
     }
 
@@ -139,24 +136,24 @@ fn string::concat(ElleMeta meta, ...) -> string {
     i32 sizes[meta.arity];
     i64 length = 0;
 
-    for i32 i = 0; i < meta.arity; i += 1 {
+    for let i = 0; i < meta.arity; i += 1 {
         strings[i] = args.yield(string);
         sizes[i] = strings[i].len();
         length += sizes[i];
     }
 
-    string result = (string)malloc((length + 1) * #size(char));
+    let result = (string)malloc((length + 1) * #size(char));
 
     if !result {
         return nil;
     }
 
-    i32 index = 0;
+    let index = 0;
 
-    for i32 i = 0; i < meta.arity; i += 1 {
-        string current = strings[i];
+    for let i = 0; i < meta.arity; i += 1 {
+        let current = strings[i];
 
-        for i32 j = 0; j < sizes[i]; j += 1 {
+        for let j = 0; j < sizes[i]; j += 1 {
             result[index] = current[j];
             index += 1;
         }
@@ -181,9 +178,9 @@ fn string::concat(ElleMeta meta, ...) -> string {
 fn string::extend(ElleMeta meta, string *self, ...) {
     // - 1 to account for `string *self` which isnt variadic
     variadic args[meta.arity - 1];
-    string res = *self;
+    let res = *self;
 
-    for i32 i = 0; i < meta.arity - 1; i += 1 {
+    for let i = 0; i < meta.arity - 1; i += 1 {
         res <>= args.yield(string);
     }
 
@@ -191,8 +188,8 @@ fn string::extend(ElleMeta meta, string *self, ...) {
 }
 
 fn string::color(string self, string color) {
-    string fmt = "\x1b[%dm";
-    i32 code = -1;
+    let fmt = "\x1b[%dm";
+    let code = -1;
 
     if color == "bold" {
         code = 1;
@@ -238,7 +235,7 @@ fn string::color(string self, string color) {
         return self;
     }
 
-    string result = (string)malloc(fmt.len() + 1);
+    let result = (string)malloc(fmt.len() + 1);
     io::sprintf(result, fmt, code);
     result <>= self;
 
@@ -251,30 +248,30 @@ fn string::reset(string self) {
 
 // Capitalizes the first character of a string, and lowercases the rest of the string
 fn string::capitalize(string self) {
-    string first = self.slice(0, 1);
-    string rest = self.slice(1, self.len());
+    let first = self.slice(0, 1);
+    let rest = self.slice(1, self.len());
 
     return first.to_upper() <> rest.to_lower();
 }
 
 fn string::replace(string self, string needle, string replacement) -> string {
-    i32 needle_len = needle.len();
-    i32 replacement_len = replacement.len();
-    i32 self_len = self.len();
+    let needle_len = needle.len();
+    let replacement_len = replacement.len();
+    let self_len = self.len();
 
     if needle_len == 0 || self_len == 0 {
         return self;
     }
 
-    i32 buf_size = self_len;
-    string res = (string)malloc(buf_size + 1);
+    let buf_size = self_len;
+    let res = (string)malloc(buf_size + 1);
 
     if !res {
         return nil;
     }
 
-    i32 res_index = 0;
-    i32 i = 0;
+    let res_index = 0;
+    let i = 0;
 
     while i < self_len {
         if strncmp((string)((i64)self + i), needle, needle_len) == 0 {
@@ -315,11 +312,11 @@ fn string::repeat(string self, i32 count) {
         return "";
     }
 
-    string res = self;
+    let res = self;
 
     // count - 1 because we already have 1
     // in the initial declaration
-    for i32 i = 0; i < count - 1; i += 1 {
+    for let i = 0; i < count - 1; i += 1 {
         res <>= self;
     }
 
@@ -327,7 +324,7 @@ fn string::repeat(string self, i32 count) {
 }
 
 fn string::insert(string *self, i32 index, char c) {
-    i32 length = (*self).len();
+    let length = (*self).len();
 
     if index < 0 || index > length {
         return nil;
@@ -362,14 +359,14 @@ fn string::insert(string *self, i32 index, char c) {
 // io::assert(a == "me", nil)
 // ```
 fn string::pop(string *self) -> char {
-    i32 length = (*self).len();
+    let length = (*self).len();
 
     if length == 0 {
         return '\0';
     }
 
-    char last_char = (*self)[length - 1];
-    string result = (string)malloc(length * #size(char));
+    let last_char = (*self)[length - 1];
+    let result = (string)malloc(length * #size(char));
 
     if !result {
         return '\0';
@@ -383,8 +380,8 @@ fn string::pop(string *self) -> char {
 }
 
 fn string::push(string *self, char c) {
-    i32 length = (*self).len();
-    string result = (string)malloc((length + 2) * #size(char));
+    let length = (*self).len();
+    let result = (string)malloc((length + 2) * #size(char));
 
     if (!result) {
         return nil;
@@ -400,7 +397,7 @@ fn string::push(string *self, char c) {
 local fn __internal_to_string<T, U>(i64 args, string fmt) {
     T arg = args.yield(U);
 
-    i32 length = io::snprintf(nil, 0, fmt, arg);
+    let length = io::snprintf(nil, 0, fmt, arg);
     string res = (string)malloc(length);
     io::sprintf(res, fmt, arg);
 
@@ -416,13 +413,13 @@ fn __to_string(string ty, i64 args, bool wrap) {
     }
 
     if ty.starts_with("string") {
-        string arg = args.yield(string);
+        let arg = args.yield(string);
 
         if wrap {
             arg = string::concat("\"", arg, "\"");
         }
 
-        string res = (string)malloc(arg.len() + 1);
+        let res = (string)malloc(arg.len() + 1);
         strcpy(res, arg);
         return res;
     }
@@ -468,33 +465,23 @@ fn __to_string(string ty, i64 args, bool wrap) {
     }
 
     if ty.starts_with("char") {
-        string fmt = "";
-
-        if wrap {
-            fmt = "'%c'";
-        } else {
-            fmt = "%c";
-        }
-
-        return __internal_to_string<char, char>(args, fmt);
+        return __internal_to_string<char, char>(args, wrap ? "'%c'" : "%c");
     }
 
     if ty.starts_with("bool") {
         // Even though this yields a string we need to
         // copy it into a heap-allocated string
         // so that the caller can reliably free it
-        string arg = args.yield(bool).to_string();
-        string fmt = "%s";
-
-        string res = (string)malloc(arg.len() + 1);
-        io::sprintf(res, fmt, arg);
+        let arg = args.yield(bool).to_string();
+        let res = (string)malloc(arg.len() + 1);
+        io::sprintf(res, "%s", arg);
         return res;
     }
 
-    i64 arg = args.yield(i64);
-    string fmt = "<%s at %p>";
-    i32 length = io::snprintf(nil, 0, fmt, ty, arg);
-    string res = (string)malloc(length);
+    let arg = args.yield(i64);
+    let fmt = "<%s at %p>";
+    let length = io::snprintf(nil, 0, fmt, ty, arg);
+    let res = (string)malloc(length);
     io::sprintf(res, fmt, ty, arg);
 
     return res;
@@ -514,40 +501,40 @@ fn string::as_string_wrapped(ElleMeta meta, ...) {
 // If you want to format arguments of arbitrary types
 // into a new string, use string::format() instead
 fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
-    string result = (string)malloc(fmt.len());
+    let result = (string)malloc(fmt.len());
 
-    i32 arg = 0;
-    bool is_open = false;
-    bool wrapped = false;
+    let arg = 0;
+    let is_open = false;
+    let wrapped = false;
 
-    for i32 i = 0; i < fmt.len(); i += 1 {
+    for c in fmt {
         if is_open {
             // Allow for escaping { using {{}
-            if fmt[i] == '{' {
+            if c == '{' {
                 is_open = false;
 
                 // Push '{' as it was skipped the first time
-                result.push(fmt[i]);
+                result.push(c);
                 continue;
             }
 
             // {:} enables wrapped mode which means
             // that strings are printed as "str" not str
             // and chars are printed as 'c' not c
-            if fmt[i] == ':' {
+            if c == ':' {
                 wrapped = true;
                 continue;
             }
 
-            if fmt[i] != '}' {
-                io::fprintf(stderr, "Invalid format at position '%d' (%c)\n", i, fmt[i]);
+            if c != '}' {
+                io::fprintf(stderr, "Invalid format at position '%d' (%c)\n", #i(c), c);
                 io::fflush(stderr);
                 return "";
             }
 
             arg += 1;
 
-            string out = __to_string(meta.types[arg], args, wrapped);
+            let out = __to_string(meta.types[arg], args, wrapped);
             result.extend(out);
             free(out);
 
@@ -556,12 +543,12 @@ fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
             continue;
         }
 
-        if fmt[i] == '{' {
+        if c == '{' {
             is_open = true;
             continue;
         }
 
-        result.push(fmt[i]);
+        result.push(c);
     }
 
     return result;
@@ -577,7 +564,7 @@ fn string::__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(El
 fn string::format(ElleMeta meta, string fmt, ...) @fmt -> string {
     variadic args[meta.arity - 1];
 
-    for i32 i = 0; i < meta.arity; i += 1 {
+    for let i = 0; i < meta.arity; i += 1 {
         meta.types[i] = "string";
     }
 

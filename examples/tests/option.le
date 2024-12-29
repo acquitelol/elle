@@ -18,8 +18,8 @@ fn get_miku_number(string input) -> Option<i32> {
 }
 
 fn main() {
-    Option<string> a = get_meow(1);
-    Option<string> b = get_meow(3);
+    let a = get_meow(1);
+    let b = get_meow(3);
 
     io::dbg(a.unwrap_or("Fallback :3"));
     io::dbg(b.unwrap_or("Fallback :3"));
@@ -27,8 +27,8 @@ fn main() {
     io::assert(a.unwrap_or("Fallback :3") == "meow", nil);
     io::assert(b.unwrap_or("Fallback :3") == "Fallback :3", nil);
 
-    Option<i32> c = get_miku_number("aaa :3");
-    Option<i32> d = get_miku_number("mikudayo");
+    let c = get_miku_number("aaa :3");
+    let d = get_miku_number("mikudayo");
 
     io::dbg(c.unwrap_or(-1));
     io::dbg(d.unwrap_or(-1));

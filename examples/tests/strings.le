@@ -1,9 +1,7 @@
-use std/string;
-use std/math;
-use std/io;
+use std/prelude;
 
 fn main() {
-    string a = string::ascii_lower();
+    let a = string::ascii_lower();
 
     io::assert(
         a.to_upper() == "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
@@ -17,38 +15,38 @@ fn main() {
         string::format("result = \"{}\"", a)
     );
 
-    string b = "";
+    let b = "";
     io::assert(b.is_empty(), "b should be empty");
     io::assert(string::is_empty(b), "b should be empty");
 
-    string c = "test";
+    let c = "test";
 
     io::assert(
         c.len() == 4,
         string::format("result = \"{}\" & c.len() = {}", c, c.len())
     );
 
-    string d = "meow";
+    let d = "meow";
 
     io::assert(d.ends_with("ow"), d <> " should end with \"ow\"");
     io::assert(!d.starts_with("ow"), d <> " should not start with \"ow\"");
     io::assert(d.contains("eo"), d <> " should contain \"eo\"");
 
-    string e = "ewew";
+    let e = "ewew";
 
     io::assert(
         e.concat(e) == "ewewewew" && e <> e == "ewewewew" && e <> e == e.concat(e),
         string::format("result = \"{}\"", e.concat(e))
     );
 
-    string f = "awa";
+    let f = "awa";
 
     io::assert(
         f.repeat(4) == "awaawaawaawa",
         string::format("result = \"{}\"", f.repeat(4))
     );
 
-    string g = "test123AWA";
+    let g = "test123AWA";
 
     io::assert(
         g.to_upper() == "TEST123AWA",
@@ -60,13 +58,13 @@ fn main() {
         string::format("result = \"{}\"", g.to_lower())
     );
 
-    string h = string::ascii_upper();
+    let h = string::ascii_upper();
     io::assert(
         h.slice(0, 3) == "ABC",
         string::format("result = \"{}\"", h.slice(0, 3))
     );
 
-    string i = "me";
+    let i = "me";
     i.extend("wo");
 
     io::assert(
@@ -74,7 +72,7 @@ fn main() {
         string::format("result = \"{}\"", i)
     );
 
-    char ch = i.pop();
+    let ch = i.pop();
 
     io::assert(ch == 'o', string::format("ch = {}", ch));
     io::assert(i == "mew", string::format("result = \"{}\"", i));
@@ -84,7 +82,7 @@ fn main() {
 
     io::assert(i == "mewew", string::format("result = \"{}\"", i));
 
-    string j = string::format(
+    let j = string::format(
         "abc {}, {}, escaped {{}, mrow {} and a char but i32: {}",
         1, true, ":3", (i32)'a'
     );

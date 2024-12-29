@@ -1,8 +1,8 @@
 use std/collections/hashmap;
-use std/io;
+use std/prelude;
 
 fn main() {
-    HashMap<i32, string> *map = HashMap::new();
+    let map = HashMap::new<i32, string>();
 
     io::assert(map.is_empty(), nil);
 
@@ -47,10 +47,10 @@ fn main() {
     io::assert(!map.contains_key(98), nil);
     io::assert(!map.contains_key(1000), nil);
 
-    HashMap<string, i32> *string_map = HashMap::new();
+    let string_map = HashMap::new<string, i32>();
 
     for char c = 'a'; c < 'f'; c += 1 {
-        string_map["{}".format(c)] = c - 'a';
+        string_map["{}".format(c)] = math::next_power_of_2((i32)(c - 'a') * 30);
     }
 
     io::dbg(

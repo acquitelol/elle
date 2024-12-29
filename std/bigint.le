@@ -4,29 +4,35 @@ use std/libc/io;
 global pub;
 
 struct BigInt {
-    Array<i8> *digits; // Starts with least significant digit
+    i8[] digits; // Starts with least significant digit
     bool is_negative;
 };
 
-fn BigInt::new(string value) -> BigInt * {
+fn BigInt::empty(bool is_negative) {
     BigInt *bigint = malloc(#size(BigInt));
     *bigint = malloc(#size(BigInt));
 
-    bigint.is_negative = false;
-    bigint.digits = Array::new<i32>();
+    bigint.is_negative = is_negative;
+    bigint.digits = [];
+
+    return bigint;
+}
+
+fn BigInt::new(string value) -> BigInt * {
+    let bigint = BigInt::empty(false);
 
     if value.is_empty() {
         bigint.digits.push(0);
         return bigint;
     }
 
-    i32 start_index = 0;
+    let start_index = 0;
     if value[0] == '-' {
         bigint.is_negative = true;
         start_index = 1;
     }
 
-    for i32 i = value.len() - 1; i >= start_index; i -= 1 {
+    for let i = value.len() - 1; i >= start_index; i -= 1 {
         bigint.digits.push(value[i] - '0');
     }
 
@@ -34,7 +40,7 @@ fn BigInt::new(string value) -> BigInt * {
 }
 
 fn BigInt::to_string(BigInt *self) -> string {
-    string result = self.is_negative ? "-" : "";
+    let result = self.is_negative ? "-" : "";
 
     for i32 i = self.digits.len() - 1; i >= 0; i -= 1 {
         result.push(self.digits[i] + '0');
@@ -47,7 +53,7 @@ fn BigInt::to<T>(BigInt *self) -> T {
     T result = 0;
     T multiplier = 1;
 
-    for i32 i = 0; i < self.digits.len(); i += 1 {
+    for let i = 0; i < self.digits.len(); i += 1 {
         result += self.digits[i] * multiplier;
         multiplier *= 10;
     }
@@ -67,33 +73,28 @@ fn BigInt::add(BigInt *self, BigInt *other) -> BigInt * {
     if self.is_negative != other.is_negative {
         if self.is_negative {
             self.is_negative = false;
-            BigInt *a = other.sub(self);
+            let a = other.sub(self);
             self.is_negative = true;
             return a;
         } else {
             other.is_negative = false;
-            BigInt *b = self.sub(other);
+            let b = self.sub(other);
             other.is_negative = true;
             return b;
         }
     }
 
-    BigInt *result = malloc(#size(BigInt));
-    *result = malloc(#size(BigInt));
-
-    result.digits = Array::new();
-    result.is_negative = self.is_negative;
-
-    i32 carry = 0;
-    i32 max_len = self.digits.len() > other.digits.len()
+    let result = BigInt::empty(self.is_negative);
+    let carry = 0;
+    let max_len = self.digits.len() > other.digits.len()
         ? self.digits.len()
         : other.digits.len();
 
-    for i32 i = 0; (i < max_len) || (carry != 0); i += 1 {
-        i32 a = i < self.digits.len() ? self.digits[i] : 0;
-        i32 b = i < other.digits.len() ? other.digits[i] : 0;
+    for let i = 0; (i < max_len) || (carry != 0); i += 1 {
+        let a = i < self.digits.len() ? self.digits[i] : 0;
+        let b = i < other.digits.len() ? other.digits[i] : 0;
+        let sum = a + b + carry;
 
-        i32 sum = a + b + carry;
         result.digits.push(sum % 10);
         carry = sum / 10;
     }
@@ -104,7 +105,7 @@ fn BigInt::add(BigInt *self, BigInt *other) -> BigInt * {
 fn BigInt::sub(BigInt *self, BigInt *other) -> BigInt * {
     if self.is_negative != other.is_negative {
         other.is_negative = !other.is_negative;
-        BigInt *a = self.add(other);
+        let a = self.add(other);
         other.is_negative = !other.is_negative;
         return a;
     }
@@ -112,30 +113,26 @@ fn BigInt::sub(BigInt *self, BigInt *other) -> BigInt * {
     if self.is_negative {
         other.is_negative = false;
         self.is_negative = false;
-        BigInt *b = other.sub(self);
+        let b = other.sub(self);
         self.is_negative = true;
         other.is_negative = true;
         return b;
     }
 
-    if BigInt::compare(self, other) < 0 {
-        BigInt *c = other.sub(self);
+    if self.compare(other) < 0 {
+        let c = other.sub(self);
         c.is_negative = true;
         return c;
     }
 
-    BigInt *result = malloc(#size(BigInt));
-    *result = malloc(#size(BigInt));
+    let result = BigInt::empty(false);
+    let borrow = 0;
 
-    result.digits = Array::new<i32>();
-    result.is_negative = false;
+    for let i = 0; i < self.digits.len(); i += 1 {
+        let a = self.digits[i];
+        let b = i < other.digits.len() ? other.digits[i] : 0;
+        let diff = a - b - borrow;
 
-    i32 borrow = 0;
-    for i32 i = 0; i < self.digits.len(); i += 1 {
-        i32 a = self.digits[i];
-        i32 b = i < other.digits.len() ? other.digits[i] : 0;
-
-        i32 diff = a - b - borrow;
         if diff < 0 {
             diff += 10;
             borrow = 1;
@@ -162,7 +159,7 @@ fn BigInt::compare(BigInt *self, BigInt *other) -> i32 {
         return self.digits.len() < other.digits.len() == self.is_negative ? 1 : -1;
     }
 
-    for i32 i = self.digits.len() - 1; i >= 0; i -= 1 {
+    for let i = self.digits.len() - 1; i >= 0; i -= 1 {
         if self.digits[i] != other.digits[i] {
             return self.digits[i] < other.digits[i] == self.is_negative ? 1 : -1;
         }
@@ -175,23 +172,24 @@ fn BigInt::equals(BigInt *self, BigInt *other) {
     return self.compare(other) == 0;
 }
 
-fn BigInt::mul(BigInt *self, BigInt *other) -> BigInt * {
-    BigInt *result = malloc(#size(BigInt));
-    *result = malloc(#size(BigInt));
+external fn BigInt::equals(BigInt *self, BigInt *other) @alias("BigInt::__equals__") -> bool;
 
+fn BigInt::mul(BigInt *self, BigInt *other) -> BigInt * {
+    let result = BigInt::empty(false);
     result.digits = Array::with_capacity(self.digits.len() + other.digits.len());
 
-    for i32 i = 0; i < result.digits.capacity; i += 1 {
+    for let i = 0; i < result.digits.capacity; i += 1 {
         result.digits.push(0);
     }
 
     result.is_negative = self.is_negative != other.is_negative;
 
-    for i32 i = 0; i < self.digits.len(); i += 1 {
-        i32 carry = 0;
-        for i32 j = 0; j < other.digits.len() || carry != 0; j += 1 {
-            i32 b = j < other.digits.len() ? other.digits[j] : 0;
-            i32 prod = result.digits[i + j] + self.digits[i] * b + carry;
+    for let i = 0; i < self.digits.len(); i += 1 {
+        let carry = 0;
+
+        for let j = 0; j < other.digits.len() || carry != 0; j += 1 {
+            let b = j < other.digits.len() ? other.digits[j] : 0;
+            let prod = result.digits[i + j] + self.digits[i] * b + carry;
             result.digits[i + j] = prod % 10;
             carry = prod / 10;
         }

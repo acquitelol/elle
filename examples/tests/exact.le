@@ -15,7 +15,7 @@ fn `identity`(i32 `val`) @manual -> i32 {
 }
 
 fn main() {
-    i32 a = 123;
+    let a = 123;
 
     io::assert(deref(&a) == 123, nil);
     io::assert(add_one(a) == 124, nil);

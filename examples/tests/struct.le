@@ -22,15 +22,15 @@ fn other(Foo *a) {
 }
 
 fn main() {
-    Bar bar = Bar {
+    let bar = Bar {
         meow = 9,
         nya = 8
     };
 
-    Foo foo = Foo {
+    let foo = Foo {
         a = 752,
         c = 12,
-        b = [1.2, 512.6],
+        b = #[1.2, 512.6],
         bar = Bar {
             meow = 100,
             nya = 0

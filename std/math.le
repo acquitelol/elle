@@ -9,12 +9,20 @@ fn i64::min() -> i64 {
     return ~i64::max();
 }
 
+fn i64::truncate(i64 self) {
+    return (i32)self;
+}
+
 fn i32::max() -> i32 {
     return 2_147_483_647;
 }
 
 fn i32::min() -> i32 {
     return ~i32::max();
+}
+
+fn i32::promote(i32 self) {
+    return (i64)self;
 }
 
 const f64 E = 2.7182818284590455348848081484902650117;
@@ -71,11 +79,11 @@ fn math::fclamp(f64 value, f64 min_value, f64 max_value) -> f64 {
     return math::fmax(min_value, math::fmin(value, max_value));
 }
 
-fn math::next_power_of_2(i64 x) {
-	i64 y = 1;
+fn math::next_power_of_2<T>(T x) {
+	T y = 1;
 
 	while y < x {
-	   y += y;
+	    y += y;
 	}
 
 	return y;

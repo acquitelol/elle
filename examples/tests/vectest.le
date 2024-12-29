@@ -1,33 +1,32 @@
 use std/vectors;
-use std/math;
-use std/io;
+use std/prelude;
 
 fn Vector3::test() {
-    Vector3 v = Vector3 { x = 1.0, y = 0.0, z = 0.0 };
-    Vector3 axis = Vector3 { x = 0.0, y = 0.0, z = 1.0 };
-    f32 angle = PI / 2.0;
+    let v = Vector3 { x = 1.0, y = 0.0, z = 0.0 };
+    let axis = Vector3 { x = 0.0, y = 0.0, z = 1.0 };
+    let angle = PI / 2.0;
 
-    Vector3 rotated = v.rotate(axis, angle);
+    let rotated = v.rotate(axis, angle);
     io::dbg(rotated);
 
-    Vector3 v1 = Vector3 { x = 1, y = 0, z = 0 };
-    Vector3 v2 = Vector3 { x = 0, y = 1, z = 0 };
+    let v1 = Vector3 { x = 1, y = 0, z = 0 };
+    let v2 = Vector3 { x = 0, y = 1, z = 0 };
     io::dbg(v1.angle(v2));
 
-    Vector3 zero = Vector3::zero();
+    let zero = Vector3::zero();
     io::dbg(zero);
 }
 
 fn Vector2::test() {
-    Vector2 v1 = Vector2 { x = 1.0, y = 0.0 };
-    Vector2 rotated = v1.rotate(PI);
+    let v1 = Vector2 { x = 1.0, y = 0.0 };
+    let rotated = v1.rotate(PI);
     io::dbg(rotated);
 
-    Vector2 v1 = Vector2 { x = 1, y = 0 };
-    Vector2 v2 = Vector2 { x = 0, y = 1 };
+    let v1 = Vector2 { x = 1, y = 0 };
+    let v2 = Vector2 { x = 0, y = 1 };
     io::dbg(v1.angle(v2));
 
-    Vector2 zero = Vector2::zero();
+    let zero = Vector2::zero();
     io::dbg(zero);
 }
 

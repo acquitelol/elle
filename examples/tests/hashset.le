@@ -2,7 +2,7 @@ use std/collections/hashset;
 use std/io;
 
 fn main() {
-    HashSet<i32> *set = HashSet::new();
+    let set = HashSet::new<i32>();
     defer set.free();
 
     io::assert(set.is_empty(), nil);

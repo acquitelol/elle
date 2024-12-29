@@ -16,10 +16,11 @@ pub enum AstNode {
         location: Location,
     },
     /// A declaration of name `name` with type `r#type` to value `value
+    /// If unique is true, ignores `name` and generates a unique temp name
     DeclareStatement {
         name: String,
         r#type: Option<Type>,
-        value: Box<AstNode>,
+        value: Option<Box<AstNode>>,
         location: Location,
         value_location: Location,
     },
@@ -55,6 +56,7 @@ pub enum AstNode {
         right: Box<AstNode>,
         operator: TokenKind,
         treat_as_string: bool,
+        dunder_methods: bool,
         location: Location,
     },
     /// Runs `body` if condition `condition` is true, otherwise runs `else_body`
@@ -81,8 +83,10 @@ pub enum AstNode {
     },
     /// Declares an array literal of size `values.len()` and values `values` and returns a pointer to the start of it
     ArrayStatement {
+        known_generics: Vec<Type>,
         values: Vec<(Location, AstNode)>,
         location: Location,
+        dynamic: bool,
     },
     /// Declares a struct named `name` with values `values`
     StructStatement {
@@ -206,9 +210,11 @@ fn modify_type_in_node(
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }
 
-            let new_value =
-                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
-            *value = Box::new(new_value);
+            if let Some(value) = value {
+                let new_value =
+                    modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
+                *value = Box::new(new_value);
+            }
         }
         AstNode::LambdaStatement {
             arguments, value, ..

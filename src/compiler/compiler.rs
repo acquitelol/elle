@@ -15,9 +15,9 @@ use crate::{
         enums::{modify_type_in_ast, Argument, AstNode, Primitive},
         parser::StructPool,
     },
-    unknown_field, unknown_function, Warning, Warnings, FORMAT_CONSTANT, GENERIC_END,
-    GENERIC_IDENTIFIER, LOAD_CONSTANT, META_STRUCT_NAME, POINTER_ID, STORE_CONSTANT,
-    VOID_POINTER_ID,
+    unknown_field, unknown_function, Warning, Warnings, DUNDER_CONSTANTS, EQUALS_CONSTANT,
+    FORMAT_CONSTANT, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, META_STRUCT_NAME, POINTER_ID,
+    STORE_CONSTANT, VOID_POINTER_ID,
 };
 
 use super::enums::{
@@ -182,7 +182,7 @@ impl Compiler {
                                         .functions
                                         .iter()
                                         .find(|func| func.name == name)
-                                        .map(|x| x.to_owned())
+                                        .cloned()
                                 } else {
                                     None
                                 })),
@@ -195,7 +195,7 @@ impl Compiler {
             }
         }
 
-        var.map(|item| item.to_owned())
+        var.cloned()
     }
 
     fn get_variable_lazy(
@@ -339,9 +339,7 @@ impl Compiler {
         //
         // TODO: Forward declare *all* functions without their bodies
         if !func_ref.borrow().lambda {
-            {
-                module.borrow_mut().add_function(func.clone());
-            }
+            module.borrow_mut().add_function(func.clone());
         }
 
         for statement in body.iter() {
@@ -634,21 +632,58 @@ impl Compiler {
                     panic!("{}", location.error(format!("Variable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.", name)));
                 }
 
-                let res = self.get_variable(&format!("{}.addr", name), Some(func), Some(module));
-                let mut local_ty = r#type.unwrap_or(existing);
+                if r#type.clone().is_some_and(|ty| ty == Type::Infer) && value.is_none() {
+                    panic!("{}", location.error(format!("Failed to determine a type for '{}'.\nPlease give this variable a type or a value.", name)));
+                }
 
-                let mut temp = self.new_variable(&local_ty, &name, Some(func), false, false);
+                let res = self.get_variable(&format!("{}.addr", name), Some(func), Some(module));
+                let mut local_ty = r#type.clone().unwrap_or(existing);
+
+                let mut temp = if local_ty != Type::Infer {
+                    Some(self.new_variable(&local_ty, &name, Some(func), false, false))
+                } else {
+                    None
+                };
 
                 let parsed = self.generate_statement(
                     func,
                     module,
-                    *value,
-                    Some(local_ty.clone()),
-                    Some(temp.clone()),
+                    *value.unwrap_or(Box::new(
+                        if r#type.clone().is_some_and(|ty| ty.is_struct()) {
+                            AstNode::StructStatement {
+                                name: r#type.unwrap().get_struct_inner().unwrap(),
+                                values: vec![],
+                                location: location.clone(),
+                            }
+                        } else {
+                            AstNode::LiteralStatement {
+                                kind: TokenKind::IntegerLiteral,
+                                value: ValueKind::Number(0),
+                                location: location.clone(),
+                            }
+                        },
+                    )),
+                    if local_ty == Type::Infer {
+                        None
+                    } else {
+                        Some(local_ty.clone())
+                    },
+                    temp.clone(),
                     false,
                 );
 
                 if let Some((ret_ty, value)) = parsed {
+                    if local_ty == Type::Infer {
+                        local_ty = ret_ty.clone();
+
+                        temp = Some(self.new_variable(&local_ty, &name, Some(func), false, false));
+
+                        let scope = self
+                            .scopes
+                            .last_mut()
+                            .expect("Expected last scope to exist");
+                        scope.insert(name.to_owned(), (local_ty.clone(), temp.clone().unwrap()));
+                    }
                     // in `fn *a = fn() -> 5;`
                     // - fn *a has type Pointer(Fn)
                     // - fn() -> 5 has type Function(...)
@@ -661,7 +696,7 @@ impl Compiler {
                         })
                     {
                         local_ty = ret_ty.clone();
-                        temp = self.new_variable(&local_ty, &name, Some(func), false, false)
+                        temp = Some(self.new_variable(&local_ty, &name, Some(func), false, false))
                     }
 
                     let (final_ty, final_val) = if ret_ty != local_ty {
@@ -710,7 +745,8 @@ impl Compiler {
                             Instruction::Load(addr_ty.clone(), addr_val.clone()),
                         );
 
-                        self.address_pool.insert(temp.clone(), addr_val.clone());
+                        self.address_pool
+                            .insert(temp.unwrap().clone(), addr_val.clone());
                         return Some((addr_ty, tmp));
                     }
 
@@ -734,7 +770,8 @@ impl Compiler {
                         final_val.clone(),
                     ));
 
-                    self.address_pool.insert(temp.clone(), addr_val.clone());
+                    self.address_pool
+                        .insert(temp.clone().unwrap(), addr_val.clone());
                     return Some((final_ty, final_val));
                 }
 
@@ -765,6 +802,7 @@ impl Compiler {
                 right,
                 operator,
                 treat_as_string,
+                dunder_methods,
                 location,
             } => {
                 // Implement conditional short circuiting for logical AND and OR
@@ -772,6 +810,42 @@ impl Compiler {
                     return Some(self.handle_short_circuiting_operation(
                         left, right, func, module, ty, is_return, location, operator,
                     ));
+                }
+
+                if matches!(operator, TokenKind::Range | TokenKind::RangeEqual) {
+                    let node = AstNode::FunctionCall {
+                        name: "Array.range".into(),
+                        generics: vec![],
+                        parameters: vec![
+                            (location.clone(), *left),
+                            (location.clone(), *right),
+                            (
+                                location.clone(),
+                                AstNode::LiteralStatement {
+                                    kind: TokenKind::IntegerLiteral,
+                                    value: ValueKind::Number(
+                                        if operator == TokenKind::RangeEqual {
+                                            1
+                                        } else {
+                                            0
+                                        },
+                                    ),
+                                    location: location.clone(),
+                                },
+                            ),
+                        ],
+                        type_method: false,
+                        ignore_no_def: false,
+                        location: location.clone(),
+                    };
+
+                    let (ty, val) = self
+                        .generate_statement(func, module, node, ty.clone(), None, is_return)
+                        .expect(&location.error(
+                            "Unexpected error when trying to parse left side of an arithmetic operation"
+                        ));
+
+                    return Some((ty, val));
                 }
 
                 let (mut left_ty, left_val_unparsed) = self
@@ -844,12 +918,40 @@ impl Compiler {
                     left_val = val;
                 }
 
+                if (!left_ty.is_primitive() || !right_ty.is_primitive())
+                    && [TokenKind::EqualTo, TokenKind::NotEqualTo].contains(&operator)
+                    && dunder_methods
+                {
+                    let mut node = AstNode::FunctionCall {
+                        name: EQUALS_CONSTANT.into(),
+                        generics: vec![],
+                        parameters: vec![(location.clone(), *left), (location.clone(), *right)],
+                        type_method: true,
+                        ignore_no_def: false,
+                        location: location.clone(),
+                    };
+
+                    if operator == TokenKind::NotEqualTo {
+                        node = AstNode::NotStatement {
+                            value: Box::new(node),
+                            location: location.clone(),
+                        }
+                    }
+
+                    let (ty, val) = self
+                        .generate_statement(func, module, node, ty.clone(), None, is_return)
+                        .expect(&location.error(
+                            "Unexpected error when trying to parse an equals arithmetic operation",
+                        ));
+
+                    return Some((ty, val));
+                }
+
                 if left_ty.is_string() && right_ty.is_string() && treat_as_string {
                     let mut kind = None;
 
                     match operator {
-                        // Token => (Name, HasMeta, Type)
-                        TokenKind::EqualTo => kind = Some(("equals", false, Type::Boolean)),
+                        // Token => (Name, HasMeta, Type),
                         TokenKind::Concat => {
                             kind = Some(("concat", true, Type::Pointer(Box::new(Type::Char))))
                         }
@@ -861,21 +963,18 @@ impl Compiler {
                         // ideally add a .equals method on any primitive to make it equatable, and implement it for each
                         // same for any struct, define a .equals method to allow it to be ran with == directly
                         let func_name = format!("string.{kind}");
-                        let tmp_function;
+                        let module_ref = module.borrow();
 
-                        {
-                            let module_ref = module.borrow();
-                            let tmp_function_option = module_ref
-                                .functions
-                                .iter()
-                                .find(|func| func.name == func_name);
+                        let tmp_function_option = module_ref
+                            .functions
+                            .iter()
+                            .find(|func| func.name == func_name);
 
-                            if tmp_function_option.is_none() {
-                                panic!("{}", location.error(format!("Cannot use the '{}' operator because the string module is not imported.\nPlease import it with {GREEN}{BOLD}use std/string;{RESET} at the top of this file.", operator)))
-                            }
-
-                            tmp_function = tmp_function_option.unwrap().clone();
+                        if tmp_function_option.is_none() {
+                            panic!("{}", location.error(format!("Cannot use the '{}' operator because the string module is not imported.\nPlease import it with {GREEN}{BOLD}use std/string;{RESET} at the top of this file.", operator)))
                         }
+
+                        let tmp_function = tmp_function_option.unwrap().clone();
                         let mut params = vec![(left_ty, left_val), (right_ty, right_val)];
 
                         if has_meta {
@@ -1203,7 +1302,10 @@ impl Compiler {
                     } else if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_string() {
                         name = format!("string.{}", name)
                     // fmt access
-                    } else if ty.is_pointer() && &name == FORMAT_CONSTANT && type_method {
+                    } else if ty.is_pointer()
+                        && DUNDER_CONSTANTS.contains(&name.as_str())
+                        && type_method
+                    {
                         name = format!("{}.{}", POINTER_ID, name)
                     } else {
                         name = format!("{}.{}", ty.id(), name)
@@ -1215,7 +1317,7 @@ impl Compiler {
                     .functions
                     .iter()
                     .find(|function| function.name == name)
-                    .map(|function| function.clone());
+                    .cloned();
                 let mut is_callback = false;
 
                 let mut tmp_function = if let Some(func) = tmp_function_option {
@@ -1442,7 +1544,7 @@ impl Compiler {
                                 .functions
                                 .iter()
                                 .find(|func| func.name == func_name)
-                                .map(|x| x.to_owned())
+                                .cloned()
                                 .unwrap_or(Function::default());
 
                             if is_generic!(struct_name) {
@@ -1485,7 +1587,7 @@ impl Compiler {
                                 .functions
                                 .iter()
                                 .find(|func| func.name == func_name)
-                                .map(|x| x.to_owned())
+                                .cloned()
                                 .unwrap_or(Function::default());
 
                             if self.generic_functions.contains_key(&func_name) {
@@ -1694,6 +1796,7 @@ impl Compiler {
                                 }),
                                 operator: TokenKind::Multiply,
                                 treat_as_string: false,
+                                dunder_methods: true,
                                 location: location.clone(),
                             }
                         } else {
@@ -1867,10 +1970,12 @@ impl Compiler {
                         right: if left_ty.is_pointer() { right } else { left },
                         operator: TokenKind::Multiply,
                         treat_as_string: false,
+                        dunder_methods: true,
                         location: right_location.clone(),
                     }),
                     operator: TokenKind::Add,
                     treat_as_string: false,
+                    dunder_methods: true,
                     location: right_location.clone(),
                 };
 
@@ -2081,10 +2186,7 @@ impl Compiler {
                 func.borrow_mut().add_block(step_label.clone());
 
                 if let Some(step) = step {
-                    self.generate_statement(func, module, *step, ty, None, false)
-                        .expect(&location.error(
-                            "Unexpected error when trying to compile the step of a while loop",
-                        ));
+                    self.generate_statement(func, module, *step, ty, None, false);
                 }
 
                 func.borrow_mut()
@@ -2336,6 +2438,7 @@ impl Compiler {
                             }),
                             operator: TokenKind::Subtract,
                             treat_as_string: false,
+                            dunder_methods: true,
                             location: location.clone(),
                         },
                         ty,
@@ -2411,7 +2514,63 @@ impl Compiler {
                     Value::Global(lambda_name),
                 ))
             }
-            AstNode::ArrayStatement { values, location } => {
+            AstNode::ArrayStatement {
+                known_generics,
+                values,
+                location,
+                dynamic,
+            } => {
+                let inner_ty = if let Some(ty) = ty.clone() {
+                    ty.get_pointer_inner()
+                } else {
+                    None
+                };
+
+                if dynamic {
+                    let new_func = func.borrow_mut().to_owned();
+
+                    let node = if values.len() > 0 {
+                        let (ty, _) = self
+                            .generate_statement(
+                                &RefCell::new(new_func),
+                                module,
+                                values[0].clone().1,
+                                None,
+                                None,
+                                false,
+                            )
+                            .expect(&location.error(format!(
+                                "Unexpected error when trying to compile the first item in an array"
+                            )));
+
+                        AstNode::FunctionCall {
+                            name: "Array.new".into(),
+                            generics: vec![ty],
+                            parameters: values,
+                            type_method: false,
+                            ignore_no_def: false,
+                            location: location.clone(),
+                        }
+                    } else {
+                        AstNode::FunctionCall {
+                            name: "Array.new".into(),
+                            generics: known_generics,
+                            parameters: vec![],
+                            type_method: false,
+                            ignore_no_def: false,
+                            location: location.clone(),
+                        }
+                    };
+
+                    let (ty, val) = self
+                        .generate_statement(func, module, node, ty, value, is_return)
+                        .expect(&location.error(format!(
+                            "Unexpected error when trying to compile a dynamic array"
+                        )));
+
+                    return Some((ty, val));
+                }
+
                 let mut first_type: Option<Type> = None;
                 let mut results: Vec<Value> = vec![];
 
@@ -2427,12 +2586,6 @@ impl Compiler {
                         )
                     );
                 }
-
-                let inner_ty = if let Some(ty) = ty {
-                    ty.get_pointer_inner()
-                } else {
-                    None
-                };
 
                 for (i, (location, value)) in values.iter().enumerate() {
                     let (ty, val) = self
@@ -2670,9 +2823,7 @@ impl Compiler {
                         &Type::Pointer(_) => {
                             let ty = Type::Long;
 
-                            if let Some((_, buf_val)) =
-                                self.buf_metadata.get(&val).map(|item| item.to_owned())
-                            {
+                            if let Some((_, buf_val)) = self.buf_metadata.get(&val).cloned() {
                                 func.borrow_mut().assign_instruction(
                                     &size,
                                     &ty,
@@ -3095,6 +3246,8 @@ impl Compiler {
                             })
                             .collect(),
                         location: location.clone(),
+                        known_generics: vec![],
+                        dynamic: false,
                     }),
                 ),
                 (
@@ -3116,6 +3269,8 @@ impl Compiler {
                             })
                             .collect(),
                         location: location.clone(),
+                        known_generics: vec![],
+                        dynamic: false,
                     }),
                 ),
                 (
@@ -3467,8 +3622,8 @@ impl Compiler {
             )
         }
 
-        if ((first.is_strictly_int() && second.is_string())
-            || (second.is_strictly_int() && first.is_string()))
+        if ((first.is_strictly_number() && second.is_string())
+            || (second.is_strictly_number() && first.is_string()))
             && !explicit
         {
             panic!(
@@ -3543,19 +3698,57 @@ impl Compiler {
                 .map(|(i, generic)| (generic.clone(), parts[i].clone())),
         );
 
+        let struct_pool = RefCell::new(self.struct_pool.clone());
+        let tree = RefCell::new(vec![]);
+
         let parsed_members = members
             .iter()
             .map(|member| Argument {
                 name: member.name.clone(),
                 r#type: member.r#type.clone().unknown_to_known(
-                    None,
-                    None,
+                    Some(&struct_pool),
+                    Some(&tree),
                     generics.clone(),
                     parsed_generics.clone(),
                 ),
                 manual: member.manual,
             })
             .collect::<Vec<Argument>>();
+
+        self.struct_pool = struct_pool.borrow().to_owned();
+
+        for primitive in tree.borrow().to_owned().into_iter() {
+            match primitive {
+                Primitive::Struct {
+                    name,
+                    public,
+                    usable,
+                    imported,
+                    generics,
+                    known_generics,
+                    members,
+                    keyword_location,
+                    location,
+                    ignore_empty,
+                } => {
+                    let td = self.generate_struct(
+                        name,
+                        public,
+                        usable,
+                        imported,
+                        generics,
+                        known_generics,
+                        members,
+                        ignore_empty,
+                        keyword_location,
+                        location,
+                    );
+
+                    module.borrow_mut().add_type(td);
+                }
+                _ => {}
+            };
+        }
 
         let mut items = vec![];
 
@@ -3598,6 +3791,19 @@ impl Compiler {
         tmp_function: &mut Function,
         ty: Option<Type>,
     ) {
+        loop {
+            match self.generic_functions.get(&name.clone()).unwrap().clone() {
+                Primitive::Function { unaliased, .. } => {
+                    if unaliased.is_none() {
+                        break;
+                    }
+
+                    *name = unaliased.clone().unwrap_or(name.to_string());
+                }
+                _ => {}
+            };
+        }
+
         match self.generic_functions.get(&name.clone()).unwrap().clone() {
             Primitive::Function {
                 name: _,
@@ -3658,7 +3864,7 @@ impl Compiler {
                     };
 
                     // Use an empty func as to not cause duplicate codegen and/or side effects
-                    let mut tmp_func = Function::default();
+                    let mut tmp_func = func.borrow().to_owned();
                     tmp_func.add_block("start");
 
                     let (ty, _) = self.generate_statement(
@@ -3691,11 +3897,18 @@ impl Compiler {
                         && known_generics.len() < generics.len()
                     {
                         // Possibly Option.generic.8 and Option
-                        known_generics.extend(
-                            ty.clone()
-                                .deduce_generic_type(other.clone())
-                                .expect(&format!("Failed on {:?} & {:?}", ty, other)),
-                        )
+                        if let Some(inner) = ty.clone().deduce_generic_type(other.clone()) {
+                            known_generics.extend(inner)
+                        } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
+                            println!(
+                                "{}",
+                                location.warning(format!(
+                                    "Failed to deduce a generic type from {} and {}",
+                                    ty.display(),
+                                    other.display()
+                                ),)
+                            )
+                        }
                     }
                 }
 
@@ -3705,11 +3918,20 @@ impl Compiler {
                             && known_generics.len() < generics.len()
                         {
                             // Possibly Option.generic.8 and Option
-                            known_generics.extend(
-                                ty.clone()
-                                    .deduce_generic_type(other.clone())
-                                    .expect(&format!("Failed on {:?} & {:?}", ty, other)),
-                            )
+                            if let Some(inner) = ty.clone().deduce_generic_type(other.clone()) {
+                                known_generics.extend(inner)
+                            } else if other.is_unknown()
+                                && other.get_unknown_inner().unwrap() == "fn"
+                            {
+                                println!(
+                                    "{}",
+                                    location.warning(format!(
+                                        "Failed to deduce a generic type from {} and {}",
+                                        ty.display(),
+                                        other.display()
+                                    ),)
+                                )
+                            }
                         }
                     }
 
@@ -3718,11 +3940,20 @@ impl Compiler {
                             && known_generics.len() < generics.len()
                         {
                             // Possibly Option.generic.8 and Option
-                            known_generics.extend(
-                                ty.clone()
-                                    .deduce_generic_type(other.clone())
-                                    .expect(&format!("Failed on {:?} & {:?}", ty, other)),
-                            )
+                            if let Some(inner) = ty.clone().deduce_generic_type(other.clone()) {
+                                known_generics.extend(inner)
+                            } else if other.is_unknown()
+                                && other.get_unknown_inner().unwrap() == "fn"
+                            {
+                                println!(
+                                    "{}",
+                                    location.warning(format!(
+                                        "Failed to deduce a generic type from {} and {}",
+                                        ty.display(),
+                                        other.display()
+                                    ),)
+                                )
+                            }
                         }
                     }
                 }
@@ -3779,17 +4010,12 @@ impl Compiler {
                         .join(".")
                 );
 
-                let existing;
-
-                {
-                    let mdl = module.borrow();
-
-                    existing = mdl
-                        .functions
-                        .iter()
-                        .find(|function| function.name == generic_name)
-                        .map(|function| function.clone());
-                }
+                let existing = module
+                    .borrow()
+                    .functions
+                    .iter()
+                    .find(|function| function.name == generic_name)
+                    .cloned();
 
                 *name = generic_name.clone();
 
@@ -3797,6 +4023,78 @@ impl Compiler {
                     // Temporarily empty the scopes
                     let scopes = self.scopes.clone();
                     self.scopes = vec![hashmap![]];
+
+                    let struct_pool = RefCell::new(self.struct_pool.clone());
+                    let tree = RefCell::new(vec![]);
+
+                    let parsed_arguments = &arguments
+                        .iter()
+                        .cloned()
+                        .map(|arg| Argument {
+                            name: arg.name,
+                            r#type: arg.r#type.unknown_to_known(
+                                Some(&struct_pool),
+                                Some(&tree),
+                                generics.clone(),
+                                known_generics.clone(),
+                            ),
+                            manual: arg.manual,
+                        })
+                        .collect::<Vec<Argument>>();
+
+                    let parsed_return = if r#return.is_some() {
+                        Some(r#return.unwrap().unknown_to_known(
+                            Some(&struct_pool),
+                            Some(&tree),
+                            generics.clone(),
+                            known_generics.clone(),
+                        ))
+                    } else {
+                        r#return
+                    };
+
+                    let parsed_body = modify_type_in_ast(
+                        body,
+                        &generics,
+                        &known_generics,
+                        Some(&struct_pool),
+                        Some(&tree),
+                    );
+
+                    self.struct_pool = struct_pool.borrow().to_owned();
+
+                    for primitive in tree.borrow().to_owned().into_iter() {
+                        match primitive {
+                            Primitive::Struct {
+                                name,
+                                public,
+                                usable,
+                                imported,
+                                generics,
+                                known_generics,
+                                members,
+                                keyword_location,
+                                location,
+                                ignore_empty,
+                            } => {
+                                let td = self.generate_struct(
+                                    name,
+                                    public,
+                                    usable,
+                                    imported,
+                                    generics,
+                                    known_generics,
+                                    members,
+                                    ignore_empty,
+                                    keyword_location,
+                                    location,
+                                );
+
+                                module.borrow_mut().add_type(td);
+                            }
+                            _ => {}
+                        };
+                    }
 
                     let function = self.generate_function(
                         generic_name,
@@ -3813,31 +4111,9 @@ impl Compiler {
                         imported,
                         vec![],
                         known_generics.clone(),
-                        &arguments
-                            .iter()
-                            .cloned()
-                            .map(|arg| Argument {
-                                name: arg.name,
-                                r#type: arg.r#type.unknown_to_known(
-                                    None,
-                                    None,
-                                    generics.clone(),
-                                    known_generics.clone(),
-                                ),
-                                manual: arg.manual,
-                            })
-                            .collect::<Vec<Argument>>(),
-                        if r#return.is_some() {
-                            Some(r#return.unwrap().unknown_to_known(
-                                None,
-                                None,
-                                generics.clone(),
-                                known_generics.clone(),
-                            ))
-                        } else {
-                            r#return
-                        },
-                        modify_type_in_ast(body, &generics, &known_generics, None, None),
+                        parsed_arguments,
+                        parsed_return,
+                        parsed_body,
                         &module,
                         location,
                         return_location,

@@ -165,14 +165,14 @@ fn Vector3::normalize(Vector3 self) {
 // ⋅ denotes the dot product
 // ----------
 fn Vector3::rotate(Vector3 self, Vector3 axis, f32 angle) {
-    Vector3 u = axis.normalize();
+    let u = axis.normalize();
 
     f32 sin_theta = math::sin(angle);
     f32 cos_theta = math::cos(angle);
 
-    Vector3 term1 = self.scale(cos_theta);
-    Vector3 term2 = u.cross(self).scale(sin_theta);
-    Vector3 term3 = u.scale(u.dot(self) * (1.0 - cos_theta));
+    let term1 = self.scale(cos_theta);
+    let term2 = u.cross(self).scale(sin_theta);
+    let term3 = u.scale(u.dot(self) * (1.0 - cos_theta));
 
     return term1.add(term2).add(term3);
 }

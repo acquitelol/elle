@@ -10,7 +10,7 @@ struct LinkedList<T> {
 };
 
 fn LinkedList::__fmt__<T>(LinkedList<T> self, i32 nesting) {
-    string res = "";
+    let res = "";
 
     while self.head {
         res <>= self.head.data.__fmt__(0);

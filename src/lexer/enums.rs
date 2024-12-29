@@ -81,6 +81,7 @@ pub enum TokenKind {
     Dot,
     Yield,
     // Step,
+    In,
     Deref,
     Defer,
     Size,
@@ -97,6 +98,11 @@ pub enum TokenKind {
     Local,
     Attribute,
     Namespace,
+    Hashtag,
+    IndexOf,
+    Let,
+    Range,
+    RangeEqual,
 }
 
 impl TokenKind {
@@ -108,8 +114,9 @@ impl TokenKind {
     pub fn precedence(&self) -> i8 {
         match self {
             // Self::Exponent => 11,
-            Self::Multiply | Self::Divide | Self::Modulus => 10,
-            Self::Add | Self::Concat | Self::Subtract => 9,
+            Self::Multiply | Self::Divide | Self::Modulus => 11,
+            Self::Add | Self::Concat | Self::Subtract => 10,
+            Self::Range | Self::RangeEqual => 9,
             Self::ShiftLeft | Self::ShiftRight => 8,
             Self::LessThan | Self::LessThanEqual | Self::GreaterThan | Self::GreaterThanEqual => 7,
             Self::EqualTo | Self::NotEqualTo => 6,
@@ -151,7 +158,9 @@ impl TokenKind {
             | Self::BitwiseOr
             | Self::BitwiseAnd
             | Self::ShiftLeft
-            | Self::ShiftRight => true,
+            | Self::ShiftRight
+            | Self::Range
+            | Self::RangeEqual => true,
             _ => false,
         }
     }
@@ -229,7 +238,8 @@ impl TokenKind {
             | Self::For
             | Self::If
             | Self::Equal
-            | Self::Question => true,
+            | Self::Question
+            | Self::In => true,
             other if other.is_declarative() => true,
             other if other.is_arithmetic() => true,
             _ => false,
@@ -273,6 +283,7 @@ impl ValueKind {
         match self.clone() {
             ValueKind::String(val) => match val.as_str() {
                 "string" => Some(Type::Pointer(Box::new(Type::Char))),
+                "any" => Some(Type::Pointer(Box::new(Type::Void))),
                 "i8" => Some(Type::Byte),
                 "u8" => Some(Type::UnsignedByte),
                 "i16" => Some(Type::Halfword),

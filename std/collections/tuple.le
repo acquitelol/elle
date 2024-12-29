@@ -1,3 +1,5 @@
+use std/core;
+use std/hashes;
 global pub;
 
 struct Tuple<T, U> {
@@ -5,31 +7,23 @@ struct Tuple<T, U> {
     U y;
 };
 
-local fn __internal_tuple_bounds_check(i64 i, i64 min_i, i64 max_i, ElleMeta meta) {
-    if i < min_i || i > max_i {
-        io::cprintf(
-            "[%s:%d:%d] ERROR: Index %ld is out of bounds (must be between %ld and %ld)\n"
-                .color("red")
-                .reset(),
-            meta.file, meta.line, meta.column, i, min_i, max_i
-        );
-
-        abort();
-    }
+fn Tuple::__fmt__<T, U>(Tuple<T, U> self, i32 nesting) {
+    return string::format(
+        "({}, {})",
+        self.x.__fmt__(nesting),
+        self.y.__fmt__(nesting)
+    );
 }
 
-fn Tuple::__load__<T, U>(Tuple<T, U> *self, i32 i) {
-    __internal_tuple_bounds_check(i, 0, 1);
-
-    if i == 0 { return self.x; }
-    if i == 1 { return self.y; }
+fn Tuple::__equals__<T, U>(Tuple<T, U> self, Tuple<T, U> other) {
+    return self.x == other.x && self.y == other.y;
 }
 
-fn Tuple::__store__<T, U>(Tuple<T, U> *self, i32 i, void *value) {
-    __internal_tuple_bounds_check(i, 0, 1);
-
-    if i == 0 { self.x = (T)value; }
-    if i == 1 { self.y = (U)value; }
+fn Tuple::__hash__<T, U>(Tuple<T, U> self, i32 capacity) {
+    i64 hash_x = self.x.__hash__(capacity);
+    i64 hash_y = self.y.__hash__(capacity);
+    i64 combined = hash_x * 31 + hash_y;
+    return __internal_hash_mod(combined, capacity);
 }
 
 fn Tuple::new<T, U>(T x, U y) {
@@ -42,24 +36,9 @@ fn Tuple::new<T, U>(T x, U y) {
     return tuple;
 }
 
+external fn Tuple::new<T, U>(T x, U y) @alias("$") -> (T, U);
+
 fn Tuple::free<T, U>(Tuple<T, U> *self) {
     free((void *)(*self));
     free(self);
-}
-
-struct Triple<T, U, V> {
-    T x;
-    U y;
-    V z;
-};
-
-fn Triple::new<T, U, V>(T x, U y, V z) {
-    Triple<T, U, V> *triple = malloc(#size(Triple<T, U, V>));
-    *triple = malloc(#size(Triple<T, U, V>));
-
-    triple.x = x;
-    triple.y = y;
-    triple.z = z;
-
-    return triple;
 }

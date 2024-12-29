@@ -29,7 +29,7 @@ struct Region {
 fn Region::new() {
     Region *region = malloc(#size(Region));
     *region = malloc(#size(Region));
-    region.heap = Array::new();
+    region.heap = [];
 
     return region;
 }
@@ -41,7 +41,7 @@ fn Region::free(Region *self) {
 }
 
 fn Region::alloc(Region *self, i32 size) {
-    Object *obj = Object::new(size);
+    let obj = Object::new(size);
     self.heap.push(obj);
     return obj.data;
 }
@@ -53,7 +53,7 @@ fn Region::clean(Region *self) {
 }
 
 fn main() {
-    Region *region = Region::new();
+    let region = Region::new();
     defer region.free();
 
     i32 *num = region.alloc(#size(i32));
@@ -62,11 +62,11 @@ fn main() {
     i32 *arr = region.alloc(10 * #size(i32));
     arr[0] = 5;
 
-    io::dbg(*num, arr[0], region.heap.len());
+    io::dbg(*num, arr[0], region.heap);
 
     io::printf("\nCleaning the region allocation...\n");
     region.clean();
 
     // Everything will be garbage data because it was freed
-    io::dbg(*num, arr[0], region.heap.len());
+    io::dbg(*num, arr[0], region.heap);
 }

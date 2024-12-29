@@ -1,39 +1,37 @@
-use std/collections/tuple;
-use std/io;
+use std/prelude;
 
-fn Tuple::capitalize(Tuple<string, string> self) -> Tuple<string, string> {
-    return Tuple {
-        x = self.x.capitalize(),
-        y = self.y.capitalize(),
-    };
+fn Tuple::capitalize((string, string) self) {
+    self.x = self.x.capitalize();
+    self.y = self.y.capitalize();
+    return self;
 }
 
 struct Info {
-    Tuple<string, string> name;
-    Tuple<string, string> data;
+    (string, string) name;
+    (string, string) data;
 };
 
 fn Info::to_space_name(Info self) {
-    Tuple<string, string> name = Tuple {
-        x = self.name.y.slice(0, 3) <> self.name.x.slice(0, 2),
-        y = self.data.y.slice(0, 3) <> self.data.x.slice(0, 2)
-    };
+    let name = $(
+        self.name.y.slice(0, 3) <> self.name.x.slice(0, 2),
+        self.data.y.slice(0, 3) <> self.data.x.slice(0, 2)
+    );
 
     return name.capitalize();
 }
 
 fn main() {
     Info info = Info {
-        name = Tuple {
-            x = io::input("What is your first name? -> "),
-            y = io::input("What is your last name? -> ")
-        },
-        data = Tuple {
-            x = io::input("What is your birth month? -> "),
-            y = io::input("What is your favourite animal? -> ")
-        }
+        name = $(
+            io::input("What is your first name? -> "),
+            io::input("What is your last name? -> ")
+        ),
+        data = $(
+            io::input("What is your birth month? -> "),
+            io::input("What is your favourite animal? -> ")
+        )
     };
 
-    Tuple<string, string> space_name = info.to_space_name();
+    let space_name = info.to_space_name();
     io::printf("Your space name is {} {}", space_name.x, space_name.y);
 }

@@ -1,6 +1,8 @@
 use std/libc/mem;
 use std/libc/io;
 use std/core;
+use std/math;
+use std/io;
 global pub;
 
 struct Array<T> @nofmt {
@@ -8,11 +10,6 @@ struct Array<T> @nofmt {
     i32 capacity;
     T *elements;
 };
-
-fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
-    Array<T> temp = self;
-    return temp.to_string();
-}
 
 local fn __internal_array_bounds_check(string file, i32 line, i32 col, i64 i, i64 length) {
     if i < 0 || i > length - 1 {
@@ -27,26 +24,63 @@ local fn __internal_array_bounds_check(string file, i32 line, i32 col, i64 i, i6
     }
 }
 
-fn Array::__load__<T>(ElleMeta meta, Array<T> *self, i64 i) {
+fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
+    let temp = self;
+    return temp.to_string();
+}
+
+fn Array::__load__<T>(ElleMeta meta, T[] self, i64 i) {
     __internal_array_bounds_check(meta.file, meta.line, meta.column, i, self.len());
     return self.elements[i];
 }
 
-fn Array::__store__<T>(ElleMeta meta, Array<T> *self, i64 i, T value) {
+fn Array::__store__<T>(ElleMeta meta, T[] self, i64 i, T value) {
     __internal_array_bounds_check(meta.file, meta.line, meta.column, i, self.len());
     self.elements[i] = value;
 }
 
-fn Array::len<T>(Array<T> *self) -> i32 {
+fn Array::__len__<T>(T[] self) -> i32 {
     return self.size;
 }
 
-fn Array::is_empty<T>(Array<T> *self) -> bool {
+fn Array::__equals__<T, U>(T[] self, U[] other) -> bool {
+    // If the pointers are the same (nil == nil)
+    if (void *)self == (void *)other {
+        return true;
+    }
+
+    // If one is nil
+    if ((void *)self == nil) || ((void *)other == nil)
+        || self.len() != other.len() // If lengths don't match
+    {
+        return false;
+    }
+
+    if !self.is_empty() && !other.is_empty() {
+        if self[0] != other[0] {
+            return false; // If the types don't match
+        }
+    }
+
+    for let i = 0; i < self.len(); i += 1 {
+        if self[i] != other[i] {
+            return false; // Deep equality
+        }
+    }
+
+    return true;
+}
+
+fn Array::len<T>(T[] self) -> i32 {
+    return self.size;
+}
+
+fn Array::is_empty<T>(T[] self) -> bool {
     return self.size == 0;
 }
 
-fn Array::with_capacity<T>(i32 initialCapacity) -> Array<T> * {
-    Array<T> *array = malloc(#size(Array<T>));
+fn Array::with_capacity<T>(i32 initialCapacity) -> T[] {
+    T[] array = malloc(#size(Array<T>));
     *array = malloc(#size(Array<T>));
 
     array.elements = malloc(initialCapacity * #size(T));
@@ -56,8 +90,8 @@ fn Array::with_capacity<T>(i32 initialCapacity) -> Array<T> * {
     return array;
 }
 
-fn Array::new<T>(ElleMeta meta, ...) -> Array<T> * {
-    Array<T> *array = Array::with_capacity(2);
+fn Array::new<T>(ElleMeta meta, ...) -> T[] {
+    T[] array = Array::with_capacity(2);
 
     if meta.arity > 0 {
         variadic args[meta.arity];
@@ -70,12 +104,12 @@ fn Array::new<T>(ElleMeta meta, ...) -> Array<T> * {
     return array;
 }
 
-fn Array::resize<T>(Array<T> *self, i32 newCapacity) {
+fn Array::resize<T>(T[] self, i32 newCapacity) {
     self.elements = realloc(self.elements, newCapacity * #size(T));
     self.capacity = newCapacity;
 }
 
-fn Array::push<T>(Array<T> *self, T element) {
+fn Array::push<T>(T[] self, T element) {
     while self.size >= self.capacity {
         self.resize((self.capacity || 1) * 2);
     }
@@ -90,17 +124,17 @@ fn Array::push<T>(Array<T> *self, T element) {
 // Array::range(0, 4) -> [0, 1, 2, 3]
 // Array::range(0, 0) -> []
 // Array::range(2, 5) -> [2, 3, 4]
-fn Array::range(i32 from, i32 to) -> Array<i32> * {
-    Array<i32> *array = Array::with_capacity(to);
+fn Array::range(i32 from, i32 to, bool included) -> i32[] {
+    i32[] array = Array::with_capacity(to);
 
-    for i32 i = from; i < to; i += 1 {
+    for i32 i = from; i < to + included; i += 1 {
         array.push(i);
     }
 
     return array;
 }
 
-fn Array::pop<T>(Array<T> *self) -> T {
+fn Array::pop<T>(T[] self) -> T {
     if self.is_empty() {
         return (T)nil;
     }
@@ -112,12 +146,12 @@ fn Array::pop<T>(Array<T> *self) -> T {
     return last;
 }
 
-fn Array::clear<T>(Array<T> *self) {
+fn Array::clear<T>(T[] self) {
     self.resize(1);
     self.size = 0;
 }
 
-fn Array::sort<T>(Array<T> *self) {
+fn Array::sort<T>(T[] self) {
     if self.is_empty() || self.len() <= 1 {
         return;
     }
@@ -150,13 +184,13 @@ local fn __internal_qsort<T>(T *array, i32 low, i32 high) {
     __internal_qsort(array, i + 1, high);
 }
 
-fn Array::cartesian_product<T>(Array<T> *self, i32 n) {
-    Array<void *> *results = Array::new<void *>();
-    Array<T> *current = Array::new();
+fn Array::cartesian_product<T>(T[] self, i32 n) {
+    T[][] results = [];
+    T[] current = [];
     defer current.free();
 
     if n == 0 {
-        Array<T> *combination = Array::new();
+        T[] combination = [];
         results.push((T)combination);
         return results;
     }
@@ -165,9 +199,9 @@ fn Array::cartesian_product<T>(Array<T> *self, i32 n) {
     return results;
 }
 
-local fn __internal_cartesian_product_generate<T>(Array<T> *self, Array<T> *current, i32 n, Array<void *> *results) {
+local fn __internal_cartesian_product_generate<T>(T[] self, T[] current, i32 n, T[][] results) {
     if current.len() == n {
-        Array<T> *combination = current.clone();
+        T[] combination = current.clone();
         results.push((T)combination);
         return;
     }
@@ -179,8 +213,8 @@ local fn __internal_cartesian_product_generate<T>(Array<T> *self, Array<T> *curr
     }
 }
 
-fn Array::clone<T>(Array<T> *self) -> Array<T> * {
-    Array<T> *clone = Array::with_capacity(self.len());
+fn Array::clone<T>(T[] self) -> T[] {
+    T[] clone = Array::with_capacity(self.len());
 
     for i32 i = 0; i < self.len(); i += 1 {
         clone.push(self[i]);
@@ -190,9 +224,9 @@ fn Array::clone<T>(Array<T> *self) -> Array<T> * {
 }
 
 // Creates a new sized array from a null terminated string
-fn Array::from_string(string str) -> Array<char> * {
+fn Array::from_string(string str) -> char[] {
     i32 length = str.len();
-    Array<char> *array = Array::with_capacity(length);
+    char[] array = Array::with_capacity(length);
 
     for i32 i = 0; i < length; i += 1 {
         array.push(str[i]);
@@ -202,7 +236,7 @@ fn Array::from_string(string str) -> Array<char> * {
 }
 
 // Turn an array into a string in format [1, 2, "xyz", 'y']
-fn Array::to_string<T>(ElleMeta meta, Array<T> *self) -> string {
+fn Array::to_string<T>(ElleMeta meta, T[] self) -> string {
     string res = "[";
 
     for i32 i = 0; i < self.len(); i += 1 {
@@ -218,13 +252,13 @@ fn Array::to_string<T>(ElleMeta meta, Array<T> *self) -> string {
 }
 
 // Join an array's elements by a separator
-fn Array::join<T>(Array<T> *self, string separator) {
-    string res = "";
+fn Array::join<T>(T[] self, string separator) {
+    let res = "";
 
-    for i32 i = 0; i < self.len(); i += 1 {
-        res.extend(string::as_string(self[i]));
+    for item in self {
+        res.extend(string::as_string(item));
 
-        if i < self.len() - 1 {
+        if #i(item) < self.len() - 1 {
             res.extend(separator);
         }
     }
@@ -232,9 +266,11 @@ fn Array::join<T>(Array<T> *self, string separator) {
     return res;
 }
 
-fn Array::contains<T>(Array<T> *self, T element) {
-    for i32 i = 0; i < self.len(); i += 1 {
-        if self[i] == element {
+external fn Array::join<T>(T[] self, string separator) @alias("Array::implode") -> string;
+
+fn Array::contains<T>(T[] self, T element) {
+    for item in self {
+        if item == element {
             return true;
         }
     }
@@ -242,26 +278,21 @@ fn Array::contains<T>(Array<T> *self, T element) {
     return false;
 }
 
-// Alias for Array::join<T>()
-fn Array::implode<T>(Array<T> *self, string separator) {
-    return self.join(separator);
-}
-
 // Take all the elements of another Array<T> and push them into this Array<T>
-fn Array::extend<T>(Array<T> *self, Array<T> *other) {
-    for i32 i = 0; i < other.len(); i += 1 {
-        self.push(other[i]);
+fn Array::extend<T>(T[] self, T[] other) {
+    for item in other {
+        self.push(item);
     }
 }
 
-fn Array::remove<T>(Array<T> *self, i32 index) -> T {
+fn Array::remove<T>(T[] self, i32 index) -> T {
     if index < 0 || index >= self.size {
         return (T)nil;
     }
 
     T removedElement = self[index];
 
-    for i32 i = index; i < self.size - 1; i += 1 {
+    for let i = index; i < self.size - 1; i += 1 {
         self[i] = self[i + 1];
     }
 
@@ -274,7 +305,7 @@ fn Array::remove<T>(Array<T> *self, i32 index) -> T {
     return removedElement;
 }
 
-fn Array::insert<T>(Array<T> *self, i32 index, T element) {
+fn Array::insert<T>(T[] self, i32 index, T element) {
     if index < 0 || index > self.size {
         io::cprintf(
             "Index %ld is out of bounds (must be between 0 and %ld inclusive)\n"
@@ -297,17 +328,25 @@ fn Array::insert<T>(Array<T> *self, i32 index, T element) {
     self.size += 1;
 }
 
-fn Array::map<T>(Array<T> *self, fn *mapping) {
-    Array<T> *new_self = Array::with_capacity(self.len());
+fn Array::map<T, U>(U[] self, fn *mapping) -> T[] {
+    let new_self = Array::with_capacity(self.len());
 
-    for i32 i = 0; i < self.len(); i += 1 {
-        new_self.push(mapping(self[i], i));
+    for let i = 0; i < self.len(); i += 1 {
+        new_self.push(mapping(self[i], i, new_self));
     }
 
     return new_self;
 }
 
-fn Array::includes<T>(Array<T> *self, T element) {
+fn Array::truncate(i64[] self) {
+    return self.map<i32>(i64::truncate);
+}
+
+fn Array::promote(i32[] self) {
+    return self.map<i64>(i32::promote);
+}
+
+fn Array::includes<T>(T[] self, T element) {
     for i32 i = 0; i < self.len(); i += 1 {
         if self[i] == element {
             return true;
@@ -317,7 +356,7 @@ fn Array::includes<T>(Array<T> *self, T element) {
     return false;
 }
 
-fn Array::index<T>(Array<T> *self, T element) {
+fn Array::index<T>(T[] self, T element) {
     for i32 i = 0; i < self.len(); i += 1 {
         if self[i] == element {
             return i;
@@ -327,7 +366,7 @@ fn Array::index<T>(Array<T> *self, T element) {
     return -1;
 }
 
-fn Array::sum<T>(Array<T> *self) {
+fn Array::sum<T>(T[] self) {
     T sum = 0;
 
     for i32 i = 0; i < self.len(); i += 1 {
@@ -337,7 +376,7 @@ fn Array::sum<T>(Array<T> *self) {
     return sum;
 }
 
-fn Array::product<T>(Array<T> *self) {
+fn Array::product<T>(T[] self) {
     T sum = 0;
 
     for i32 i = 0; i < self.len(); i += 1 {
@@ -347,7 +386,7 @@ fn Array::product<T>(Array<T> *self) {
     return sum;
 }
 
-fn Array::first<T>(Array<T> *self) -> T {
+fn Array::first<T>(T[] self) -> T {
     if self.len() < 1 {
         return (T)nil;
     }
@@ -355,7 +394,7 @@ fn Array::first<T>(Array<T> *self) -> T {
     return self[0];
 }
 
-fn Array::last<T>(Array<T> *self) -> T {
+fn Array::last<T>(T[] self) -> T {
     if self.len() < 1 {
         return (T)nil;
     }
@@ -363,7 +402,7 @@ fn Array::last<T>(Array<T> *self) -> T {
     return (T)(self[self.len() - 1]);
 }
 
-fn Array::max<T>(Array<T> *self) -> T {
+fn Array::max<T>(T[] self) -> T {
     if self.len() == 0 {
         return (T)nil;
     }
@@ -379,7 +418,7 @@ fn Array::max<T>(Array<T> *self) -> T {
     return max;
 }
 
-fn Array::min<T>(Array<T> *self) -> T {
+fn Array::min<T>(T[] self) -> T {
     if self.len() == 0 {
         return (T)nil;
     }
@@ -387,7 +426,7 @@ fn Array::min<T>(Array<T> *self) -> T {
     T min = self[0];
 
     for i32 i = 1; i < self.len(); i += 1 {
-        if self[i] < max {
+        if self[i] < min {
             min = self[i];
         }
     }
@@ -395,7 +434,48 @@ fn Array::min<T>(Array<T> *self) -> T {
     return min;
 }
 
-fn Array::free<T>(Array<T> *self) {
+fn Array::slice<T>(T[] self, i32 _start, i32 _end) -> T[] {
+    let start = _start;
+    let end = _end;
+
+    if end == -1 {
+        end = self.len();
+    }
+
+    if start < 0 {
+        start = self.len() + start;
+    }
+
+    if end < 0 {
+        end = self.len() + end;
+    }
+
+    if start < 0 {
+        start = 0;
+    }
+
+    if start >= self.len() {
+        start = self.len();
+    }
+
+    if end >= self.len() {
+        end = self.len();
+    }
+
+    if end < start {
+        end = start;
+    }
+
+    let length = end - start;
+    let temp = Array::with_capacity(length);
+
+    temp.elements = self.elements + (start * #size(T));
+    temp.size = length;
+
+    return temp;
+}
+
+fn Array::free<T>(T[] self) {
     free(self.elements);
     free((void *)(*self));
     free(self);

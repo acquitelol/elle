@@ -3,7 +3,7 @@
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
-    fmt::{self},
+    fmt,
     iter::Peekable,
     mem,
     num::ParseIntError,
@@ -300,6 +300,7 @@ pub enum Type {
     Char,
     Void,
     Null,
+    Infer,
     // Inner type
     Pointer(Box<Type>),
     Struct(String),
@@ -364,6 +365,7 @@ impl Type {
                 }
             }
             Self::Unknown(name) => name.into(),
+            _ => unreachable!(),
         }
     }
 
@@ -511,31 +513,54 @@ impl Type {
                             }
 
                             nesting += 1;
+
+                            if parts.peek().is_some_and(|next| next != GENERIC_POINTER) {
+                                break;
+                            }
+
                             part = parts.next().unwrap();
                         }
 
-                        let mut res = id_to_ty(part);
+                        let res = internal_match(parts);
 
-                        for _ in 0..nesting {
-                            res = Type::Pointer(Box::new(res));
+                        if let Some(mut res) = res {
+                            for _ in 0..nesting {
+                                res = Type::Pointer(Box::new(res));
+                            }
+
+                            Some(res)
+                        } else {
+                            None
                         }
-
-                        Some(res)
                     } else if &part == GENERIC_UNKNOWN {
                         Some(Type::Unknown(parts.next().unwrap()))
                     } else if &part == GENERIC_END {
-                        None
+                        internal_match(parts)
                     } else {
                         Some(Type::Struct(
                             if parts.peek().is_some_and(|part| part == GENERIC_IDENTIFIER) {
                                 let mut res = vec![];
                                 res.push(parts.next().unwrap());
+                                let mut nesting = 0;
 
-                                while parts.peek().is_some_and(|part| part != GENERIC_END) {
+                                loop {
+                                    if parts.peek().is_some_and(|part| part == GENERIC_IDENTIFIER) {
+                                        nesting += 1;
+                                    }
+
+                                    if parts.peek().is_some_and(|part| part == GENERIC_END) {
+                                        if nesting > 0 {
+                                            nesting -= 1;
+                                        } else {
+                                            parts.next();
+                                            break;
+                                        }
+                                    }
+
                                     res.push(parts.next().unwrap());
                                 }
 
-                                format!("{part}.{}", res.join("."))
+                                format!("{part}.{}.{GENERIC_END}", res.join("."))
                             } else {
                                 part
                             },
@@ -589,15 +614,18 @@ impl Type {
                 }
             }
             Type::Struct(name) if is_unknown!(name) => {
-                let (original_name, _) = Type::from_internal_id(name.clone());
+                let (original_name, generics) = Type::from_internal_id(name.clone());
 
                 let generic_name = format!(
                     "{original_name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
                     generics
                         .iter()
+                        .map(|v| v.get_unknown_inner())
+                        .filter(|v| v.is_some())
+                        .map(|v| v.unwrap())
                         .map(|generic| {
                             known_generics
-                                .get(generic)
+                                .get(&generic)
                                 .unwrap()
                                 .to_internal_id()
                                 .to_string()
@@ -683,9 +711,7 @@ impl Type {
         match ty.clone() {
             Type::Pointer(inner) => self.has_generic_type(*inner),
             Type::Unknown(_) => true,
-            Type::Struct(name) => {
-                name.contains(&format!(".{}", Type::Unknown("T".into()).to_internal_id()))
-            }
+            Type::Struct(name) => is_unknown!(name),
             _ => false,
         }
     }
@@ -720,7 +746,26 @@ impl Type {
                         .iter()
                         .cloned()
                         .enumerate()
-                        .map(|(i, v)| (v.get_unknown_inner().unwrap(), known_parts[i].clone())),
+                        .map(|(i, v)| {
+                            if !matches!(v, Type::Unknown(_)) {
+                                if let Some(new) =
+                                    known_parts[i].clone().deduce_generic_type(v.clone())
+                                {
+                                    if new.is_empty() {
+                                        return (None, known_parts[i].clone());
+                                    }
+
+                                    return (
+                                        new.keys().nth(0).cloned(),
+                                        new.values().nth(0).cloned().unwrap(),
+                                    );
+                                }
+                            }
+
+                            (v.get_unknown_inner(), known_parts[i].clone())
+                        })
+                        .filter(|(unknown, _)| unknown.is_some())
+                        .map(|(unknown, known)| (unknown.unwrap(), known)),
                 ))
             }
             _ => None,
@@ -800,8 +845,8 @@ impl Type {
         !self.is_float()
     }
 
-    pub fn is_strictly_int(&self) -> bool {
-        !self.is_float() && !self.is_string() && !self.is_void_pointer()
+    pub fn is_strictly_number(&self) -> bool {
+        !self.is_string() && !self.is_void_pointer() && !self.is_struct() && !self.is_function()
     }
 
     pub fn is_struct(&self) -> bool {
@@ -850,6 +895,15 @@ impl Type {
         match self {
             Self::Pointer(_) | Self::Long => true,
             _ => false,
+        }
+    }
+
+    pub fn is_primitive(&self) -> bool {
+        match self {
+            Self::Pointer(x) if matches!(**x, Self::Struct(_)) => false,
+            Self::Pointer(x) if matches!(**x, Self::Char) => false,
+            Self::Struct(_) => false,
+            _ => true,
         }
     }
 
@@ -947,6 +1001,7 @@ impl fmt::Display for Type {
             Self::Struct(td) => write!(formatter, ":{}", td),
             Self::Function(_) => write!(formatter, "l"),
             Self::Unknown(name) => panic!("Tried to compile with a generic type {name}"),
+            _ => unreachable!(),
         }
     }
 }

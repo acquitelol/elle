@@ -31,12 +31,37 @@ static POINTER_ID: &str = "__ptr__";
 static FORMAT_CONSTANT: &str = "__fmt__";
 static LOAD_CONSTANT: &str = "__load__";
 static STORE_CONSTANT: &str = "__store__";
+static LEN_CONSTANT: &str = "__len__";
+static HASH_CONSTANT: &str = "__hash__";
+static EQUALS_CONSTANT: &str = "__equals__";
 static INTERNAL_FORMATTER: &str =
     "__internal_formatter_do_not_use_unless_you_know_what_youre_doing__";
-static RESERVED_KEYWORDS: &[&'static str] = &[
-    "as", "let", "mut", "enum", "match", "static", "super", "do", "macro", "in", "step", "of",
-    "class", "var", "impl",
+static DUNDER_CONSTANTS: &[&'static str] = &[
+    FORMAT_CONSTANT,
+    LOAD_CONSTANT,
+    STORE_CONSTANT,
+    LEN_CONSTANT,
+    HASH_CONSTANT,
+    EQUALS_CONSTANT,
 ];
+static RESERVED_KEYWORDS: &[&'static str] = &[
+    "as", "mut", "enum", "match", "static", "super", "do", "macro", "step", "of", "class", "var",
+    "impl",
+];
+
+#[macro_export]
+macro_rules! INTERNAL_IDX_FORMAT {
+    () => {
+        "__internal_{}_idx"
+    };
+}
+
+#[macro_export]
+macro_rules! INTERNAL_ITERATOR_FORMAT {
+    () => {
+        "__internal_{}_iterator"
+    };
+}
 
 pub enum Warning {
     StructFieldsMissing = 1 << 0,

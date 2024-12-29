@@ -378,14 +378,11 @@ impl Lexer {
                                 self.advance();
                                 (TokenKind::Ellipsis, ValueKind::Nil)
                             }
-                            _ => {
-                                panic!(
-                                    "{}",
-                                    self.get_location().error(
-                                        "Invalid token: expected \".\" or \"...\" but got \"..\"."
-                                    )
-                                )
+                            '=' => {
+                                self.advance();
+                                (TokenKind::RangeEqual, ValueKind::Nil)
                             }
+                            _ => (TokenKind::Range, ValueKind::Nil),
                         }
                     }
                     _ => (TokenKind::Dot, ValueKind::Nil),
@@ -394,19 +391,25 @@ impl Lexer {
             '#' => {
                 self.advance();
 
-                let (_, value) = self.consume_identifier();
+                match self.current_char() {
+                    '[' => (TokenKind::Hashtag, ValueKind::Nil),
+                    _ => {
+                        let (_, value) = self.consume_identifier();
 
-                match value {
-                    ValueKind::String(val) => match val.as_str() {
-                        "size" => (TokenKind::Size, ValueKind::Nil),
-                        "len" => (TokenKind::ArrayLength, ValueKind::Nil),
-                        other => panic!(
-                            "{}",
-                            self.get_location()
-                                .error(format!("Unimplemented directive: '{}'", other))
-                        ),
-                    },
-                    _ => unreachable!(),
+                        match value {
+                            ValueKind::String(val) => match val.as_str() {
+                                "size" => (TokenKind::Size, ValueKind::Nil),
+                                "len" => (TokenKind::ArrayLength, ValueKind::Nil),
+                                "i" => (TokenKind::IndexOf, ValueKind::Nil),
+                                other => panic!(
+                                    "{}",
+                                    self.get_location()
+                                        .error(format!("Unimplemented directive: '{}'", other))
+                                ),
+                            },
+                            _ => unreachable!(),
+                        }
+                    }
                 }
             }
             _ => {
@@ -551,6 +554,8 @@ impl Lexer {
             "global" => TokenKind::Global,
             "local" => TokenKind::Local,
             "namespace" => TokenKind::Namespace,
+            "in" => TokenKind::In,
+            "let" => TokenKind::Let,
             // WHEN ADDING A KEYWORD HERE DON'T FORGET TO
             // POTENTIALLY UPDATE THE RESERVED KEYWORD LIST
             _ => TokenKind::Identifier,

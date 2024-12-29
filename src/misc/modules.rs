@@ -19,8 +19,8 @@ use crate::{
         enums::{Argument, AstNode, Primitive},
         parser::{DoOnly, Parser, StructPool},
     },
-    Warnings, FORMAT_CONSTANT, INTERNAL_FORMATTER, LONG_EXTENSION, POINTER_ID, SHORT_EXTENSION,
-    STD_LIB_PATH, VOID_POINTER_ID,
+    Warnings, FORMAT_CONSTANT, INTERNAL_FORMATTER, LEN_CONSTANT, LONG_EXTENSION, POINTER_ID,
+    SHORT_EXTENSION, STD_LIB_PATH, VOID_POINTER_ID,
 };
 
 pub fn lex_and_parse(
@@ -292,6 +292,43 @@ pub fn lex_and_parse(
             },
         );
 
+        tree.insert(
+            0,
+            Primitive::Function {
+                name: format!("{}.{LEN_CONSTANT}", POINTER_ID).into(),
+                public: false,
+                usable: true,
+                imported: false,
+                variadic: false,
+                manual: false,
+                external: false,
+                builtin: true,
+                volatile: false,
+                format: false,
+                unaliased: None,
+                generics: vec!["T".into()],
+                arguments: vec![Argument {
+                    name: "self".into(),
+                    r#type: Type::Pointer(Box::new(Type::Unknown("T".into()))),
+                    manual: false,
+                }],
+                r#return: Some(Type::Word),
+                body: vec![AstNode::ReturnStatement {
+                    value: Box::new(AstNode::ArrayLengthStatement {
+                        value: Box::new(AstNode::LiteralStatement {
+                            kind: TokenKind::Identifier,
+                            value: ValueKind::String("self".into()),
+                            location: loc.clone(),
+                        }),
+                        location: loc.clone(),
+                    }),
+                    location: loc.clone(),
+                }],
+                location: loc.clone(),
+                return_location: loc.clone(),
+            },
+        );
+
         if !is_string_module_disabled {
             // Primitive format functions
             for primitive in Type::get_primitive_types() {
@@ -354,6 +391,7 @@ pub fn lex_and_parse(
                                 }),
                                 operator: TokenKind::EqualTo,
                                 treat_as_string: false,
+                                dunder_methods: false,
                                 location: loc.clone(),
                             }),
                             body: vec![AstNode::ReturnStatement {
@@ -440,11 +478,11 @@ pub fn lex_and_parse(
                         AstNode::DeclareStatement {
                             name: "res".into(),
                             r#type: Some(Type::Pointer(Box::new(Type::Char))),
-                            value: Box::new(AstNode::LiteralStatement {
+                            value: Some(Box::new(AstNode::LiteralStatement {
                                 kind: TokenKind::StringLiteral,
                                 value: ValueKind::String("invalid".into()),
                                 location: loc.clone(),
-                            }),
+                            })),
                             location: loc.clone(),
                             value_location: loc.clone(),
                         },
@@ -463,6 +501,7 @@ pub fn lex_and_parse(
                                     }),
                                     operator: TokenKind::NotEqualTo,
                                     treat_as_string: false,
+                                    dunder_methods: false,
                                     location: loc.clone()
                                 }),
                                 right: Box::new(AstNode::ArithmeticOperation {
@@ -479,6 +518,7 @@ pub fn lex_and_parse(
                                         }),
                                         operator: TokenKind::Modulus,
                                         treat_as_string: false,
+                                        dunder_methods: false,
                                         location: loc.clone(),
                                     }),
                                     right: Box::new(AstNode::LiteralStatement {
@@ -488,16 +528,18 @@ pub fn lex_and_parse(
                                     }),
                                     operator: TokenKind::EqualTo,
                                     treat_as_string: false,
+                                    dunder_methods: false,
                                     location: loc.clone(),
                                 }),
                                 operator: TokenKind::And,
                                 treat_as_string: false,
+                                dunder_methods: false,
                                 location: loc.clone(),
                             }),
                             body: vec![AstNode::DeclareStatement {
                                 name: "res".into(),
                                 r#type: None,
-                                value: Box::new(AstNode::FunctionCall {
+                                value: Some(Box::new(AstNode::FunctionCall {
                                     name: FORMAT_CONSTANT.into(),
                                     generics: vec![],
                                     parameters: vec![
@@ -533,7 +575,7 @@ pub fn lex_and_parse(
                                     type_method: true,
                                     ignore_no_def: false,
                                     location: loc.clone(),
-                                }),
+                                })),
                                 location: loc.clone(),
                                 value_location: loc.clone(),
                             }],

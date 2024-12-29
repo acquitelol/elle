@@ -3,7 +3,7 @@ use std/collections/sll;
 use std/io;
 
 fn main() {
-    LinkedList<i32> list = LinkedList::new();
+    let list = LinkedList::new<i32>();
     defer list.free();
 
     list.add(10);

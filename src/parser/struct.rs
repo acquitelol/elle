@@ -193,6 +193,7 @@ impl<'a> Struct<'a> {
                                         }),
                                         operator: TokenKind::Add,
                                         treat_as_string: false,
+                                        dunder_methods: true,
                                         location: location.clone(),
                                     },
                                 ),
@@ -289,7 +290,7 @@ impl<'a> Struct<'a> {
                     AstNode::DeclareStatement {
                         name: "spacing".into(),
                         r#type: Some(Type::Pointer(Box::new(Type::Char))),
-                        value: Box::new(AstNode::FunctionCall {
+                        value: Some(Box::new(AstNode::FunctionCall {
                             name: "string.repeat".into(),
                             generics: vec![],
                             parameters: vec![
@@ -316,6 +317,7 @@ impl<'a> Struct<'a> {
                                         }),
                                         operator: TokenKind::Multiply,
                                         treat_as_string: false,
+                                        dunder_methods: true,
                                         location: location.clone(),
                                     },
                                 ),
@@ -323,7 +325,7 @@ impl<'a> Struct<'a> {
                             type_method: false,
                             ignore_no_def: false,
                             location: location.clone(),
-                        }),
+                        })),
                         location: location.clone(),
                         value_location: location.clone(),
                     },

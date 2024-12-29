@@ -13,13 +13,8 @@ def repl():
             line = line[:-1]
 
         code = "\n".join(list(map(lambda x: x.replace(" " * 12, ""),
-            f"""use std/io;
-            use std/math;
-            use std/cast;
+            f"""use std/prelude;
             use std/vectors;
-            use std/types;
-            use std/split;
-            use std/collections/array;
 
             fn main() {{
                 {f";\n{" " * 16}".join(lines)}{";" if len(lines) > 0 else ""}

@@ -3,7 +3,7 @@ use std/io;
 const i64 MEMORY_SIZE = 30_000;
 
 fn skip(string *pc, i32 dir) -> string {
-    i32 loop = 1;
+    let loop = 1;
 
     while loop > 0 {
         *pc += (string)dir;
@@ -22,8 +22,8 @@ fn interpret(string program) {
     char memory[MEMORY_SIZE];
     memset(memory, 0, MEMORY_SIZE * #size(char));
 
-    string ptr = memory;
-    string pc = program;
+    let ptr = memory;
+    let pc = program;
 
     while *pc {
         if *pc == '>' {

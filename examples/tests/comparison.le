@@ -8,8 +8,8 @@ fn rhs(string name, bool state, string operator) {
 }
 
 fn main() {
-    bool a = true;
-    bool b = false;
+    let a = true;
+    let b = false;
 
     a && rhs("a", a, "AND");
     b || rhs("b", b, "OR");

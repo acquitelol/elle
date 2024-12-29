@@ -2,8 +2,7 @@ use std/collections/array;
 use std/io;
 
 fn main() {
-    Array<i32> *a = Array::new(1, 2);
-    defer a.free();
+    let a = [1, 2];
 
     a.push(39);
     a.push(-1);
@@ -11,8 +10,7 @@ fn main() {
     io::assert(a.first() == 1, nil);
     io::assert(a.last() == -1, nil);
 
-    Array<string> *b = Array::new();
-    defer b.free();
+    string[] b = [];
 
     b.push("hello");
     b.push("world");
@@ -21,8 +19,7 @@ fn main() {
 
     io::dbg(a);
 
-    Array<i32> *c = Array::new(172);
-    defer c.free();
+    let c = [172];
 
     // Test extension
     a.extend(c);
@@ -44,28 +41,25 @@ fn main() {
     io::dbg(b);
 
     // Test from_string
-    Array<char> *hello_world = Array::from_string("hello world!");
-    defer hello_world.free();
+    let hello_world = Array::from_string("hello world!");
 
     io::dbg(hello_world.join(""));
 
     // Test contains
-    Array<string> *d = Array::new("a", "b", "c");
-    defer d.free();
+    let d = ["a", "b", "c"];
 
     io::dbg(d.contains("a"), d.contains("foo"));
 
     // Generates [0, 1, 2, 3, 4]
-    Array<i32> *e = Array::range(0, 5);
-    defer e.free();
+    let e = 0..5;
 
     // Squares every number in `e`
-    Array<i32> *e_mapped = e.map(fn(i32 x) -> x * x);
+    let e_mapped = e.map<i32>(fn(i32 x) -> x * x);
     defer e_mapped.free();
 
     io::dbg(e_mapped);
 
-    Array<i32> *empty = Array::range(0, 0);
+    let empty = 0..0;
     defer empty.free();
 
     io::dbg(empty);

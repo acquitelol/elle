@@ -22,10 +22,10 @@ fn render_sierpinski(Vector2 center, f32 length, f32 thickness, i32 depth) {
         return;
     }
 
-    for i32 i = 0; i < BRANCHES; i += 1 {
-        f32 angle = ROTATION_OFFSET + ANGLE * i;
+    for let i = 0; i < BRANCHES; i += 1 {
+        let angle = ROTATION_OFFSET + ANGLE * i;
 
-        Vector2 branch = Vector2 {
+        let branch = Vector2 {
             x = center.x + math::cos(angle) * length,
             y = center.y + math::sin(angle) * length
         };
@@ -39,7 +39,7 @@ fn main() {
     raylib::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Sierpinski Triangle");
     defer raylib::close_window();
 
-    Vector2 center = Vector2 {
+    let center = Vector2 {
         x = SCREEN_WIDTH / 2,
         y = SCREEN_HEIGHT / 2,
     };

@@ -70,10 +70,7 @@ impl<'a> Function<'a> {
             self.parser.advance();
 
             while self.parser.current_token().kind != TokenKind::GreaterThan {
-                if !external {
-                    generics.push(self.parser.get_identifier());
-                }
-
+                generics.push(self.parser.get_identifier());
                 self.parser.advance();
 
                 if self.parser.current_token().kind == TokenKind::Comma {
@@ -109,6 +106,8 @@ impl<'a> Function<'a> {
                         .unwrap(),
                 )
                 || self.parser.struct_pool.borrow().contains_key(&ty_name))
+            // TODO: Fix this (start of a tuple type, BIGGGG hack)
+            || self.parser.current_token().kind == TokenKind::LeftParenthesis
             || self.parser.current_token().kind == TokenKind::Ellipsis
         {
             while self.parser.current_token().kind != TokenKind::RightParenthesis {
@@ -309,6 +308,7 @@ impl<'a> Function<'a> {
                             struct_pool: &self.parser.struct_pool,
                             tree: &self.parser.tree,
                             generics: &generics,
+                            known_generics: &vec![],
                         },
                     )
                     .parse();

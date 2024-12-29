@@ -14,16 +14,17 @@ struct Question {
     i32 index;
 };
 
-fn Question::new(Array<Operation *> *operators, i32 index) {
-    i32 lhs = rand::random(1, LARGEST_INT);
-    i32 rhs = rand::random(1, LARGEST_INT);
-    i32 operator = rand::random(0, operators.len() - 1);
+fn Question::new(Operation *[] operators, i32 index) {
+    let lhs = rand::random(1, LARGEST_INT);
+    let rhs = rand::random(1, LARGEST_INT);
+    let operator = rand::random(0, operators.len() - 1);
 
-    Operation *operation = operators[operator];
+    let operation = operators[operator];
     fn *func = operation.func;
 
     Question *question = malloc(#size(Question));
     *question = malloc(#size(Question));
+
     question.display = "What is {} {} {}? -> ".format(lhs, operation.display, rhs);
     question.answer = func(lhs, rhs);
     question.index = index;
@@ -47,22 +48,19 @@ fn Operation::new(string display, fn *func) {
 
 fn main() {
     rand::seed(time(nil));
+    Question *[] incorrect = [];
 
-    Array<Question *> *incorrect = Array::new();
-    defer incorrect.free();
-
-    Array<Operation *> *operations = Array::new(
+    let operations = [
         Operation::new("+", fn(i32 a, i32 b) -> a + b),
         Operation::new("-", fn(i32 a, i32 b) -> a - b),
         Operation::new("*", fn(i32 a, i32 b) -> a * b),
-        Operation::new("/", fn(i32 a, i32 b) -> a / b) // Random numbers start at 1
-    );
-    defer operations.free();
+        Operation::new("/", fn(i32 a, i32 b) -> a / b)
+    ];
 
-    for i32 i = 0; i < QUESTION_COUNT; i += 1 {
-        Question *question = Question::new(operations, i);
-        string input = io::input("({}/{}) {}".format(i + 1, QUESTION_COUNT, question.display));
-        i32 answer = 0;
+    for let i = 0; i < QUESTION_COUNT; i += 1 {
+        let question = Question::new(operations, i);
+        let input = io::input("({}/{}) {}".format(i + 1, QUESTION_COUNT, question.display));
+        let answer = 0;
 
         if !i32::try_parse(input, &answer) || answer != question.answer {
             question.input = answer;
@@ -70,7 +68,7 @@ fn main() {
         }
     }
 
-    i32 correct = QUESTION_COUNT - incorrect.len();
+    let correct = QUESTION_COUNT - incorrect.len();
     io::printf("\nYou answered {}/{} questions correctly!", correct, QUESTION_COUNT);
     io::printf(
         "That's {}%. Congrats!",
@@ -81,9 +79,7 @@ fn main() {
         io::println("\nIncorrect questions:");
     }
 
-    for i32 i = 0; i < incorrect.len(); i += 1 {
-        Question *question = incorrect[i];
-
+    for question in incorrect {
         io::printf(
             "{}) The correct answer was {}, you wrote {}.",
             question.index + 1, question.answer, question.input

@@ -1,14 +1,13 @@
 use std/libc/io;
-use std/string;
 use std/core;
 
 global pub;
 
 local fn __print(i64 args, ElleMeta meta, bool wrap, bool full, bool newline) {
-    for i32 i = 0; i < meta.arity; i += 1 {
-        string ty = meta.types[i];
-        string expr = meta.exprs[i];
-        string res = __to_string("string", args, wrap && ty == "string");
+    for let i = 0; i < meta.arity; i += 1 {
+        let ty = meta.types[i];
+        let expr = meta.exprs[i];
+        let res = __to_string("string", args, wrap && ty == "string");
 
         if full {
             io::cprintf(
@@ -28,11 +27,11 @@ local fn __print(i64 args, ElleMeta meta, bool wrap, bool full, bool newline) {
 }
 
 local fn __err(i64 args, ElleMeta meta, bool newline) {
-    FILE *stderr = fdopen(2, "w");
-    string fmt = "\x1b[31m[ERROR]: %s\x1b[0m";
-    string error = "";
+    let stderr = fdopen(2, "w");
+    let fmt = "\x1b[31m[ERROR]: %s\x1b[0m";
+    let error = "";
 
-    for i32 i = 0; i < meta.arity; i += 1 {
+    for let i = 0; i < meta.arity; i += 1 {
         string ty = meta.types[i];
         string expr = meta.exprs[i];
         string res = __to_string("string", args, false);
@@ -81,7 +80,7 @@ fn io::eprintln(ElleMeta meta, ...) @fmt {
 fn io::printf(ElleMeta meta, string fmt, ...) @fmt {
     variadic args[meta.arity - 1];
 
-    for i32 i = 0; i < meta.arity; i += 1 {
+    for let i = 0; i < meta.arity; i += 1 {
         meta.types[i] = "string";
     }
 
@@ -91,7 +90,7 @@ fn io::printf(ElleMeta meta, string fmt, ...) @fmt {
 fn io::eprintf(ElleMeta meta, string fmt, ...) @fmt {
     variadic args[meta.arity - 1];
 
-    for i32 i = 0; i < meta.arity; i += 1 {
+    for let i = 0; i < meta.arity; i += 1 {
         meta.types[i] = "string";
     }
 
@@ -101,7 +100,7 @@ fn io::eprintf(ElleMeta meta, string fmt, ...) @fmt {
 fn io::panic(ElleMeta meta, string fmt, ...) @fmt {
     variadic args[meta.arity - 1];
 
-    for i32 i = 0; i < meta.arity; i += 1 {
+    for let i = 0; i < meta.arity; i += 1 {
         meta.types[i] = "string";
     }
 
@@ -126,7 +125,7 @@ fn die(ElleMeta meta) {
 
 fn io::assert(ElleMeta meta, bool condition, string message) {
     if !condition {
-        string parsed = message || "No additional information was specified.";
+        let parsed = message || "No additional information was specified.";
 
         io::eprintln(
             meta.caller, ": Assertion '", meta.exprs[0], "' failed.\n",
@@ -141,24 +140,24 @@ const i64 BUF_SIZE = 1024;
 const i64 EOF = -1;
 
 fn io::input(string message) -> string {
-    string buf = (string)malloc(BUF_SIZE * #size(char));
+    let buf = (string)malloc(BUF_SIZE * #size(char));
     defer free(buf);
 
     io::print(message);
     io::fgets(buf, BUF_SIZE, stdin);
 
     // I would rather O(n) than O(2n)
-    i32 length = buf.len();
+    let length = buf.len();
 
     buf[buf.len() - 1] = '\0';
-    string result = (string)malloc(buf.len() + 1);
+    let result = (string)malloc(buf.len() + 1);
     strcpy(result, buf);
 
     return result;
 }
 
 fn io::read_to_string(string path) -> string {
-    FILE *file = io::fopen(path, "r");
+    let file = io::fopen(path, "r");
     defer io::fclose(file);
 
     if !file {
@@ -166,7 +165,7 @@ fn io::read_to_string(string path) -> string {
     }
 
     io::fseek(file, 0, SEEK_END);
-    i64 file_size = io::ftell(file);
+    let file_size = io::ftell(file);
     io::fseek(file, 0, SEEK_SET);
     i64 buf_size;
 
@@ -176,7 +175,7 @@ fn io::read_to_string(string path) -> string {
         buf_size = 4096;
     }
 
-    string buf = (string)malloc(buf_size * #size(char));
+    let buf = (string)malloc(buf_size * #size(char));
 
     if !buf {
         return nil;

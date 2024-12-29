@@ -110,6 +110,211 @@ pub fn create_generic_struct(
         .insert(generic_name.clone(), (vec![], parsed_members, location));
 }
 
+#[macro_export]
+macro_rules! get_type {
+    ($self:expr, $generics:expr, $struct_pool:expr, $tree:expr) => {{
+        let mut is_fn_pointer = false;
+        let mut is_struct = false;
+        let name;
+
+        let mut ty = if $self.current_token().kind == TokenKind::LeftParenthesis {
+            let mut location = $self.current_token().location;
+
+            if !$struct_pool.borrow().contains_key("Tuple") {
+                let import_text = "use std/collections/tuple;";
+
+                location.ctx = Rc::new(location.ctx.trim().into());
+                location.above = Some(Rc::new(format!(
+                    "Add this to your file:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
+                    " ".repeat(
+                        location.ctx.len() - location.ctx.trim().len()
+                            + format!("{}", location.row + 1).len()
+                            + 8
+                    ),
+                    import_text
+                )));
+
+                panic!(
+                    "{}",
+                    location
+                        .error("The tuple module is not imported. Please import it to use tuples.")
+                );
+            }
+
+            $self.advance(); // Skip left parenthesis
+
+            let mut types = vec![];
+
+            while $self.current_token().kind != TokenKind::RightParenthesis {
+                types.push($self.get_type($generics));
+                $self.advance();
+
+                if $self.current_token().kind == TokenKind::Comma {
+                    $self.advance();
+                }
+            }
+
+            name = "Tuple".into();
+            let generic_name = format!(
+                "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
+                types
+                    .iter()
+                    .map(|ty| ty.to_internal_id().to_string())
+                    .collect::<Vec<String>>()
+                    .join(".")
+            );
+
+            if !$struct_pool.borrow().contains_key(&generic_name) {
+                create_generic_struct(
+                    "Tuple".into(),
+                    generic_name.clone(),
+                    location,
+                    types,
+                    &$struct_pool,
+                    &$tree,
+                )
+            }
+
+            $self.expect_tokens(vec![TokenKind::RightParenthesis]);
+            Type::Pointer(Box::new(Type::Struct(generic_name)))
+        } else {
+            is_fn_pointer = $self.current_token().kind == TokenKind::Function;
+
+            name = if is_fn_pointer {
+                $self.current_token().value.get_string_inner().unwrap()
+            } else {
+                $self.get(vec![TokenKind::Identifier])
+            };
+
+            is_struct = $struct_pool.borrow().contains_key(&name);
+            let is_valid = is_fn_pointer
+                || is_struct
+                || $generics.unwrap_or(&vec![]).contains(&name)
+                || ValueKind::String(name.clone()).is_base_type();
+
+            if !is_valid {
+                panic!(
+                    "{}",
+                    $self.current_token().location.error(format!(
+                        "Type or struct named '{}' could not be found. Are you sure you spelt it correctly?",
+                        name
+                    ))
+                )
+            }
+
+            ValueKind::String(name.clone())
+                .to_type_string($struct_pool.borrow().contains_key(&name))
+                .unwrap()
+        };
+
+        let mut found_ptr = false;
+
+        loop {
+            let tmp = $self.next_token();
+
+            if tmp.is_some() {
+                match tmp.unwrap().kind {
+                    TokenKind::Multiply | TokenKind::Deref => {
+                        found_ptr = true;
+                        ty = Type::Pointer(Box::new(ty));
+                        $self.advance();
+                    }
+                    TokenKind::LeftBlockBrace => {
+                        $self.advance();
+                        $self.advance();
+
+                        let mut location = $self.current_token().location;
+
+                        if !$struct_pool.borrow().contains_key("Array") {
+                            let import_text = "use std/collections/array;";
+
+                            location.ctx = Rc::new(location.ctx.trim().into());
+                            location.above = Some(Rc::new(format!(
+                                "Add this to your file:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
+                                " ".repeat(
+                                    location.ctx.len() - location.ctx.trim().len()
+                                        + format!("{}", location.row + 1).len()
+                                        + 8
+                                ),
+                                import_text
+                            )));
+
+                            panic!("{}", location.error("The array module is not imported. Please import it to use dynamic arrays."));
+                        }
+
+                        let generic_name = format!(
+                            "Array.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
+                            ty.to_internal_id().to_string()
+                        );
+
+                        if !$struct_pool.borrow().contains_key(&generic_name) {
+                            create_generic_struct(
+                                "Array".into(),
+                                generic_name.clone(),
+                                location,
+                                vec![ty],
+                                &$struct_pool,
+                                &$tree,
+                            )
+                        }
+
+                        ty = Type::Pointer(Box::new(Type::Struct(generic_name)));
+                        $self.expect_tokens(vec![TokenKind::RightBlockBrace]);
+                    }
+                    TokenKind::LessThan if is_struct => {
+                        $self.advance();
+                        $self.advance();
+
+                        let mut known_generics = vec![];
+
+                        while $self.current_token().kind != TokenKind::GreaterThan {
+                            known_generics.push($self.get_type($generics));
+                            $self.advance();
+
+                            if $self.current_token().kind == TokenKind::Comma {
+                                $self.advance();
+                            }
+                        }
+
+                        let location = $self.current_token().location;
+
+                        let generic_name = format!(
+                            "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
+                            known_generics
+                                .iter()
+                                .map(|known| known.to_internal_id().to_string())
+                                .collect::<Vec<String>>()
+                                .join(".")
+                        );
+
+                        if !$struct_pool.borrow().contains_key(&generic_name) {
+                            create_generic_struct(
+                                name.clone(),
+                                generic_name.clone(),
+                                location,
+                                known_generics,
+                                &$struct_pool,
+                                &$tree,
+                            )
+                        }
+
+                        ty = Type::Struct(generic_name);
+                        $self.expect_tokens(vec![TokenKind::GreaterThan]);
+                    }
+                    // Crashes if it hasn't got at least 1 nested pointer for
+                    // function pointers, ie `fn main(fn a)` is invalid
+                    // you must have `fn main(fn *a)` instead.
+                    _ => ensure_fn_pointer!($self, is_fn_pointer, found_ptr),
+                }
+            } else {
+                ensure_fn_pointer!($self, is_fn_pointer, found_ptr)
+            }
+        }
+
+        ty
+    }};
+}
+
 pub struct Parser {
     pub tokens: Vec<Token>,
     pub position: usize,
@@ -236,96 +441,7 @@ impl Parser {
     }
 
     pub fn get_type(&mut self, generics: Option<&Vec<String>>) -> Type {
-        let is_fn_pointer = self.current_token().kind == TokenKind::Function;
-
-        let name = if is_fn_pointer {
-            self.current_token().value.get_string_inner().unwrap()
-        } else {
-            self.get(vec![TokenKind::Identifier])
-        };
-
-        let is_struct = self.struct_pool.borrow().contains_key(&name);
-        let is_valid = is_fn_pointer
-            || is_struct
-            || generics.unwrap_or(&vec![]).contains(&name)
-            || ValueKind::String(name.clone()).is_base_type();
-
-        if !is_valid {
-            panic!(
-                "{}",
-                self.current_token().location.error(format!(
-                    "Type or struct named '{}' could not be found. Are you sure you spelt it correctly?",
-                    name
-                ))
-            )
-        }
-
-        let mut ty = ValueKind::String(name.clone())
-            .to_type_string(self.struct_pool.borrow().contains_key(&name))
-            .unwrap();
-        let mut found_ptr = false;
-
-        loop {
-            let tmp = self.next_token();
-
-            if tmp.is_some() {
-                match tmp.unwrap().kind {
-                    TokenKind::Multiply | TokenKind::Deref => {
-                        found_ptr = true;
-                        ty = Type::Pointer(Box::new(ty));
-                        self.advance();
-                    }
-                    TokenKind::LessThan if is_struct => {
-                        self.advance();
-                        self.advance();
-
-                        let mut known_generics = vec![];
-
-                        while self.current_token().kind != TokenKind::GreaterThan {
-                            known_generics.push(self.get_type(generics));
-                            self.advance();
-
-                            if self.current_token().kind == TokenKind::Comma {
-                                self.advance();
-                            }
-                        }
-
-                        let location = self.current_token().location;
-
-                        let generic_name = format!(
-                            "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
-                            known_generics
-                                .iter()
-                                .map(|known| known.to_internal_id().to_string())
-                                .collect::<Vec<String>>()
-                                .join(".")
-                        );
-
-                        if !self.struct_pool.borrow().contains_key(&generic_name) {
-                            create_generic_struct(
-                                name.clone(),
-                                generic_name.clone(),
-                                location,
-                                known_generics,
-                                &self.struct_pool,
-                                &self.tree,
-                            )
-                        }
-
-                        ty = Type::Struct(generic_name);
-                        self.expect_tokens(vec![TokenKind::GreaterThan]);
-                    }
-                    // Crashes if it hasn't got at least 1 nested pointer for
-                    // function pointers, ie `fn main(fn a)` is invalid
-                    // you must have `fn main(fn *a)` instead.
-                    _ => ensure_fn_pointer!(self, is_fn_pointer, found_ptr),
-                }
-            } else {
-                ensure_fn_pointer!(self, is_fn_pointer, found_ptr)
-            }
-        }
-
-        ty
+        get_type!(self, generics, self.struct_pool, self.tree)
     }
 
     // 0 - functions, constants, etc
