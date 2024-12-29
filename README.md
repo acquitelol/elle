@@ -40,6 +40,26 @@ Let's dissect the code:
 
 <hr />
 
+### ♡ **Variable declarations**
+
+* Variables can be declared in 2 ways:
+  - Using their type (useful for inference of information like generics)
+  - Using let (useful for inferring based on the right hand side)
+
+* Example:
+```rs
+let a = 0; // a is inferred to be i32 because 0 is i32
+i64 a = 5; // 5 is inferred to be i64 because a is i64
+```
+
+This is especially useful for dynamic array declarations:
+```rs
+let arr = Array::new<i64>();
+i64[] arr = [];
+```
+
+<hr />
+
 ### ♡ **If statements**
 
 * An if statement is an expression that evaluates a block if the condition is non-zero, with an optional `else` block which is evaluated if the condition **is** zero.
@@ -50,7 +70,7 @@ Let's dissect the code:
 * Example:
 
 ```rs
-i32 a = 0;
+let a = 0;
 
 if expression {
     a += 1;
@@ -79,7 +99,7 @@ while expression {
 * You also have access to block scoped variables inside of this loop. This means you can create a pseudo `for loop` with the following code:
 
 ```rs
-i32 i = 0;
+let i = 0;
 
 while i < 10 {
     io::println(i);
@@ -142,6 +162,52 @@ Please keep in mind that you also have access to the `break` and `continue` keyw
 
 <hr />
 
+### ♡ **Foreach loops**
+
+* A foreach loop is an expression that has 2 main parts:
+
+1. Variable declaration - Declaring a variable for each element
+2. Iterator - The iterator value (which must have an `__len__` function)
+
+* Example:
+```rs
+for x in ["a", "b", "c"] {
+    io::println(x);
+}
+```
+
+* Any iterable type can be used as an iterator:
+```rs
+for c in "hello world" {
+    io::dbg(c);
+}
+
+for i in 0..100 {
+    io::dbg(i);
+}
+```
+
+You can also access the current index during a `foreach` loop, no enumeration necessary:
+
+```rs
+for x in [1, 2, 3] {
+    io::dbg(#i(x), x);
+}
+```
+
+You can also assign to this variable if you need to (such as stepping by 2):
+
+```rs
+for x in [1, 2, 3, 4] {
+    io::dbg(#i(x), #i(x) + 1, x);
+    #i(x) += 1; // Will now increment by 2
+}
+```
+
+Please keep in mind that you also have access to the `break` and `continue` keywords while inside of a loop, which break exeuction early or continue to the next iteration respectively.
+
+<hr />
+
 ### ♡ **Standalone blocks**
 
 * A standalone block is somewhat equivalent to an `if true` statement, although they are not implemented exactly the same internally. It creates a block of code that is executed on a seperate "branch" to the main code in the function. This means that if you run something like `defer` inside of a standalone block it would call that when the *standalone block* leaves scope, not the function itself.
@@ -150,7 +216,7 @@ Here's a simple example:
 
 ```rs
 fn main() {
-    i32 a = 0;
+    let a = 0;
 
     {
         a += 1;
@@ -164,7 +230,7 @@ And it is relatively clear how this code is essentially equal to:
 
 ```rs
 fn main() {
-    i32 a = 0;
+    let a = 0;
 
     if true {
         a += 1;
@@ -241,9 +307,9 @@ fn add(ElleMeta meta, ...) {
     // Note: `i32` should be the same as the type
     // you are yielding from later.
     variadic args[meta.arity];
-    i32 res = 0;
+    let res = 0;
 
-    for i32 i = 0; i < meta.arity; i += 1 {
+    for let i = 0; i < meta.arity; i += 1 {
         res += args.yield(i32);
     }
 
@@ -264,12 +330,146 @@ At the call-site, using this function is easy. It can be done like this:
 
 ```rs
 fn main() {
-    i32 res = add(1, 2, 3, 4);
+    let res = add(1, 2, 3, 4);
     io::println(res);
 }
 ```
 
 Examples that contain variadic functions include [`concat.le`](https://github.com/acquitelol/elle/blob/rewrite/examples/misc/concat.le) and [`variadic.le`](https://github.com/acquitelol/elle/blob/rewrite/examples/tests/variadic.le).
+
+<hr />
+
+### ♡ **Arrays**
+
+There are 2 kinds of arrays in Elle: *dynamic* and *static*.
+
+Dynamic arrays are allocated on the heap, and are designed to grow or shrink, allowing you to push and pop values. They also have far more utility methods on them. These kinds of arrays are created with the `[1, 2, 3]` syntax.
+
+Static arrays are allocated on the stack, and are designed to be static in size. These arrays have basically no utility methods on them, and decay to just a pointer (`#[1, 2, 3]` -> `i32 *`) but are faster. They're declared with the `#[1, 2, 3]` syntax.
+
+Both implement the `__len__` method, which means this is valid:
+
+```rs
+for x in [1, 2, 3] {
+    io::dbg(x);
+}
+
+for x in #[1, 2, 3] {
+    io::dbg(x);
+}
+```
+
+Dynamic arrays have special sugar when being typed:
+
+```rs
+i64[] x = [];
+
+// OR
+
+let x = Array::new<i64>();
+
+// ... equivalent to ...
+
+Array<i64> *x = Array::new();
+```
+
+Static arrays do not, but you can still use `let`:
+
+```rs
+let x = #[1, 2, 3]; // x's type is `i32 *`
+
+// ... OR if you need the inference ...
+
+f32 *x = #[1, 2, 3]; // 1, 2, 3 are casted to floats
+```
+
+You can also use `let` when declaring dynamic arrays which have values:
+```rs
+let x = [1, 2, 3]; // x's type is i32[]
+let y = ["a", "b", "c"]; // y's type is string[]
+```
+
+You can also define dynamic arrays:
+```rs
+let grid = [
+    [1, 2],
+    [3, 4]
+];
+
+grid[0][1]; // 2
+grid[1][0]; // 3
+
+// ... or if you prefer explicit typing ...
+
+char[][] x = [
+    ['a', 'b'],
+    ['c', 'd']
+];
+
+x[0][0]; // a
+x[1][1]; // d
+```
+
+It's worth noting that the `T[]` type syntax is actually sugar for `Array<T> *`. `T[][]` is equivalent to `Array<Array<T> *> *`.
+
+<hr />
+
+### ♡ **Tuples and triples**
+
+Tuples and triples are distinct data structures in Elle. Tuples have 2 items inside, triples have 3 items.
+
+Tuples have special sugar for their types, just like arrays. `(T, U)` is equivalent to `Tuple<T, U> *`. Triples have no sugar, simply `Triple<T, U, V> *`.
+
+To define a tuple, use `$(x, y)` or `Tuple::new(x, y)`.
+
+To define a triple, use `$$(x, y, z)` or `Triple::new(x, y, z)`.
+
+You can put tuples inside of arrays:
+```rs
+let foo = [$(1, "a"), $(2, "b")];
+
+// ... or if you wanna be explicit ...
+
+(i32, string)[] foo = [$(1, "a"), $(2, "b")];
+
+// if you don't wanna put values inside but wanna use let you can do this
+
+let foo = Array::new<(i32, string)>();
+
+// ... nothing new here
+```
+
+<hr />
+
+### ♡ **Ranges**
+
+Ranges are ways you can define the start and end of a number. There are 2 kinds of ranges in elle: exclusive and inclusive.
+
+Exclusive ranges are defined with `x..y`, where `x` and `y` are expressions.
+Inclusive ranges are defined with `x..=y`, where `x` and `y` are expressions.
+
+An exclusive range means that `x` is inclusive but `y` is exclusive. An inclusive range means both are inclusive.
+
+At the moment, ranges are just aliases for `Array::range(x, y, inclusive)`. This means they are not lazy, they create dynamic arrays.
+
+They can be used in `foreach` loops however, because they're arrays:
+
+```rs
+// 0..10 == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+for i in 0..10 {
+    io::dbg(i);
+}
+
+// 0..0 == []
+for i in 0..0 {
+    io::dbg(i); // will never run
+}
+
+// 5..=10 == [5, 6, 7, 8, 9, 10]
+for i in 5..=10 {
+    io::dbg(i);
+}
+```
 
 <hr />
 
@@ -280,14 +480,13 @@ Elle allows you to create single line lambda functions.
 Here is a basic example of how you can use them:
 
 ```rs
-use std/collections/array;
-use std/io;
+use std/prelude;
 
 fn main() {
-    Array<i32> *arr = Array::new(1, 2, 3);
-    Array<i32> *arr_doubled = arr.map(fn(i32 x) -> x * 2);
+    let arr = [1, 2, 3];
+    let arr_doubled = arr.map<i32>(fn(i32 x) -> x * 2);
 
-    io::println(arr_doubled.to_string()); // [2, 4, 6]
+    io::println(arr_doubled); // <[2, 4, 6] at 0xdeadbeef>
 }
 ```
 
@@ -300,31 +499,28 @@ Please note the following:
 This means that these examples won't work:
 
 ```rs
-use std/collections/array;
-use std/io;
+use std/prelude;
 
 fn main() {
-    Array<i32> *arr = Array::new(1, 2, 3);
-    i32 a = 5;
+    let arr = [1, 2, 3];
+    let a = 5;
 
     // The compiler will throw an error here
-    Array<i32> *arr_doubled = arr.map(fn(i32 x) -> x * a);
-    io::println(arr_doubled.to_string());
+    let arr_doubled = arr.map<i32>(fn(i32 x) -> x * a);
+    io::println(arr_doubled);
 }
 ```
 
 ```rs
-use std/collections/array;
-use std/io;
+use std/prelude;
 
 fn main() {
-    Array<i32> *arr = Array::new(1, 2, 3);
-    i32 a = 5;
+    let arr = [1, 2, 3];
 
     // The program will segfault here (for now)
     // due to not being passed ElleMeta
-    Array<i32> *arr_doubled = arr.map(io::println);
-    io::println(arr_doubled.to_string());
+    let arr_doubled = arr.map(io::println);
+    io::println(arr_doubled);
 }
 ```
 
@@ -352,7 +548,7 @@ fn deref(i32 *`ptr`) @manual -> i32 {
 }
 
 fn main() {
-    i32 x = 5;
+    let x = 5;
 
     // Print the value at the 0th index (pointer start)
     // This is identical to `x[0]`
@@ -392,6 +588,8 @@ out[0] = 'a'; // Keep in mind that `out` is a `char *`
 io::println(out[0]);
 ```
 
+The type of a static buffer cannot be inferred. You must declare it explicitly.
+
 <hr />
 
 ### ♡ **Defer statements**
@@ -404,7 +602,7 @@ A very simple example of this is declaring a variable and deferring printing its
 use std/io;
 
 fn main() {
-    i32 i = 0;
+    let i = 0;
 
     // If this were not in a defer statement, then this would print 0
     // However, it will print 25 instead.
@@ -422,7 +620,7 @@ This also means that if you, hypothetically, design a program like this
 use std/io;
 
 fn main() {
-    i32 i = 0;
+    let i = 0;
     defer io::print(i);
 
     {
@@ -440,7 +638,7 @@ This is because it will call `io::print` once when the standalone block will lea
 You can also write something like this:
 ```rs
 fn main() {
-    i32 i = 0;
+    let i = 0;
     defer io::print(i);
 
     {
@@ -465,13 +663,13 @@ Consider this code:
 use std/io;
 
 fn main() {
-    i64 size = 10;
+    let size = 10;
     i64 *numbers = malloc(size * #size(i64));
     defer free(numbers);
 
-    for i64 i = 0; i < size - 1; i += 1 {
+    for let i = 0; i < size - 1; i += 1 {
         numbers[i] = i * 2;
-        i64 res = numbers[i];
+        let res = numbers[i];
         io::printf("numbers[{}] = {}", i, res);
     }
 
@@ -510,6 +708,7 @@ These are the mappings of types in Elle:
 - `fn` - A type that maps to a `byte`. This is intended to be used as a pointer to the first byte of a function definition.
 - `pointer` - Denoted by `<type> *` -> As pointers are just a number, an address in memory, a pointer in Elle is just an `i64` that holds extra context by holding another type so that it can use its size to calculate an offset when indexing its memory.
 - `string` - A mapping to a `char *`, which is essentially an array of characters, or a "c-string".
+- `any` - A mapping to `void *`. This is **TEMPORARY**.
 
 <hr />
 
@@ -569,7 +768,7 @@ Example of using logical `NOT`:
 use std/io;
 
 fn main() {
-    bool myBool = false;
+    let myBool = false;
 
     if !myBool {
         io::println("Hello world!");
@@ -583,7 +782,7 @@ Example of using bitwise `NOT`:
 use std/io;
 
 fn main() {
-    i32 a = 1;
+    let a = 1;
 
     if ~a == -2 {
         io::println("Hello world!");
@@ -610,7 +809,7 @@ fn other(i32 *something) {
 }
 
 pub fn main() {
-    i32 a = 39;
+    let a = 39;
     other(&a);
     return 0;
 }
@@ -631,7 +830,7 @@ fn other(i32 *a, string *str) {
 }
 
 fn main() {
-    i32 a = 39;
+    let a = 39;
     string str = "Hello world!";
 
     other(&a, &str);
@@ -677,8 +876,13 @@ This is the mapping defined by Elle:
 - `<<` - Shift Left
 - `>>` - Shift Right
 - `<>` - Concatenation (only works on strings)
-- `&&` - Logical And (Not usable when declaring a variable)
-- `||` - Logical Or (Not usable when declaring a variable)
+
+Operators which exist but can't be used when declaring variables:
+
+- `&&` - Logical And
+- `||` - Logical Or
+- `..` - Exclusive range (in 0..10, 0 is inclusive, 10 is exclusive)
+- `..=` - Inclusive range (in 0..=10, 0 is inclusive, 10 is inclusive)
 
 Keep in mind that you can also use these operators when doing a variable declaration.
 This means the following code is valid:
@@ -687,7 +891,7 @@ This means the following code is valid:
 use std/io;
 
 fn main() {
-    i32 a = 1;
+    let a = 1;
     a ^= 1; // a is now 0
     io::println(a);
 }
@@ -695,7 +899,7 @@ fn main() {
 
 And of course, this works for every arithmetic operator, not just `^`.
 
-Elle follows the standard [order of operations](https://github.com/acquitelol/elle/blob/rewrite/src/lexer/enums.rs#L106-L119) described by mathematics (typically defined as BIDMAS or PEMDAS), which means you can also wrap expressions in `()` to evaluate them before other expressions that may have a higher precedence.
+Elle follows the standard [order of operations](https://github.com/acquitelol/elle/blob/rewrite/src/lexer/enums.rs#L114-L130) described by mathematics (typically defined as BIDMAS or PEMDAS), which means you can also wrap expressions in `()` to evaluate them before other expressions that may have a higher precedence.
 
 Example of a program that calculates the xor (`^`) and sum (`+`) of some values:
 
@@ -723,41 +927,6 @@ fn main() {
     io::dbg(a); // Expected: (string) a = "abc"
 }
 ```
-
-<hr />
-
-### ♡ **Array literals**
-
-* An array literal is a simple and intuitive syntax to automatically allocate stack memory for a buffer and assign values at each offset based on the literal definition. Essentially, an expression like this:
-
-```rs
-i32 *some_arr = [512, 1, -3];
-```
-
-would first allocate memory to a buffer and store that in a variable called `some_arr` with the size of `3 * 4 = 12` (because there are 3 items and the size of an `i32` is 4 bytes) and then it would offset the pointer returned and store each value specified at that address.
-
-So it would first store `512` at `some_arr + 0`, then it would store `1` at `some_arr + 4` (offset accounting the size of the array type), then finally would store `-3` at `some_arr + 8`.
-
-<br />
-
-You can view a more detailed example of array usage at [array.le](https://github.com/acquitelol/elle/blob/rewrite/examples/misc/array.le).
-Array literals are not required to be assigned to a variable. Please look at this example:
-
-```rs
-use std/io;
-
-fn other(i64 *arr, i32 val) {
-    io::printf("\narr[0] = {}\nval = {}", arr[0], val);
-}
-
-fn main() {
-    other([MAX_SIGNED_LONG], [123][0]);
-}
-```
-
-where we pass an array literal directly to another function or operation. An array literal, internally, will simply return the memory address of the start of the array. As these arrays has no variable declaration linked to them, there is no way to get their type, however we can infer this type based on the type of the values inside, so it can still be indexed correctly.
-
-You can also get the size and length of these arrays. Simply wrap them in `#size` or `#len` just like if you wanted to get the size of an array that was declared to a variable. For more information, please read the size directives chapter.
 
 <hr />
 
@@ -847,7 +1016,7 @@ Finally, here is a basic example of using `#len` to loop through an array of str
 use std/io;
 
 fn main() {
-    string *some_array = ["abc", "meow", "test"]";
+    let some_array = #["abc", "meow", "test"]";
 
     for i32 i = 0; i < #len(some_array); i += 1 {
         io::printf("some_array[{}] = {}", i, some_array[i]);
