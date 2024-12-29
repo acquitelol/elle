@@ -176,7 +176,7 @@ impl<'a> Statement<'a> {
         }
 
         if self.is_eof() || self.current_token().kind == TokenKind::Semicolon {
-            return AstNode::DeclareStatement {
+            return AstNode::Declare {
                 name,
                 r#type: r#type.clone(),
                 // If the type is a struct create 'Struct {}' otherwise 0
@@ -195,10 +195,10 @@ impl<'a> Statement<'a> {
         let res = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
         let parsed_res = match res.clone() {
-            AstNode::DeclareStatement { name, .. } => {
+            AstNode::Declare { name, .. } => {
                 self.body.borrow_mut().push(res);
 
-                AstNode::LiteralStatement {
+                AstNode::Literal {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
                     location: location.clone(),
@@ -207,7 +207,7 @@ impl<'a> Statement<'a> {
             _ => res,
         };
 
-        AstNode::DeclareStatement {
+        AstNode::Declare {
             name,
             r#type,
             value: Some(Box::new(parsed_res)),
@@ -227,11 +227,11 @@ impl<'a> Statement<'a> {
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
         let mapping = operation.kind.to_non_declarative();
 
-        AstNode::DeclareStatement {
+        AstNode::Declare {
             name: name.clone(),
             r#type: None,
-            value: Some(Box::new(AstNode::ArithmeticOperation {
-                left: Box::new(AstNode::LiteralStatement {
+            value: Some(Box::new(AstNode::BinaryOperation {
+                left: Box::new(AstNode::Literal {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
                     location: location.clone(),
@@ -264,13 +264,13 @@ impl<'a> Statement<'a> {
         let exponent = right.len();
         let original = String::from_iter([left, right]).parse::<i128>().unwrap();
 
-        AstNode::ArithmeticOperation {
-            left: Box::new(AstNode::LiteralStatement {
+        AstNode::BinaryOperation {
+            left: Box::new(AstNode::Literal {
                 kind: TokenKind::FloatLiteral,
                 value: ValueKind::Number(original),
                 location: self.current_token().location,
             }),
-            right: Box::new(AstNode::LiteralStatement {
+            right: Box::new(AstNode::Literal {
                 kind: TokenKind::FloatLiteral,
                 value: ValueKind::Number(10_i128.pow(exponent as u32)),
                 location: self.current_token().location,
@@ -331,8 +331,8 @@ impl<'a> Statement<'a> {
         self.advance();
 
         if self.current_token().kind == TokenKind::Semicolon {
-            return AstNode::ReturnStatement {
-                value: Box::new(AstNode::LiteralStatement {
+            return AstNode::Return {
+                value: Box::new(AstNode::Literal {
                     kind: TokenKind::IntegerLiteral,
                     value: ValueKind::Number(0),
                     location: self.current_token().location.clone(),
@@ -347,7 +347,7 @@ impl<'a> Statement<'a> {
         let res = if tokens.len() > 0 {
             Statement::new(tokens, 0, &self.body, self.shared).parse().0
         } else {
-            AstNode::LiteralStatement {
+            AstNode::Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(0),
                 location: self.current_token().location,
@@ -355,10 +355,10 @@ impl<'a> Statement<'a> {
         };
 
         let parsed_res = match res.clone() {
-            AstNode::DeclareStatement { name, .. } => {
+            AstNode::Declare { name, .. } => {
                 self.body.borrow_mut().push(res);
 
-                AstNode::LiteralStatement {
+                AstNode::Literal {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
                     location: self.current_token().location,
@@ -367,7 +367,7 @@ impl<'a> Statement<'a> {
             _ => res,
         };
 
-        AstNode::ReturnStatement {
+        AstNode::Return {
             value: Box::new(parsed_res),
             location,
         }
@@ -419,7 +419,7 @@ impl<'a> Statement<'a> {
         };
 
         if self.current_token().kind == TokenKind::Semicolon || self.is_eof() {
-            return AstNode::LiteralStatement {
+            return AstNode::Literal {
                 kind: TokenKind::Identifier,
                 value: ValueKind::String(name),
                 location,
@@ -642,7 +642,7 @@ impl<'a> Statement<'a> {
         // Shift the position across the size of the expression
         self.position += left.len() + right_end_index;
 
-        let node = AstNode::ArithmeticOperation {
+        let node = AstNode::BinaryOperation {
             left: Box::new(Statement::new(left, 0, &self.body, self.shared).parse().0),
             right: Box::new(Statement::new(right, 0, &self.body, self.shared).parse().0),
             operator,
@@ -672,7 +672,7 @@ impl<'a> Statement<'a> {
 
             let right = self.parse_primary();
 
-            node = AstNode::ArithmeticOperation {
+            node = AstNode::BinaryOperation {
                 left: Box::new(node),
                 right: Box::new(right),
                 operator,
@@ -720,7 +720,7 @@ impl<'a> Statement<'a> {
         self.advance();
         self.expect_tokens(vec![TokenKind::Semicolon]);
 
-        AstNode::BufferStatement {
+        AstNode::Buffer {
             name,
             r#type: Some(ty.unwrap_or(Type::Byte)),
             size: Box::new(size.unwrap()),
@@ -829,7 +829,7 @@ impl<'a> Statement<'a> {
 
         self.advance();
 
-        let array = AstNode::ArrayStatement {
+        let array = AstNode::ArrayLiteral {
             values,
             known_generics: self.shared.known_generics.clone(),
             location: self.current_token().location,
@@ -897,7 +897,7 @@ impl<'a> Statement<'a> {
 
         self.position -= 1;
 
-        AstNode::WhileLoop {
+        AstNode::WhileLoopStatement {
             condition: Box::new(expression),
             step: None,
             body,
@@ -964,7 +964,7 @@ impl<'a> Statement<'a> {
                 .parse()
                 .0
         } else {
-            AstNode::LiteralStatement {
+            AstNode::Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(0),
                 location: self.current_token().location,
@@ -985,7 +985,7 @@ impl<'a> Statement<'a> {
                 .parse()
                 .0
         } else {
-            AstNode::LiteralStatement {
+            AstNode::Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(1),
                 location: self.current_token().location,
@@ -1048,7 +1048,7 @@ impl<'a> Statement<'a> {
                 .parse()
                 .0
         } else {
-            AstNode::LiteralStatement {
+            AstNode::Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(1),
                 location: self.current_token().location,
@@ -1063,7 +1063,7 @@ impl<'a> Statement<'a> {
             self.body.borrow_mut().push(declare);
         }
 
-        AstNode::WhileLoop {
+        AstNode::WhileLoopStatement {
             condition: Box::new(condition),
             step: Some(Box::new(step)),
             body,
@@ -1111,19 +1111,19 @@ impl<'a> Statement<'a> {
 
         self.position -= 1;
 
-        let index_node = AstNode::LiteralStatement {
+        let index_node = AstNode::Literal {
             kind: TokenKind::Identifier,
             value: ValueKind::String(index.clone()),
             location: location.clone(),
         };
 
-        let iterator_node = AstNode::LiteralStatement {
+        let iterator_node = AstNode::Literal {
             kind: TokenKind::Identifier,
             value: ValueKind::String(iter.clone()),
             location: location.clone(),
         };
 
-        let element_access = AstNode::MemoryStatement {
+        let element_access = AstNode::MemoryOperation {
             left: Box::new(iterator_node.clone()),
             right: Box::new(index_node.clone()),
             value: None,
@@ -1133,7 +1133,7 @@ impl<'a> Statement<'a> {
             is_deref: false,
         };
 
-        let element_node = AstNode::DeclareStatement {
+        let element_node = AstNode::Declare {
             name,
             r#type: Some(ty),
             value: Some(Box::new(element_access)),
@@ -1141,7 +1141,7 @@ impl<'a> Statement<'a> {
             value_location: location.clone(),
         };
 
-        let condition_node = AstNode::ArithmeticOperation {
+        let condition_node = AstNode::BinaryOperation {
             left: Box::new(index_node.clone()),
             right: Box::new(AstNode::FunctionCall {
                 name: LEN_CONSTANT.into(),
@@ -1157,12 +1157,12 @@ impl<'a> Statement<'a> {
             location: location.clone(),
         };
 
-        let step_node = AstNode::DeclareStatement {
+        let step_node = AstNode::Declare {
             name: index.clone(),
             r#type: None,
-            value: Some(Box::new(AstNode::ArithmeticOperation {
+            value: Some(Box::new(AstNode::BinaryOperation {
                 left: Box::new(index_node),
-                right: Box::new(AstNode::LiteralStatement {
+                right: Box::new(AstNode::Literal {
                     kind: TokenKind::IntegerLiteral,
                     value: ValueKind::Number(1),
                     location: location.clone(),
@@ -1176,10 +1176,10 @@ impl<'a> Statement<'a> {
             value_location: location.clone(),
         };
 
-        self.body.borrow_mut().push(AstNode::DeclareStatement {
+        self.body.borrow_mut().push(AstNode::Declare {
             name: index,
             r#type: Some(Type::Word),
-            value: Some(Box::new(AstNode::LiteralStatement {
+            value: Some(Box::new(AstNode::Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(0),
                 location: location.clone(),
@@ -1188,7 +1188,7 @@ impl<'a> Statement<'a> {
             value_location: location.clone(),
         });
 
-        self.body.borrow_mut().push(AstNode::DeclareStatement {
+        self.body.borrow_mut().push(AstNode::Declare {
             name: iter,
             r#type: Some(Type::Infer),
             value: Some(Box::new(iterator)),
@@ -1197,7 +1197,7 @@ impl<'a> Statement<'a> {
         });
         body.insert(0, element_node);
 
-        AstNode::WhileLoop {
+        AstNode::WhileLoopStatement {
             condition: Box::new(condition_node),
             step: Some(Box::new(step_node)),
             body,
@@ -1363,7 +1363,7 @@ impl<'a> Statement<'a> {
 
         let mut value_location = self.current_token().location.clone();
 
-        let mut expression = AstNode::MemoryStatement {
+        let mut expression = AstNode::MemoryOperation {
             left: left.clone(),
             right: right.clone(),
             value: None,
@@ -1385,7 +1385,7 @@ impl<'a> Statement<'a> {
                         .0,
                 ));
 
-                expression = AstNode::MemoryStatement {
+                expression = AstNode::MemoryOperation {
                     left: left.clone(),
                     right: right.clone(),
                     value,
@@ -1398,7 +1398,7 @@ impl<'a> Statement<'a> {
             other if other.is_declarative() => {
                 value = Some(Box::new(self.parse_declarative_node(expression.clone())));
 
-                expression = AstNode::MemoryStatement {
+                expression = AstNode::MemoryOperation {
                     left: left.clone(),
                     right: right.clone(),
                     value,
@@ -1453,7 +1453,7 @@ impl<'a> Statement<'a> {
 
         self.advance();
 
-        AstNode::VariadicStatement {
+        AstNode::VariadicStart {
             name,
             size,
             location,
@@ -1479,7 +1479,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
-        let mut expression = AstNode::NextStatement {
+        let mut expression = AstNode::VariadicArgument {
             name,
             r#type: Some(r#type),
             location: location.clone(),
@@ -1575,9 +1575,9 @@ impl<'a> Statement<'a> {
 
         let value = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
-        AstNode::LambdaStatement {
+        AstNode::Lambda {
             arguments,
-            value: vec![AstNode::ReturnStatement {
+            value: vec![AstNode::Return {
                 value: Box::new(value),
                 location: location.clone(),
             }],
@@ -1647,7 +1647,7 @@ impl<'a> Statement<'a> {
 
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
-        AstNode::ConversionStatement {
+        AstNode::Conversion {
             r#type: Some(r#type),
             value,
             location,
@@ -1748,7 +1748,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
-        let mut expression = AstNode::SizeStatement { value, location };
+        let mut expression = AstNode::Size { value, location };
 
         match self.current_token().kind {
             other if other.is_ternary_start() => {
@@ -1830,7 +1830,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
-        let mut expression = AstNode::ArrayLengthStatement { value, location };
+        let mut expression = AstNode::ArrayLength { value, location };
 
         match self.current_token().kind {
             other if other.is_ternary_start() => {
@@ -1853,7 +1853,7 @@ impl<'a> Statement<'a> {
 
         let tokens = self.yield_tokens_for_unary();
         let parsed = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
-        let node = AstNode::ArithmeticOperation {
+        let node = AstNode::BinaryOperation {
             left: parsed,
             right: Box::new(AstNode::token_to_literal(token)),
             operator: TokenKind::Multiply,
@@ -1875,7 +1875,7 @@ impl<'a> Statement<'a> {
 
         let tokens = self.yield_tokens_for_unary();
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
-        let node = AstNode::NotStatement { value, location };
+        let node = AstNode::LogicalNot { value, location };
 
         if self.current_token().kind.is_ternary_start() {
             self.parse_ternary_node(node)
@@ -1890,7 +1890,7 @@ impl<'a> Statement<'a> {
 
         let tokens = self.yield_tokens_for_unary();
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
-        let node = AstNode::BitwiseNotStatement { value, location };
+        let node = AstNode::BitWiseNot { value, location };
 
         if self.current_token().kind.is_ternary_start() {
             self.parse_ternary_node(node)
@@ -1905,7 +1905,7 @@ impl<'a> Statement<'a> {
 
         let tokens = self.yield_tokens_for_unary();
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
-        let node = AstNode::AddressStatement { value, location };
+        let node = AstNode::Address { value, location };
 
         if self.current_token().kind.is_ternary_start() {
             self.parse_ternary_node(node)
@@ -1924,7 +1924,7 @@ impl<'a> Statement<'a> {
         let left = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
         let right_location = self.current_token().location.clone();
-        let right = Box::new(AstNode::LiteralStatement {
+        let right = Box::new(AstNode::Literal {
             kind: TokenKind::LongLiteral,
             value: ValueKind::Number(0),
             location: self.current_token().location,
@@ -1947,7 +1947,7 @@ impl<'a> Statement<'a> {
 
             other if other.is_declarative() => {
                 value = Some(Box::new(self.parse_declarative_node(
-                    AstNode::MemoryStatement {
+                    AstNode::MemoryOperation {
                         left: left.clone(),
                         right: right.clone(),
                         value,
@@ -1961,7 +1961,7 @@ impl<'a> Statement<'a> {
             _ => {}
         }
 
-        AstNode::MemoryStatement {
+        AstNode::MemoryOperation {
             left,
             right,
             value,
@@ -2072,7 +2072,7 @@ impl<'a> Statement<'a> {
             values.push((name, value));
         }
 
-        AstNode::StructStatement {
+        AstNode::StructLiteral {
             name,
             values,
             location,
@@ -2178,7 +2178,7 @@ impl<'a> Statement<'a> {
                     Some((inner_location, name)),
                     Some(vec![(
                         location.clone(),
-                        AstNode::FieldStatement {
+                        AstNode::FieldAccess {
                             left,
                             right,
                             value,
@@ -2191,16 +2191,16 @@ impl<'a> Statement<'a> {
                 );
             }
 
-            if let AstNode::FieldStatement {
+            if let AstNode::FieldAccess {
                 left,
                 right: inner_right,
                 location,
                 ..
             } = *right
             {
-                right = Box::new(AstNode::FieldStatement {
+                right = Box::new(AstNode::FieldAccess {
                     left,
-                    right: Box::new(AstNode::FieldStatement {
+                    right: Box::new(AstNode::FieldAccess {
                         left: inner_right,
                         right: inner,
                         value: None,
@@ -2210,7 +2210,7 @@ impl<'a> Statement<'a> {
                     location,
                 })
             } else {
-                right = Box::new(AstNode::FieldStatement {
+                right = Box::new(AstNode::FieldAccess {
                     left: right,
                     right: inner,
                     value: None, // Only the root may have a value
@@ -2243,7 +2243,7 @@ impl<'a> Statement<'a> {
             TokenKind::LeftBlockBrace => {
                 return self.parse_offset_store(Some((
                     position,
-                    AstNode::FieldStatement {
+                    AstNode::FieldAccess {
                         left: left.clone(),
                         right: right.clone(),
                         value,
@@ -2254,7 +2254,7 @@ impl<'a> Statement<'a> {
             }
             other if other.is_declarative() => {
                 value = Some(Box::new(self.parse_declarative_node(
-                    AstNode::FieldStatement {
+                    AstNode::FieldAccess {
                         left: left.clone(),
                         right: right.clone(),
                         value: None,
@@ -2263,7 +2263,7 @@ impl<'a> Statement<'a> {
                 )));
             }
             other if other.is_ternary_start() => {
-                return self.parse_ternary_node(AstNode::FieldStatement {
+                return self.parse_ternary_node(AstNode::FieldAccess {
                     left,
                     right,
                     value,
@@ -2277,7 +2277,7 @@ impl<'a> Statement<'a> {
             _ => {}
         }
 
-        AstNode::FieldStatement {
+        AstNode::FieldAccess {
             left,
             right,
             value,
@@ -2322,7 +2322,7 @@ impl<'a> Statement<'a> {
             Statement::new(tokens, 0, &self.body, self.shared).parse().0
         });
 
-        AstNode::TernaryStatement {
+        AstNode::Ternary {
             condition: Box::new(condition),
             if_true,
             if_false,
@@ -2344,7 +2344,7 @@ impl<'a> Statement<'a> {
 
         let location = self.current_token().location.clone();
 
-        let mut expression = AstNode::LiteralStatement {
+        let mut expression = AstNode::Literal {
             kind: TokenKind::Identifier,
             value: ValueKind::String(format!(INTERNAL_IDX_FORMAT!(), name)),
             location: location.clone(),
@@ -2355,7 +2355,7 @@ impl<'a> Statement<'a> {
                 self.advance();
                 let value_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
-                expression = AstNode::DeclareStatement {
+                expression = AstNode::Declare {
                     name: format!(INTERNAL_IDX_FORMAT!(), name),
                     r#type: None,
                     value: Some(Box::new(
@@ -2368,7 +2368,7 @@ impl<'a> Statement<'a> {
                 }
             }
             other if other.is_declarative() => {
-                expression = AstNode::DeclareStatement {
+                expression = AstNode::Declare {
                     name: format!(INTERNAL_IDX_FORMAT!(), name),
                     r#type: None,
                     value: Some(Box::new(self.parse_declarative_node(expression))),
@@ -2397,7 +2397,7 @@ impl<'a> Statement<'a> {
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
         let mapping = operation.kind.to_non_declarative();
 
-        AstNode::ArithmeticOperation {
+        AstNode::BinaryOperation {
             left: Box::new(node.clone()),
             right: Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0),
             operator: mapping,
@@ -2544,12 +2544,12 @@ impl<'a> Statement<'a> {
 
             for node in nodes.drain(..) {
                 match node {
-                    AstNode::ReturnStatement { .. } => {
+                    AstNode::Return { .. } => {
                         new_nodes.extend(deferred.clone());
                         new_nodes.push(node);
                         found_return = true;
                     }
-                    AstNode::WhileLoop {
+                    AstNode::WhileLoopStatement {
                         condition,
                         step,
                         body,
@@ -2558,7 +2558,7 @@ impl<'a> Statement<'a> {
                         let mut new_body = body;
                         insert_deferred_statements(&mut new_body, deferred, false);
 
-                        new_nodes.push(AstNode::WhileLoop {
+                        new_nodes.push(AstNode::WhileLoopStatement {
                             condition,
                             step,
                             body: new_body,

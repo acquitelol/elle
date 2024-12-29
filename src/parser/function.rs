@@ -341,12 +341,12 @@ impl<'a> Function<'a> {
 
             for node in nodes.drain(..) {
                 match node {
-                    AstNode::ReturnStatement { .. } => {
+                    AstNode::Return { .. } => {
                         new_nodes.extend(deferred.clone());
                         new_nodes.push(node);
                         found_return = true;
                     }
-                    AstNode::WhileLoop {
+                    AstNode::WhileLoopStatement {
                         condition,
                         step,
                         body,
@@ -355,7 +355,7 @@ impl<'a> Function<'a> {
                         let mut new_body = body;
                         insert_deferred_statements(&mut new_body, deferred, false);
 
-                        new_nodes.push(AstNode::WhileLoop {
+                        new_nodes.push(AstNode::WhileLoopStatement {
                             condition,
                             step,
                             body: new_body,

@@ -283,7 +283,7 @@ pub fn lex_and_parse(
                 imported: false,
                 // void *
                 r#type: Some(Type::Pointer(Box::new(Type::Void))),
-                value: Box::new(AstNode::LiteralStatement {
+                value: Box::new(AstNode::Literal {
                     kind: TokenKind::LongLiteral,
                     value: ValueKind::Number(0),
                     location: loc.clone(),
@@ -313,9 +313,9 @@ pub fn lex_and_parse(
                     manual: false,
                 }],
                 r#return: Some(Type::Word),
-                body: vec![AstNode::ReturnStatement {
-                    value: Box::new(AstNode::ArrayLengthStatement {
-                        value: Box::new(AstNode::LiteralStatement {
+                body: vec![AstNode::Return {
+                    value: Box::new(AstNode::ArrayLength {
+                        value: Box::new(AstNode::Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("self".into()),
                             location: loc.clone(),
@@ -334,14 +334,14 @@ pub fn lex_and_parse(
             for primitive in Type::get_primitive_types() {
                 let idx = as_string_idx!(tree, INTERNAL_FORMATTER);
 
-                let mut body = vec![AstNode::ReturnStatement {
+                let mut body = vec![AstNode::Return {
                     value: Box::new(AstNode::FunctionCall {
                         name: format!("string.{}", INTERNAL_FORMATTER),
                         generics: vec![],
                         parameters: vec![
                             (
                                 loc.clone(),
-                                AstNode::LiteralStatement {
+                                AstNode::Literal {
                                     kind: TokenKind::StringLiteral,
                                     value: ValueKind::String(
                                         match primitive {
@@ -356,7 +356,7 @@ pub fn lex_and_parse(
                             ),
                             (
                                 loc.clone(),
-                                AstNode::LiteralStatement {
+                                AstNode::Literal {
                                     kind: TokenKind::Identifier,
                                     value: ValueKind::String("self".into()),
                                     location: loc.clone(),
@@ -374,17 +374,17 @@ pub fn lex_and_parse(
                     body.insert(
                         0,
                         AstNode::IfStatement {
-                            condition: Box::new(AstNode::ArithmeticOperation {
-                                left: Box::new(AstNode::ConversionStatement {
+                            condition: Box::new(AstNode::BinaryOperation {
+                                left: Box::new(AstNode::Conversion {
                                     r#type: Some(Type::Long),
-                                    value: Box::new(AstNode::LiteralStatement {
+                                    value: Box::new(AstNode::Literal {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("self".into()),
                                         location: loc.clone(),
                                     }),
                                     location: loc.clone(),
                                 }),
-                                right: Box::new(AstNode::LiteralStatement {
+                                right: Box::new(AstNode::Literal {
                                     kind: TokenKind::IntegerLiteral,
                                     value: ValueKind::Number(0),
                                     location: loc.clone(),
@@ -394,8 +394,8 @@ pub fn lex_and_parse(
                                 dunder_methods: false,
                                 location: loc.clone(),
                             }),
-                            body: vec![AstNode::ReturnStatement {
-                                value: Box::new(AstNode::LiteralStatement {
+                            body: vec![AstNode::Return {
+                                value: Box::new(AstNode::Literal {
                                     kind: TokenKind::StringLiteral,
                                     value: ValueKind::String("(nil)".into()),
                                     location: loc.clone(),
@@ -475,10 +475,10 @@ pub fn lex_and_parse(
                     ],
                     r#return: Some(Type::Pointer(Box::new(Type::Char))),
                     body: vec![
-                        AstNode::DeclareStatement {
+                        AstNode::Declare {
                             name: "res".into(),
                             r#type: Some(Type::Pointer(Box::new(Type::Char))),
-                            value: Some(Box::new(AstNode::LiteralStatement {
+                            value: Some(Box::new(AstNode::Literal {
                                 kind: TokenKind::StringLiteral,
                                 value: ValueKind::String("invalid".into()),
                                 location: loc.clone(),
@@ -487,14 +487,14 @@ pub fn lex_and_parse(
                             value_location: loc.clone(),
                         },
                         AstNode::IfStatement {
-                            condition: Box::new(AstNode::ArithmeticOperation {
-                                left: Box::new(AstNode::ArithmeticOperation {
-                                    left: Box::new(AstNode::LiteralStatement {
+                            condition: Box::new(AstNode::BinaryOperation {
+                                left: Box::new(AstNode::BinaryOperation {
+                                    left: Box::new(AstNode::Literal {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("self".into()),
                                         location: loc.clone(),
                                     }),
-                                    right: Box::new(AstNode::LiteralStatement {
+                                    right: Box::new(AstNode::Literal {
                                         kind: TokenKind::IntegerLiteral,
                                         value: ValueKind::Number(0),
                                         location: loc.clone()
@@ -504,14 +504,14 @@ pub fn lex_and_parse(
                                     dunder_methods: false,
                                     location: loc.clone()
                                 }),
-                                right: Box::new(AstNode::ArithmeticOperation {
-                                    left: Box::new(AstNode::ArithmeticOperation {
-                                        left: Box::new(AstNode::LiteralStatement {
+                                right: Box::new(AstNode::BinaryOperation {
+                                    left: Box::new(AstNode::BinaryOperation {
+                                        left: Box::new(AstNode::Literal {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("self".into()),
                                             location: loc.clone(),
                                         }),
-                                        right: Box::new(AstNode::LiteralStatement {
+                                        right: Box::new(AstNode::Literal {
                                             kind: TokenKind::IntegerLiteral,
                                             value: ValueKind::Number(Type::Word.size_base() as i128),
                                             location: loc.clone(),
@@ -521,7 +521,7 @@ pub fn lex_and_parse(
                                         dunder_methods: false,
                                         location: loc.clone(),
                                     }),
-                                    right: Box::new(AstNode::LiteralStatement {
+                                    right: Box::new(AstNode::Literal {
                                         kind: TokenKind::IntegerLiteral,
                                         value: ValueKind::Number(0),
                                         location: loc.clone()
@@ -536,7 +536,7 @@ pub fn lex_and_parse(
                                 dunder_methods: false,
                                 location: loc.clone(),
                             }),
-                            body: vec![AstNode::DeclareStatement {
+                            body: vec![AstNode::Declare {
                                 name: "res".into(),
                                 r#type: None,
                                 value: Some(Box::new(AstNode::FunctionCall {
@@ -545,13 +545,13 @@ pub fn lex_and_parse(
                                     parameters: vec![
                                         (
                                             loc.clone(),
-                                            AstNode::MemoryStatement {
-                                                left: Box::new(AstNode::LiteralStatement {
+                                            AstNode::MemoryOperation {
+                                                left: Box::new(AstNode::Literal {
                                                     kind: TokenKind::Identifier,
                                                     value: ValueKind::String("self".into()),
                                                     location: loc.clone(),
                                                 }),
-                                                right: Box::new(AstNode::LiteralStatement {
+                                                right: Box::new(AstNode::Literal {
                                                     kind: TokenKind::IntegerLiteral,
                                                     value: ValueKind::Number(0),
                                                     location: loc.clone(),
@@ -565,7 +565,7 @@ pub fn lex_and_parse(
                                         ),
                                         (
                                             loc.clone(),
-                                            AstNode::LiteralStatement {
+                                            AstNode::Literal {
                                                 kind: TokenKind::Identifier,
                                                 value: ValueKind::String("nesting".into()),
                                                 location: loc.clone(),
@@ -582,14 +582,14 @@ pub fn lex_and_parse(
                             else_body: vec![],
                             location: loc.clone(),
                         },
-                        AstNode::ReturnStatement {
+                        AstNode::Return {
                             value: Box::new(AstNode::FunctionCall {
                                 name: format!("string.{}", INTERNAL_FORMATTER).into(),
                                 generics: vec![],
                                 parameters: vec![
                                     (
                                         loc.clone(),
-                                        AstNode::LiteralStatement {
+                                        AstNode::Literal {
                                             kind: TokenKind::StringLiteral,
                                             value: ValueKind::String("<{} at {}>".into()),
                                             location: loc.clone(),
@@ -597,7 +597,7 @@ pub fn lex_and_parse(
                                     ),
                                     (
                                         loc.clone(),
-                                        AstNode::LiteralStatement {
+                                        AstNode::Literal {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("res".into()),
                                             location: loc.clone(),
@@ -605,7 +605,7 @@ pub fn lex_and_parse(
                                     ),
                                     (
                                         loc.clone(),
-                                        AstNode::LiteralStatement {
+                                        AstNode::Literal {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("self".into()),
                                             location: loc.clone(),
@@ -654,14 +654,14 @@ pub fn lex_and_parse(
                         },
                     ],
                     r#return: Some(Type::Pointer(Box::new(Type::Char))),
-                    body: vec![AstNode::ReturnStatement {
+                    body: vec![AstNode::Return {
                         value: Box::new(AstNode::FunctionCall {
                             name: format!("string.{}", INTERNAL_FORMATTER).into(),
                             generics: vec![],
                             parameters: vec![
                                 (
                                     loc.clone(),
-                                    AstNode::LiteralStatement {
+                                    AstNode::Literal {
                                         kind: TokenKind::StringLiteral,
                                         value: ValueKind::String("<unknown at {}>".into()),
                                         location: loc.clone(),
@@ -669,7 +669,7 @@ pub fn lex_and_parse(
                                 ),
                                 (
                                     loc.clone(),
-                                    AstNode::LiteralStatement {
+                                    AstNode::Literal {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("self".into()),
                                         location: loc.clone(),
@@ -710,21 +710,21 @@ pub fn lex_and_parse(
                 }],
                 r#return: Some(Type::Pointer(Box::new(Type::Char))),
                 body: vec![AstNode::IfStatement {
-                    condition: Box::new(AstNode::LiteralStatement {
+                    condition: Box::new(AstNode::Literal {
                         kind: TokenKind::Identifier,
                         value: ValueKind::String("self".into()),
                         location: loc.clone(),
                     }),
-                    body: vec![AstNode::ReturnStatement {
-                        value: Box::new(AstNode::LiteralStatement {
+                    body: vec![AstNode::Return {
+                        value: Box::new(AstNode::Literal {
                             kind: TokenKind::StringLiteral,
                             value: ValueKind::String("true".into()),
                             location: loc.clone(),
                         }),
                         location: loc.clone(),
                     }],
-                    else_body: vec![AstNode::ReturnStatement {
-                        value: Box::new(AstNode::LiteralStatement {
+                    else_body: vec![AstNode::Return {
+                        value: Box::new(AstNode::Literal {
                             kind: TokenKind::StringLiteral,
                             value: ValueKind::String("false".into()),
                             location: loc.clone(),

@@ -231,18 +231,18 @@ macro_rules! unknown_function {
 macro_rules! token_to_node {
     ($token:expr, $self:expr) => {
         match $token.kind {
-            TokenKind::TrueLiteral => AstNode::LiteralStatement {
+            TokenKind::TrueLiteral => AstNode::Literal {
                 kind: TokenKind::BoolLiteral,
                 value: ValueKind::Number(1),
                 location: $token.location,
             },
-            TokenKind::FalseLiteral => AstNode::LiteralStatement {
+            TokenKind::FalseLiteral => AstNode::Literal {
                 kind: TokenKind::BoolLiteral,
                 value: ValueKind::Number(0),
                 location: $token.location,
             },
             TokenKind::FloatingPoint => $self.parse_float($token),
-            _ => AstNode::LiteralStatement {
+            _ => AstNode::Literal {
                 kind: $token.kind,
                 value: $token.value,
                 location: $token.location,

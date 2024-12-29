@@ -10,14 +10,13 @@ use super::parser::StructPool;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
-    LiteralStatement {
+    Literal {
         kind: TokenKind,
         value: ValueKind,
         location: Location,
     },
     /// A declaration of name `name` with type `r#type` to value `value
-    /// If unique is true, ignores `name` and generates a unique temp name
-    DeclareStatement {
+    Declare {
         name: String,
         r#type: Option<Type>,
         value: Option<Box<AstNode>>,
@@ -25,19 +24,19 @@ pub enum AstNode {
         value_location: Location,
     },
     /// Allocates stack memory of size `size`, assigns it to `name`, and calls `vastart` on it
-    VariadicStatement {
+    VariadicStart {
         name: String,
         size: Box<AstNode>,
         location: Location,
     },
     /// Yields a new argument of type `r#type` from `name`
-    NextStatement {
+    VariadicArgument {
         name: String,
         r#type: Option<Type>,
         location: Location,
     },
     /// Returns value `value`
-    ReturnStatement {
+    Return {
         value: Box<AstNode>,
         location: Location,
     },
@@ -51,7 +50,7 @@ pub enum AstNode {
         location: Location,
     },
     /// Performs an arithmetic operation with `operator` using `left` and `right
-    ArithmeticOperation {
+    BinaryOperation {
         left: Box<AstNode>,
         right: Box<AstNode>,
         operator: TokenKind,
@@ -68,34 +67,34 @@ pub enum AstNode {
     },
     /// Runs `body` while condition `condition` is true, using step `step`
     /// (`step` is used for easy merging between while loops and for loops)
-    WhileLoop {
+    WhileLoopStatement {
         condition: Box<AstNode>,
         step: Option<Box<AstNode>>,
         body: Vec<AstNode>,
         location: Location,
     },
     /// Declares a buffer named `name` with an inner type `r#type` and size `size`
-    BufferStatement {
+    Buffer {
         name: String,
         r#type: Option<Type>,
         size: Box<AstNode>,
         location: Location,
     },
     /// Declares an array literal of size `values.len()` and values `values` and returns a pointer to the start of it
-    ArrayStatement {
+    ArrayLiteral {
         known_generics: Vec<Type>,
         values: Vec<(Location, AstNode)>,
         location: Location,
         dynamic: bool,
     },
     /// Declares a struct named `name` with values `values`
-    StructStatement {
+    StructLiteral {
         name: String,
         values: Vec<(String, Box<AstNode>)>,
         location: Location,
     },
     /// Accesses the fields of a struct, optionally assigning a value to the result
-    FieldStatement {
+    FieldAccess {
         left: Box<AstNode>,
         right: Box<AstNode>,
         value: Option<Box<AstNode>>,
@@ -103,7 +102,7 @@ pub enum AstNode {
     },
     /// Loads or stores information from a pointer through pointer arithmetic
     /// In an expression like a[10], left is `a` and right is `10`
-    MemoryStatement {
+    MemoryOperation {
         left: Box<AstNode>,
         right: Box<AstNode>,
         value: Option<Box<AstNode>>,
@@ -125,47 +124,47 @@ pub enum AstNode {
         location: Location,
     },
     /// Takes value `value` and negates it (compares it to 0)
-    NotStatement {
+    LogicalNot {
         value: Box<AstNode>,
         location: Location,
     },
     /// Takes value `value` and flips all its bits
-    BitwiseNotStatement {
+    BitWiseNot {
         value: Box<AstNode>,
         location: Location,
     },
-    /// Returns the address of a some `value`
-    AddressStatement {
+    /// Returns the address of some value `value`
+    Address {
         value: Box<AstNode>,
         location: Location,
     },
     /// Performs an explicit conversion of value `value` to type `r#type`
-    ConversionStatement {
+    Conversion {
         r#type: Option<Type>,
         value: Box<AstNode>,
         location: Location,
     },
     /// Returns the size (in bytes) or length, depending on if `standalone` is set to true
     /// The result is used to allow for getting the size of both expressions and types
-    SizeStatement {
+    Size {
         value: Result<Type, Box<AstNode>>,
         location: Location,
     },
     /// Creates a capturing closure that takes in some number of arguments
     /// and returns a single line statement result
-    LambdaStatement {
+    Lambda {
         arguments: Vec<Argument>,
         value: Vec<AstNode>,
         location: Location,
     },
     /// Calculates the array length of an Elle-generated array
     /// Uses the formula *(array_ptr - #size(i32))
-    ArrayLengthStatement {
+    ArrayLength {
         value: Box<AstNode>,
         location: Location,
     },
     /// An expression which allows you to declare a value to something conditionally.
-    TernaryStatement {
+    Ternary {
         condition: Box<AstNode>,
         if_true: Box<AstNode>,
         if_false: Box<AstNode>,
@@ -175,7 +174,7 @@ pub enum AstNode {
 
 impl AstNode {
     pub fn token_to_literal(token: Token) -> AstNode {
-        Self::LiteralStatement {
+        Self::Literal {
             kind: token.kind,
             value: token.value,
             location: token.location,
@@ -204,8 +203,8 @@ fn modify_type_in_node(
     tree: Option<&RefCell<Vec<Primitive>>>,
 ) -> AstNode {
     match &mut node {
-        AstNode::LiteralStatement { .. } => {}
-        AstNode::DeclareStatement { r#type, value, .. } => {
+        AstNode::Literal { .. } => {}
+        AstNode::Declare { r#type, value, .. } => {
             if let Some(ty) = r#type {
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }
@@ -216,7 +215,7 @@ fn modify_type_in_node(
                 *value = Box::new(new_value);
             }
         }
-        AstNode::LambdaStatement {
+        AstNode::Lambda {
             arguments, value, ..
         } => {
             for arg in arguments.iter_mut() {
@@ -226,27 +225,27 @@ fn modify_type_in_node(
 
             *value = modify_type_in_ast(value.clone(), generics, known_types, struct_pool, tree);
         }
-        AstNode::ReturnStatement { value, .. } => {
+        AstNode::Return { value, .. } => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
-        AstNode::NextStatement { r#type, .. } => {
+        AstNode::VariadicArgument { r#type, .. } => {
             if let Some(ty) = r#type {
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }
         }
-        AstNode::VariadicStatement { size, .. } => {
+        AstNode::VariadicStart { size, .. } => {
             let new_size =
                 modify_type_in_node(*size.clone(), generics, known_types, struct_pool, tree);
             *size = Box::new(new_size);
         }
-        AstNode::ArrayLengthStatement { value, .. } => {
+        AstNode::ArrayLength { value, .. } => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
-        AstNode::BufferStatement { r#type, size, .. } => {
+        AstNode::Buffer { r#type, size, .. } => {
             if let Some(ty) = r#type {
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }
@@ -269,7 +268,7 @@ fn modify_type_in_node(
                 *generic = modify_type(generic.clone(), generics, known_types, struct_pool, tree);
             }
         }
-        AstNode::ArithmeticOperation { left, right, .. } => {
+        AstNode::BinaryOperation { left, right, .. } => {
             let new_left =
                 modify_type_in_node(*left.clone(), generics, known_types, struct_pool, tree);
             *left = Box::new(new_left);
@@ -277,7 +276,7 @@ fn modify_type_in_node(
                 modify_type_in_node(*right.clone(), generics, known_types, struct_pool, tree);
             *right = Box::new(new_right);
         }
-        AstNode::TernaryStatement {
+        AstNode::Ternary {
             condition,
             if_true,
             if_false,
@@ -306,7 +305,7 @@ fn modify_type_in_node(
             *else_body =
                 modify_type_in_ast(else_body.clone(), generics, known_types, struct_pool, tree);
         }
-        AstNode::WhileLoop {
+        AstNode::WhileLoopStatement {
             condition,
             step,
             body,
@@ -327,21 +326,21 @@ fn modify_type_in_node(
             }
             *body = modify_type_in_ast(body.clone(), generics, known_types, struct_pool, tree);
         }
-        AstNode::ArrayStatement { values, .. } => {
+        AstNode::ArrayLiteral { values, .. } => {
             for (_, value) in values {
                 let new_value =
                     modify_type_in_node(value.clone(), generics, known_types, struct_pool, tree);
                 *value = new_value;
             }
         }
-        AstNode::StructStatement { values, .. } => {
+        AstNode::StructLiteral { values, .. } => {
             for (_, value) in values {
                 let new_value =
                     modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
                 *value = Box::new(new_value);
             }
         }
-        AstNode::FieldStatement {
+        AstNode::FieldAccess {
             left, right, value, ..
         } => {
             let new_left =
@@ -356,7 +355,7 @@ fn modify_type_in_node(
                 *value = Some(Box::new(new_value));
             }
         }
-        AstNode::MemoryStatement {
+        AstNode::MemoryOperation {
             left, right, value, ..
         } => {
             let new_left =
@@ -379,22 +378,22 @@ fn modify_type_in_node(
         AstNode::BlockStatement { body, .. } => {
             *body = modify_type_in_ast(body.clone(), generics, known_types, struct_pool, tree);
         }
-        AstNode::NotStatement { value, .. } => {
+        AstNode::LogicalNot { value, .. } => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
-        AstNode::BitwiseNotStatement { value, .. } => {
+        AstNode::BitWiseNot { value, .. } => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
-        AstNode::AddressStatement { value, .. } => {
+        AstNode::Address { value, .. } => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
-        AstNode::ConversionStatement { r#type, value, .. } => {
+        AstNode::Conversion { r#type, value, .. } => {
             if let Some(ty) = r#type {
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }
@@ -402,7 +401,7 @@ fn modify_type_in_node(
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
-        AstNode::SizeStatement { value, .. } => match value {
+        AstNode::Size { value, .. } => match value {
             Ok(ty) => {
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }

@@ -84,7 +84,7 @@ impl<'a> Constant<'a> {
             name,
             public,
             r#type: Some(ty.clone()),
-            value: Box::new(AstNode::ConversionStatement {
+            value: Box::new(AstNode::Conversion {
                 r#type: Some(ty),
                 value: Box::new(value),
                 location: self.parser.current_token().location,

@@ -156,13 +156,13 @@ impl<'a> Struct<'a> {
                 .iter()
                 .cloned()
                 .map(|member| {
-                    let field = AstNode::FieldStatement {
-                        left: Box::new(AstNode::LiteralStatement {
+                    let field = AstNode::FieldAccess {
+                        left: Box::new(AstNode::Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("self".into()),
                             location: location.clone(),
                         }),
-                        right: Box::new(AstNode::LiteralStatement {
+                        right: Box::new(AstNode::Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String(member.name),
                             location: location.clone(),
@@ -180,13 +180,13 @@ impl<'a> Struct<'a> {
                                 (location.clone(), field),
                                 (
                                     location.clone(),
-                                    AstNode::ArithmeticOperation {
-                                        left: Box::new(AstNode::LiteralStatement {
+                                    AstNode::BinaryOperation {
+                                        left: Box::new(AstNode::Literal {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("nesting".into()),
                                             location: location.clone(),
                                         }),
-                                        right: Box::new(AstNode::LiteralStatement {
+                                        right: Box::new(AstNode::Literal {
                                             kind: TokenKind::IntegerLiteral,
                                             value: ValueKind::Number(1),
                                             location: location.clone(),
@@ -210,7 +210,7 @@ impl<'a> Struct<'a> {
                 parameters,
                 (
                     location.clone(),
-                    AstNode::LiteralStatement {
+                    AstNode::Literal {
                         kind: TokenKind::Identifier,
                         value: ValueKind::String("spacing".into()),
                         location: location.clone(),
@@ -222,7 +222,7 @@ impl<'a> Struct<'a> {
                 0,
                 (
                     location.clone(),
-                    AstNode::LiteralStatement {
+                    AstNode::Literal {
                         kind: TokenKind::StringLiteral,
                         value: ValueKind::String(format!(
                             "{name} {{{{\n{}\n{{}}}}",
@@ -241,7 +241,7 @@ impl<'a> Struct<'a> {
             // Spacing for the last curly brace
             interleaved.push((
                 location.clone(),
-                AstNode::LiteralStatement {
+                AstNode::Literal {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String("spacing".into()),
                     location: location.clone(),
@@ -287,7 +287,7 @@ impl<'a> Struct<'a> {
                 ],
                 r#return: Some(Type::Pointer(Box::new(Type::Char))),
                 body: vec![
-                    AstNode::DeclareStatement {
+                    AstNode::Declare {
                         name: "spacing".into(),
                         r#type: Some(Type::Pointer(Box::new(Type::Char))),
                         value: Some(Box::new(AstNode::FunctionCall {
@@ -296,7 +296,7 @@ impl<'a> Struct<'a> {
                             parameters: vec![
                                 (
                                     location.clone(),
-                                    AstNode::LiteralStatement {
+                                    AstNode::Literal {
                                         kind: TokenKind::StringLiteral,
                                         value: ValueKind::String(" ".into()),
                                         location: location.clone(),
@@ -304,13 +304,13 @@ impl<'a> Struct<'a> {
                                 ),
                                 (
                                     location.clone(),
-                                    AstNode::ArithmeticOperation {
-                                        left: Box::new(AstNode::LiteralStatement {
+                                    AstNode::BinaryOperation {
+                                        left: Box::new(AstNode::Literal {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("nesting".into()),
                                             location: location.clone(),
                                         }),
-                                        right: Box::new(AstNode::LiteralStatement {
+                                        right: Box::new(AstNode::Literal {
                                             kind: TokenKind::IntegerLiteral,
                                             value: ValueKind::Number(4),
                                             location: location.clone(),
@@ -329,7 +329,7 @@ impl<'a> Struct<'a> {
                         location: location.clone(),
                         value_location: location.clone(),
                     },
-                    AstNode::ReturnStatement {
+                    AstNode::Return {
                         value: Box::new(AstNode::FunctionCall {
                             name: format!("string.{}", INTERNAL_FORMATTER).into(),
                             generics: vec![],

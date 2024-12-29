@@ -346,7 +346,7 @@ impl Compiler {
             // Ignore plain literals that aren't assigned to anything
             // exact literals should not be ignored
             match statement {
-                AstNode::LiteralStatement { kind, .. } => match kind {
+                AstNode::Literal { kind, .. } => match kind {
                     TokenKind::ExactLiteral => match self.generate_statement(
                         &func_ref,
                         module,
@@ -612,7 +612,7 @@ impl Compiler {
         is_return: bool,
     ) -> Option<(Type, Value)> {
         let res = match stmt {
-            AstNode::DeclareStatement {
+            AstNode::Declare {
                 name,
                 r#type,
                 value,
@@ -650,13 +650,13 @@ impl Compiler {
                     module,
                     *value.unwrap_or(Box::new(
                         if r#type.clone().is_some_and(|ty| ty.is_struct()) {
-                            AstNode::StructStatement {
+                            AstNode::StructLiteral {
                                 name: r#type.unwrap().get_struct_inner().unwrap(),
                                 values: vec![],
                                 location: location.clone(),
                             }
                         } else {
-                            AstNode::LiteralStatement {
+                            AstNode::Literal {
                                 kind: TokenKind::IntegerLiteral,
                                 value: ValueKind::Number(0),
                                 location: location.clone(),
@@ -777,7 +777,7 @@ impl Compiler {
 
                 None
             }
-            AstNode::ReturnStatement {
+            AstNode::Return {
                 value, location, ..
             } => {
                 match self.generate_statement(func, module, *value, ty, None, true) {
@@ -797,7 +797,7 @@ impl Compiler {
 
                 None
             }
-            AstNode::ArithmeticOperation {
+            AstNode::BinaryOperation {
                 left,
                 right,
                 operator,
@@ -821,7 +821,7 @@ impl Compiler {
                             (location.clone(), *right),
                             (
                                 location.clone(),
-                                AstNode::LiteralStatement {
+                                AstNode::Literal {
                                     kind: TokenKind::IntegerLiteral,
                                     value: ValueKind::Number(
                                         if operator == TokenKind::RangeEqual {
@@ -932,7 +932,7 @@ impl Compiler {
                     };
 
                     if operator == TokenKind::NotEqualTo {
-                        node = AstNode::NotStatement {
+                        node = AstNode::LogicalNot {
                             value: Box::new(node),
                             location: location.clone(),
                         }
@@ -999,7 +999,7 @@ impl Compiler {
                                 .generate_statement(
                                     func,
                                     module,
-                                    AstNode::LiteralStatement {
+                                    AstNode::Literal {
                                         kind: TokenKind::ExactLiteral,
                                         value: ValueKind::String("...".into()),
                                         location: location.clone(),
@@ -1119,7 +1119,7 @@ impl Compiler {
 
                 Some((final_ty, op_temp))
             }
-            AstNode::LiteralStatement {
+            AstNode::Literal {
                 kind,
                 value,
                 location,
@@ -1477,7 +1477,7 @@ impl Compiler {
                         {
                             got_address = true;
 
-                            parameter.1 = AstNode::AddressStatement {
+                            parameter.1 = AstNode::Address {
                                 value: Box::new(parameter.1),
                                 location: call_location.clone(),
                             }
@@ -1561,7 +1561,7 @@ impl Compiler {
                                             parameters[i].clone(),
                                             (
                                                 call_location.clone(),
-                                                AstNode::LiteralStatement {
+                                                AstNode::Literal {
                                                     kind: TokenKind::IntegerLiteral,
                                                     value: ValueKind::Number(0),
                                                     location: call_location.clone(),
@@ -1600,7 +1600,7 @@ impl Compiler {
                                         parameters[i].clone(),
                                         (
                                             call_location.clone(),
-                                            AstNode::LiteralStatement {
+                                            AstNode::Literal {
                                                 kind: TokenKind::IntegerLiteral,
                                                 value: ValueKind::Number(0),
                                                 location: call_location.clone(),
@@ -1672,7 +1672,7 @@ impl Compiler {
                         .generate_statement(
                             func,
                             module,
-                            AstNode::LiteralStatement {
+                            AstNode::Literal {
                                 kind: TokenKind::ExactLiteral,
                                 value: ValueKind::String("...".into()),
                                 location: call_location.clone(),
@@ -1774,7 +1774,7 @@ impl Compiler {
 
                 Some((ty, temp))
             }
-            AstNode::BufferStatement {
+            AstNode::Buffer {
                 name,
                 r#type,
                 size,
@@ -1787,9 +1787,9 @@ impl Compiler {
                         func,
                         module,
                         if let Some(ref ty) = r#type {
-                            AstNode::ArithmeticOperation {
+                            AstNode::BinaryOperation {
                                 left: size,
-                                right: Box::new(AstNode::LiteralStatement {
+                                right: Box::new(AstNode::Literal {
                                     kind: TokenKind::LongLiteral,
                                     value: ValueKind::Number(ty.size(module) as i128),
                                     location: location.clone(),
@@ -1800,7 +1800,7 @@ impl Compiler {
                                 location: location.clone(),
                             }
                         } else {
-                            AstNode::LiteralStatement {
+                            AstNode::Literal {
                                 kind: TokenKind::LongLiteral,
                                 value: ValueKind::Number(0),
                                 location: location.clone(),
@@ -1833,7 +1833,7 @@ impl Compiler {
 
                 Some((Type::Pointer(Box::new(buf_ty)), tmp))
             }
-            AstNode::MemoryStatement {
+            AstNode::MemoryOperation {
                 left,
                 right,
                 value,
@@ -1955,14 +1955,14 @@ impl Compiler {
                     right_ty.get_pointer_inner().unwrap()
                 };
 
-                let node = AstNode::ArithmeticOperation {
+                let node = AstNode::BinaryOperation {
                     left: if left_ty.is_pointer() {
                         left.clone()
                     } else {
                         right.clone()
                     },
-                    right: Box::new(AstNode::ArithmeticOperation {
-                        left: Box::new(AstNode::LiteralStatement {
+                    right: Box::new(AstNode::BinaryOperation {
+                        left: Box::new(AstNode::Literal {
                             kind: TokenKind::LongLiteral,
                             value: ValueKind::Number(inner.size(module) as i128),
                             location: right_location.clone(),
@@ -2054,7 +2054,7 @@ impl Compiler {
 
                 for statement in body.iter() {
                     match statement {
-                        AstNode::LiteralStatement { kind, .. } => match kind {
+                        AstNode::Literal { kind, .. } => match kind {
                             TokenKind::ExactLiteral => {
                                 match self.generate_statement(
                                     func,
@@ -2105,7 +2105,7 @@ impl Compiler {
 
                     for statement in else_body.iter() {
                         match statement {
-                            AstNode::LiteralStatement { kind, .. } => match kind {
+                            AstNode::Literal { kind, .. } => match kind {
                                 TokenKind::ExactLiteral => match self.generate_statement(
                                     func,
                                     module,
@@ -2152,7 +2152,7 @@ impl Compiler {
 
                 None
             }
-            AstNode::WhileLoop {
+            AstNode::WhileLoopStatement {
                 condition,
                 step,
                 body,
@@ -2196,7 +2196,7 @@ impl Compiler {
 
                 for statement in body.iter() {
                     match statement {
-                        AstNode::LiteralStatement { kind, .. } => match kind {
+                        AstNode::Literal { kind, .. } => match kind {
                             TokenKind::ExactLiteral => {
                                 match self.generate_statement(
                                     func,
@@ -2248,7 +2248,7 @@ impl Compiler {
 
                 None
             }
-            AstNode::VariadicStatement {
+            AstNode::VariadicStart {
                 name,
                 size,
                 location,
@@ -2270,10 +2270,12 @@ impl Compiler {
                     Instruction::Alloc8(final_val),
                 );
 
-                func.borrow_mut().add_instruction(Instruction::VAStart(var));
-                None
+                func.borrow_mut()
+                    .add_instruction(Instruction::VAStart(var.clone()));
+
+                Some((Type::Long, var))
             }
-            AstNode::NextStatement {
+            AstNode::VariadicArgument {
                 name,
                 r#type,
                 location,
@@ -2307,7 +2309,7 @@ impl Compiler {
 
                 for statement in body.iter() {
                     match statement {
-                        AstNode::LiteralStatement { kind, .. } => match kind {
+                        AstNode::Literal { kind, .. } => match kind {
                             TokenKind::ExactLiteral => {
                                 match self.generate_statement(
                                     func,
@@ -2352,7 +2354,7 @@ impl Compiler {
                 self.scopes.pop();
                 None
             }
-            AstNode::ConversionStatement {
+            AstNode::Conversion {
                 r#type: second,
                 value,
                 location,
@@ -2371,7 +2373,7 @@ impl Compiler {
                     true,
                 ))
             }
-            AstNode::NotStatement { value, location } => {
+            AstNode::LogicalNot { value, location } => {
                 let (ty, val) = self
                     .generate_statement(func, module, *value, ty, None, false)
                     .expect(&location.error(
@@ -2403,7 +2405,7 @@ impl Compiler {
 
                 Some((ty, temp))
             }
-            AstNode::BitwiseNotStatement { value, location } => {
+            AstNode::BitWiseNot { value, location } => {
                 let (ty, val) = self
                     .generate_statement(func, module, *value, ty, None, false)
                     .expect(&location.error(
@@ -2424,14 +2426,14 @@ impl Compiler {
 
                 Some((ty, temp))
             }
-            AstNode::ArrayLengthStatement { value, location } => {
+            AstNode::ArrayLength { value, location } => {
                 let (_, val) = self
                     .generate_statement(
                         func,
                         module,
-                        AstNode::ArithmeticOperation {
+                        AstNode::BinaryOperation {
                             left: value,
-                            right: Box::new(AstNode::LiteralStatement {
+                            right: Box::new(AstNode::Literal {
                                 kind: TokenKind::IntegerLiteral,
                                 value: ValueKind::Number(Type::Word.size(module) as i128),
                                 location: location.clone(),
@@ -2459,7 +2461,7 @@ impl Compiler {
 
                 Some((Type::Word, temp))
             }
-            AstNode::LambdaStatement {
+            AstNode::Lambda {
                 arguments,
                 value,
                 location,
@@ -2514,7 +2516,7 @@ impl Compiler {
                     Value::Global(lambda_name),
                 ))
             }
-            AstNode::ArrayStatement {
+            AstNode::ArrayLiteral {
                 known_generics,
                 values,
                 location,
@@ -2707,7 +2709,7 @@ impl Compiler {
 
                 Some((buf_ty, tmp))
             }
-            AstNode::AddressStatement { value, location } => {
+            AstNode::Address { value, location } => {
                 let (ty, val) = self
                     .generate_statement(func, module, *value, ty, None, false)
                     .expect(&location.error(
@@ -2735,7 +2737,7 @@ impl Compiler {
                     Some((addr_ty, addr_val))
                 }
             }
-            AstNode::TernaryStatement {
+            AstNode::Ternary {
                 condition,
                 if_true,
                 if_false,
@@ -2796,7 +2798,7 @@ impl Compiler {
                 func.borrow_mut().add_block(end_label);
                 Some((if_true_ty, temp))
             }
-            AstNode::SizeStatement { value, location } => match value {
+            AstNode::Size { value, location } => match value {
                 Ok(ty) => {
                     let tmp_ty = Type::Long;
                     let temp = self.new_temporary(Some("size"), true);
@@ -2863,7 +2865,7 @@ impl Compiler {
                     }
                 }
             },
-            AstNode::StructStatement {
+            AstNode::StructLiteral {
                 mut name,
                 values,
                 location,
@@ -3033,7 +3035,7 @@ impl Compiler {
 
                 Some((ty, alloc_tmp))
             }
-            AstNode::FieldStatement {
+            AstNode::FieldAccess {
                 left,
                 right,
                 value,
@@ -3140,12 +3142,12 @@ impl Compiler {
         parameters: Vec<(Location, AstNode)>,
         location: Location,
     ) -> AstNode {
-        let node = AstNode::StructStatement {
+        let node = AstNode::StructLiteral {
             name: META_STRUCT_NAME.into(),
             values: vec![
                 (
                     "exprs".into(),
-                    Box::new(AstNode::ArrayStatement {
+                    Box::new(AstNode::ArrayLiteral {
                         values: params
                             .iter()
                             .enumerate()
@@ -3235,7 +3237,7 @@ impl Compiler {
 
                                 (
                                     location.clone(),
-                                    AstNode::LiteralStatement {
+                                    AstNode::Literal {
                                         kind: TokenKind::StringLiteral,
                                         value: ValueKind::String(
                                             res.replace("\\", "\\\\").replace("\"", "\\\""),
@@ -3252,7 +3254,7 @@ impl Compiler {
                 ),
                 (
                     "types".into(),
-                    Box::new(AstNode::ArrayStatement {
+                    Box::new(AstNode::ArrayLiteral {
                         values: params
                             .iter()
                             .map(|param| {
@@ -3260,7 +3262,7 @@ impl Compiler {
 
                                 (
                                     location.clone(),
-                                    AstNode::LiteralStatement {
+                                    AstNode::Literal {
                                         kind: TokenKind::StringLiteral,
                                         value: ValueKind::String(inner),
                                         location: location.clone(),
@@ -3275,7 +3277,7 @@ impl Compiler {
                 ),
                 (
                     "arity".into(),
-                    Box::new(AstNode::LiteralStatement {
+                    Box::new(AstNode::Literal {
                         kind: TokenKind::IntegerLiteral,
                         value: ValueKind::Number(params.len() as i128),
                         location: location.clone(),
@@ -3283,7 +3285,7 @@ impl Compiler {
                 ),
                 (
                     "caller".into(),
-                    Box::new(AstNode::LiteralStatement {
+                    Box::new(AstNode::Literal {
                         kind: TokenKind::StringLiteral,
                         value: ValueKind::String(func.borrow_mut().name.clone()),
                         location: location.clone(),
@@ -3291,7 +3293,7 @@ impl Compiler {
                 ),
                 (
                     "file".into(),
-                    Box::new(AstNode::LiteralStatement {
+                    Box::new(AstNode::Literal {
                         kind: TokenKind::StringLiteral,
                         value: ValueKind::String(
                             location.file.clone().split("/").last().unwrap().to_string(),
@@ -3301,7 +3303,7 @@ impl Compiler {
                 ),
                 (
                     "line".into(),
-                    Box::new(AstNode::LiteralStatement {
+                    Box::new(AstNode::Literal {
                         kind: TokenKind::IntegerLiteral,
                         value: ValueKind::Number((location.row + 1) as i128),
                         location: location.clone(),
@@ -3309,7 +3311,7 @@ impl Compiler {
                 ),
                 (
                     "column".into(),
-                    Box::new(AstNode::LiteralStatement {
+                    Box::new(AstNode::Literal {
                         kind: TokenKind::IntegerLiteral,
                         value: ValueKind::Number((location.column + 1) as i128),
                         location: location.clone(),
@@ -3363,7 +3365,7 @@ impl Compiler {
     ) -> (Type, Value) {
         loop {
             match right {
-                AstNode::LiteralStatement {
+                AstNode::Literal {
                     kind,
                     value,
                     location,
@@ -3428,7 +3430,7 @@ impl Compiler {
                         return (member_ty.unwrap(), offset_tmp);
                     }
                 }
-                AstNode::FieldStatement {
+                AstNode::FieldAccess {
                     left: nested_left,
                     right: nested_right,
                     ..
@@ -4207,7 +4209,7 @@ impl Compiler {
                         hashmap![],
                         &vec![],
                         ty,
-                        vec![AstNode::ReturnStatement {
+                        vec![AstNode::Return {
                             value,
                             location: location.clone(),
                         }],
