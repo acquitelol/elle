@@ -1416,7 +1416,7 @@ Here is an example of how you can use it:
 
 ```rs
 fn main(string[] args) {
-    let program = args.pop();
+    let program = args.remove(0);
 
     for arg in args {
         if arg == "foo" {
