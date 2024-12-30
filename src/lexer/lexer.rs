@@ -401,6 +401,7 @@ impl Lexer {
                                 "size" => (TokenKind::Size, ValueKind::Nil),
                                 "len" => (TokenKind::ArrayLength, ValueKind::Nil),
                                 "i" => (TokenKind::IndexOf, ValueKind::Nil),
+                                "env" => (TokenKind::Environment, ValueKind::Nil),
                                 other => panic!(
                                     "{}",
                                     self.get_location()

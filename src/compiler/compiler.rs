@@ -15,9 +15,9 @@ use crate::{
         enums::{modify_type_in_ast, Argument, AstNode, Primitive},
         parser::StructPool,
     },
-    unknown_field, unknown_function, Warning, Warnings, DUNDER_CONSTANTS, EQUALS_CONSTANT,
-    FORMAT_CONSTANT, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, META_STRUCT_NAME, POINTER_ID,
-    STORE_CONSTANT, VOID_POINTER_ID,
+    unknown_field, unknown_function, Warning, Warnings, DUNDER_CONSTANTS, ENV_ID, ENV_STRUCT_NAME,
+    EQUALS_CONSTANT, FORMAT_CONSTANT, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID,
+    META_STRUCT_NAME, POINTER_ID, STORE_CONSTANT, VOID_POINTER_ID,
 };
 
 use super::enums::{
@@ -2299,6 +2299,48 @@ impl Compiler {
 
                 Some((ty, tmp))
             }
+            AstNode::Environment { value, location } => {
+                if let Some(value) = value {
+                    if !self
+                        .data_sections
+                        .iter()
+                        .find(|data| data.name == ENV_ID)
+                        .is_some()
+                    {
+                        self.data_sections.push(Data {
+                            linkage: Linkage::public(),
+                            name: ENV_ID.into(),
+                            align: None,
+                            items: vec![(Type::Long, DataItem::Const(0))],
+                        })
+                    }
+
+                    let (ty, val) =
+                        self.generate_statement(func, module, *value, ty, None, is_return)
+                            .expect(&location.error(
+                                "Unexpected error when compiling value to set to environment",
+                            ));
+
+                    func.borrow_mut().add_instruction(Instruction::Store(
+                        ty.clone(),
+                        Value::Global(ENV_ID.into()),
+                        val.clone(),
+                    ));
+
+                    Some((ty, val))
+                } else {
+                    let ty = Type::Pointer(Box::new(Type::Struct(ENV_STRUCT_NAME.into())));
+                    let val = self.new_temporary(None, false);
+
+                    func.borrow_mut().assign_instruction(
+                        &val,
+                        &ty,
+                        Instruction::Load(ty.clone(), Value::Global(ENV_ID.into())),
+                    );
+
+                    Some((ty, val))
+                }
+            }
             AstNode::BlockStatement { body, location: _ } => {
                 self.scopes.push(hashmap!());
                 self.tmp_counter += 1;
@@ -3287,7 +3329,15 @@ impl Compiler {
                     "caller".into(),
                     Box::new(AstNode::Literal {
                         kind: TokenKind::StringLiteral,
-                        value: ValueKind::String(func.borrow_mut().name.clone()),
+                        value: ValueKind::String({
+                            let name = func.borrow_mut().name.clone();
+
+                            if name == MAIN_ID {
+                                "main".into()
+                            } else {
+                                name
+                            }
+                        }),
                         location: location.clone(),
                     }),
                 ),

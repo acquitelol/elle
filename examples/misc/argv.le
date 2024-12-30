@@ -1,7 +1,7 @@
-use std/io;
+use std/prelude;
 
-fn main(i32 argc, string *argv) {
-    for i32 i = 0; i < argc; i += 1 {
-        io::printf("argv[{}] = {}", i, argv[i]);
+fn main(string[] args) {
+    for arg in args {
+        io::dbg(arg);
     }
 }

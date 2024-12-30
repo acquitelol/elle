@@ -109,6 +109,7 @@ impl<'a> Function<'a> {
             // TODO: Fix this (start of a tuple type, BIGGGG hack)
             || self.parser.current_token().kind == TokenKind::LeftParenthesis
             || self.parser.current_token().kind == TokenKind::Ellipsis
+            || self.parser.current_token().kind == TokenKind::Function
         {
             while self.parser.current_token().kind != TokenKind::RightParenthesis {
                 if self.parser.current_token().kind == TokenKind::Ellipsis {

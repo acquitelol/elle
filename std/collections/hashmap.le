@@ -15,19 +15,14 @@ struct Bucket {
 };
 
 fn Bucket::new(void *key, void *value, bool full) {
-    Bucket *bucket = malloc(#size(Bucket));
-    *bucket = malloc(#size(Bucket));
+    Bucket *bucket = #env.allocator.alloc(#size(Bucket));
+    *bucket = #env.allocator.alloc(#size(Bucket));
 
     bucket.key = key;
     bucket.value = value;
     bucket.full = full;
 
     return bucket;
-}
-
-fn Bucket::free(Bucket *self) {
-    free((void *)(*self));
-    free(self);
 }
 
 struct HashMap<T, U> {
@@ -83,8 +78,8 @@ fn HashMap::__fmt__<T, U>(HashMap<T, U> self, i32 nesting) {
 }
 
 fn HashMap::with_capacity<T, U>(i32 initial_capacity) -> HashMap<T, U> * {
-    HashMap<T, U> *map = malloc(#size(HashMap<T, U>));
-    *map = malloc(#size(HashMap<T, U>));
+    HashMap<T, U> *map = #env.allocator.alloc(#size(HashMap<T, U> *));
+    *map = #env.allocator.alloc(#size(HashMap<T, U>));
 
     map.table = Array::with_capacity(initial_capacity);
     map.capacity = initial_capacity;
@@ -244,7 +239,6 @@ fn HashMap::keys<T, U>(HashMap<T, U> *self) -> T[] {
 
 fn HashMap::resize<T, U>(HashMap<T, U> *self, i32 new_capacity) {
     Bucket *[] old_table = self.table;
-    defer old_table.free();
 
     self.table = Array::with_capacity(new_capacity);
     self.capacity = new_capacity;
@@ -277,14 +271,4 @@ fn HashMap::clear<T, U>(HashMap<T, U> *self) {
         self.table[i].key = EMPTY;
         self.table[i].value = EMPTY;
     }
-}
-
-fn HashMap::free<T, U>(HashMap<T, U> *self) {
-    for i32 i = 0; i < self.table.len(); i += 1 {
-        self.table[i].free();
-    }
-
-    self.table.free();
-    free((void *)(*self));
-    free(self);
 }

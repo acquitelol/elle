@@ -103,6 +103,7 @@ pub enum TokenKind {
     Let,
     Range,
     RangeEqual,
+    Environment,
 }
 
 impl TokenKind {

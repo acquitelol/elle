@@ -296,6 +296,61 @@ fn main() {
 
 <hr />
 
+### ♡ **Dynamic memory allocation**
+
+- Ellec has a notion of a `#env` directive which gives you an `ElleEnv *`.
+
+This structure is also not defined in Elle code (like `ElleMeta`), but its equivalent structure may look like:
+
+```rs
+struct ElleEnv {
+    ArbitraryAllocator *allocator;
+};
+```
+
+The allocator is completely abstracted away from you, but you should be safe assuming that it holds an `alloc` and `realloc` method.
+
+Memory deallocation is managed by the compiler.
+
+Example of using this:
+
+```rs
+struct Foo {
+    i32 a;
+};
+
+fn Foo::new(i32 a) {
+    // Note that this is a double allocation because structs are pointers internally
+    Foo *foo = #env.allocator.alloc(#size(Foo *));
+    *foo = #env.allocator.alloc(#size(Foo));
+
+    foo.a = a;
+    return foo;
+}
+
+fn main() {
+    let foo = Foo::new(10);
+    io::dbg(foo);
+}
+```
+
+Another example:
+
+```rs
+fn main() {
+    // allocate space for 10 integers
+    i32 *numbers = #env.allocator.alloc(#size(i32) * 10);
+    numbers[1] = 39;
+
+    io::dbg(numbers[1]); // 39
+    // dont need to free it
+}
+```
+
+Keep in mind that you can also use the libc standard manual memory management functions, like `malloc`, `realloc`, and `free`. These methods are defined in `std/libc/mem`.
+
+<hr />
+
 ### ♡ **Variadic Functions**
 
 * A variadic function is a function that can take in a variable amount of arguments. This works similar to C except that there are macros which allow you to get the argument size.
@@ -660,12 +715,12 @@ The most useful application of deferring is for memory management, however.
 Consider this code:
 
 ```rs
-use std/io;
+use std/io
 
 fn main() {
     let size = 10;
-    i64 *numbers = malloc(size * #size(i64));
-    defer free(numbers);
+    i64 *numbers = mem::malloc(size * #size(i64));
+    defer mem::free(numbers);
 
     for let i = 0; i < size - 1; i += 1 {
         numbers[i] = i * 2;
@@ -732,12 +787,12 @@ Casting is not necessary here, because the Elle compiler is smart enough to auto
 
 <br />
 
-You can also cast to pointer types, however note that, unlike C, casting to a pointer type when using `malloc` is *not* necessary because the Elle compiler automatically casts the `void *` into the type of the variable.
+You can also cast to pointer types, however note that, unlike C, casting to a pointer type when using `mem::malloc` is *not* necessary because the Elle compiler automatically casts the `void *` into the type of the variable.
 
 This means you can write:
 ```rs
 fn main() {
-    f64 *a = malloc(1024 * #size(f64));
+    f64 *a = mem::malloc(1024 * #size(f64));
 }
 ```
 and Elle will not complain.
@@ -1351,27 +1406,27 @@ From this you can get a quick grasp of how to use generics effectively. The stru
 
 <hr />
 
-### ♡ **Argc and argv**
+### ♡ **Command line arguments (argc/argv)**
 
-* These are variables that can be taken as arguments from the `main` function that allow you to pass extra data to the executable. Conventionally, the first argument, `argc`, is the number of arguments, and the second argument, `argv`, is an array of the arguments, or rather a pointer to them.
+- You can optionally accept an array of strings (`string[]`) as the 0th argument in your main function, which will cause the compiler to create this array out of `argc` and `argv`.
 
-Due to Elle's compilation to QBE which implements the C ABI, getting input from `argc` and `argv` is actually *exactly* the same as C. There is practically no difference.
+If your main function does not accept this array, the array will not be created.
 
-Consider this function which accepts argv and prints them all to the console:
+Here is an example of how you can use it:
 
 ```rs
-use std/io;
+fn main(string[] args) {
+    let program = args.pop();
 
-fn main(i32 argc, string *argv) {
-    for i32 i = 0; i < argc; i += 1 {
-        io::printf("argv[{}] = {}", i, argv[i]);
+    for arg in args {
+        if arg == "foo" {
+            io::println("i received a foo!");
+        }
     }
 }
 ```
 
-It accepts `argc` as a signed 32-bit integer and `argv` as an array of `string` (denoted by `string *`, basically an array of strings). These arguments are optional, as you may have noticed from code examples above, where some `main` functions did not take an `argc` or `argv`.
-
-You can also accept `string *envp` (and `string *apple` on MacOS/Darwin platforms, which provides arbitrary OS information, such as the path to the executing binary).
+Keep in mind that to use this, you must have the dynamic array module imported. You can either manually import `std/collections/array`, or import `std/prelude` which imports the array module inside.
 
 <hr />
 

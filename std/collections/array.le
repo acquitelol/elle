@@ -1,8 +1,8 @@
+use std/libc/string;
 use std/libc/mem;
 use std/libc/io;
 use std/core;
 use std/math;
-use std/io;
 global pub;
 
 struct Array<T> @nofmt {
@@ -14,9 +14,7 @@ struct Array<T> @nofmt {
 local fn __internal_array_bounds_check(string file, i32 line, i32 col, i64 i, i64 length) {
     if i < 0 || i > length - 1 {
         io::cprintf(
-            "[%s:%d:%d] ERROR: Index %ld is out of bounds for array length %ld\n"
-                .color("red")
-                .reset(),
+            "[%s:%d:%d] ERROR: Index %ld is out of bounds for array length %ld\n",
             file, line, col, i, length
         );
 
@@ -80,10 +78,10 @@ fn Array::is_empty<T>(T[] self) -> bool {
 }
 
 fn Array::with_capacity<T>(i32 initialCapacity) -> T[] {
-    T[] array = malloc(#size(Array<T>));
-    *array = malloc(#size(Array<T>));
+    T[] array = #env.allocator.alloc(#size(T[]));
+    *array = #env.allocator.alloc(#size(Array<T>));
 
-    array.elements = malloc(initialCapacity * #size(T));
+    array.elements = #env.allocator.alloc(initialCapacity * #size(T));
     array.size = 0;
     array.capacity = initialCapacity;
 
@@ -105,7 +103,7 @@ fn Array::new<T>(ElleMeta meta, ...) -> T[] {
 }
 
 fn Array::resize<T>(T[] self, i32 newCapacity) {
-    self.elements = realloc(self.elements, newCapacity * #size(T));
+    self.elements = #env.allocator.realloc(self.elements, newCapacity * #size(T));
     self.capacity = newCapacity;
 }
 
@@ -141,7 +139,10 @@ fn Array::pop<T>(T[] self) -> T {
 
     T last = self.elements[(i32)self.size - 1];
     self.size -= 1;
-    self.resize(self.size);
+
+    if self.size < self.capacity / 4 {
+        self.resize(self.capacity / 2);
+    }
 
     return last;
 }
@@ -187,7 +188,6 @@ local fn __internal_qsort<T>(T *array, i32 low, i32 high) {
 fn Array::cartesian_product<T>(T[] self, i32 n) {
     T[][] results = [];
     T[] current = [];
-    defer current.free();
 
     if n == 0 {
         T[] combination = [];
@@ -473,10 +473,4 @@ fn Array::slice<T>(T[] self, i32 _start, i32 _end) -> T[] {
     temp.size = length;
 
     return temp;
-}
-
-fn Array::free<T>(T[] self) {
-    free(self.elements);
-    free((void *)(*self));
-    free(self);
 }

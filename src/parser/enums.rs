@@ -170,6 +170,11 @@ pub enum AstNode {
         if_false: Box<AstNode>,
         location: Location,
     },
+    /// Allows for getting and setting the global environment pointer, in static memory
+    Environment {
+        value: Option<Box<AstNode>>,
+        location: Location,
+    },
 }
 
 impl AstNode {
@@ -416,6 +421,13 @@ fn modify_type_in_node(
                 *ast_node = Box::new(new_ast_node);
             }
         },
+        AstNode::Environment { value, .. } => {
+            if let Some(val) = value {
+                let new_value =
+                    modify_type_in_node(*val.clone(), generics, known_types, struct_pool, tree);
+                *value = Some(Box::new(new_value));
+            }
+        }
     }
 
     node

@@ -6,12 +6,12 @@ use std/io;
 
 fn main() {
     i32 highestScore = 0;
-    string winner = (string)malloc(BUF_SIZE * #size(char));
+    string winner = (string)mem::malloc(BUF_SIZE * #size(char));
     defer free(winner);
 
     while true {
         string person = io::input("Enter a person's name (or 'stop'): ");
-        defer free(person);
+        defer mem::free(person);
 
         if person == "stop" {
             break;

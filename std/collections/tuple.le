@@ -27,8 +27,8 @@ fn Tuple::__hash__<T, U>(Tuple<T, U> self, i32 capacity) {
 }
 
 fn Tuple::new<T, U>(T x, U y) {
-    Tuple<T, U> *tuple = malloc(#size(Tuple<T, U>));
-    *tuple = malloc(#size(Tuple<T, U>));
+    Tuple<T, U> *tuple = #env.allocator.alloc(#size(Tuple<T, U> *));
+    *tuple = #env.allocator.alloc(#size(Tuple<T, U>));
 
     tuple.x = x;
     tuple.y = y;
@@ -37,8 +37,3 @@ fn Tuple::new<T, U>(T x, U y) {
 }
 
 external fn Tuple::new<T, U>(T x, U y) @alias("$") -> (T, U);
-
-fn Tuple::free<T, U>(Tuple<T, U> *self) {
-    free((void *)(*self));
-    free(self);
-}

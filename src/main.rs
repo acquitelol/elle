@@ -13,11 +13,14 @@ mod parser;
 
 use compiler::compiler::Compiler;
 use compiler::enums::Type;
-use lexer::enums::Location;
+use lexer::enums::{Location, TokenKind, ValueKind};
 use misc::{build::build, colors::*, help::print_help, modules::lex_and_parse};
-use parser::enums::{Argument, Primitive};
+use parser::enums::{Argument, AstNode, Primitive};
 
 static META_STRUCT_NAME: &str = "ElleMeta";
+static ENV_STRUCT_NAME: &str = "ElleEnv";
+static PRIMARY_ALOCATOR_NAME: &str = "ArenaAllocator";
+static PRIMARY_ALLOCATOR_MODULE: &str = "std/allocators/arena";
 static GENERIC_IDENTIFIER: &str = "0"; // Start of a generic
 static GENERIC_END: &str = "1"; // Allowing for nested generic structs
 static GENERIC_POINTER: &str = "2"; // Pointer to another type
@@ -28,6 +31,8 @@ static SHORT_EXTENSION: &str = ".le";
 static OBJECT_EXTENSION: &str = ".o";
 static VOID_POINTER_ID: &str = "__void_ptr__";
 static POINTER_ID: &str = "__ptr__";
+static ENV_ID: &str = "__internal.elle.__env__";
+static MAIN_ID: &str = "__internal.elle.__main__";
 static FORMAT_CONSTANT: &str = "__fmt__";
 static LOAD_CONSTANT: &str = "__load__";
 static STORE_CONSTANT: &str = "__store__";
@@ -246,6 +251,16 @@ fn main() -> ExitCode {
         },
     ];
 
+    let env_members = vec![
+        // The pointer to the region allocator
+        Argument {
+            name: "allocator".into(),
+            // Region *
+            r#type: Type::Pointer(Box::new(Type::Struct(PRIMARY_ALOCATOR_NAME.into()))),
+            manual: false,
+        },
+    ];
+
     let input_path = if let Some(input_path) = input_path {
         input_path
     } else {
@@ -254,13 +269,16 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     };
 
+    let loc = Location::default(input_path.clone());
+
     pool.insert(
         META_STRUCT_NAME.into(),
-        (
-            vec![],
-            meta_members.clone(),
-            Location::default(input_path.clone()),
-        ),
+        (vec![], meta_members.clone(), loc.clone()),
+    );
+
+    pool.insert(
+        ENV_STRUCT_NAME.into(),
+        (vec![], env_members.clone(), loc.clone()),
     );
 
     let struct_pool = RefCell::new(pool);
@@ -277,7 +295,7 @@ fn main() -> ExitCode {
         debug_time,
         object_output,
         0,
-        Location::default(input_path.clone()),
+        loc.clone(),
         &mut string_module_methods,
     );
 
@@ -291,11 +309,314 @@ fn main() -> ExitCode {
             generics: vec![],
             known_generics: hashmap![],
             members: meta_members.clone(),
-            keyword_location: Location::default(input_path.clone()),
-            location: Location::default(input_path.clone()),
+            keyword_location: loc.clone(),
+            location: loc.clone(),
             ignore_empty: false,
         },
     );
+
+    tree.insert(
+        0,
+        Primitive::Struct {
+            name: ENV_STRUCT_NAME.into(),
+            public: false,
+            usable: true,
+            imported: false,
+            generics: vec![],
+            known_generics: hashmap![],
+            members: env_members.clone(),
+            keyword_location: loc.clone(),
+            location: loc.clone(),
+            ignore_empty: false,
+        },
+    );
+
+    // Rename main to an internal main
+    let mut main_arg_len = 0;
+    tree.iter_mut()
+        .find(|x| match x {
+            Primitive::Function { name, .. } if name == "main" => true,
+            _ => false,
+        })
+        .map(|x| match x {
+            Primitive::Function {
+                name, arguments, location, ..
+            } if name == "main" => {
+                *name = MAIN_ID.into();
+                main_arg_len = arguments.len();
+
+                if main_arg_len > 1 {
+                    panic!(
+                        "{}",
+                        location.error(format!("You cannot expect more than 1 argument ({RED}{main_arg_len}{RESET}) in the main function.\nOnly a single argument is supplied of type \"{GREEN}string[]{RESET}\"."))
+                    )
+                }
+
+                if main_arg_len == 1 &&
+                    arguments[0].r#type != Type::Pointer(Box::new(
+                        Type::Struct(format!("Array.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
+                            Type::Pointer(Box::new(Type::Char)).to_internal_id()
+                        ))
+                    ))
+                {
+                    panic!(
+                        "{}",
+                        location.error(
+                            format!(
+                                "Mismatched type for argument in main function.\nExpected type \"{GREEN}string[]{RESET}\" but got \"{GREEN}{}{RESET}\".",
+                                arguments[0].r#type.display()
+                            )
+                        )
+                    )
+                }
+            }
+            _ => {}
+        });
+
+    // Define a custom main
+    tree.push(Primitive::Function {
+        name: "main".into(),
+        public: true,
+        usable: true,
+        imported: false,
+        variadic: false,
+        manual: false,
+        external: false,
+        builtin: true,
+        volatile: true,
+        format: false,
+        unaliased: None,
+        generics: vec![],
+        arguments: vec![
+            Argument {
+                name: "argc".into(),
+                r#type: Type::Word,
+                manual: false,
+            },
+            Argument {
+                name: "argv".into(),
+                r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
+                manual: false,
+            },
+        ],
+        r#return: Some(Type::Word),
+        body: [
+            vec![
+                AstNode::Declare {
+                    name: "env".into(),
+                    r#type: Some(Type::Infer),
+                    value: Some(Box::new(AstNode::StructLiteral {
+                        name: ENV_STRUCT_NAME.into(),
+                        values: vec![(
+                            "allocator".into(),
+                            Box::new(AstNode::FunctionCall {
+                                name: format!("{PRIMARY_ALOCATOR_NAME}.new"),
+                                generics: vec![],
+                                parameters: vec![],
+                                type_method: false,
+                                ignore_no_def: false,
+                                location: loc.clone(),
+                            }),
+                        )],
+                        location: loc.clone(),
+                    })),
+                    location: loc.clone(),
+                    value_location: loc.clone(),
+                },
+                AstNode::Environment {
+                    value: Some(Box::new(AstNode::Address {
+                        value: Box::new(AstNode::Literal {
+                            kind: TokenKind::Identifier,
+                            value: ValueKind::String("env".into()),
+                            location: loc.clone(),
+                        }),
+                        location: loc.clone(),
+                    })),
+                    location: loc.clone(),
+                },
+            ],
+            if main_arg_len == 1 {
+                vec![
+                    AstNode::Declare {
+                        name: "args".into(),
+                        r#type: Some(Type::Infer),
+                        value: Some(Box::new(AstNode::FunctionCall {
+                            name: "Array.with_capacity".into(),
+                            generics: vec![Type::Pointer(Box::new(Type::Char))],
+                            parameters: vec![(
+                                loc.clone(),
+                                AstNode::Literal {
+                                    kind: TokenKind::Identifier,
+                                    value: ValueKind::String("argc".into()),
+                                    location: loc.clone(),
+                                },
+                            )],
+                            type_method: false,
+                            ignore_no_def: false,
+                            location: loc.clone(),
+                        })),
+                        location: loc.clone(),
+                        value_location: loc.clone(),
+                    },
+                    AstNode::Declare {
+                        name: "i".into(),
+                        r#type: Some(Type::Word),
+                        value: Some(Box::new(AstNode::Literal {
+                            kind: TokenKind::IntegerLiteral,
+                            value: ValueKind::Number(0),
+                            location: loc.clone(),
+                        })),
+                        location: loc.clone(),
+                        value_location: loc.clone(),
+                    },
+                    AstNode::WhileLoopStatement {
+                        condition: Box::new(AstNode::BinaryOperation {
+                            left: Box::new(AstNode::Literal {
+                                kind: TokenKind::Identifier,
+                                value: ValueKind::String("i".into()),
+                                location: loc.clone(),
+                            }),
+                            right: Box::new(AstNode::Literal {
+                                kind: TokenKind::Identifier,
+                                value: ValueKind::String("argc".into()),
+                                location: loc.clone(),
+                            }),
+                            operator: TokenKind::LessThan,
+                            treat_as_string: false,
+                            dunder_methods: false,
+                            location: loc.clone(),
+                        }),
+                        step: Some(Box::new(AstNode::Declare {
+                            name: "i".into(),
+                            r#type: None,
+                            value: Some(Box::new(AstNode::BinaryOperation {
+                                left: Box::new(AstNode::Literal {
+                                    kind: TokenKind::Identifier,
+                                    value: ValueKind::String("i".into()),
+                                    location: loc.clone(),
+                                }),
+                                right: Box::new(AstNode::Literal {
+                                    kind: TokenKind::IntegerLiteral,
+                                    value: ValueKind::Number(1),
+                                    location: loc.clone(),
+                                }),
+                                operator: TokenKind::Add,
+                                treat_as_string: false,
+                                dunder_methods: false,
+                                location: loc.clone(),
+                            })),
+                            location: loc.clone(),
+                            value_location: loc.clone(),
+                        })),
+                        body: vec![AstNode::FunctionCall {
+                            name: "push".into(),
+                            generics: vec![],
+                            parameters: vec![
+                                (
+                                    loc.clone(),
+                                    AstNode::Literal {
+                                        kind: TokenKind::Identifier,
+                                        value: ValueKind::String("args".into()),
+                                        location: loc.clone(),
+                                    },
+                                ),
+                                (
+                                    loc.clone(),
+                                    AstNode::MemoryOperation {
+                                        left: Box::new(AstNode::Literal {
+                                            kind: TokenKind::Identifier,
+                                            value: ValueKind::String("argv".into()),
+                                            location: loc.clone(),
+                                        }),
+                                        right: Box::new(AstNode::Literal {
+                                            kind: TokenKind::Identifier,
+                                            value: ValueKind::String("i".into()),
+                                            location: loc.clone(),
+                                        }),
+                                        value: None,
+                                        left_location: loc.clone(),
+                                        right_location: loc.clone(),
+                                        value_location: loc.clone(),
+                                        is_deref: false,
+                                    },
+                                ),
+                            ],
+                            type_method: true,
+                            ignore_no_def: false,
+                            location: loc.clone(),
+                        }],
+                        location: loc.clone(),
+                    },
+                ]
+            } else {
+                vec![]
+            },
+            vec![
+                AstNode::Declare {
+                    name: "status".into(),
+                    r#type: Some(Type::Word),
+                    value: Some(Box::new(AstNode::FunctionCall {
+                        name: MAIN_ID.into(),
+                        generics: vec![],
+                        parameters: if main_arg_len == 1 {
+                            vec![(
+                                loc.clone(),
+                                AstNode::Literal {
+                                    kind: TokenKind::Identifier,
+                                    value: ValueKind::String("args".into()),
+                                    location: loc.clone(),
+                                },
+                            )]
+                        } else {
+                            vec![]
+                        },
+                        type_method: false,
+                        ignore_no_def: false,
+                        location: loc.clone(),
+                    })),
+                    location: loc.clone(),
+                    value_location: loc.clone(),
+                },
+                AstNode::FunctionCall {
+                    name: "free_self".into(),
+                    generics: vec![],
+                    parameters: vec![(
+                        loc.clone(),
+                        AstNode::FieldAccess {
+                            left: Box::new(AstNode::Literal {
+                                kind: TokenKind::Identifier,
+                                value: ValueKind::String("env".into()),
+                                location: loc.clone(),
+                            }),
+                            right: Box::new(AstNode::Literal {
+                                kind: TokenKind::Identifier,
+                                value: ValueKind::String("allocator".into()),
+                                location: loc.clone(),
+                            }),
+                            value: None,
+                            location: loc.clone(),
+                        },
+                    )],
+                    type_method: true,
+                    ignore_no_def: false,
+                    location: loc.clone(),
+                },
+                AstNode::Return {
+                    value: Box::new(AstNode::Literal {
+                        kind: TokenKind::Identifier,
+                        value: ValueKind::String("status".into()),
+                        location: loc.clone(),
+                    }),
+                    location: loc.clone(),
+                },
+            ],
+        ]
+        .concat()
+        .into_iter()
+        .collect(),
+        location: loc.clone(),
+        return_location: loc.clone(),
+    });
 
     if ast {
         dbg!(tree);

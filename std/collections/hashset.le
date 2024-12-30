@@ -18,8 +18,6 @@ fn HashSet::__fmt__<T>(HashSet<T> self, i32 nesting) {
     let values = temp.values();
     let res = "{";
 
-    defer values.free();
-
     for i32 i = 0; i < values.len(); i += 1 {
         res <>= values[i].__fmt__(0);
 
@@ -33,8 +31,8 @@ fn HashSet::__fmt__<T>(HashSet<T> self, i32 nesting) {
 }
 
 fn HashSet::with_capacity<T>(i32 initial_capacity) -> HashSet<T> * {
-    HashSet<T> *set = malloc(#size(HashSet<T>));
-    *set = malloc(#size(HashSet<T>));
+    HashSet<T> *set = #env.allocator.alloc(#size(HashSet<T> *));
+    *set = #env.allocator.alloc(#size(HashSet<T>));
 
     let capacity = math::next_power_of_2(initial_capacity);
     set.table = Array::with_capacity(capacity);
@@ -60,12 +58,6 @@ fn HashSet::new<T>(ElleMeta meta, ...) -> HashSet<T> * {
     }
 
     return set;
-}
-
-fn HashSet::free<T>(HashSet<T> *self) {
-    self.table.free();
-    free((void *)(*self));
-    free(self);
 }
 
 fn HashSet::add<T>(HashSet<T> *self, T value) -> bool {
@@ -149,7 +141,6 @@ fn HashSet::is_empty<T>(HashSet<T> *self) -> bool {
 
 fn HashSet::resize<T>(HashSet<T> *self, i32 new_capacity) {
     T[] old_table = self.table;
-    defer old_table.free();
 
     self.table = Array::with_capacity(new_capacity);
     self.capacity = new_capacity;
@@ -176,6 +167,10 @@ fn HashSet::values<T>(HashSet<T> *self) -> T[] {
     }
 
     return result;
+}
+
+fn HashSet::is_full<T>(T element) {
+    return ((void *)element != NEVER_USED) && ((void *)element != TOMBSTONE);
 }
 
 fn HashSet::clear<T>(HashSet<T> *self) {

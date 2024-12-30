@@ -9,8 +9,8 @@ struct BigInt {
 };
 
 fn BigInt::empty(bool is_negative) {
-    BigInt *bigint = malloc(#size(BigInt));
-    *bigint = malloc(#size(BigInt));
+    BigInt *bigint = #env.allocator.alloc(#size(BigInt));
+    *bigint = #env.allocator.alloc(#size(BigInt));
 
     bigint.is_negative = is_negative;
     bigint.digits = [];
@@ -200,10 +200,4 @@ fn BigInt::mul(BigInt *self, BigInt *other) -> BigInt * {
     }
 
     return result;
-}
-
-fn BigInt::free(BigInt *self) {
-    self.digits.free();
-    free((void *)(*self));
-    free(self);
 }

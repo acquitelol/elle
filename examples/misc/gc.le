@@ -8,10 +8,10 @@ struct Object {
 };
 
 fn Object::new(i32 size) {
-    Object *obj = malloc(#size(Object));
-    *obj = malloc(#size(Object));
+    Object *obj = #env.allocator.alloc(#size(Object *));
+    *obj = #env.allocator.alloc(#size(Object));
 
-    obj.data = malloc(size);
+    obj.data = #env.allocator.alloc(size);
     obj.marked = false;
     obj.size = size;
 
@@ -25,12 +25,12 @@ fn Object::free(Object *self) {
 }
 
 struct GC {
-    Array<Object *> *heap;
+    Object *[] heap;
 };
 
 fn GC::new() {
-    GC *gc = malloc(#size(GC));
-    *gc = malloc(#size(GC));
+    GC *gc = #env.allocator.alloc(#size(GC *));
+    *gc = #env.allocator.alloc(#size(GC));
     gc.heap = [];
 
     return gc;

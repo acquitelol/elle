@@ -4,14 +4,6 @@ use std/libc/io;
 
 global pub;
 
-// NOTE: This is for null-terminated strings
-// so it may perform differently than you expect
-fn string::len(string self) {
-    return strlen(self);
-}
-
-external fn string::len(string self) @alias("string::__len__") -> i64;
-
 fn string::is_empty(string self) {
     return self.len() == 0;
 }
@@ -72,7 +64,7 @@ fn string::default(string self, string default) {
 }
 
 fn string::to_upper(string self) {
-    let out = (string)malloc((self.len() + 1) * #size(char));
+    let out = (string)#env.allocator.alloc((self.len() + 1) * #size(char));
 
     for c in self {
         if c >= 'a' && c <= 'z' {
@@ -86,7 +78,7 @@ fn string::to_upper(string self) {
 }
 
 fn string::to_lower(string self) {
-    let out = (string)malloc((self.len() + 1) * #size(char));
+    let out = (string)#env.allocator.alloc((self.len() + 1) * #size(char));
 
     for c in self {
         if c >= 'A' && c <= 'Z' {
@@ -109,7 +101,7 @@ fn string::slice(string self, i32 start, i32 end) -> string {
     }
 
     let new_length = end - start;
-    let sliced = (string)malloc(new_length + 1);
+    let sliced = (string)#env.allocator.alloc(new_length + 1);
 
     if !sliced {
         return nil;
@@ -142,7 +134,7 @@ fn string::concat(ElleMeta meta, ...) -> string {
         length += sizes[i];
     }
 
-    let result = (string)malloc((length + 1) * #size(char));
+    let result = (string)#env.allocator.alloc((length + 1) * #size(char));
 
     if !result {
         return nil;
@@ -235,7 +227,7 @@ fn string::color(string self, string color) {
         return self;
     }
 
-    let result = (string)malloc(fmt.len() + 1);
+    let result = (string)#env.allocator.alloc(fmt.len() + 1);
     io::sprintf(result, fmt, code);
     result <>= self;
 
@@ -264,7 +256,7 @@ fn string::replace(string self, string needle, string replacement) -> string {
     }
 
     let buf_size = self_len;
-    let res = (string)malloc(buf_size + 1);
+    let res = (string)#env.allocator.alloc(buf_size + 1);
 
     if !res {
         return nil;
@@ -277,7 +269,7 @@ fn string::replace(string self, string needle, string replacement) -> string {
         if strncmp((string)((i64)self + i), needle, needle_len) == 0 {
             if res_index + replacement_len > buf_size {
                 buf_size += replacement_len;
-                res = (string)realloc(res, buf_size + 1);
+                res = (string)#env.allocator.realloc(res, buf_size + 1);
             }
 
             strcpy((string)((i64)res + res_index), replacement);
@@ -286,7 +278,7 @@ fn string::replace(string self, string needle, string replacement) -> string {
         } else {
             if res_index + 1 > buf_size {
                 buf_size += 1;
-                res = (string)realloc(res, buf_size + 1);
+                res = (string)#env.allocator.realloc(res, buf_size + 1);
             }
 
             res[res_index] = self[i];
@@ -331,7 +323,7 @@ fn string::insert(string *self, i32 index, char c) {
     }
 
     // +1 for the new char, +1 for the null terminator
-    string result = (string)malloc((length + 2) * #size(char));
+    string result = (string)#env.allocator.alloc((length + 2) * #size(char));
 
     if !result {
         return nil;
@@ -366,7 +358,7 @@ fn string::pop(string *self) -> char {
     }
 
     let last_char = (*self)[length - 1];
-    let result = (string)malloc(length * #size(char));
+    let result = (string)#env.allocator.alloc(length * #size(char));
 
     if !result {
         return '\0';
@@ -381,7 +373,7 @@ fn string::pop(string *self) -> char {
 
 fn string::push(string *self, char c) {
     let length = (*self).len();
-    let result = (string)malloc((length + 2) * #size(char));
+    let result = (string)#env.allocator.alloc((length + 2) * #size(char));
 
     if (!result) {
         return nil;
@@ -398,7 +390,7 @@ local fn __internal_to_string<T, U>(i64 args, string fmt) {
     T arg = args.yield(U);
 
     let length = io::snprintf(nil, 0, fmt, arg);
-    string res = (string)malloc(length);
+    string res = (string)#env.allocator.alloc(length);
     io::sprintf(res, fmt, arg);
 
     return res;
@@ -419,7 +411,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
             arg = string::concat("\"", arg, "\"");
         }
 
-        let res = (string)malloc(arg.len() + 1);
+        let res = (string)#env.allocator.alloc(arg.len() + 1);
         strcpy(res, arg);
         return res;
     }
@@ -473,7 +465,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
         // copy it into a heap-allocated string
         // so that the caller can reliably free it
         let arg = args.yield(bool).to_string();
-        let res = (string)malloc(arg.len() + 1);
+        let res = (string)#env.allocator.alloc(arg.len() + 1);
         io::sprintf(res, "%s", arg);
         return res;
     }
@@ -481,7 +473,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
     let arg = args.yield(i64);
     let fmt = "<%s at %p>";
     let length = io::snprintf(nil, 0, fmt, ty, arg);
-    let res = (string)malloc(length);
+    let res = (string)#env.allocator.alloc(length);
     io::sprintf(res, fmt, ty, arg);
 
     return res;
@@ -501,7 +493,7 @@ fn string::as_string_wrapped(ElleMeta meta, ...) {
 // If you want to format arguments of arbitrary types
 // into a new string, use string::format() instead
 fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
-    let result = (string)malloc(fmt.len());
+    let result = (string)#env.allocator.alloc(fmt.len());
 
     let arg = 0;
     let is_open = false;
@@ -536,7 +528,6 @@ fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
 
             let out = __to_string(meta.types[arg], args, wrapped);
             result.extend(out);
-            free(out);
 
             is_open = false;
             wrapped = false;

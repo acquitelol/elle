@@ -17,8 +17,8 @@ fn Triple::__fmt__<T, U, V>(Triple<T, U, V> self, i32 nesting) {
     );
 }
 
-fn Triple::__equals__<T, U, V>(Triple<T, U, V> self, Triple<T, U, V> other) {
-    return self.x == other.x && self.y == other.y && self.z == other.z;
+fn Triple::__equals__<T, U, V>(Triple<T, U, V> *self, Triple<T, U, V> *other) {
+    return (self.x == other.x) && (self.y == other.y) && (self.z == other.z);
 }
 
 fn Triple::__hash__<T, U, V>(Triple<T, U, V> self, i32 capacity) {
@@ -30,8 +30,8 @@ fn Triple::__hash__<T, U, V>(Triple<T, U, V> self, i32 capacity) {
 }
 
 fn Triple::new<T, U, V>(T x, U y, V z) {
-    Triple<T, U, V> *triple = malloc(#size(Triple<T, U, V>));
-    *triple = malloc(#size(Triple<T, U, V>));
+    Triple<T, U, V> *triple = #env.allocator.alloc(#size(Triple<T, U, V> *));
+    *triple = #env.allocator.alloc(#size(Triple<T, U, V>));
 
     triple.x = x;
     triple.y = y;
@@ -41,8 +41,3 @@ fn Triple::new<T, U, V>(T x, U y, V z) {
 }
 
 external fn Triple::new<T, U, V>(T x, U y, V z) @alias("$$") -> Triple<T, U, V> *;
-
-fn Triple::free<T, U, V>(Triple<T, U, V> *self) {
-    free((void *)(*self));
-    free(self);
-}

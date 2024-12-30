@@ -117,6 +117,11 @@ impl<'a> Struct<'a> {
 
         let mut members = vec![];
 
+        self.parser.struct_pool.borrow_mut().insert(
+            name.clone(),
+            (generics.clone(), members.clone(), location.clone()),
+        );
+
         loop {
             if self.parser.current_token().kind == TokenKind::RightCurlyBrace {
                 break;

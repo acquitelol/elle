@@ -2389,6 +2389,51 @@ impl<'a> Statement<'a> {
         expression
     }
 
+    fn parse_env(&mut self) -> AstNode {
+        let position = self.position;
+        let location = self.current_token().location.clone();
+        self.advance();
+
+        let mut expression = AstNode::Environment {
+            value: None,
+            location: location.clone(),
+        };
+
+        match self.current_token().kind {
+            TokenKind::Equal => {
+                self.advance();
+                let value_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
+
+                expression = AstNode::Environment {
+                    value: Some(Box::new(
+                        Statement::new(value_tokens, 0, &self.body, self.shared)
+                            .parse()
+                            .0,
+                    )),
+                    location: location.clone(),
+                }
+            }
+
+            other if other.is_declarative() => {
+                expression = AstNode::Environment {
+                    value: Some(Box::new(self.parse_declarative_node(expression))),
+                    location: location.clone(),
+                }
+            }
+
+            TokenKind::Dot => {
+                expression = self.parse_field_access(Some((position, expression, location.clone())))
+            }
+
+            TokenKind::LeftBlockBrace => {
+                expression = self.parse_offset_store(Some((position, expression, location.clone())))
+            }
+            _ => {}
+        }
+
+        expression
+    }
+
     fn parse_declarative_node(&mut self, node: AstNode) -> AstNode {
         let operation = self.current_token();
         let location = self.current_token().location.clone();
@@ -2629,6 +2674,7 @@ impl<'a> Statement<'a> {
             TokenKind::Size => self.parse_size(),
             TokenKind::ArrayLength => self.parse_array_length(),
             TokenKind::IndexOf => self.parse_indexof(),
+            TokenKind::Environment => self.parse_env(),
             TokenKind::Let => {
                 self.advance();
                 self.parse_declare(Some(Some(Type::Infer)))

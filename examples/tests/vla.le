@@ -55,12 +55,9 @@ fn main() {
 
     // Squares every number in `e`
     let e_mapped = e.map<i32>(fn(i32 x) -> x * x);
-    defer e_mapped.free();
-
     io::dbg(e_mapped);
 
     let empty = 0..0;
-    defer empty.free();
 
     io::dbg(empty);
     io::assert(

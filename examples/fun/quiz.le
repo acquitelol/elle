@@ -22,8 +22,8 @@ fn Question::new(Operation *[] operators, i32 index) {
     let operation = operators[operator];
     fn *func = operation.func;
 
-    Question *question = malloc(#size(Question));
-    *question = malloc(#size(Question));
+    Question *question = #env.allocator.alloc(#size(Question));
+    *question = #env.allocator.alloc(#size(Question));
 
     question.display = "What is {} {} {}? -> ".format(lhs, operation.display, rhs);
     question.answer = func(lhs, rhs);
@@ -38,8 +38,8 @@ struct Operation {
 };
 
 fn Operation::new(string display, fn *func) {
-    Operation *op = malloc(#size(Operation));
-    *op = malloc(#size(Operation));
+    Operation *op = #env.allocator.alloc(#size(Operation));
+    *op = #env.allocator.alloc(#size(Operation));
     op.display = display;
     op.func = func;
 

@@ -4,7 +4,6 @@ use std/io;
 
 fn main() {
     let list = LinkedList::new<i32>();
-    defer list.free();
 
     list.add(10);
     list.add(23);

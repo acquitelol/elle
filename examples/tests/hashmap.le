@@ -3,7 +3,6 @@ use std/prelude;
 
 fn main() {
     let map = HashMap::new<i32, string>();
-
     io::assert(map.is_empty(), nil);
 
     map[1000] = "foo";

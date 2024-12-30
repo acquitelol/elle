@@ -17,8 +17,6 @@ local fn __print(i64 args, ElleMeta meta, bool wrap, bool full, bool newline) {
         } else {
             io::cprintf("%s", res);
         }
-
-        free(res); // Don't leak memory
     }
 
     if newline {
@@ -37,15 +35,10 @@ local fn __err(i64 args, ElleMeta meta, bool newline) {
         string res = __to_string("string", args, false);
 
         error <>= res;
-        free(res); // Don't leak memory
     }
 
     io::fprintf(stderr, fmt, error);
     io::fflush(stderr);
-
-    if meta.arity > 0 {
-        free(error);
-    }
 
     if newline {
         io::putchar('\n');
@@ -140,8 +133,7 @@ const i64 BUF_SIZE = 1024;
 const i64 EOF = -1;
 
 fn io::input(string message) -> string {
-    let buf = (string)malloc(BUF_SIZE * #size(char));
-    defer free(buf);
+    let buf = (string)#env.allocator.alloc(BUF_SIZE * #size(char));
 
     io::print(message);
     io::fgets(buf, BUF_SIZE, stdin);
@@ -150,7 +142,7 @@ fn io::input(string message) -> string {
     let length = buf.len();
 
     buf[buf.len() - 1] = '\0';
-    let result = (string)malloc(buf.len() + 1);
+    let result = (string)#env.allocator.alloc(buf.len() + 1);
     strcpy(result, buf);
 
     return result;
@@ -175,7 +167,7 @@ fn io::read_to_string(string path) -> string {
         buf_size = 4096;
     }
 
-    let buf = (string)malloc(buf_size * #size(char));
+    let buf = (string)#env.allocator.alloc(buf_size * #size(char));
 
     if !buf {
         return nil;
@@ -189,7 +181,7 @@ fn io::read_to_string(string path) -> string {
 
         if pos >= buf_size - 1 {
             buf_size *= 2;
-            buf = (string)realloc(buf, buf_size * #size(char));
+            buf = (string)#env.allocator.realloc(buf, buf_size * #size(char));
 
             if !buf {
                 return nil;

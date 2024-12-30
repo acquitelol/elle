@@ -20,7 +20,7 @@ use crate::{
         parser::{DoOnly, Parser, StructPool},
     },
     Warnings, FORMAT_CONSTANT, INTERNAL_FORMATTER, LEN_CONSTANT, LONG_EXTENSION, POINTER_ID,
-    SHORT_EXTENSION, STD_LIB_PATH, VOID_POINTER_ID,
+    PRIMARY_ALLOCATOR_MODULE, SHORT_EXTENSION, STD_LIB_PATH, VOID_POINTER_ID,
 };
 
 pub fn lex_and_parse(
@@ -130,7 +130,17 @@ pub fn lex_and_parse(
                 module: "std/string".into(),
                 location: Location::default(input_path.clone()),
             },
-        )
+        );
+    }
+
+    if nesting == 0 {
+        imports.insert(
+            0,
+            Primitive::Use {
+                module: PRIMARY_ALLOCATOR_MODULE.into(),
+                location: Location::default(input_path.clone()),
+            },
+        );
     }
 
     for import in imports.iter().cloned() {
