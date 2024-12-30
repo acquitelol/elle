@@ -651,7 +651,7 @@ impl Compiler {
                     *value.unwrap_or(Box::new(
                         if r#type.clone().is_some_and(|ty| ty.is_struct()) {
                             AstNode::StructLiteral {
-                                name: r#type.unwrap().get_struct_inner().unwrap(),
+                                name: r#type.clone().unwrap().get_struct_inner().unwrap(),
                                 values: vec![],
                                 location: location.clone(),
                             }
@@ -713,7 +713,7 @@ impl Compiler {
                         (local_ty.clone(), value.clone())
                     };
 
-                    if res.is_ok() {
+                    if res.is_ok() && r#type.is_none() {
                         let (addr_ty, addr_val) = res.unwrap();
                         let tmp = self.new_variable(&addr_ty, &name, Some(func), true, false);
 
@@ -754,7 +754,7 @@ impl Compiler {
                         &local_ty,
                         &format!("{}.addr", name),
                         Some(func),
-                        false,
+                        true,
                         false,
                     );
 
