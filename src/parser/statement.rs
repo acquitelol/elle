@@ -190,7 +190,19 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let value_location = self.current_token().location.clone();
-        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
+        let mut nesting = 0;
+
+        let tokens = self.yield_tokens_with_condition(|token, _, _| {
+            if token.kind == TokenKind::LeftCurlyBrace {
+                nesting += 1;
+            }
+
+            if token.kind == TokenKind::RightCurlyBrace {
+                nesting -= 1;
+            }
+
+            token.kind == TokenKind::Semicolon && nesting == 0
+        });
 
         let res = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
@@ -863,7 +875,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
         self.advance();
 
-        let body = self.yield_block();
+        let body = self.yield_block(false); // If statements are.. well.. statements
         let mut else_body: Vec<AstNode> = vec![];
 
         if self.current_token().kind == TokenKind::Else {
@@ -871,7 +883,7 @@ impl<'a> Statement<'a> {
             self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
             self.advance();
 
-            else_body = self.yield_block();
+            else_body = self.yield_block(false); // Else is also a statement
         }
 
         self.position -= 1;
@@ -893,7 +905,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
         self.advance();
 
-        let body = self.yield_block();
+        let body = self.yield_block(false); // While loops are statements
 
         self.position -= 1;
 
@@ -1055,7 +1067,7 @@ impl<'a> Statement<'a> {
             }
         };
 
-        let body = self.yield_block();
+        let body = self.yield_block(false); // For loops are statements
 
         self.position -= 1;
 
@@ -1107,7 +1119,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
         self.advance();
 
-        let mut body = self.yield_block();
+        let mut body = self.yield_block(false); // Foreach is a statement
 
         self.position -= 1;
 
@@ -1550,38 +1562,50 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
-        self.expect_tokens(vec![TokenKind::RightArrow]);
-        self.advance();
+        if self.current_token().kind == TokenKind::LeftCurlyBrace {
+            self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
+            self.advance();
 
-        let mut nesting = 0;
-        let tokens = self.yield_tokens_with_condition(|_, token, next_token| {
-            if token.kind == TokenKind::LeftParenthesis {
-                nesting += 1;
+            let body = self.yield_block(true); // Lambdas are expressions
+            self.position -= 1;
+
+            AstNode::Lambda {
+                arguments,
+                value: body,
+                location,
             }
-
-            if token.kind == TokenKind::RightParenthesis {
-                if nesting > 0 {
-                    nesting -= 1;
-                } else {
-                    return true;
+        } else {
+            let mut nesting = 0;
+            let tokens = self.yield_tokens_with_condition(|_, token, next_token| {
+                if token.kind == TokenKind::LeftParenthesis {
+                    nesting += 1;
                 }
+
+                if token.kind == TokenKind::RightParenthesis {
+                    if nesting > 0 {
+                        nesting -= 1;
+                    } else {
+                        return true;
+                    }
+                }
+
+                token.kind == TokenKind::Semicolon
+                    || (nesting == 0
+                        && (token.kind == TokenKind::Comma
+                            || next_token
+                                .is_some_and(|next| next.kind == TokenKind::RightCurlyBrace)))
+            });
+
+            let value = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
+
+            AstNode::Lambda {
+                arguments,
+                value: vec![AstNode::Return {
+                    value: Box::new(value),
+                    location: location.clone(),
+                }],
+                location,
             }
-
-            token.kind == TokenKind::Semicolon
-                || (nesting == 0
-                    && (token.kind == TokenKind::Comma
-                        || next_token.is_some_and(|next| next.kind == TokenKind::RightCurlyBrace)))
-        });
-
-        let value = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
-
-        AstNode::Lambda {
-            arguments,
-            value: vec![AstNode::Return {
-                value: Box::new(value),
-                location: location.clone(),
-            }],
-            location,
         }
     }
 
@@ -1658,7 +1682,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
         self.advance();
 
-        let body = self.yield_block();
+        let body = self.yield_block(false); // Blocks are statements
         self.position -= 1;
         AstNode::BlockStatement {
             body,
@@ -2539,7 +2563,7 @@ impl<'a> Statement<'a> {
         tokens
     }
 
-    fn yield_block(&mut self) -> Vec<AstNode> {
+    fn yield_block(&mut self, expect_semicolon: bool) -> Vec<AstNode> {
         let cell: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
 
         loop {
@@ -2548,6 +2572,11 @@ impl<'a> Statement<'a> {
             match current.kind {
                 TokenKind::RightCurlyBrace => {
                     self.advance();
+
+                    if !self.is_eof() && expect_semicolon {
+                        self.expect_tokens(vec![TokenKind::Semicolon]);
+                    }
+
                     break;
                 }
                 _ => {

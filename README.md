@@ -530,25 +530,35 @@ for i in 5..=10 {
 
 ### ♡ **Lambda functions**
 
-Elle allows you to create single line lambda functions.
+Elle allows you to create single line or multi line lambda (anonymous) functions.
 
-Here is a basic example of how you can use them:
+Here are basic examples of how you can use them:
 
 ```rs
 use std/prelude;
 
 fn main() {
-    let arr = [1, 2, 3];
-    let arr_doubled = arr.map<i32>(fn(i32 x) -> x * 2);
+    let arr = [1, 2, 3].map<i32>(fn(i32 x) x * 2);
+    io::println(arr); // <[2, 4, 6] at 0xdeadbeef>
+}
+```
 
-    io::println(arr_doubled); // <[2, 4, 6] at 0xdeadbeef>
+```rs
+use std/prelude;
+
+fn main() {
+    let x = fn(i32 x) {
+        let foo = x * 100;
+        return (foo - 10) / 2;
+    };
+
+    io::dbg(x(3));
 }
 ```
 
 Please note the following:
 - These lambdas do **not** capture surrounding variables
 - They are not automatically passed ElleMeta by the compiler (because there is not enough context to do so)
-- You cannot create multi-line lambdas
 - You cannot declare the interface for a lambda on the type level
 
 This means that these examples won't work:
@@ -561,7 +571,7 @@ fn main() {
     let a = 5;
 
     // The compiler will throw an error here
-    let arr_doubled = arr.map<i32>(fn(i32 x) -> x * a);
+    let arr_doubled = arr.map<i32>(fn(i32 x) x * a);
     io::println(arr_doubled);
 }
 ```

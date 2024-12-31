@@ -1,0 +1,17 @@
+use std/prelude;
+
+fn main() {
+    let exclaim = fn(string x) x <> "!";
+    let whisper = fn(string x) x.to_lower();
+
+    io::assert(exclaim("Hello, world") == "Hello, world!", nil);
+    io::assert(whisper("Hello, world") == "hello, world", nil);
+
+    let multiline = fn(f32 x) {
+        let foo = math::sqrt(x) * E;
+        return (i32)(foo / 4);
+    };
+
+    io::assert(multiline(81) == 6, nil);
+    io::println("All lambda tests have passed!".color("green").reset());
+}

@@ -51,10 +51,10 @@ fn main() {
     Question *[] incorrect = [];
 
     let operations = [
-        Operation::new("+", fn(i32 a, i32 b) -> a + b),
-        Operation::new("-", fn(i32 a, i32 b) -> a - b),
-        Operation::new("*", fn(i32 a, i32 b) -> a * b),
-        Operation::new("/", fn(i32 a, i32 b) -> a / b)
+        Operation::new("+", fn(i32 a, i32 b) a + b),
+        Operation::new("-", fn(i32 a, i32 b) a - b),
+        Operation::new("*", fn(i32 a, i32 b) a * b),
+        Operation::new("/", fn(i32 a, i32 b) a / b)
     ];
 
     for let i = 0; i < QUESTION_COUNT; i += 1 {
