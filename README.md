@@ -158,7 +158,7 @@ fn main() {
 }
 ```
 
-Please keep in mind that you also have access to the `break` and `continue` keywords while inside of a loop, which break exeuction early or continue to the next iteration respectively.
+Please keep in mind that you also have access to the `break` and `continue` keywords while inside of a loop, which break execution early or continue to the next iteration respectively.
 
 <hr />
 
@@ -204,7 +204,7 @@ for x in [1, 2, 3, 4] {
 }
 ```
 
-Please keep in mind that you also have access to the `break` and `continue` keywords while inside of a loop, which break exeuction early or continue to the next iteration respectively.
+Please keep in mind that you also have access to the `break` and `continue` keywords while inside of a loop, which break execution early or continue to the next iteration respectively.
 
 <hr />
 
@@ -298,7 +298,7 @@ fn main() {
 
 ### ♡ **Dynamic memory allocation**
 
-- Ellec has a notion of a `#env` directive which gives you an `ElleEnv *`.
+- Elle has a notion of a `#env` directive which gives you an `ElleEnv *`.
 
 This structure is also not defined in Elle code (like `ElleMeta`), but its equivalent structure may look like:
 
@@ -444,7 +444,7 @@ let x = [1, 2, 3]; // x's type is i32[]
 let y = ["a", "b", "c"]; // y's type is string[]
 ```
 
-You can also define dynamic arrays:
+You can also define multi-dimensional arrays:
 ```rs
 let grid = [
     [1, 2],
@@ -483,11 +483,11 @@ You can put tuples inside of arrays:
 ```rs
 let foo = [$(1, "a"), $(2, "b")];
 
-// ... or if you wanna be explicit ...
+// ... or if you prefer explicit typing ...
 
 (i32, string)[] foo = [$(1, "a"), $(2, "b")];
 
-// if you don't wanna put values inside but wanna use let you can do this
+// if you don't wanna put values inside but wanna use the `let` keyowrd you can do this
 
 let foo = Array::new<(i32, string)>();
 
@@ -584,7 +584,7 @@ fn main() {
 
     // The program will segfault here (for now)
     // due to not being passed ElleMeta
-    let arr_doubled = arr.map(io::println);
+    let arr_doubled = arr.map<i32>(io::println);
     io::println(arr_doubled);
 }
 ```
@@ -641,16 +641,44 @@ fn main() {
 
 ### ♡ **Static buffers**
 
-* A static buffer is a basic allocation of stack memory with a specified, static size.
+* A static buffer is a basic allocation of stack memory with a specified size.
 * You can allocate a buffer with the `type buf[size];` syntax.
 
-* Assuming you wrote the above code, you would now have a variable in scope, defined with the name `buf`. This variable is a pointer to the type specified.
-* Example:
+This would allocate memory on the stack of that size and give you back a pointer to that type.
+
+For example:
 
 ```rs
-char out[128];
-out[0] = 'a'; // Keep in mind that `out` is a `char *`
-io::println(out[0]);
+use std/prelude;
+
+const i32 ARRAY_SIZE = 40;
+
+fn main() {
+    i32 foo[ARRAY_SIZE]; // foo's type is `i32 *`
+
+    for i in 0..ARRAY_SIZE {
+        foo[i] = (i + 10) * 100;
+    }
+
+    io::dbg(foo[33]);
+}
+```
+
+The size doesn't have to be known at compile time:
+
+```rs
+use std/prelude;
+
+fn main() {
+    let size = i32::parse(io::input("Enter a size -> "));
+    i32 foo[size]; // foo's type is `i32 *`
+
+    for i in 0..size {
+        foo[i] = (i + 10) * 100;
+    }
+
+    io::dbg(foo[size - 1]);
+}
 ```
 
 The type of a static buffer cannot be inferred. You must declare it explicitly.
@@ -698,7 +726,7 @@ fn main() {
 ```
 
 The expected output is 2, then 4.
-This is because it will call `io::print` once when the standalone block will leave scope, at which point `i` is 2, then it will call `print_int` again when the function itself (`main`) will leave scope, at which point it will be 4 because `i` was squared (`i *= i`).
+This is because it will call `io::print` once when the standalone block will leave scope, at which point `i` is 2, then it will call `io::print` again when the function itself (`main`) will leave scope, at which point it will be 4 because `i` was squared (`i *= i`).
 
 You can also write something like this:
 ```rs
@@ -793,7 +821,7 @@ fn main() {
 }
 ```
 
-Casting is not necessary here, because the Elle compiler is smart enough to automatically cast the `f32` to an `i32` when compiling the arithmetic operation, based on a [weight](https://github.com/acquitelol/elle/blob/rewrite/src/compiler/enums.rs#L405-L414) that each type is assigned.
+Casting is not necessary here, because the Elle compiler is smart enough to automatically cast the `f32` to an `i32` when compiling the arithmetic operation, based on a [weight](https://github.com/acquitelol/elle/blob/rewrite/src/compiler/enums.rs#L934-L943) that each type is assigned.
 
 <br />
 
@@ -946,8 +974,8 @@ Operators which exist but can't be used when declaring variables:
 
 - `&&` - Logical And
 - `||` - Logical Or
-- `..` - Exclusive range (in 0..10, 0 is inclusive, 10 is exclusive)
-- `..=` - Inclusive range (in 0..=10, 0 is inclusive, 10 is inclusive)
+- `..` - Exclusive range
+- `..=` - Inclusive range
 
 Keep in mind that you can also use these operators when doing a variable declaration.
 This means the following code is valid:
