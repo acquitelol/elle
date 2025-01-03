@@ -48,6 +48,7 @@ fn main() {
 
     let finished = false;
     let bounces = 0;
+    char bouncesString["Bounces: {}".format(i32::max()).len()];
 
     while !raylib::window_should_close() {
         let deltaTime = raylib::get_frame_time();
@@ -111,7 +112,7 @@ fn main() {
         raylib::draw_text(title, (screenWidth - raylib::measure_text(title, fontSize)) / 2, 40, fontSize, BLUE);
 
         // Bounces
-        string bouncesString = "Bounces: {}".format(bounces);
+        io::sprintf(bouncesString, "Bounces: %d", bounces);
         raylib::draw_text(bouncesString, (screenWidth - raylib::measure_text(bouncesString, fontSize)) / 2, 100, fontSize, YELLOW);
 
         // Subtitle

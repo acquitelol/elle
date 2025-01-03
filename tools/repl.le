@@ -7,7 +7,7 @@ fn main() {
     string[] lines = [];
 
     while true {
-        let line = io::input(".ೃ࿔* -> "));
+        let line = io::input(".ೃ࿔* -> ");
 
         if line.ends_with(";") {
             line.pop();

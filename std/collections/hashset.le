@@ -192,3 +192,13 @@ fn HashSet::clone<T>(HashSet<T> *self) -> HashSet<T> * {
 
     return new_set;
 }
+
+fn HashSet::from<T>(T[] array) -> HashSet<T> * {
+    let set = HashSet::new();
+
+    for v in array {
+        set.add(v);
+    }
+
+    return set;
+}

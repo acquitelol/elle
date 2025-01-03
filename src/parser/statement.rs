@@ -451,6 +451,7 @@ impl<'a> Statement<'a> {
             let mut paren_nesting = 0;
             let mut block_nesting = 0;
             let mut curly_nesting = 0;
+            let mut generic_nesting = 0;
 
             loop {
                 // Wrapped statement, deref, nested function call
@@ -468,11 +469,29 @@ impl<'a> Statement<'a> {
                     curly_nesting += 1;
                 }
 
+                // Generic of a funcall
+                if self.current_token().kind == TokenKind::LessThan
+                    && self.next_token().is_some_and(|token| {
+                        let ty_name = token.value.get_string_inner().unwrap_or("".into());
+
+                        token.value.is_base_type()
+                            || self.shared.struct_pool.borrow().contains_key(&ty_name)
+                            || self.shared.generics.contains(&ty_name)
+                            || token.kind == TokenKind::LeftParenthesis
+                    })
+                {
+                    generic_nesting += 1;
+                }
+
                 tokens.push(self.current_token());
                 self.advance();
 
                 if self.current_token().kind == TokenKind::Comma {
-                    if paren_nesting > 0 || block_nesting > 0 || curly_nesting > 0 {
+                    if paren_nesting > 0
+                        || block_nesting > 0
+                        || curly_nesting > 0
+                        || generic_nesting > 0
+                    {
                         // Comma in an inner function should just be added to the
                         // token list to be parsed
                         tokens.push(self.current_token());
@@ -516,6 +535,12 @@ impl<'a> Statement<'a> {
                                 .location
                                 .error("Invalid balance of curly braces")
                         )
+                    }
+                }
+
+                if self.current_token().kind == TokenKind::GreaterThan {
+                    if generic_nesting > 0 {
+                        generic_nesting -= 1;
                     }
                 }
 
@@ -754,6 +779,7 @@ impl<'a> Statement<'a> {
             let mut paren_nesting = 0;
             let mut block_nesting = 0;
             let mut curly_nesting = 0;
+            let mut generic_nesting = 0;
 
             loop {
                 // Wrapped statement, deref, nested function call
@@ -771,11 +797,28 @@ impl<'a> Statement<'a> {
                     curly_nesting += 1;
                 }
 
+                if self.current_token().kind == TokenKind::LessThan
+                    && self.next_token().is_some_and(|token| {
+                        let ty_name = token.value.get_string_inner().unwrap_or("".into());
+
+                        token.value.is_base_type()
+                            || self.shared.struct_pool.borrow().contains_key(&ty_name)
+                            || self.shared.generics.contains(&ty_name)
+                            || token.kind == TokenKind::LeftParenthesis
+                    })
+                {
+                    generic_nesting += 1;
+                }
+
                 tmp_tokens.push(self.current_token());
                 self.advance();
 
                 if self.current_token().kind == TokenKind::Comma {
-                    if paren_nesting > 0 || block_nesting > 0 || curly_nesting > 0 {
+                    if paren_nesting > 0
+                        || block_nesting > 0
+                        || curly_nesting > 0
+                        || generic_nesting > 0
+                    {
                         // Comma in an inner function should just be added to the
                         // token list to be parsed
                         tmp_tokens.push(self.current_token());
@@ -819,6 +862,12 @@ impl<'a> Statement<'a> {
                                 .location
                                 .error("Invalid balance of curly braces")
                         )
+                    }
+                }
+
+                if self.current_token().kind == TokenKind::GreaterThan {
+                    if generic_nesting > 0 {
+                        generic_nesting -= 1;
                     }
                 }
 
@@ -2478,27 +2527,31 @@ impl<'a> Statement<'a> {
 
     fn yield_tokens_for_unary(&mut self) -> Vec<Token> {
         let mut nesting = 0;
+        let mut brace_nesting = 0;
 
         self.yield_tokens_with_condition(|token, prev_token, next_token| {
-            let ty_name = prev_token.value.get_string_inner().unwrap_or("".into());
-
             if prev_token.kind == TokenKind::LeftParenthesis {
                 nesting += 1;
             }
 
-            if prev_token.kind == TokenKind::RightParenthesis {
-                if nesting > 0 {
-                    nesting -= 1;
-                } else {
-                    return true;
-                }
+            if prev_token.kind == TokenKind::RightParenthesis && nesting > 0 {
+                nesting -= 1;
             }
+
+            if prev_token.kind == TokenKind::LeftCurlyBrace {
+                brace_nesting += 1;
+            }
+
+            if prev_token.kind == TokenKind::RightCurlyBrace && brace_nesting > 0 {
+                brace_nesting -= 1;
+            }
+
+            let ty_name = prev_token.value.get_string_inner().unwrap_or("".into());
 
             if token.kind.is_arithmetic() {
                 if token.kind == TokenKind::LessThan && next_token.is_some() {
                     let next = next_token.unwrap();
                     let next_name = next.value.get_string_inner().unwrap_or("".into());
-
                     !(self.shared.struct_pool.borrow().contains_key(&next_name)
                         || self.shared.generics.contains(&next_name)
                         || next.value.is_base_type()
@@ -2509,13 +2562,14 @@ impl<'a> Statement<'a> {
                         || prev_token.value.is_base_type()
                         || prev_token.kind == TokenKind::LeftParenthesis)
                 } else {
-                    nesting == 0
+                    nesting == 0 && brace_nesting == 0
                 }
             } else {
-                token.kind.is_declarative()
+                (token.kind.is_declarative()
                     || token.kind == TokenKind::Semicolon
                     || token.kind == TokenKind::Equal
-                    || token.kind == TokenKind::Question
+                    || token.kind == TokenKind::Question)
+                    && brace_nesting == 0
             }
         })
     }
