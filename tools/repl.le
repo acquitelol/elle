@@ -1,0 +1,57 @@
+use std/prelude;
+use std/time;
+
+const string SHORT_EXTENSION = ".le";
+
+fn main() {
+    string[] lines = [];
+
+    while true {
+        let line = io::input(".ೃ࿔* -> "));
+
+        if line.ends_with(";") {
+            line.pop();
+        }
+
+        let backlog = "{}{}".format(
+            lines.join(";\n{}".format(" ".repeat(16))),
+            lines.len() > 0 ? ";" : ""
+        );
+
+        let code = "
+            use std/prelude;
+
+            fn main() {{
+                {}
+                io::println({});
+            }".format(backlog, line)
+         .split("\n")
+         .map<string>(fn(string x) x.replace(" ".repeat(12), ""))
+         .join("\n");
+
+        if line == "<!dbg>" {
+            io::println(code);
+            continue;
+        }
+
+        let src_path = ".repl-{}{}".format(time(nil), SHORT_EXTENSION);
+        let exec_path = "./{}".format(src_path.replace(SHORT_EXTENSION, ""));
+
+        if !io::write_to_file(src_path, code) {
+            io::eprintf("Failed to write to file at path: {}", src_path);
+            continue;
+        }
+
+        let src_code = libc::system("ellec --hush {}".format(src_path));
+        io::remove(src_path);
+
+        if !src_code {
+            let exec_code = libc::system(exec_path);
+            io::remove(exec_path);
+
+            if !exec_code {
+                lines.push(line);
+            }
+        }
+    }
+}

@@ -1,3 +1,4 @@
+namespace libc;
 global pub;
 
 external fn atoi(string str) @alias("string::atoi") -> i32;
@@ -5,5 +6,6 @@ external fn atol(string str) @alias("string::atol") -> i64;
 external fn atof(string str) @alias("string::atof") -> f64;
 external fn strtol(string str, string *endptr, i32 base) @alias("string::strtol") -> i64;
 
-external fn abort();
-external fn exit(i32 code);
+external fn abort() @alias("libc::abort");
+external fn exit(i32 code) @alias("libc::exit");
+external fn system(string cmd) @alias("libc::system");

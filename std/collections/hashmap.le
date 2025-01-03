@@ -42,7 +42,8 @@ local fn __internal_key_exists_check<T, U>(HashMap<T, U> *self, T key, ElleMeta 
             meta.column
             key.__fmt__(0)
         );
-        abort();
+
+        libc::abort();
     }
 }
 

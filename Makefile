@@ -31,6 +31,10 @@ compile-release:
 test:
 	pypy3 tools/examples.py all
 
+repl:
+	ellec tools/repl.le
+
 clean:
 	rm -rf dist
+	rm repl
 	@make compile-release

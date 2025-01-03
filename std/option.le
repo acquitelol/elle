@@ -39,7 +39,7 @@ fn Option::None<T>() -> Option<T> {
 fn Option::expect<T>(Option<T> self, string message) -> T {
     if !self.__is_some {
         io::fprintf(stderr, "%s\n", message);
-        abort();
+        libc::abort();
     }
 
     return self.__value;

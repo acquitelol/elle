@@ -104,7 +104,7 @@ fn io::panic(ElleMeta meta, string fmt, ...) @fmt {
         __internal_fmt(fmt, meta, args)
     );
 
-    abort();
+    libc::abort();
 }
 
 fn die(ElleMeta meta) {
@@ -113,7 +113,7 @@ fn die(ElleMeta meta) {
         meta.file, meta.line, meta.column
     );
 
-    abort();
+    libc::abort();
 }
 
 fn io::assert(ElleMeta meta, bool condition, string message) {
@@ -125,7 +125,7 @@ fn io::assert(ElleMeta meta, bool condition, string message) {
             parsed.color("italic").reset()
         );
 
-        abort();
+        libc::abort();
     }
 }
 
@@ -191,4 +191,21 @@ fn io::read_to_string(string path) -> string {
 
     buf[pos] = '\0';
     return buf;
+}
+
+fn io::write_to_file(string path, string content) -> bool {
+    let file = io::fopen(path, "w");
+    defer io::fclose(file);
+
+    if !file {
+        return false;
+    }
+
+    let size = io::fwrite(content, #size(char), content.len(), file);
+
+    if size != content.len() {
+        return false;
+    }
+
+    return true;
 }

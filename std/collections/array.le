@@ -18,7 +18,7 @@ local fn __internal_array_bounds_check(string file, i32 line, i32 col, i64 i, i6
             file, line, col, i, length
         );
 
-        abort();
+        libc::abort();
     }
 }
 
@@ -313,7 +313,8 @@ fn Array::insert<T>(T[] self, i32 index, T element) {
                 .reset(),
             index, self.size
         );
-        abort();
+
+        libc::abort();
     }
 
     if self.size >= self.capacity {

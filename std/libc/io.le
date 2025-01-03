@@ -49,5 +49,6 @@ external fn fread(void *ptr, i64 size, i64 nmemb, FILE *stream) @alias("io::frea
 external fn fwrite(void *ptr, i64 size, i64 nmemb, FILE *stream) @alias("io::fwrite") -> i64;
 external fn ftell(FILE *stream) @alias("io::ftell") -> i64;
 external fn fseek(FILE *stream, i64 offset, i32 whence) @alias("io::fseek") -> i32;
+external fn remove(string path) @alias("io::remove") -> i32;
 
 namespace io;
