@@ -411,9 +411,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
             arg = string::concat("\"", arg, "\"");
         }
 
-        let res = (string)#env.allocator.alloc(arg.len() + 1);
-        strcpy(res, arg);
-        return res;
+        return arg;
     }
 
     if ty.starts_with("i8") {
@@ -464,10 +462,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
         // Even though this yields a string we need to
         // copy it into a heap-allocated string
         // so that the caller can reliably free it
-        let arg = args.yield(bool).to_string();
-        let res = (string)#env.allocator.alloc(arg.len() + 1);
-        io::sprintf(res, "%s", arg);
-        return res;
+        return args.yield(bool).to_string();
     }
 
     let arg = args.yield(i64);
@@ -493,7 +488,7 @@ fn string::as_string_wrapped(ElleMeta meta, ...) {
 // If you want to format arguments of arbitrary types
 // into a new string, use string::format() instead
 fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
-    let result = (string)#env.allocator.alloc(fmt.len());
+    let result = "";
 
     let arg = 0;
     let is_open = false;
