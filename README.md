@@ -349,6 +349,71 @@ fn main() {
 
 Keep in mind that you can also use the libc standard manual memory management functions, like `malloc`, `realloc`, and `free`. These methods are defined in `std/libc/mem`.
 
+The allocator does not currently clean up after itself, which means that if you are doing an allocating operation in a loop, you will keep allocating forever and never free anything. To mitigate this, you can use the `$scoped`/`mem::scoped` function:
+
+```rs
+use std/prelude;
+
+fn main() {
+    let a = 5;
+
+    while true {
+        $scoped(fn(i32 *a) {
+            i32 *xs = #env.allocator.alloc(#size(i32) * *a);
+            xs[0] = 39;
+            io::dbg(xs);
+        }, &a);
+    }
+}
+```
+
+This function will allocate memory which will all be automatically freed after the function call ends. That means that this acts similar to a temporary allocator or stack memory. As Elle has no capturing lambdas, a `void *arg` is provided for you in this lambda, which you can choose to use or not. It can take any shape; you can pass a single variable (like in the example above) or an entire structure if you want to:
+
+```rs
+use std/prelude;
+
+struct Foo {
+    i32 a;
+    f32 b;
+    string c;
+};
+
+fn main() {
+    while true {
+        $scoped(fn(Foo *foo) {
+            let x = [foo.a]; // This allocates too, will allocate into the scoped allocator
+            io::dbg(x, foo);
+        }, &Foo {
+            a = 1,
+            b = 3.9,
+            c = "foo"
+        });
+    }
+}
+```
+
+Or nothing:
+
+```rs
+use std/prelude;
+
+fn main() {
+    rand::seed(0);
+
+    while true {
+        $scoped(fn() {
+            let x = [
+                rand::random(0, 10),
+                rand::random(0, 10),
+                rand::random(0, 10)
+            ];
+
+            io::dbg(x);
+        }, nil);
+    }
+}
+```
+
 <hr />
 
 ### ♡ **Variadic Functions**

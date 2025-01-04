@@ -7,4 +7,5 @@ use std/types;
 use std/cast;
 use std/core;
 use std/math;
+use std/rand;
 use std/io;

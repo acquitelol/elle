@@ -459,9 +459,6 @@ fn __to_string(string ty, i64 args, bool wrap) {
     }
 
     if ty.starts_with("bool") {
-        // Even though this yields a string we need to
-        // copy it into a heap-allocated string
-        // so that the caller can reliably free it
         return args.yield(bool).to_string();
     }
 
