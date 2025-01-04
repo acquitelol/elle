@@ -78,8 +78,7 @@ fn Array::is_empty<T>(T[] self) -> bool {
 }
 
 fn Array::with_capacity<T>(i32 initialCapacity) -> T[] {
-    T[] array = #env.allocator.alloc(#size(T[]));
-    *array = #env.allocator.alloc(#size(Array<T>));
+    T[] array = #env.allocator.alloc(#size(Array<T>));
 
     array.elements = #env.allocator.alloc(initialCapacity * #size(T));
     array.size = 0;

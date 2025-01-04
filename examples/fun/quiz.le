@@ -23,7 +23,6 @@ fn Question::new(Operation *[] operators, i32 index) {
     fn *func = operation.func;
 
     Question *question = #env.allocator.alloc(#size(Question));
-    *question = #env.allocator.alloc(#size(Question));
 
     question.display = "What is {} {} {}? -> ".format(lhs, operation.display, rhs);
     question.answer = func(lhs, rhs);
@@ -39,7 +38,6 @@ struct Operation {
 
 fn Operation::new(string display, fn *func) {
     Operation *op = #env.allocator.alloc(#size(Operation));
-    *op = #env.allocator.alloc(#size(Operation));
     op.display = display;
     op.func = func;
 

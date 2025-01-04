@@ -30,8 +30,7 @@ fn LinkedList::new<T>() -> LinkedList<T> {
 }
 
 fn LinkedList::add<T>(LinkedList<T> *self, T data) {
-    Node<T> *new = mem::malloc(#size(Node<T> *));
-    *new = mem::malloc(#size(Node<T>));
+    Node<T> *new = mem::malloc(#size(Node<T>));
 
     if !new {
         return;

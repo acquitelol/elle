@@ -10,7 +10,6 @@ struct BigInt {
 
 fn BigInt::empty(bool is_negative) {
     BigInt *bigint = #env.allocator.alloc(#size(BigInt));
-    *bigint = #env.allocator.alloc(#size(BigInt));
 
     bigint.is_negative = is_negative;
     bigint.digits = [];

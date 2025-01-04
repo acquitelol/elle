@@ -9,7 +9,6 @@ struct Option<T> {
 
 local fn alloc_some<T>(T value) -> Option<T> {
     Option<T> *option = #env.allocator.alloc(#size(Option<T>));
-    *option = #env.allocator.alloc(#size(Option<T>));
 
     option.__value = value;
     option.__is_some = true;
@@ -19,7 +18,6 @@ local fn alloc_some<T>(T value) -> Option<T> {
 
 local fn alloc_none<T>() -> Option<T> {
     Option<T> *option = #env.allocator.alloc(#size(Option<T>));
-    *option = #env.allocator.alloc(#size(Option<T>));
 
     option.__value = 0;
     option.__is_some = false;

@@ -1,8 +1,6 @@
 // RLE = Run-Length Encoding
 // https://en.wikipedia.org/wiki/Run-length_encoding
-use std/types;
-use std/cast;
-use std/io;
+use std/prelude;
 
 namespace RLE;
 

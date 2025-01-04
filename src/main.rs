@@ -49,6 +49,7 @@ static DUNDER_CONSTANTS: &[&'static str] = &[
     HASH_CONSTANT,
     EQUALS_CONSTANT,
 ];
+static PTR_PRIORITY_CONSTANTS: &[&'static str] = &[FORMAT_CONSTANT];
 static RESERVED_KEYWORDS: &[&'static str] = &[
     "as", "mut", "enum", "match", "static", "super", "do", "macro", "step", "of", "class", "var",
     "impl",

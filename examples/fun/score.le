@@ -1,17 +1,12 @@
-// This file is not best practices or using any modern Elle semantics
-// It simply lives here as a relic of the past
-use std/string;
-use std/cast;
-use std/io;
+use std/prelude;
 
 fn main() {
-    i32 highestScore = 0;
-    string winner = (string)mem::malloc(BUF_SIZE * #size(char));
-    defer free(winner);
+    let highestScore = 0;
+    let winner = "";
+    let stop = false;
 
     while true {
         string person = io::input("Enter a person's name (or 'stop'): ");
-        defer mem::free(person);
 
         if person == "stop" {
             break;
@@ -21,7 +16,7 @@ fn main() {
 
         if score > highestScore {
             highestScore = score;
-            strcpy(winner, person);
+            winner = person.clone();
         }
     }
 

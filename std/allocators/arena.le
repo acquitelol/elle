@@ -19,9 +19,7 @@ struct ArenaAllocator @nofmt {
 };
 
 fn Arena::new(i32 size) {
-    // double alloc because structs are ptrs
-    Arena *arena = mem::malloc(#size(Arena *));
-    *arena = mem::malloc(#size(Arena));
+    Arena *arena = mem::malloc(#size(Arena));
 
     arena.buffer = mem::malloc(size);
     arena.size = size;
@@ -32,9 +30,7 @@ fn Arena::new(i32 size) {
 }
 
 fn ArenaAllocator::new() {
-    // double alloc because structs are ptrs
-    ArenaAllocator *self = mem::malloc(#size(ArenaAllocator *));
-    *self = mem::malloc(#size(ArenaAllocator));
+    ArenaAllocator *self = mem::malloc(#size(ArenaAllocator));
 
     self.chunk_size = 64 * 1024; // 64kb chunks
     self.min_chunk_size = 1024;  // 1kb minimum
@@ -92,11 +88,9 @@ fn ArenaAllocator::free_self(ArenaAllocator *self) {
     while current {
         let next = current.next;
         mem::free(current.buffer);
-        mem::free((void *)(*current));
         mem::free(current);
         current = next;
     }
 
-    mem::free((void *)(*self)); // structs are pointers so must free double alloc
-    mem::free(self);            // free pointer to struct
+    mem::free(self);
 }

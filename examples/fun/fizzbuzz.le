@@ -1,5 +1,4 @@
-use std/cast;
-use std/io;
+use std/prelude;
 
 fn main() {
     let input = i32::parse(io::input("Enter a number -> "));
@@ -9,7 +8,7 @@ fn main() {
         return 1;
     }
 
-    for i in 0..=input {
+    for i in 1..=input {
         let res = "";
 
         if i % 3 == 0 {

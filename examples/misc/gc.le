@@ -8,8 +8,7 @@ struct Object {
 };
 
 fn Object::new(i32 size) {
-    Object *obj = mem::malloc(#size(Object *));
-    *obj = mem::malloc(#size(Object));
+    Object *obj = mem::malloc(#size(Object));
 
     obj.data = mem::malloc(size);
     obj.marked = false;
@@ -20,7 +19,6 @@ fn Object::new(i32 size) {
 
 fn Object::free(Object *self) {
     mem::free(self.data);
-    mem::free((void *)(*self));
     mem::free(self);
 }
 
@@ -29,8 +27,7 @@ struct GC {
 };
 
 fn GC::new() {
-    GC *gc = #env.allocator.alloc(#size(GC *));
-    *gc = #env.allocator.alloc(#size(GC));
+    GC *gc = #env.allocator.alloc(#size(GC));
     gc.heap = [];
 
     return gc;

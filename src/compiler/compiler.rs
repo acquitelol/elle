@@ -17,7 +17,7 @@ use crate::{
     },
     unknown_field, unknown_function, Warning, Warnings, DUNDER_CONSTANTS, ENV_ID, ENV_STRUCT_NAME,
     EQUALS_CONSTANT, FORMAT_CONSTANT, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID,
-    META_STRUCT_NAME, POINTER_ID, STORE_CONSTANT, VOID_POINTER_ID,
+    META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VOID_POINTER_ID,
 };
 
 use super::enums::{
@@ -638,12 +638,7 @@ impl Compiler {
 
                 let res = self.get_variable(&format!("{}.addr", name), Some(func), Some(module));
                 let mut local_ty = r#type.clone().unwrap_or(existing);
-
-                let mut temp = if local_ty != Type::Infer {
-                    Some(self.new_variable(&local_ty, &name, Some(func), false, false))
-                } else {
-                    None
-                };
+                let mut temp = Some(self.new_variable(&local_ty, &name, Some(func), false, false));
 
                 let parsed = self.generate_statement(
                     func,
@@ -715,7 +710,6 @@ impl Compiler {
 
                     if res.is_ok() && r#type.is_none() {
                         let (addr_ty, addr_val) = res.unwrap();
-                        let tmp = self.new_variable(&addr_ty, &name, Some(func), true, false);
 
                         if addr_ty != final_ty
                             && !(addr_ty.is_pointer()
@@ -739,15 +733,9 @@ impl Compiler {
                             final_val.clone(),
                         ));
 
-                        func.borrow_mut().assign_instruction(
-                            &tmp,
-                            &addr_ty,
-                            Instruction::Load(addr_ty.clone(), addr_val.clone()),
-                        );
-
                         self.address_pool
                             .insert(temp.unwrap().clone(), addr_val.clone());
-                        return Some((addr_ty, tmp));
+                        return Some((addr_ty, final_val));
                     }
 
                     let addr_val = self.new_variable(
@@ -761,7 +749,15 @@ impl Compiler {
                     func.borrow_mut().assign_instruction_front(
                         &addr_val,
                         &Type::Pointer(Box::new(final_ty.clone())),
-                        Instruction::Alloc8(Value::Const("".into(), final_ty.size(module) as i128)),
+                        Instruction::Alloc8(Value::Const(
+                            "".into(),
+                            if final_ty.is_struct() {
+                                Type::Pointer(Box::new(Type::Void))
+                            } else {
+                                final_ty.clone()
+                            }
+                            .size(module) as i128,
+                        )),
                     );
 
                     func.borrow_mut().add_instruction(Instruction::Store(
@@ -1285,6 +1281,21 @@ impl Compiler {
                     // struct access
                     if ty.is_struct() {
                         name = format!("{}.{}", ty.get_struct_inner().unwrap(), name)
+                    // string access
+                    } else if ty.is_string() {
+                        name = format!("string.{}", name)
+                    // string* access
+                    } else if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_string() {
+                        name = format!("string.{}", name)
+                    // void* access
+                    } else if ty.is_void_pointer() {
+                        name = format!("{}.{}", VOID_POINTER_ID, name)
+                    // dunder access
+                    } else if ty.is_pointer()
+                        && PTR_PRIORITY_CONSTANTS.contains(&name.as_str())
+                        && type_method
+                    {
+                        name = format!("{}.{}", POINTER_ID, name)
                     // struct* access
                     } else if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct() {
                         name = format!(
@@ -1292,16 +1303,10 @@ impl Compiler {
                             ty.get_pointer_inner().unwrap().get_struct_inner().unwrap(),
                             name
                         )
-                    // string access
-                    } else if ty.is_string() {
-                        name = format!("string.{}", name)
                     // void* access
                     } else if ty.is_void_pointer() {
                         name = format!("{}.{}", VOID_POINTER_ID, name)
-                    // string* access
-                    } else if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_string() {
-                        name = format!("string.{}", name)
-                    // fmt access
+                    // dunder access
                     } else if ty.is_pointer()
                         && DUNDER_CONSTANTS.contains(&name.as_str())
                         && type_method
@@ -2010,13 +2015,19 @@ impl Compiler {
                     return Some((inner, compiled_location));
                 }
 
-                let temp = self.new_temporary(Some("load"), true);
+                let temp = if inner.is_struct() {
+                    compiled_location
+                } else {
+                    let temp = self.new_temporary(Some("load"), true);
 
-                func.borrow_mut().assign_instruction(
-                    &temp,
-                    &inner,
-                    Instruction::Load(inner.clone(), compiled_location),
-                );
+                    func.borrow_mut().assign_instruction(
+                        &temp,
+                        &inner,
+                        Instruction::Load(inner.clone(), compiled_location),
+                    );
+
+                    temp
+                };
 
                 Some((inner, temp))
             }
@@ -2758,6 +2769,10 @@ impl Compiler {
                         "Unexpected error when trying to compile the value of an address statement",
                     ));
 
+                if ty.is_struct() {
+                    return Some((Type::Pointer(Box::new(ty)), val));
+                }
+
                 if let Some(addr_val) = self.address_pool.get(&val) {
                     Some((Type::Pointer(Box::new(ty)), addr_val.clone()))
                 } else {
@@ -3414,7 +3429,7 @@ impl Compiler {
         load: bool,
     ) -> (Type, Value) {
         loop {
-            match right {
+            match right.clone() {
                 AstNode::Literal {
                     kind,
                     value,
@@ -3425,15 +3440,6 @@ impl Compiler {
                     if !ty.is_struct() {
                         // Automatically deref 'Foo *' into 'Foo' when processing
                         if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct() {
-                            let tmp = self.new_temporary(Some("load"), true);
-
-                            func.borrow_mut().assign_instruction(
-                                &tmp,
-                                &Type::Long,
-                                Instruction::Load(ty.get_pointer_inner().unwrap(), left),
-                            );
-
-                            left = tmp;
                             ty = ty.get_pointer_inner().unwrap();
                         } else {
                             panic!(
@@ -3450,7 +3456,7 @@ impl Compiler {
                     let struct_name = ty.get_struct_inner().unwrap();
 
                     let (member_ty, offset) = self
-                        .member_to_offset(module, &ty.get_struct_inner().unwrap(), &field)
+                        .member_to_offset(module, &struct_name, &field)
                         .expect(&unknown_field!(
                             self.struct_pool.get(&struct_name).unwrap(),
                             ty,
@@ -3650,15 +3656,19 @@ impl Compiler {
             }
 
             if first.is_pointer() && first.get_pointer_inner().unwrap() == second {
-                let tmp = self.new_temporary(Some("load"), false);
+                if second.is_struct() {
+                    return (second, val);
+                } else {
+                    let tmp = self.new_temporary(Some("load"), false);
 
-                func.borrow_mut().assign_instruction(
-                    &tmp,
-                    &second.clone(),
-                    Instruction::Load(second.clone(), val),
-                );
+                    func.borrow_mut().assign_instruction(
+                        &tmp,
+                        &second.clone(),
+                        Instruction::Load(second.clone(), val),
+                    );
 
-                return (second, tmp);
+                    return (second, tmp);
+                }
             }
 
             panic!(

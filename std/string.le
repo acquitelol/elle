@@ -179,6 +179,10 @@ fn string::extend(ElleMeta meta, string *self, ...) {
     *self = res;
 }
 
+fn string::clone(string self) {
+    return self <> "";
+}
+
 fn string::color(string self, string color) {
     let fmt = "\x1b[%dm";
     let code = -1;

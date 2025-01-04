@@ -22,11 +22,6 @@ fn other(Foo *a) {
 }
 
 fn main() {
-    let bar = Bar {
-        meow = 9,
-        nya = 8
-    };
-
     let foo = Foo {
         a = 752,
         c = 12,
@@ -35,7 +30,10 @@ fn main() {
             meow = 100,
             nya = 0
         },
-        ptr = &bar
+        ptr = &Bar {
+            meow = 9,
+            nya = 8
+        }
     };
 
     foo.c = 14;

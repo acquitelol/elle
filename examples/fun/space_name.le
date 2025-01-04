@@ -21,7 +21,7 @@ fn Info::to_space_name(Info self) {
 }
 
 fn main() {
-    Info info = Info {
+    let info = Info {
         name = $(
             io::input("What is your first name? -> "),
             io::input("What is your last name? -> ")
