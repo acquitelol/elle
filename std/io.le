@@ -45,34 +45,27 @@ local fn __err(i64 args, ElleMeta meta, bool newline) {
     }
 }
 
-fn io::dbg(ElleMeta meta, ...) @fmt {
-    variadic args[meta.arity];
+fn io::dbg(ElleMeta meta, ...args) @fmt {
     __print(args, meta, true, true, false);
 }
 
-fn io::print(ElleMeta meta, ...) @fmt {
-    variadic args[meta.arity];
+fn io::print(ElleMeta meta, ...args) @fmt {
     __print(args, meta, false, false, false);
 }
 
-fn io::println(ElleMeta meta, ...) @fmt {
-    variadic args[meta.arity];
+fn io::println(ElleMeta meta, ...args) @fmt {
     __print(args, meta, false, false, true);
 }
 
-fn io::eprint(ElleMeta meta, ...) @fmt {
-    variadic args[meta.arity];
+fn io::eprint(ElleMeta meta, ...args) @fmt {
     __err(args, meta, false);
 }
 
-fn io::eprintln(ElleMeta meta, ...) @fmt {
-    variadic args[meta.arity];
+fn io::eprintln(ElleMeta meta, ...args) @fmt {
     __err(args, meta, true);
 }
 
-fn io::printf(ElleMeta meta, string fmt, ...) @fmt {
-    variadic args[meta.arity - 1];
-
+fn io::printf(ElleMeta meta, string fmt, ...args) @fmt {
     for let i = 0; i < meta.arity; i += 1 {
         meta.types[i] = "string";
     }
@@ -81,7 +74,7 @@ fn io::printf(ElleMeta meta, string fmt, ...) @fmt {
 }
 
 fn io::eprintf(ElleMeta meta, string fmt, ...) @fmt {
-    variadic args[meta.arity - 1];
+    variadic args;
 
     for let i = 0; i < meta.arity; i += 1 {
         meta.types[i] = "string";
@@ -91,7 +84,7 @@ fn io::eprintf(ElleMeta meta, string fmt, ...) @fmt {
 }
 
 fn io::panic(ElleMeta meta, string fmt, ...) @fmt {
-    variadic args[meta.arity - 1];
+    variadic args;
 
     for let i = 0; i < meta.arity; i += 1 {
         meta.types[i] = "string";
@@ -107,7 +100,7 @@ fn io::panic(ElleMeta meta, string fmt, ...) @fmt {
     libc::abort();
 }
 
-fn die(ElleMeta meta) {
+fn io::die(ElleMeta meta) {
     io::eprintf(
         "[{}:{}:{}] Something has gone extremely wrong with no explanation.",
         meta.file, meta.line, meta.column
@@ -116,9 +109,31 @@ fn die(ElleMeta meta) {
     libc::abort();
 }
 
+fn io::todo(ElleMeta meta, string message) {
+    io::cprintf("%ld", message);
+    let parsed = message ? ": {}".format(message) : "";
+
+    io::eprintf(
+        "[{}:{}:{}] {}: not yet implemented{}",
+        meta.file, meta.line, meta.column, meta.caller, parsed
+    );
+
+    libc::abort();
+}
+
+fn io::unimplemented(ElleMeta meta) {
+    io::eprintf(
+        "[{}:{}:{}] {}: not yet implemented",
+        meta.file, meta.line, meta.column, meta.caller
+    );
+
+    libc::abort();
+}
+
+
 fn io::assert(ElleMeta meta, bool condition, string message) {
     if !condition {
-        let parsed = message || "No additional information was specified.";
+        let parsed = message ?: "No additional information was specified.";
 
         io::eprintln(
             meta.caller, ": Assertion '", meta.exprs[0], "' failed.\n",
@@ -129,14 +144,21 @@ fn io::assert(ElleMeta meta, bool condition, string message) {
     }
 }
 
-const i64 BUF_SIZE = 1024;
+external fn io::dbg(ElleMeta meta, ...args) @fmt @alias("$dbg");
+external fn io::panic(ElleMeta meta, string fmt, ...) @fmt @alias("$panic");
+external fn io::die(ElleMeta meta) @alias("$die");
+external fn io::todo(ElleMeta meta, string message) @alias("$todo");
+external fn io::unimplemented(ElleMeta meta) @alias("$unimplemented");
+external fn io::assert(ElleMeta meta, bool condition, string message) @alias("$assert");
+
+const i64 __internal_BUF_SIZE = 4096;
 const i64 EOF = -1;
 
 fn io::input(string message) -> string {
-    let buf = (string)#env.allocator.alloc(BUF_SIZE * #size(char));
+    let buf = (string)#env.allocator.alloc(__internal_BUF_SIZE * #size(char));
 
     io::print(message);
-    io::fgets(buf, BUF_SIZE, stdin);
+    io::fgets(buf, __internal_BUF_SIZE, stdin);
 
     // I would rather O(n) than O(2n)
     let length = buf.len();
@@ -159,13 +181,7 @@ fn io::read_to_string(string path) -> string {
     io::fseek(file, 0, SEEK_END);
     let file_size = io::ftell(file);
     io::fseek(file, 0, SEEK_SET);
-    i64 buf_size;
-
-    if file_size > 0 {
-        buf_size = file_size + 1;
-    } else {
-        buf_size = 4096;
-    }
+    let buf_size = file_size > 0 ? file_size + 1 : __internal_BUF_SIZE;
 
     let buf = (string)#env.allocator.alloc(buf_size * #size(char));
 

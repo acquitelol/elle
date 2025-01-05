@@ -121,9 +121,7 @@ fn string::slice(string self, i32 start, i32 end) -> string {
 //
 // "a".concat("b") == "ab"
 // string::concat("me", "ow") == "meow"
-fn string::concat(ElleMeta meta, ...) -> string {
-    variadic args[meta.arity];
-
+fn string::concat(ElleMeta meta, ...args) -> string {
     string strings[meta.arity];
     i32 sizes[meta.arity];
     i64 length = 0;
@@ -167,9 +165,8 @@ fn string::concat(ElleMeta meta, ...) -> string {
 // string a = "me";
 // string::extend(a, "ow");
 // a == "meow"
-fn string::extend(ElleMeta meta, string *self, ...) {
+fn string::extend(ElleMeta meta, string *self, ...args) {
     // - 1 to account for `string *self` which isnt variadic
-    variadic args[meta.arity - 1];
     let res = *self;
 
     for let i = 0; i < meta.arity - 1; i += 1 {
@@ -475,13 +472,11 @@ fn __to_string(string ty, i64 args, bool wrap) {
     return res;
 }
 
-fn string::as_string(ElleMeta meta, ...) {
-    variadic args[meta.arity];
+fn string::as_string(ElleMeta meta, ...args) {
     return __to_string(meta.types[0], args, false);
 }
 
-fn string::as_string_wrapped(ElleMeta meta, ...) {
-    variadic args[meta.arity];
+fn string::as_string_wrapped(ElleMeta meta, ...args) {
     return __to_string(meta.types[0], args, true);
 }
 
@@ -543,14 +538,11 @@ fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
 
 // Internal formatting function that does not automatically run
 // parameters through their formatter (no @fmt attribute)
-fn string::__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(ElleMeta meta, string fmt, ...) -> string {
-    variadic args[meta.arity - 1];
+fn string::__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(ElleMeta meta, string fmt, ...args) -> string {
     return __internal_fmt(fmt, meta, args);
 }
 
-fn string::format(ElleMeta meta, string fmt, ...) @fmt -> string {
-    variadic args[meta.arity - 1];
-
+fn string::format(ElleMeta meta, string fmt, ...args) @fmt -> string {
     for let i = 0; i < meta.arity; i += 1 {
         meta.types[i] = "string";
     }

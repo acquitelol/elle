@@ -8,5 +8,5 @@ fn main() {
     let b = (color >> 8) & 0xFF;
     let a = color & 0xFF;
 
-    io::dbg(r, g, b, a);
+    $dbg(r, g, b, a);
 }

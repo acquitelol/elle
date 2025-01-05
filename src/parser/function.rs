@@ -87,6 +87,7 @@ impl<'a> Function<'a> {
 
         let mut arguments = vec![];
         let mut variadic = false;
+        let mut variadic_name = None;
 
         let ty_name = self
             .parser
@@ -114,6 +115,12 @@ impl<'a> Function<'a> {
             while self.parser.current_token().kind != TokenKind::RightParenthesis {
                 if self.parser.current_token().kind == TokenKind::Ellipsis {
                     self.parser.advance();
+
+                    if self.parser.current_token().kind == TokenKind::Identifier {
+                        variadic_name = Some(self.parser.get_identifier());
+                        self.parser.advance();
+                    }
+
                     variadic = true;
                     break;
                 }
@@ -289,6 +296,13 @@ impl<'a> Function<'a> {
         self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
 
         let body: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
+
+        if let Some(name) = variadic_name {
+            body.borrow_mut().push(AstNode::VariadicStart {
+                name,
+                location: self.parser.current_token().location,
+            });
+        }
 
         loop {
             self.parser.advance();

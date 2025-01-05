@@ -15,8 +15,11 @@ fn main() {
     // because they will produce inaccurate results.
     //
     // The expected outcome is an assertion failure at the `false` assert.
+    //
+    // For extra security, we will use io::assert for the succeeding one
+    // and $assert for the failing one.
     io::assert(true, "This should not fail because it is `true`.\nSomething has gone terribly wrong.");
-    io::assert(false, "This assert has intentionally failed." <> "\nThis means that this test has passed.".color("green").reset());
+    $assert(false, "This assert has intentionally failed." <> "\nThis means that this test has passed.".color("green").reset());
 
     io::println("This path should be unreachable.\nSomething has gone terribly wrong.".color("red").reset())
 }

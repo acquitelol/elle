@@ -16,6 +16,6 @@ fn main() {
     //
     // With this new implementation we use a hashmap to determine the known type
     // for a generic which is not only cleaner but also far more correct than before.
-    io::dbg(foo(1, 1.2));
-    io::dbg(foo(1.2, 1));
+    $dbg(foo(1, 1.2));
+    $dbg(foo(1.2, 1));
 }

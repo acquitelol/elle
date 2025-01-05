@@ -18,7 +18,7 @@ fn other(Foo *a) {
     a.bar.meow = 50001;
     a.ptr.nya = 10;
 
-    io::dbg(a.ptr.nya, a.b[0]);
+    $dbg(a.ptr.nya, a.b[0]);
 }
 
 fn main() {
@@ -39,5 +39,5 @@ fn main() {
     foo.c = 14;
 
     other(&foo);
-    io::println(foo);
+    $dbg(foo);
 }

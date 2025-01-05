@@ -45,15 +45,11 @@ fn HashSet::with_capacity<T>(i32 initial_capacity) -> HashSet<T> * {
     return set;
 }
 
-fn HashSet::new<T>(ElleMeta meta, ...) -> HashSet<T> * {
-    HashSet<T> *set = HashSet::with_capacity(4);
+fn HashSet::new<T>(ElleMeta meta, ...args) -> HashSet<T> * {
+    let set = HashSet::with_capacity(4);
 
-    if meta.arity > 0 {
-        variadic args[meta.arity];
-
-        for i32 i = 0; i < meta.arity; i += 1 {
-            set.add(args.yield(T));
-        }
+    for i32 i = 0; i < meta.arity; i += 1 {
+        set.add(args.yield(T));
     }
 
     return set;

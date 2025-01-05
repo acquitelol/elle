@@ -154,7 +154,7 @@ fn get_e() {
 
 fn main() {
     f64 e = get_e();
-    io::dbg(e);
+    $dbg(e);
 }
 ```
 
@@ -179,11 +179,11 @@ for x in ["a", "b", "c"] {
 * Any iterable type can be used as an iterator:
 ```rs
 for c in "hello world" {
-    io::dbg(c);
+    $dbg(c);
 }
 
 for i in 0..100 {
-    io::dbg(i);
+    $dbg(i);
 }
 ```
 
@@ -191,7 +191,7 @@ You can also access the current index during a `foreach` loop, no enumeration ne
 
 ```rs
 for x in [1, 2, 3] {
-    io::dbg(#i(x), x);
+    $dbg(#i(x), x);
 }
 ```
 
@@ -199,7 +199,7 @@ You can also assign to this variable if you need to (such as stepping by 2):
 
 ```rs
 for x in [1, 2, 3, 4] {
-    io::dbg(#i(x), #i(x) + 1, x);
+    $dbg(#i(x), #i(x) + 1, x);
     #i(x) += 1; // Will now increment by 2
 }
 ```
@@ -330,7 +330,7 @@ fn Foo::new(i32 a) {
 
 fn main() {
     let foo = Foo::new(10);
-    io::dbg(foo);
+    $dbg(foo);
 }
 ```
 
@@ -342,7 +342,7 @@ fn main() {
     i32 *numbers = #env.allocator.alloc(#size(i32) * 10);
     numbers[1] = 39;
 
-    io::dbg(numbers[1]); // 39
+    $dbg(numbers[1]); // 39
     // dont need to free it
 }
 ```
@@ -361,7 +361,7 @@ fn main() {
         $scoped(fn(i32 *a) {
             i32 *xs = #env.allocator.alloc(#size(i32) * *a);
             xs[0] = 39;
-            io::dbg(xs);
+            $dbg(xs);
         }, &a);
     }
 }
@@ -382,7 +382,7 @@ fn main() {
     while true {
         $scoped(fn(Foo *foo) {
             let x = [foo.a]; // This allocates too, will allocate into the scoped allocator
-            io::dbg(x, foo);
+            $dbg(x, foo);
         }, &Foo {
             a = 1,
             b = 3.9,
@@ -408,7 +408,7 @@ fn main() {
                 rand::random(0, 10)
             ];
 
-            io::dbg(x);
+            $dbg(x);
         }, nil);
     }
 }
@@ -418,15 +418,12 @@ fn main() {
 
 ### ♡ **Variadic Functions**
 
-* A variadic function is a function that can take in a variable amount of arguments. This works similar to C except that there are macros which allow you to get the argument size.
+* A variadic function is a function that can take in a variable amount of arguments. This works similar to C except that Elle provides you with mechanisms to make this much nicer to use.
 
 Here's a basic example of a variadic function which takes in any amount of arguments and returns their sum:
 
 ```rs
-fn add(ElleMeta meta, ...) {
-    // Note: `i32` should be the same as the type
-    // you are yielding from later.
-    variadic args[meta.arity];
+fn add(ElleMeta meta, ...args) {
     let res = 0;
 
     for let i = 0; i < meta.arity; i += 1 {
@@ -437,15 +434,6 @@ fn add(ElleMeta meta, ...) {
 }
 ```
 
-Let's go through an explanation for how this works:
-
-* L1: Declare the function signature.
-* L2: Declare the `args` variable as a pointer to the start of the variadic arguments. This is denoted by `variadic name[length]`. This call internally stack allocates memory of the size specified and then calls `vastart` on the returned pointer.
-* L3: Initialize the result at `0`.
-* L5: Declare a for loop with an unused iterator from 0 to the length. This will allow you to loop through all of the arguments that will be provided by the user. This is necessary because you can yield arguments forever, however if you don't know how many there are then you will enter uninitialized memory.
-* L6: Yield the next argument from the `args` pointer as an `i32` type, and add it to the result value
-* L9: Return the summed value. Right before this point, the `free` call that we deferred earlier would be called.
-
 At the call-site, using this function is easy. It can be done like this:
 
 ```rs
@@ -455,7 +443,7 @@ fn main() {
 }
 ```
 
-Examples that contain variadic functions include [`concat.le`](https://github.com/acquitelol/elle/blob/rewrite/examples/misc/concat.le) and [`variadic.le`](https://github.com/acquitelol/elle/blob/rewrite/examples/tests/variadic.le).
+Examples that contain variadic functions include [`variadic.le`](https://github.com/acquitelol/elle/blob/rewrite/examples/tests/variadic.le).
 
 <hr />
 
@@ -471,11 +459,11 @@ Both implement the `__len__` method, which means this is valid:
 
 ```rs
 for x in [1, 2, 3] {
-    io::dbg(x);
+    $dbg(x);
 }
 
 for x in #[1, 2, 3] {
-    io::dbg(x);
+    $dbg(x);
 }
 ```
 
@@ -577,17 +565,17 @@ They can be used in `foreach` loops however, because they're arrays:
 ```rs
 // 0..10 == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 for i in 0..10 {
-    io::dbg(i);
+    $dbg(i);
 }
 
 // 0..0 == []
 for i in 0..0 {
-    io::dbg(i); // will never run
+    $dbg(i); // will never run
 }
 
 // 5..=10 == [5, 6, 7, 8, 9, 10]
 for i in 5..=10 {
-    io::dbg(i);
+    $dbg(i);
 }
 ```
 
@@ -617,7 +605,7 @@ fn main() {
         return (foo - 10) / 2;
     };
 
-    io::dbg(x(3));
+    $dbg(x(3));
 }
 ```
 
@@ -687,7 +675,7 @@ fn main() {
 ```
 
 * These expressions will expand into the exact characters you type into the intermediate language code.
-* Typing "`storeb 0, %tmp_12`;" will write exactly `storeb 0, %tmp_12` into the intermediate language, completely ignoring types, sigils, etc.
+* Typing "`storeb 0, %tmp_12`;" will write exactly `storeb 0, %tmp_12` into the intermediate language, completely ignoring types, IR sigils, etc.
 * Only use this for basic operations, it is not intended as a replacement for writing Elle code as block-scoped variables are written with a temporary counter and cannot be referenced directly from exact literals.
 
 You can also create functions with names that are valid in the IR but not in Elle, such as with the `.` character:
@@ -725,7 +713,7 @@ fn main() {
         foo[i] = (i + 10) * 100;
     }
 
-    io::dbg(foo[33]);
+    $dbg(foo[33]);
 }
 ```
 
@@ -742,7 +730,7 @@ fn main() {
         foo[i] = (i + 10) * 100;
     }
 
-    io::dbg(foo[size - 1]);
+    $dbg(foo[size - 1]);
 }
 ```
 
@@ -1082,103 +1070,7 @@ use std/io; // std/io contains std/string so we don't need to import it
 fn main() {
     string a = "a" <> "b";
     a <>= "c"; // Concatenation can be done declaratively
-    io::dbg(a); // Expected: (string) a = "abc"
-}
-```
-
-<hr />
-
-### ♡ **Size directives**
-
-* A "size directive" is similar to a `sizeof` builtin in C. It returns the size of various definitions verbatim.
-
-There are currently 2 size directives in Elle:
-`#size()` and `#len()`
-
-You can put both **types** and **expressions** inside of the `#size()` directive and it returns the size of the statement provided.
-
-You can only place **expressions** inside of the `#len()` directive as it returns the size of the buffer divided by the size of each type. This is exactly equivalent to `#size(arr) / #size(arr_type)`. It will crash if you try  to use it on a buffer that wasn't defined in the function that the directive is called from.
-
-For example, take this snippet:
-
-```rs
-use std/io;
-
-fn other(i32 *buf) {
-    io::printf(
-        "(fn other)\n\t#size(buf) = {}\n\t#len(buf) = {}",
-        #size(buf),
-        #len(buf)
-    );
-}
-
-fn main() {
-    i32 buf[100];
-    buf[0] = 123;
-
-    io::printf(
-        "(fn main)\n\t#size(buf) = {}\n\t#len(buf) = {}",
-        #size(buf),
-        #len(buf)
-    );
-
-    other(buf);
-}
-
-```
-
-At this part:
-
-```rs
-io::printf(
-    "(fn other)\n\t#size(buf) = {}\n\t#len(buf) = {}",
-    #size(buf),
-    #len(buf)
-);
-```
-
-Elle will throw a compilation error. The `buf` buffer was not defined in the function called `other`, so therefore the compiler does not have enough context to get its length, as arguments in Elle are not fat (they don't contain extra metadata).
-
-Essentially, contextually this means that the `buf` variable is just an `i32 *` to the compiler. As it no longer has context to the size of the `buf` allocation, it cannot evaluate the `#len` directive, and throws an error.
-
-In this example:
-
-```rs
-use std/io;
-
-fn other(i32 *buf) {
-    io::printf("(fn other)\n\t#size(buf) = {}", #size(buf));
-}
-
-fn main() {
-    i32 buf[100];
-    buf[0] = 123;
-
-    io::printf(
-        "(fn main)\n\t#size(buf) = {}\n\t#len(buf) = {}",
-        #size(buf),
-        #len(buf)
-    );
-
-    other(buf);
-}
-```
-
-The code will compile successfully, because `#len` is no longer used on a buffer that isn't defined in the function where the directive was called.
-
-<hr/>
-
-Finally, here is a basic example of using `#len` to loop through an array of strings and print their values:
-
-```rs
-use std/io;
-
-fn main() {
-    let some_array = #["abc", "meow", "test"]";
-
-    for i32 i = 0; i < #len(some_array); i += 1 {
-        io::printf("some_array[{}] = {}", i, some_array[i]);
-    }
+    $dbg(a); // Expected: (string) a = "abc"
 }
 ```
 
@@ -1234,7 +1126,7 @@ fn main() {
     i64 d = 1.2e9;
     f64 e = 2.7182818e2;
 
-    io::dbg(a, b, c, d, e);
+    $dbg(a, b, c, d, e);
 }
 ```
 
@@ -1388,7 +1280,7 @@ fn main() {
     Foo res1 = foo1.add(foo2);
     Foo res2 = Foo::add(foo1, foo2);
 
-    io::dbg(res1.a, res2.a);
+    $dbg(res1.a, res2.a);
 }
 ```
 
@@ -1416,7 +1308,7 @@ fn main() {
     Foo foo = Foo { a = 10 };
     foo.divideBy(2);
 
-    io::dbg(foo.a); // foo.a = 5
+    $dbg(foo.a); // foo.a = 5
 }
 ```
 
@@ -1500,8 +1392,8 @@ fn Foo::get_b<T, U>(Foo<T, U> self) -> U {
 fn main() {
     Foo<i32, f32> foo = Foo::new(10, 1.2);
     foo.double_all();
-    io::dbg(foo.get_a());
-    io::dbg(foo.get_b(), foo.b);
+    $dbg(foo.get_a());
+    $dbg(foo.get_b(), foo.b);
 }
 ```
 
@@ -1530,6 +1422,53 @@ fn main(string[] args) {
 ```
 
 Keep in mind that to use this, you must have the dynamic array module imported. You can either manually import `std/collections/array`, or import `std/prelude` which imports the array module inside.
+
+<hr />
+
+### ♡ **Sigils (identifier prefixes)**
+
+* As you might have noticed, Elle has a notion of "sigils" which are used as prefixes to the names of various things to give them a special meaning.
+
+These are the current sigils:
+
+The `$x` sigil (stdlib alias):
+- Used to denote a common stdlib function
+
+The `#x` sigil (directive):
+- Used to denote a compiler built-in.
+
+The `@x` sigil (attribute):
+- Used to denote a tag that can be placed on a function or struct.
+
+For more information on stdlib alises, directives and attributes, please read below the below chapters.
+
+> `&` is not really a sigil, but it can be included here anyway. The `&x` expr gives you the address of `x`.
+
+<hr />
+
+### ♡ **Standard library aliases**
+
+- Used to denote a common standard library function which should be easily accessible but also shouldn't pollute the global namespace.
+- Examples of this include:
+    - `io::dbg(...)` -> `$dbg(...)`
+    - `io::panic(...)` -> `$panic(...)`
+    - `mem::scoped(...)` -> `$scoped(...)`
+    - `Tuple::new(...)` -> `$(...)`
+    - `Triple::new(...)` -> `$$(...)`
+- Note that this is created as an **alias** of the original function. This means you can call `io::dbg` instead of `$dbg`, for example.
+
+<hr />
+
+### ♡ **Directives**
+
+* These are compiler builtins you can call to get a result at compile-time.
+
+The current existing directives are:
+
+- `#len(expr)` - Gives you the length of a static array
+- `#size(T)` - Gives you the size of type T in bytes
+- `#i(ident)` - Gives you the iterator in a foreach loop given the current element
+- `#env` - Gives you a `ElleEnv *` which is a global environment structure
 
 <hr />
 
@@ -1605,9 +1544,7 @@ To create functions that use these formattings, you can specify the @fmt attribu
 ```rs
 use std/io;
 
-fn foo(ElleMeta meta, ...) @fmt {
-    variadic args[meta.arity];
-
+fn foo(ElleMeta meta, ...args) @fmt {
     for i32 i = 0; i < meta.arity; i += 1 {
         string arg = args.yield(string); // The formatter will return a string
         // Do something with it like printing it
@@ -1625,12 +1562,9 @@ To the compiler, this signals that every argument should be ran through its form
 ```rs
 use std/io;
 
-fn foo(ElleMeta meta, ...) {
-    variadic args[meta.arity];
-
+fn foo(ElleMeta meta, ...args) {
     for i32 i = 0; i < meta.arity; i += 1 {
-        string arg = args.yield(string); // The formatter will return a string
-        // Do something with it like printing it
+        string arg = args.yield(string);
         io::println(arg);
     }
 }

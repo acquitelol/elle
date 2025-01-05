@@ -87,15 +87,11 @@ fn Array::with_capacity<T>(i32 initialCapacity) -> T[] {
     return array;
 }
 
-fn Array::new<T>(ElleMeta meta, ...) -> T[] {
+fn Array::new<T>(ElleMeta meta, ...args) -> T[] {
     T[] array = Array::with_capacity(2);
 
-    if meta.arity > 0 {
-        variadic args[meta.arity];
-
-        for i32 i = 0; i < meta.arity; i += 1 {
-            array.push(args.yield(T));
-        }
+    for i32 i = 0; i < meta.arity; i += 1 {
+        array.push(args.yield(T));
     }
 
     return array;

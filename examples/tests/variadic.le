@@ -1,7 +1,6 @@
 use std/io;
 
-fn add(ElleMeta meta, ...) {
-    variadic args[meta.arity];
+fn add(ElleMeta meta, ...args) {
     let res = 0;
 
     for let i = 0; i < meta.arity; i += 1 {
@@ -13,5 +12,5 @@ fn add(ElleMeta meta, ...) {
 
 fn main() {
     let sum = add(1, 2, 3, 4, 5);
-    io::dbg(sum);
+    $dbg(sum);
 }

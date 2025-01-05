@@ -1489,36 +1489,10 @@ impl<'a> Statement<'a> {
     fn parse_variadic(&mut self) -> AstNode {
         self.advance();
         let name = self.get_identifier();
+        let location = self.current_token().location.clone();
 
         self.advance();
-        self.expect_tokens(vec![TokenKind::LeftBlockBrace]);
-        self.advance();
-        let mut location = self.current_token().location.clone();
-
-        let tokens = self.yield_tokens_with_condition(|token, _, _| {
-            if token.kind == TokenKind::RightBlockBrace {
-                return true;
-            }
-
-            location.column += token.location.length;
-            location.length += token.location.length;
-
-            return false;
-        });
-
-        let size = Box::new(if tokens.len() > 0 {
-            Statement::new(tokens, 0, &self.body, self.shared).parse().0
-        } else {
-            panic!("Invalid size for buffer {}", name);
-        });
-
-        self.advance();
-
-        AstNode::VariadicStart {
-            name,
-            size,
-            location,
-        }
+        AstNode::VariadicStart { name, location }
     }
 
     fn parse_yield_variadic(&mut self) -> AstNode {

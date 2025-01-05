@@ -2,6 +2,6 @@ use std/prelude;
 
 fn main(string[] args) {
     for arg in args {
-        io::dbg(arg);
+        $dbg(arg);
     }
 }

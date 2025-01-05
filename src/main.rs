@@ -54,6 +54,7 @@ static RESERVED_KEYWORDS: &[&'static str] = &[
     "as", "mut", "enum", "match", "static", "super", "do", "macro", "step", "of", "class", "var",
     "impl",
 ];
+static VA_LIST_SIZE_BYTES: usize = 32;
 
 #[macro_export]
 macro_rules! INTERNAL_IDX_FORMAT {

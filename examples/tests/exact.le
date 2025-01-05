@@ -17,13 +17,13 @@ fn `identity`(i32 `val`) @manual -> i32 {
 fn main() {
     let a = 123;
 
-    io::assert(deref(&a) == 123, nil);
-    io::assert(add_one(a) == 124, nil);
-    io::assert(identity(a) == 123, nil);
-    io::assert(`identity`(a) == 123, nil);
+    $assert(deref(&a) == 123, nil);
+    $assert(add_one(a) == 124, nil);
+    $assert(identity(a) == 123, nil);
+    $assert(`identity`(a) == 123, nil);
 
     // The function name can be represented without exact literals too in this case
-    io::assert(`identity`(a) == identity(a), nil);
+    $assert(`identity`(a) == identity(a), nil);
 
     io::println("All exact literal tests have passed!".color("green").reset());
 }

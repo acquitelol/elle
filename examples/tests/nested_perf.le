@@ -15,7 +15,7 @@ fn main() {
     //
     // If the compiler does this the old way, this will take very long to compile
     // With the new way it should compile much faster (several magnitudes faster)
-    io::dbg((Counter { value = 0 })
+    $dbg((Counter { value = 0 })
         .increment().increment().increment()
         .increment().increment().increment()
         .increment().increment().increment()

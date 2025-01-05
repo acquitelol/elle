@@ -23,12 +23,8 @@ pub enum AstNode {
         location: Location,
         value_location: Location,
     },
-    /// Allocates stack memory of size `size`, assigns it to `name`, and calls `vastart` on it
-    VariadicStart {
-        name: String,
-        size: Box<AstNode>,
-        location: Location,
-    },
+    /// Allocates stack memory of size `valist`, assigns it to `name`, and calls `vastart` on it
+    VariadicStart { name: String, location: Location },
     /// Yields a new argument of type `r#type` from `name`
     VariadicArgument {
         name: String,
@@ -240,11 +236,7 @@ fn modify_type_in_node(
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }
         }
-        AstNode::VariadicStart { size, .. } => {
-            let new_size =
-                modify_type_in_node(*size.clone(), generics, known_types, struct_pool, tree);
-            *size = Box::new(new_size);
-        }
+        AstNode::VariadicStart { .. } => {}
         AstNode::ArrayLength { value, .. } => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);

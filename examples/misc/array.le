@@ -2,7 +2,7 @@ use std/math;
 use std/io;
 
 fn other(i64 *arr, i32 val, i32 size) {
-    io::dbg(arr[0], val, size);
+    $dbg(arr[0], val, size);
 }
 
 // We can get the size of arrays in other functions now

@@ -17,7 +17,7 @@ fn main() {
     b.push("meow");
     b.push("abcd");
 
-    io::dbg(a);
+    $dbg(a);
 
     let c = [172];
 
@@ -25,10 +25,10 @@ fn main() {
     a.extend(c);
 
     // Test logging
-    io::dbg(a, b);
+    $dbg(a, b);
 
     // Test popping
-    io::dbg(b.pop(), b);
+    $dbg(b.pop(), b);
 
     // Test to_string
     io::println(b.to_string());
@@ -38,29 +38,29 @@ fn main() {
     // Test clearing
     b.clear();
     b.push("a");
-    io::dbg(b);
+    $dbg(b);
 
     // Test from_string
     let hello_world = Array::from_string("hello world!");
 
-    io::dbg(hello_world.join(""));
+    $dbg(hello_world.join(""));
 
     // Test contains
     let d = ["a", "b", "c"];
 
-    io::dbg(d.contains("a"), d.contains("foo"));
+    $dbg(d.contains("a"), d.contains("foo"));
 
     // Generates [0, 1, 2, 3, 4]
     let e = 0..5;
 
     // Squares every number in `e`
     let e_mapped = e.map<i32>(fn(i32 x) x * x);
-    io::dbg(e_mapped);
+    $dbg(e_mapped);
 
     let empty = 0..0;
 
-    io::dbg(empty);
-    io::assert(
+    $dbg(empty);
+    $assert(
         empty.len() == 0,
         "The length of Array::range(0, 0) should be 0"
     );

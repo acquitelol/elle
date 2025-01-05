@@ -6,14 +6,14 @@ fn main() {
     io::assert(map.is_empty(), nil);
 
     map[1000] = "foo";
-    io::assert(map.get(1000) == "foo", nil);
-    io::assert(map[1000] == "foo", nil);
-    io::assert(map.size() == 1, nil);
+    $assert(map.get(1000) == "foo", nil);
+    $assert(map[1000] == "foo", nil);
+    $assert(map.size() == 1, nil);
 
     map.put(1000, "abc");
-    io::assert(map.get(1000) == "abc", nil);
-    io::assert(map[1000] == "abc", nil);
-    io::assert(map.size() == 1, nil);
+    $assert(map.get(1000) == "abc", nil);
+    $assert(map[1000] == "abc", nil);
+    $assert(map.size() == 1, nil);
 
     io::assert(map.contains_key(1000), nil);
 
@@ -22,29 +22,29 @@ fn main() {
     map[-40] = "meep";
     map[98] = ":3";
 
-    io::assert(map.size() == 5, nil);
-    io::assert(map.contains_key(5), nil);
-    io::assert(map.contains_key(0), nil);
-    io::assert(map.contains_key(-40), nil);
-    io::assert(map.contains_key(98), nil);
+    $assert(map.size() == 5, nil);
+    $assert(map.contains_key(5), nil);
+    $assert(map.contains_key(0), nil);
+    $assert(map.contains_key(-40), nil);
+    $assert(map.contains_key(98), nil);
 
-    io::dbg(map);
+    $dbg(map);
     map.remove(5);
     map.remove(-40);
 
-    io::assert(map.size() == 3, nil);
-    io::assert(!map.contains_key(5), nil);
-    io::assert(!map.contains_key(-40), nil);
+    $assert(map.size() == 3, nil);
+    $assert(!map.contains_key(5), nil);
+    $assert(!map.contains_key(-40), nil);
 
     map.clear();
 
-    io::assert(map.size() == 0, nil);
-    io::assert(map.is_empty(), nil);
-    io::assert(!map.contains_key(5), nil);
-    io::assert(!map.contains_key(0), nil);
-    io::assert(!map.contains_key(-40), nil);
-    io::assert(!map.contains_key(98), nil);
-    io::assert(!map.contains_key(1000), nil);
+    $assert(map.size() == 0, nil);
+    $assert(map.is_empty(), nil);
+    $assert(!map.contains_key(5), nil);
+    $assert(!map.contains_key(0), nil);
+    $assert(!map.contains_key(-40), nil);
+    $assert(!map.contains_key(98), nil);
+    $assert(!map.contains_key(1000), nil);
 
     let string_map = HashMap::new<string, i32>();
 
@@ -52,7 +52,7 @@ fn main() {
         string_map["{}".format(c)] = math::next_power_of_2((i32)(c - 'a') * 30);
     }
 
-    io::dbg(
+    $dbg(
         string_map.contains_key("b"),
         string_map.contains_key("foo"),
         string_map["d"],

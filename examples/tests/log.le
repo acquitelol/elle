@@ -11,8 +11,8 @@ fn main() {
     let c = false;
     let arr = #[1, 2, 3];
 
-    io::dbg(foo, a, b, c, &a, 'z', 1e5, true, arr, #["a", "meow"]);
-    io::dbg(Foo { a = 5 });
+    $dbg(foo, a, b, c, &a, 'z', 1e5, true, arr, #["a", "meow"]);
+    $dbg(Foo { a = 5 });
     io::print("this is a string literal and ", foo, '\n');
     io::println("this is a string literal and ", foo, " (now with a newline!)");
 

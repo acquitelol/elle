@@ -37,7 +37,7 @@ fn main() {
     i64 cache[ITERATIONS + 1];
     memset(cache, -1, #size(cache));
 
-    io::dbg(
+    $dbg(
         fibonacci_cached(ITERATIONS, cache),
         fibonacci_iterative(ITERATIONS)
     );

@@ -27,10 +27,10 @@ fn main() {
     let resWithInstance = foo1.add(foo2);
     let resWithStruct = Foo::add(foo1, foo2);
 
-    io::assert(
+    $assert(
         resWithInstance == resWithStruct,
         "Instance and struct methods should produce equal results."
     );
 
-    io::dbg(resWithInstance, resWithStruct);
+    $dbg(resWithInstance, resWithStruct);
 }

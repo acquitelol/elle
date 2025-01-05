@@ -3,63 +3,63 @@ use std/prelude;
 fn main() {
     let a = string::ascii_lower();
 
-    io::assert(
+    $assert(
         a.to_upper() == "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
         string::format("result = \"{}\"", a.to_upper())
     );
 
     a.insert(11, '9');
 
-    io::assert(
+    $assert(
         a == "abcdefghijk9lmnopqrstuvwxyz",
         string::format("result = \"{}\"", a)
     );
 
     let b = "";
-    io::assert(b.is_empty(), "b should be empty");
-    io::assert(string::is_empty(b), "b should be empty");
+    $assert(b.is_empty(), "b should be empty");
+    $assert(string::is_empty(b), "b should be empty");
 
     let c = "test";
 
-    io::assert(
+    $assert(
         c.len() == 4,
         string::format("result = \"{}\" & c.len() = {}", c, c.len())
     );
 
     let d = "meow";
 
-    io::assert(d.ends_with("ow"), d <> " should end with \"ow\"");
-    io::assert(!d.starts_with("ow"), d <> " should not start with \"ow\"");
-    io::assert(d.contains("eo"), d <> " should contain \"eo\"");
+    $assert(d.ends_with("ow"), d <> " should end with \"ow\"");
+    $assert(!d.starts_with("ow"), d <> " should not start with \"ow\"");
+    $assert(d.contains("eo"), d <> " should contain \"eo\"");
 
     let e = "ewew";
 
-    io::assert(
+    $assert(
         e.concat(e) == "ewewewew" && e <> e == "ewewewew" && e <> e == e.concat(e),
         string::format("result = \"{}\"", e.concat(e))
     );
 
     let f = "awa";
 
-    io::assert(
+    $assert(
         f.repeat(4) == "awaawaawaawa",
         string::format("result = \"{}\"", f.repeat(4))
     );
 
     let g = "test123AWA";
 
-    io::assert(
+    $assert(
         g.to_upper() == "TEST123AWA",
         string::format("result = \"{}\"", g.to_upper())
     );
 
-    io::assert(
+    $assert(
         g.to_lower() == "test123awa",
         string::format("result = \"{}\"", g.to_lower())
     );
 
     let h = string::ascii_upper();
-    io::assert(
+    $assert(
         h.slice(0, 3) == "ABC",
         string::format("result = \"{}\"", h.slice(0, 3))
     );
@@ -67,27 +67,27 @@ fn main() {
     let i = "me";
     i.extend("wo");
 
-    io::assert(
+    $assert(
         i == "mewo",
         string::format("result = \"{}\"", i)
     );
 
     let ch = i.pop();
 
-    io::assert(ch == 'o', string::format("ch = {}", ch));
-    io::assert(i == "mew", string::format("result = \"{}\"", i));
+    $assert(ch == 'o', string::format("ch = {}", ch));
+    $assert(i == "mew", string::format("result = \"{}\"", i));
 
     i.push('e');
     i.push('w');
 
-    io::assert(i == "mewew", string::format("result = \"{}\"", i));
+    $assert(i == "mewew", string::format("result = \"{}\"", i));
 
     let j = string::format(
         "abc {}, {}, escaped {{}, mrow {} and a char but i32: {}",
         1, true, ":3", (i32)'a'
     );
 
-    io::assert(
+    $assert(
         j == "abc 1, true, escaped {}, mrow :3 and a char but i32: 97",
         string::format("result = \"{}\"", j)
     );

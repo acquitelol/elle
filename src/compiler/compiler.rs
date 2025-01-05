@@ -17,7 +17,8 @@ use crate::{
     },
     unknown_field, unknown_function, Warning, Warnings, DUNDER_CONSTANTS, ENV_ID, ENV_STRUCT_NAME,
     EQUALS_CONSTANT, FORMAT_CONSTANT, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID,
-    META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VOID_POINTER_ID,
+    META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES,
+    VOID_POINTER_ID,
 };
 
 use super::enums::{
@@ -2259,26 +2260,13 @@ impl Compiler {
 
                 None
             }
-            AstNode::VariadicStart {
-                name,
-                size,
-                location,
-            } => {
-                let (ty, size) = self
-                    .generate_statement(func, module, *size, ty, None, false)
-                    .expect(&location.error(
-                        format!("Unexpected error when trying to compile the size of a variadic statement named '{}'", name)
-                    ));
-
-                let (_, final_val) =
-                    self.convert_to_type(func, ty, Type::Long, size, &location, &location, false);
-
+            AstNode::VariadicStart { name, .. } => {
                 let var = self.new_variable(&Type::Long, &name, Some(func), false, false);
 
                 func.borrow_mut().assign_instruction(
                     &var,
                     &Type::Long,
-                    Instruction::Alloc8(final_val),
+                    Instruction::Alloc8(Value::Const("".into(), VA_LIST_SIZE_BYTES as i128)),
                 );
 
                 func.borrow_mut()

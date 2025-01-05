@@ -3,29 +3,29 @@ use std/io;
 
 fn main() {
     let set = HashSet::new<i32>();
-    io::assert(set.is_empty(), nil);
+    $assert(set.is_empty(), nil);
 
     set.add(1);
-    io::assert(set.size() == 1, nil);
+    $assert(set.size() == 1, nil);
 
     set.add(1);
-    io::assert(set.size() == 1, nil);
-    io::assert(!set.contains(39), nil);
+    $assert(set.size() == 1, nil);
+    $assert(!set.contains(39), nil);
 
     set.add(39);
-    io::assert(set.size() == 2, nil);
+    $assert(set.size() == 2, nil);
 
     set.add(14);
-    io::assert(set.size() == 3, nil);
+    $assert(set.size() == 3, nil);
 
-    io::assert(set.contains(39), nil);
+    $assert(set.contains(39), nil);
 
     set.remove(39);
-    io::assert(!set.contains(39), nil);
-    io::assert(set.size() == 2, nil);
+    $assert(!set.contains(39), nil);
+    $assert(set.size() == 2, nil);
 
     set.clear();
-    io::assert(set.is_empty(), nil);
+    $assert(set.is_empty(), nil);
 
     io::println("All HashSet tests have passed!".color("green").reset());
 }
