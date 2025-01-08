@@ -4,7 +4,7 @@ use std/libc/io;
 global pub;
 
 struct BigInt {
-    i8[] digits; // Starts with least significant digit
+    i32[] digits; // Starts with least significant digit
     bool is_negative;
 };
 

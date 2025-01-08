@@ -110,11 +110,9 @@ fn main() {
         // Title
         raylib::draw_text(title, (SCREEN_WIDTH - raylib::measure_text(title, FONT_SIZE)) / 2, 40, FONT_SIZE, BLUE);
 
-        // Bounces - string.format allocates memory so must be scoped to be autofreed
-        $scoped(fn(i32 *bounces) {
-            string bouncesString = "Bounces: {}".format(*bounces);
-            raylib::draw_text(bouncesString, (SCREEN_WIDTH - raylib::measure_text(bouncesString, FONT_SIZE)) / 2, 100, FONT_SIZE, YELLOW);
-        }, &bounces);
+        // Bounces
+        string bouncesString = "Bounces: {}".format(bounces);
+        raylib::draw_text(bouncesString, (SCREEN_WIDTH - raylib::measure_text(bouncesString, FONT_SIZE)) / 2, 100, FONT_SIZE, YELLOW);
 
         // Subtitle
         raylib::draw_text(subtitle, (SCREEN_WIDTH - raylib::measure_text(subtitle, FONT_SIZE / 2)) / 2, 160, FONT_SIZE / 2, PURPLE);

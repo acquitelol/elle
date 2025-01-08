@@ -3,6 +3,7 @@ namespace mem;
 
 external fn malloc(i64 size) @alias("mem::malloc") -> void *;
 external fn realloc(void *ptr, i64 size) @alias("mem::realloc") -> void *;
+external fn calloc(i64 count, i64 size) @alias("mem::calloc") -> void *;
 external fn free(void *ptr) @alias("mem::free");
 external fn memcpy(void *dest, void *src, i64 n) @alias("mem::memcpy") -> i64;
 external fn memmove(void *dest, void *src, i64 n) @alias("mem::memmove") -> i64;

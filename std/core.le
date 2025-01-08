@@ -1,5 +1,4 @@
 namespace libc;
-namespace mem;
 global pub;
 
 external fn atoi(string str) @alias("string::atoi") -> i32;
@@ -10,13 +9,3 @@ external fn strtol(string str, string *endptr, i32 base) @alias("string::strtol"
 external fn abort() @alias("libc::abort");
 external fn exit(i32 code) @alias("libc::exit");
 external fn system(string cmd) @alias("libc::system");
-
-fn mem::scoped(fn *func, void *arg) {
-    let current = #env.allocator;
-    #env.allocator = ArenaAllocator::new();
-    func(arg);
-    #env.allocator.free_self();
-    #env.allocator = current;
-}
-
-external fn mem::scoped(fn *func, void *arg) @alias("$scoped");

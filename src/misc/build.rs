@@ -38,7 +38,7 @@ pub fn build(
             Path::new(&output_path).with_extension("s"),
         )
         .expect(&format!(
-            "{RED}Failed to rename {path_string} to {output_path}"
+            "{RED}Failed to rename {path_string} to {output_path}{RESET}"
         ));
 
         return EmitKind::AsmFile(output_path);
@@ -65,10 +65,29 @@ pub fn build(
         args.push("-c");
     }
 
+    // let frame_addr_path = format!("{STD_LIB_PATH}/runtime/stack_top.s");
+    // let frame_addr_out = Path::new(&output_path)
+    //     .with_file_name("stack_top")
+    //     .with_extension("o")
+    //     .to_str()
+    //     .unwrap()
+    //     .to_string();
+
+    // let _ = Command::new(linker_path.clone())
+    //     .args(vec![&frame_addr_path, "-o", &frame_addr_out, "-c"])
+    //     .output()
+    //     .expect(&format!(
+    //         "{RED}Failed to execute CC for {frame_addr_out}.{RESET}"
+    //     ));
+
+    // args.push(&frame_addr_out);
+
     let result = Command::new(linker_path)
         .args(args)
         .output()
-        .expect(&format!("{RED}Failed to execute CC."));
+        .expect(&format!(
+            "{RED}Failed to execute CC for {path_string}.{RESET}"
+        ));
 
     if !result.stderr.is_empty() {
         println!(

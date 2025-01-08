@@ -16,9 +16,9 @@ use crate::{
         parser::StructPool,
     },
     unknown_field, unknown_function, Warning, Warnings, DUNDER_CONSTANTS, ENV_ID, ENV_STRUCT_NAME,
-    EQUALS_CONSTANT, FORMAT_CONSTANT, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID,
-    META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES,
-    VOID_POINTER_ID,
+    EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT,
+    MAIN_ID, META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT,
+    VA_LIST_SIZE_BYTES, VOID_POINTER_ID,
 };
 
 use super::enums::{
@@ -734,6 +734,13 @@ impl Compiler {
                             final_val.clone(),
                         ));
 
+                        if addr_ty.is_pointer() {
+                            func.borrow_mut().add_instruction(Instruction::Call(
+                                Value::Global(GC_NOOP.into()),
+                                vec![(addr_ty.clone(), addr_val.clone())],
+                            ));
+                        }
+
                         self.address_pool
                             .insert(temp.unwrap().clone(), addr_val.clone());
                         return Some((addr_ty, final_val));
@@ -766,6 +773,13 @@ impl Compiler {
                         addr_val.clone(),
                         final_val.clone(),
                     ));
+
+                    if final_ty.is_pointer() {
+                        func.borrow_mut().add_instruction(Instruction::Call(
+                            Value::Global(GC_NOOP.into()),
+                            vec![(final_ty.clone(), addr_val.clone())],
+                        ));
+                    }
 
                     self.address_pool
                         .insert(temp.clone().unwrap(), addr_val.clone());

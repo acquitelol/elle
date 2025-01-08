@@ -308,9 +308,7 @@ struct ElleEnv {
 };
 ```
 
-The allocator is completely abstracted away from you, but you should be safe assuming that it holds an `alloc` and `realloc` method.
-
-Memory deallocation is managed by the compiler.
+The allocator is completely abstracted away from you, but you should be safe assuming that it holds an `alloc` and `realloc` method. Memory deallocation is managed by the compiler via garbage collection.
 
 Example of using this:
 
@@ -320,10 +318,7 @@ struct Foo {
 };
 
 fn Foo::new(i32 a) {
-    // Note that this is a double allocation because structs are pointers internally
-    Foo *foo = #env.allocator.alloc(#size(Foo *));
-    *foo = #env.allocator.alloc(#size(Foo));
-
+    Foo *foo = #env.allocator.alloc(#size(Foo));
     foo.a = a;
     return foo;
 }
@@ -347,72 +342,7 @@ fn main() {
 }
 ```
 
-Keep in mind that you can also use the libc standard manual memory management functions, like `malloc`, `realloc`, and `free`. These methods are defined in `std/libc/mem`.
-
-The allocator does not currently clean up after itself, which means that if you are doing an allocating operation in a loop, you will keep allocating forever and never free anything. To mitigate this, you can use the `$scoped`/`mem::scoped` function:
-
-```rs
-use std/prelude;
-
-fn main() {
-    let a = 5;
-
-    while true {
-        $scoped(fn(i32 *a) {
-            i32 *xs = #env.allocator.alloc(#size(i32) * *a);
-            xs[0] = 39;
-            $dbg(xs);
-        }, &a);
-    }
-}
-```
-
-This function will allocate memory which will all be automatically freed after the function call ends. That means that this acts similar to a temporary allocator or stack memory. As Elle has no capturing lambdas, a `void *arg` is provided for you in this lambda, which you can choose to use or not. It can take any shape; you can pass a single variable (like in the example above) or an entire structure if you want to:
-
-```rs
-use std/prelude;
-
-struct Foo {
-    i32 a;
-    f32 b;
-    string c;
-};
-
-fn main() {
-    while true {
-        $scoped(fn(Foo *foo) {
-            let x = [foo.a]; // This allocates too, will allocate into the scoped allocator
-            $dbg(x, foo);
-        }, &Foo {
-            a = 1,
-            b = 3.9,
-            c = "foo"
-        });
-    }
-}
-```
-
-Or nothing:
-
-```rs
-use std/prelude;
-
-fn main() {
-    rand::seed(0);
-
-    while true {
-        $scoped(fn() {
-            let x = [
-                rand::random(0, 10),
-                rand::random(0, 10),
-                rand::random(0, 10)
-            ];
-
-            $dbg(x);
-        }, nil);
-    }
-}
-```
+Keep in mind that you can also use the libc standard manual memory management functions, like `malloc`, `realloc`, and `free`. These methods are defined in `std/libc/mem`. These allocations will **not** be freed automatically because the garbage collector isn't tracking them.
 
 <hr />
 
@@ -1432,7 +1362,7 @@ Keep in mind that to use this, you must have the dynamic array module imported. 
 These are the current sigils:
 
 The `$x` sigil (stdlib alias):
-- Used to denote a common stdlib function
+- Used to alias a common standard library function.
 
 The `#x` sigil (directive):
 - Used to denote a compiler built-in.
@@ -1442,17 +1372,16 @@ The `@x` sigil (attribute):
 
 For more information on stdlib alises, directives and attributes, please read below the below chapters.
 
-> `&` is not really a sigil, but it can be included here anyway. The `&x` expr gives you the address of `x`.
+> `&` is not really a sigil, but it can be included here anyway. The `&x` expr gives you the address of `x`. You can read more about this in the Unary Operators chapter.
 
 <hr />
 
 ### ♡ **Standard library aliases**
 
-- Used to denote a common standard library function which should be easily accessible but also shouldn't pollute the global namespace.
+- Used to alias a common standard library function which should be easily accessible but also shouldn't pollute the global namespace.
 - Examples of this include:
     - `io::dbg(...)` -> `$dbg(...)`
     - `io::panic(...)` -> `$panic(...)`
-    - `mem::scoped(...)` -> `$scoped(...)`
     - `Tuple::new(...)` -> `$(...)`
     - `Triple::new(...)` -> `$$(...)`
 - Note that this is created as an **alias** of the original function. This means you can call `io::dbg` instead of `$dbg`, for example.

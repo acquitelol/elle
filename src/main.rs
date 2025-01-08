@@ -19,8 +19,8 @@ use parser::enums::{Argument, AstNode, Primitive};
 
 static META_STRUCT_NAME: &str = "ElleMeta";
 static ENV_STRUCT_NAME: &str = "ElleEnv";
-static PRIMARY_ALOCATOR_NAME: &str = "ArenaAllocator";
-static PRIMARY_ALLOCATOR_MODULE: &str = "std/allocators/arena";
+static PRIMARY_ALOCATOR_NAME: &str = "GCAllocator";
+static PRIMARY_ALLOCATOR_MODULE: &str = "std/allocators/gc";
 static GENERIC_IDENTIFIER: &str = "0"; // Start of a generic
 static GENERIC_END: &str = "1"; // Allowing for nested generic structs
 static GENERIC_POINTER: &str = "2"; // Pointer to another type
@@ -33,6 +33,7 @@ static VOID_POINTER_ID: &str = "__void_ptr__";
 static POINTER_ID: &str = "__ptr__";
 static ENV_ID: &str = "__internal.elle.__env__";
 static MAIN_ID: &str = "__internal.elle.__main__";
+static GC_NOOP: &str = "__internal_gc_noop";
 static FORMAT_CONSTANT: &str = "__fmt__";
 static LOAD_CONSTANT: &str = "__load__";
 static STORE_CONSTANT: &str = "__store__";
@@ -261,6 +262,12 @@ fn main() -> ExitCode {
             r#type: Type::Pointer(Box::new(Type::Struct(PRIMARY_ALOCATOR_NAME.into()))),
             manual: false,
         },
+        // An approximation of the top of the stack
+        Argument {
+            name: "stack_top".into(),
+            r#type: Type::Pointer(Box::new(Type::Void)),
+            manual: false,
+        },
     ];
 
     let input_path = if let Some(input_path) = input_path {
@@ -406,21 +413,45 @@ fn main() -> ExitCode {
             body: [
                 vec![
                     AstNode::Declare {
+                        name: "stack_top".into(),
+                        r#type: Some(Type::Pointer(Box::new(Type::Void))),
+                        value: Some(Box::new(AstNode::Address {
+                            value: Box::new(AstNode::Literal {
+                                kind: TokenKind::IntegerLiteral,
+                                value: ValueKind::Number(0),
+                                location: loc.clone(),
+                            }),
+                            location: loc.clone(),
+                        })),
+                        location: loc.clone(),
+                        value_location: loc.clone(),
+                    },
+                    AstNode::Declare {
                         name: "env".into(),
                         r#type: Some(Type::Infer),
                         value: Some(Box::new(AstNode::StructLiteral {
                             name: ENV_STRUCT_NAME.into(),
-                            values: vec![(
-                                "allocator".into(),
-                                Box::new(AstNode::FunctionCall {
-                                    name: format!("{PRIMARY_ALOCATOR_NAME}.new"),
-                                    generics: vec![],
-                                    parameters: vec![],
-                                    type_method: false,
-                                    ignore_no_def: false,
-                                    location: loc.clone(),
-                                }),
-                            )],
+                            values: vec![
+                                (
+                                    "allocator".into(),
+                                    Box::new(AstNode::FunctionCall {
+                                        name: format!("{PRIMARY_ALOCATOR_NAME}.new"),
+                                        generics: vec![],
+                                        parameters: vec![],
+                                        type_method: false,
+                                        ignore_no_def: false,
+                                        location: loc.clone(),
+                                    }),
+                                ),
+                                (
+                                    "stack_top".into(),
+                                    Box::new(AstNode::Literal {
+                                        kind: TokenKind::Identifier,
+                                        value: ValueKind::String("stack_top".into()),
+                                        location: loc.clone(),
+                                    }),
+                                ),
+                            ],
                             location: loc.clone(),
                         })),
                         location: loc.clone(),

@@ -1,0 +1,272 @@
+use std/libc/mem;
+global pub;
+
+// used to force stack allocated pointers to be pushed to the stack
+// and not be optimized into registers so that the GC can detect
+// them as a root when scanning the stack for valid roots
+fn __internal_gc_noop(void *x) {}
+
+struct __internal_ElleGC_Header @nofmt {
+    bool marked;
+    i32 size;
+    void *data;
+};
+
+struct __internal_ElleGC_HashNode @nofmt {
+    void *key;
+    __internal_ElleGC_Header *value;
+    __internal_ElleGC_HashNode *next;
+};
+
+struct __internal_ElleGC_HashMap @nofmt {
+    __internal_ElleGC_HashNode **buckets;
+    i32 capacity;
+};
+
+fn __internal_ElleGC_HashMap::new(i32 capacity) {
+    __internal_ElleGC_HashMap *map = mem::malloc(#size(__internal_ElleGC_HashMap));
+
+    map.buckets = mem::malloc(capacity * #size(__internal_ElleGC_HashNode *));
+    map.capacity = capacity;
+
+    return map;
+}
+
+fn __internal_ElleGC_HashMap::hash(__internal_ElleGC_HashMap *self, void *key) {
+    return (key ^ (key >> 16)) % self.capacity;
+}
+
+fn __internal_ElleGC_HashMap::insert(__internal_ElleGC_HashMap *self, void *key, __internal_ElleGC_Header *value) {
+    let hash = self.hash(key);
+    let current = self.buckets[hash];
+
+    while current {
+        if (current.key == key) {
+            return;
+        }
+
+        current = current.next;
+    }
+
+    __internal_ElleGC_HashNode *node = mem::malloc(#size(__internal_ElleGC_HashNode));
+    node.key = key;
+    node.value = value;
+    node.next = self.buckets[hash];
+    self.buckets[hash] = node;
+}
+
+fn __internal_ElleGC_HashMap::find(__internal_ElleGC_HashMap *self, void *key) {
+    let hash = self.hash(key);
+    let current = self.buckets[hash];
+
+    while current {
+        if current.key == key {
+            return current.value;
+        }
+
+        current = current.next;
+    }
+
+    return nil;
+}
+
+fn __internal_ElleGC_HashMap::remove(__internal_ElleGC_HashMap *self, void *key) {
+    let hash = self.hash(key);
+    let current = self.buckets[hash];
+    __internal_ElleGC_HashNode *prev = nil;
+
+    while current {
+        if current.key == key {
+            if prev {
+                prev.next = current.next;
+            } else {
+                self.buckets[hash] = current.next;
+            }
+
+            mem::free(current);
+            return;
+        }
+
+        prev = current;
+        current = current.next;
+    }
+}
+
+fn __internal_ElleGC_HashMap::free_self(__internal_ElleGC_HashMap *self) {
+    for i32 i = 0; i < self.capacity; i += 1 {
+        let current = self.buckets[i];
+
+        while current {
+            let next = current.next;
+            mem::free(current.value.data);
+            mem::free(current.value);
+            mem::free(current);
+            current = next;
+        }
+    }
+
+    mem::free(self.buckets);
+    mem::free(self);
+}
+
+struct GCAllocator @nofmt {
+    i32 total_size;                   // total allocated memory
+    i32 threshold;                    // threshold until collection
+    i32 objects;                      // number of allocated objects
+    __internal_ElleGC_HashMap *map;   // map to track allocations
+};
+
+fn __internal_ElleGC_Header::new(i32 size) {
+    __internal_ElleGC_Header *header = mem::malloc(#size(__internal_ElleGC_Header));
+
+    header.marked = false;
+    header.size = size;
+    header.data = mem::malloc(size);
+
+    return header;
+}
+
+fn GCAllocator::new() {
+    GCAllocator *gc = mem::malloc(#size(GCAllocator));
+
+    gc.total_size = 0;
+    gc.threshold = 16 * 1024 * 1024;
+    gc.objects = 0;
+    gc.map = __internal_ElleGC_HashMap::new(64 * 1024);
+
+    return gc;
+}
+
+local fn GCAllocator::__internal_mark_region(GCAllocator *self, void **start, void **end) {
+    let current = start;
+    let end_ptr = end;
+
+    while current < end_ptr {
+        let ptr = *current;
+
+        // not nil && is a multiple of ptrsize && isnt clearly invalid
+        if ptr % #size(void *) == 0 && ptr && ptr > 0x1000  {
+            let block = self.map.find(ptr);
+
+            // only mark if not already marked because
+            // recursively marking more is expensive
+            if (bool)block && !block.marked {
+                block.marked = true;
+
+                self.__internal_mark_region(
+                    block.data,
+                    block.data + block.size
+                );
+            }
+        }
+
+        current += #size(void *);
+    }
+}
+
+fn GCAllocator::mark(GCAllocator *self) {
+    for i32 i = 0; i < self.map.capacity; i += 1 {
+        let current = self.map.buckets[i];
+
+        // unmark all
+        while current {
+            current.value.marked = false;
+            current = current.next;
+        }
+    }
+
+    // scan the stack for roots
+    self.__internal_mark_region(&0, #env.stack_top);
+}
+
+fn GCAllocator::sweep(GCAllocator *self) {
+    for i32 i = 0; i < self.map.capacity; i += 1 {
+        let node = self.map.buckets[i];
+        __internal_ElleGC_HashNode *prev = nil;
+
+        while node {
+            if !node.value.marked {
+                // if not marked then unlink and free
+                if prev {
+                    prev.next = node.next;
+                } else {
+                    self.map.buckets[i] = node.next;
+                }
+
+                self.total_size -= node.value.size;
+                self.objects -= 1;
+
+                mem::free(node.value.data);
+                mem::free(node.value);
+
+                let next_node = node.next;
+                mem::free(node);
+                node = next_node;
+            } else {
+                // else just continue
+                prev = node;
+                node = node.next;
+            }
+        }
+    }
+}
+
+fn GCAllocator::collect(GCAllocator *self) {
+    // garbage collection is a simple mark & sweep algorithm
+    // --
+    // its currently just a naive stop-the-world approach
+    // but this is relatively ok because the collection is
+    // fast enough. i tried to make a version of this using
+    // multi-threading but i found no way to keep it simple
+    // (it would need to be a generational garbage collector
+    // and that's out of the scope of what i'm willing to do
+    // right now) maybe soon ill try to refactor this to alloc
+    // and free in bulk to prevent many tiny mallocs which
+    // surely are quite slow compared to a bump allocator
+    // or arena allocator or something along those lines
+    self.mark();
+    self.sweep();
+}
+
+fn GCAllocator::alloc(GCAllocator *self, i32 size) {
+    if self.total_size + size > self.threshold {
+        self.collect();
+    }
+
+    let header = __internal_ElleGC_Header::new(size);
+    self.map.insert(header.data, header);
+    self.total_size += size;
+    self.objects += 1;
+
+    return header.data;
+}
+
+fn GCAllocator::realloc(GCAllocator *self, void *ptr, i32 new_size) {
+    if !ptr {
+        return self.alloc(new_size);
+    }
+
+    let current_header = self.map.find(ptr);
+
+    if (current_header) {
+        self.map.remove(ptr);
+
+        let new_data = mem::malloc(new_size);
+        mem::memcpy(new_data, ptr, current_header.size < new_size ? current_header.size : new_size);
+        mem::free(current_header.data);
+
+        self.total_size = self.total_size - current_header.size + new_size;
+        current_header.data = new_data;
+        current_header.size = new_size;
+        self.map.insert(new_data, current_header);
+
+        return new_data;
+    }
+
+    return self.alloc(new_size);
+}
+
+fn GCAllocator::free_self(GCAllocator *self) {
+    self.map.free_self();
+    mem::free(self);
+}

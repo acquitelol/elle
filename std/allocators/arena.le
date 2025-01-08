@@ -13,7 +13,7 @@ struct __internal_Arena @nofmt {
 };
 
 struct ArenaAllocator @nofmt {
-    __internal_Arena *current; // ll
+    __internal_Arena *current; // singly linked list
     i32 chunk_size;
     i32 min_chunk_size;
 };
