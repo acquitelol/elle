@@ -26,7 +26,7 @@ fn Triple::__hash__<T, U, V>(Triple<T, U, V> self, i32 capacity) {
     i64 hash_y = self.y.__hash__(capacity);
     i64 hash_z = self.z.__hash__(capacity);
     i64 combined = (hash_x * 31 + hash_y) * 31 + hash_z;
-    return __internal_hash_mod(combined, capacity);
+    return hash::mod(combined, capacity);
 }
 
 fn Triple::new<T, U, V>(T x, U y, V z) {

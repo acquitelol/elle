@@ -1,0 +1,28 @@
+namespace __void_ptr__;
+namespace __ptr__;
+global pub;
+
+external fn i32::__fmt__(i32 self, i32 nesting) -> string;
+external fn u32::__fmt__(u32 self, i32 nesting) -> string;
+external fn i64::__fmt__(i64 self, i32 nesting) -> string;
+external fn u64::__fmt__(u64 self, i32 nesting) -> string;
+external fn char::__fmt__(char self, i32 nesting) -> string;
+external fn bool::__fmt__(bool self, i32 nesting) -> string;
+external fn i16::__fmt__(i16 self, i32 nesting) -> string;
+external fn u16::__fmt__(u16 self, i32 nesting) -> string;
+external fn i8::__fmt__(i8 self, i32 nesting) -> string;
+external fn u8::__fmt__(u8 self, i32 nesting) -> string;
+external fn f32::__fmt__(f32 self, i32 nesting) -> string;
+external fn f64::__fmt__(f64 self, i32 nesting) -> string;
+external fn string::__fmt__(string self, i32 nesting) -> string;
+external fn __void_ptr__::__fmt__(void *self, i32 nesting) -> string;
+
+fn __ptr__::__fmt__<T>(T *self, i32 nesting) {
+    let res = "invalid";
+
+    if (bool)self && (void *)self % #size(void *) == 0 {
+        res = (*self).__fmt__(0);
+    }
+
+    return "<{} at {}>".__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(res, self);
+}

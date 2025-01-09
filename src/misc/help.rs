@@ -73,8 +73,20 @@ pub fn print_help(program: String) {
                     "Compiles but does not link anything. Produces an object file.",
                 ),
                 (
-                    "-nsm, --no-string-module",
-                    "Does not import the string module by default. May break things.",
+                    "-nosm, --no-string-module",
+                    "Doesn't import the string module by default. May break things.",
+                ),
+                (
+                    "-nogc, --no-garbage-collector",
+                    "Doesn't import the GC, so you can implement your own alloc methods.",
+                ),
+                (
+                    "-nofmt, --no-primitive-formatters",
+                    "Doesn't import the primitive formatter module.",
+                ),
+                (
+                    "-nostd, --no-stdlib",
+                    "Doesn't link with the Elle runtime library during compilation.",
                 ),
                 (
                     "-z, --link-flag <flag>",

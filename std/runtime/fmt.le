@@ -1,0 +1,62 @@
+namespace __void_ptr__;
+global pub;
+
+fn i32::__fmt__(i32 self, i32 nesting) {
+    return string::as_string(self);
+}
+
+fn u32::__fmt__(u32 self, i32 nesting) {
+    return string::as_string(self);
+}
+
+fn i64::__fmt__(i64 self, i32 nesting) {
+    return string::as_string(self);
+}
+
+fn u64::__fmt__(u64 self, i32 nesting) {
+    return string::as_string(self);
+}
+
+fn char::__fmt__(char self, i32 nesting) {
+    return string::as_string(self);
+}
+
+fn bool::__fmt__(bool self, i32 nesting) {
+    return string::as_string(self);
+}
+
+fn i16::__fmt__(i16 self, i32 nesting) {
+    return string::as_string(self);
+}
+
+fn u16::__fmt__(u16 self, i32 nesting) {
+    return string::as_string(self);
+}
+
+fn i8::__fmt__(i8 self, i32 nesting) {
+    return string::as_string(self);
+}
+
+fn u8::__fmt__(u8 self, i32 nesting) {
+    return string::as_string(self);
+}
+
+fn f32::__fmt__(f32 self, i32 nesting) {
+    return string::as_string(self);
+}
+
+fn f64::__fmt__(f64 self, i32 nesting) {
+    return string::as_string(self);
+}
+
+fn string::__fmt__(string self, i32 nesting) {
+    if (void *)self == 0 {
+        return "(nil)";
+    }
+
+    return string::as_string(self);
+}
+
+fn __void_ptr__::__fmt__(void *self, i32 nesting) {
+    return "<unknown at {}>".__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(self);
+}

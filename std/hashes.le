@@ -1,76 +1,27 @@
-global pub;
-namespace __ptr__;
 namespace __void_ptr__;
+namespace __ptr__;
+namespace hash;
+global pub;
 
-fn __internal_hash_mod<T, U>(T self, U other) {
+fn hash::mod<T, U>(T self, U other) {
     return (self % other + other) % other;
 }
 
-fn string::__hash__(string self, i32 capacity) {
-    i64 hash = 5381;
-
-    for i32 i = 0; i < self.len(); i += 1 {
-        char c = self[i];
-        hash = (hash * 33 + (i32)c) % capacity;
-    }
-
-    return __internal_hash_mod(hash, capacity);
-}
-
 fn __ptr__::__hash__<T>(T *self, i32 capacity) {
-    return __internal_hash_mod((i64)self, capacity);
+    return hash::mod((i64)self, capacity);
 }
 
-fn __void_ptr__::__hash__(void *self, i32 capacity) {
-    return __internal_hash_mod((i64)self, capacity);
-}
-
-fn char::__hash__(char self, i32 capacity) {
-    return __internal_hash_mod(self, capacity);
-}
-
-fn bool::__hash__(bool self, i32 capacity) {
-    return __internal_hash_mod(self, capacity);
-}
-
-fn i8::__hash__(i8 self, i32 capacity) {
-    return __internal_hash_mod(self, capacity);
-}
-
-fn i16::__hash__(i16 self, i32 capacity) {
-    return __internal_hash_mod(self, capacity);
-}
-
-fn i32::__hash__(i32 self, i32 capacity) {
-    return __internal_hash_mod(self, capacity);
-}
-
-fn i64::__hash__(i64 self, i32 capacity) {
-    return __internal_hash_mod(self, capacity);
-}
-
-fn u8::__hash__(u8 self, i32 capacity) {
-    return __internal_hash_mod(self, capacity);
-}
-
-fn u16::__hash__(u16 self, i32 capacity) {
-    return __internal_hash_mod(self, capacity);
-}
-
-fn u32::__hash__(u32 self, i32 capacity) {
-    return __internal_hash_mod(self, capacity);
-}
-
-fn u64::__hash__(u64 self, i32 capacity) {
-    return __internal_hash_mod(self, capacity);
-}
-
-fn f32::__hash__(f32 self, i32 capacity) {
-    f32 temp = self;
-    return __internal_hash_mod(*(i32 *)(&temp), capacity);
-}
-
-fn f64::__hash__(f64 self, i32 capacity) {
-    f64 temp = self;
-    return __internal_hash_mod(*(i64 *)(&temp), capacity);
-}
+external fn string::__hash__(string self, i32 capacity) -> i64;
+external fn __void_ptr__::__hash__(void *self, i32 capacity) -> i64;
+external fn char::__hash__(char self, i32 capacity) -> i32;
+external fn bool::__hash__(bool self, i32 capacity) -> i32;
+external fn i8::__hash__(i8 self, i32 capacity) -> i32;
+external fn i16::__hash__(i16 self, i32 capacity) -> i32;
+external fn i32::__hash__(i32 self, i32 capacity) -> i32;
+external fn i64::__hash__(i64 self, i32 capacity) -> i32;
+external fn u8::__hash__(u8 self, i32 capacity) -> i32;
+external fn u16::__hash__(u16 self, i32 capacity) -> i32;
+external fn u32::__hash__(u32 self, i32 capacity) -> i32;
+external fn u64::__hash__(u64 self, i32 capacity) -> i64;
+external fn f32::__hash__(f32 self, i32 capacity) -> i32;
+external fn f64::__hash__(f64 self, i32 capacity) -> i64;

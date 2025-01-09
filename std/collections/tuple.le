@@ -23,7 +23,7 @@ fn Tuple::__hash__<T, U>(Tuple<T, U> self, i32 capacity) {
     i64 hash_x = self.x.__hash__(capacity);
     i64 hash_y = self.y.__hash__(capacity);
     i64 combined = hash_x * 31 + hash_y;
-    return __internal_hash_mod(combined, capacity);
+    return hash::mod(combined, capacity);
 }
 
 fn Tuple::new<T, U>(T x, U y) {

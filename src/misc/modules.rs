@@ -6,7 +6,6 @@ use std::process::exit;
 use std::time::Instant;
 
 use crate::{
-    as_string_idx,
     compiler::enums::Type,
     elapsed_with_color,
     lexer::{
@@ -19,8 +18,8 @@ use crate::{
         enums::{Argument, AstNode, Primitive},
         parser::{DoOnly, Parser, StructPool},
     },
-    Warnings, FORMAT_CONSTANT, INTERNAL_FORMATTER, LEN_CONSTANT, LONG_EXTENSION, POINTER_ID,
-    PRIMARY_ALLOCATOR_MODULE, SHORT_EXTENSION, STD_LIB_PATH, VOID_POINTER_ID,
+    Warnings, LEN_CONSTANT, LONG_EXTENSION, POINTER_ID, PRIMARY_ALLOCATOR_MODULE, SHORT_EXTENSION,
+    STD_LIB_PATH,
 };
 
 pub fn lex_and_parse(
@@ -29,7 +28,9 @@ pub fn lex_and_parse(
     struct_pool: &RefCell<StructPool>,
     parsed_modules: &RefCell<HashSet<String>>,
     warnings: &Warnings,
-    is_string_module_disabled: bool,
+    no_strings: bool,
+    no_gc: bool,
+    no_fmt: bool,
     debug_time: bool,
     object_output: bool,
     nesting: usize,
@@ -123,7 +124,17 @@ pub fn lex_and_parse(
     let (mut imports, new_struct_pool, ..) = parser.parse(&DoOnly::Imports, None);
     struct_pool.replace_with(|_| new_struct_pool);
 
-    if nesting == 0 && !is_string_module_disabled {
+    if nesting == 0 && !no_fmt {
+        imports.insert(
+            0,
+            Primitive::Use {
+                module: "std/fmt".into(),
+                location: Location::default(input_path.clone()),
+            },
+        );
+    }
+
+    if nesting == 0 && !no_strings {
         imports.insert(
             0,
             Primitive::Use {
@@ -133,7 +144,7 @@ pub fn lex_and_parse(
         );
     }
 
-    if nesting == 0 {
+    if nesting == 0 && !no_gc {
         imports.insert(
             0,
             Primitive::Use {
@@ -177,7 +188,9 @@ pub fn lex_and_parse(
                     struct_pool,
                     parsed_modules,
                     warnings,
-                    is_string_module_disabled,
+                    no_strings,
+                    no_gc,
+                    no_fmt,
                     debug_time,
                     object_output,
                     nesting + 1,
@@ -338,415 +351,6 @@ pub fn lex_and_parse(
                 return_location: loc.clone(),
             },
         );
-
-        if !is_string_module_disabled {
-            // Primitive format functions
-            for primitive in Type::get_primitive_types() {
-                let idx = as_string_idx!(tree, INTERNAL_FORMATTER);
-
-                let mut body = vec![AstNode::Return {
-                    value: Box::new(AstNode::FunctionCall {
-                        name: format!("string.{}", INTERNAL_FORMATTER),
-                        generics: vec![],
-                        parameters: vec![
-                            (
-                                loc.clone(),
-                                AstNode::Literal {
-                                    kind: TokenKind::StringLiteral,
-                                    value: ValueKind::String(
-                                        match primitive {
-                                            // x if x.is_string() => "\\\"{}\\\"",
-                                            // Type::Char => "'{}'",
-                                            _ => "{}",
-                                        }
-                                        .into(),
-                                    ),
-                                    location: loc.clone(),
-                                },
-                            ),
-                            (
-                                loc.clone(),
-                                AstNode::Literal {
-                                    kind: TokenKind::Identifier,
-                                    value: ValueKind::String("self".into()),
-                                    location: loc.clone(),
-                                },
-                            ),
-                        ],
-                        type_method: false,
-                        ignore_no_def: false,
-                        location: loc.clone(),
-                    }),
-                    location: loc.clone(),
-                }];
-
-                if primitive.is_string() {
-                    body.insert(
-                        0,
-                        AstNode::IfStatement {
-                            condition: Box::new(AstNode::BinaryOperation {
-                                left: Box::new(AstNode::Conversion {
-                                    r#type: Some(Type::Long),
-                                    value: Box::new(AstNode::Literal {
-                                        kind: TokenKind::Identifier,
-                                        value: ValueKind::String("self".into()),
-                                        location: loc.clone(),
-                                    }),
-                                    location: loc.clone(),
-                                }),
-                                right: Box::new(AstNode::Literal {
-                                    kind: TokenKind::IntegerLiteral,
-                                    value: ValueKind::Number(0),
-                                    location: loc.clone(),
-                                }),
-                                operator: TokenKind::EqualTo,
-                                treat_as_string: false,
-                                dunder_methods: false,
-                                location: loc.clone(),
-                            }),
-                            body: vec![AstNode::Return {
-                                value: Box::new(AstNode::Literal {
-                                    kind: TokenKind::StringLiteral,
-                                    value: ValueKind::String("(nil)".into()),
-                                    location: loc.clone(),
-                                }),
-                                location: loc.clone(),
-                            }],
-                            else_body: vec![],
-                            location: loc.clone(),
-                        },
-                    );
-                }
-
-                tree.insert(
-                    idx + 1,
-                    Primitive::Function {
-                        name: format!("{}.{FORMAT_CONSTANT}", primitive.strict_id()),
-                        public: true,
-                        usable: true,
-                        imported: false,
-                        variadic: false,
-                        manual: false,
-                        external: false,
-                        builtin: true,
-                        volatile: false,
-                        format: false,
-                        unaliased: None,
-                        generics: vec![],
-                        arguments: vec![
-                            Argument {
-                                name: "self".into(),
-                                r#type: primitive.clone(),
-                                manual: false,
-                            },
-                            Argument {
-                                name: "nesting".into(),
-                                r#type: Type::Word,
-                                manual: false,
-                            },
-                        ],
-                        r#return: Some(Type::Pointer(Box::new(Type::Char))),
-                        body,
-                        location: Location::default(input_path.clone()),
-                        return_location: Location::default(input_path.clone()),
-                    },
-                )
-            }
-
-            // Special format for T*
-            let idx = as_string_idx!(tree, INTERNAL_FORMATTER);
-
-            tree.insert(
-                idx + 1,
-                Primitive::Function {
-                    name: format!("{}.{FORMAT_CONSTANT}", POINTER_ID).into(),
-                    public: false,
-                    usable: true,
-                    imported: false,
-                    variadic: false,
-                    manual: false,
-                    external: false,
-                    builtin: true,
-                    volatile: false,
-                    format: false,
-                    unaliased: None,
-                    generics: vec!["T".into()],
-                    arguments: vec![
-                        Argument {
-                            name: "self".into(),
-                            r#type: Type::Pointer(Box::new(Type::Unknown("T".into()))),
-                            manual: false,
-                        },
-                        Argument {
-                            name: "nesting".into(),
-                            r#type: Type::Word,
-                            manual: false,
-                        },
-                    ],
-                    r#return: Some(Type::Pointer(Box::new(Type::Char))),
-                    body: vec![
-                        AstNode::Declare {
-                            name: "res".into(),
-                            r#type: Some(Type::Pointer(Box::new(Type::Char))),
-                            value: Some(Box::new(AstNode::Literal {
-                                kind: TokenKind::StringLiteral,
-                                value: ValueKind::String("invalid".into()),
-                                location: loc.clone(),
-                            })),
-                            location: loc.clone(),
-                            value_location: loc.clone(),
-                        },
-                        AstNode::IfStatement {
-                            condition: Box::new(AstNode::BinaryOperation {
-                                left: Box::new(AstNode::BinaryOperation {
-                                    left: Box::new(AstNode::Literal {
-                                        kind: TokenKind::Identifier,
-                                        value: ValueKind::String("self".into()),
-                                        location: loc.clone(),
-                                    }),
-                                    right: Box::new(AstNode::Literal {
-                                        kind: TokenKind::IntegerLiteral,
-                                        value: ValueKind::Number(0),
-                                        location: loc.clone()
-                                    }),
-                                    operator: TokenKind::NotEqualTo,
-                                    treat_as_string: false,
-                                    dunder_methods: false,
-                                    location: loc.clone()
-                                }),
-                                right: Box::new(AstNode::BinaryOperation {
-                                    left: Box::new(AstNode::BinaryOperation {
-                                        left: Box::new(AstNode::Literal {
-                                            kind: TokenKind::Identifier,
-                                            value: ValueKind::String("self".into()),
-                                            location: loc.clone(),
-                                        }),
-                                        right: Box::new(AstNode::Literal {
-                                            kind: TokenKind::IntegerLiteral,
-                                            value: ValueKind::Number(Type::Word.size_base() as i128),
-                                            location: loc.clone(),
-                                        }),
-                                        operator: TokenKind::Modulus,
-                                        treat_as_string: false,
-                                        dunder_methods: false,
-                                        location: loc.clone(),
-                                    }),
-                                    right: Box::new(AstNode::Literal {
-                                        kind: TokenKind::IntegerLiteral,
-                                        value: ValueKind::Number(0),
-                                        location: loc.clone()
-                                    }),
-                                    operator: TokenKind::EqualTo,
-                                    treat_as_string: false,
-                                    dunder_methods: false,
-                                    location: loc.clone(),
-                                }),
-                                operator: TokenKind::And,
-                                treat_as_string: false,
-                                dunder_methods: false,
-                                location: loc.clone(),
-                            }),
-                            body: vec![AstNode::Declare {
-                                name: "res".into(),
-                                r#type: None,
-                                value: Some(Box::new(AstNode::FunctionCall {
-                                    name: FORMAT_CONSTANT.into(),
-                                    generics: vec![],
-                                    parameters: vec![
-                                        (
-                                            loc.clone(),
-                                            AstNode::MemoryOperation {
-                                                left: Box::new(AstNode::Literal {
-                                                    kind: TokenKind::Identifier,
-                                                    value: ValueKind::String("self".into()),
-                                                    location: loc.clone(),
-                                                }),
-                                                right: Box::new(AstNode::Literal {
-                                                    kind: TokenKind::IntegerLiteral,
-                                                    value: ValueKind::Number(0),
-                                                    location: loc.clone(),
-                                                }),
-                                                value: None,
-                                                left_location: loc.clone(),
-                                                right_location: loc.clone(),
-                                                value_location: loc.clone(),
-                                                is_deref: true,
-                                            },
-                                        ),
-                                        (
-                                            loc.clone(),
-                                            AstNode::Literal {
-                                                kind: TokenKind::Identifier,
-                                                value: ValueKind::String("nesting".into()),
-                                                location: loc.clone(),
-                                            },
-                                        ),
-                                    ],
-                                    type_method: true,
-                                    ignore_no_def: false,
-                                    location: loc.clone(),
-                                })),
-                                location: loc.clone(),
-                                value_location: loc.clone(),
-                            }],
-                            else_body: vec![],
-                            location: loc.clone(),
-                        },
-                        AstNode::Return {
-                            value: Box::new(AstNode::FunctionCall {
-                                name: format!("string.{}", INTERNAL_FORMATTER).into(),
-                                generics: vec![],
-                                parameters: vec![
-                                    (
-                                        loc.clone(),
-                                        AstNode::Literal {
-                                            kind: TokenKind::StringLiteral,
-                                            value: ValueKind::String("<{} at {}>".into()),
-                                            location: loc.clone(),
-                                        },
-                                    ),
-                                    (
-                                        loc.clone(),
-                                        AstNode::Literal {
-                                            kind: TokenKind::Identifier,
-                                            value: ValueKind::String("res".into()),
-                                            location: loc.clone(),
-                                        },
-                                    ),
-                                    (
-                                        loc.clone(),
-                                        AstNode::Literal {
-                                            kind: TokenKind::Identifier,
-                                            value: ValueKind::String("self".into()),
-                                            location: loc.clone(),
-                                        },
-                                    ),
-                                ],
-                                type_method: false,
-                                ignore_no_def: false,
-                                location: loc.clone(),
-                            }),
-                            location: loc.clone(),
-                        },
-                    ],
-                    location: loc.clone(),
-                    return_location: loc.clone(),
-                },
-            );
-
-            // Special format for void pointer
-            let idx = as_string_idx!(tree, INTERNAL_FORMATTER);
-            tree.insert(
-                idx + 1,
-                Primitive::Function {
-                    name: format!("{VOID_POINTER_ID}.{FORMAT_CONSTANT}").into(),
-                    public: false,
-                    usable: true,
-                    imported: false,
-                    variadic: false,
-                    manual: false,
-                    external: false,
-                    builtin: true,
-                    volatile: false,
-                    format: false,
-                    unaliased: None,
-                    generics: vec![],
-                    arguments: vec![
-                        Argument {
-                            name: "self".into(),
-                            r#type: Type::Pointer(Box::new(Type::Void)),
-                            manual: false,
-                        },
-                        Argument {
-                            name: "nesting".into(),
-                            r#type: Type::Word,
-                            manual: false,
-                        },
-                    ],
-                    r#return: Some(Type::Pointer(Box::new(Type::Char))),
-                    body: vec![AstNode::Return {
-                        value: Box::new(AstNode::FunctionCall {
-                            name: format!("string.{}", INTERNAL_FORMATTER).into(),
-                            generics: vec![],
-                            parameters: vec![
-                                (
-                                    loc.clone(),
-                                    AstNode::Literal {
-                                        kind: TokenKind::StringLiteral,
-                                        value: ValueKind::String("<unknown at {}>".into()),
-                                        location: loc.clone(),
-                                    },
-                                ),
-                                (
-                                    loc.clone(),
-                                    AstNode::Literal {
-                                        kind: TokenKind::Identifier,
-                                        value: ValueKind::String("self".into()),
-                                        location: loc.clone(),
-                                    },
-                                ),
-                            ],
-                            type_method: false,
-                            ignore_no_def: false,
-                            location: loc.clone(),
-                        }),
-                        location: loc.clone(),
-                    }],
-                    location: loc.clone(),
-                    return_location: loc.clone(),
-                },
-            );
-        }
-
-        tree.insert(
-            0,
-            Primitive::Function {
-                name: "bool.to_string".into(),
-                public: false,
-                usable: true,
-                imported: false,
-                variadic: false,
-                manual: false,
-                external: false,
-                builtin: true,
-                volatile: false,
-                format: false,
-                unaliased: None,
-                generics: vec![],
-                arguments: vec![Argument {
-                    name: "self".into(),
-                    r#type: Type::Boolean,
-                    manual: false,
-                }],
-                r#return: Some(Type::Pointer(Box::new(Type::Char))),
-                body: vec![AstNode::IfStatement {
-                    condition: Box::new(AstNode::Literal {
-                        kind: TokenKind::Identifier,
-                        value: ValueKind::String("self".into()),
-                        location: loc.clone(),
-                    }),
-                    body: vec![AstNode::Return {
-                        value: Box::new(AstNode::Literal {
-                            kind: TokenKind::StringLiteral,
-                            value: ValueKind::String("true".into()),
-                            location: loc.clone(),
-                        }),
-                        location: loc.clone(),
-                    }],
-                    else_body: vec![AstNode::Return {
-                        value: Box::new(AstNode::Literal {
-                            kind: TokenKind::StringLiteral,
-                            value: ValueKind::String("false".into()),
-                            location: loc.clone(),
-                        }),
-                        location: loc.clone(),
-                    }],
-                    location: loc.clone(),
-                }],
-                location: loc.clone(),
-                return_location: loc.clone(),
-            },
-        )
     }
 
     tree.to_vec()

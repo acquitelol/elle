@@ -4379,7 +4379,10 @@ impl Compiler {
             module_ref.borrow_mut().add_data(data);
         }
 
-        module_ref.borrow_mut().remove_unused_functions();
+        module_ref
+            .borrow_mut()
+            .remove_unused_functions(object_output);
+
         module_ref.borrow_mut().remove_unused_data();
         module_ref.borrow_mut().remove_generics();
         module_ref.borrow_mut().remove_empty_structs();

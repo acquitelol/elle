@@ -1,119 +1,22 @@
+use std/runtime/libc/io;
 use std/libc/string;
-use std/libc/mem;
-use std/libc/io;
-
 global pub;
 
-fn string::is_empty(string self) {
-    return self.len() == 0;
-}
-
-fn string::equals(string self, string other) {
-    return (i64)self == (i64)other || strcmp(self, other) == 0;
-}
-
+external fn string::is_empty(string self) -> bool;
+external fn string::equals(string self, string other) -> bool;
 external fn string::equals(string self, string other) @alias("string::__equals__") -> bool;
-
-fn string::contains(string self, string needle) -> bool {
-    return (void *)strstr(self, needle) != nil;
-}
-
-fn string::find(string self, string needle) -> i64 {
-    let result = strstr(self, needle);
-
-    if (void *)result == nil {
-        return -1;
-    }
-
-    return (i64)result - (i64)self;
-}
-
-fn string::count(string self, char needle) -> i32 {
-    let count = 0;
-
-    for let i = 0; i < self.len(); i += 1 {
-        if self[i] == needle {
-            count += 1;
-        }
-    }
-
-    return count;
-}
-
-fn string::starts_with(string self, string prefix) -> bool {
-    return strncmp(prefix, self, prefix.len()) == 0;
-}
-
-fn string::ends_with(string self, string suffix) -> bool {
-    let self_length = self.len();
-    let suffix_length = suffix.len();
-
-    if (suffix_length > self_length) {
-        return false;
-    }
-
-    return strncmp((string)((i64)self + (i64)self_length - suffix_length), suffix, suffix_length) == 0;
-}
-
-fn string::default(string self, string default) {
-    if ((void *)self) == 0 || self.is_empty() {
-        return default;
-    }
-
-    return self;
-}
-
-fn string::to_upper(string self) {
-    let out = (string)#env.allocator.alloc((self.len() + 1) * #size(char));
-
-    for c in self {
-        if c >= 'a' && c <= 'z' {
-            out[#i(c)] = c - ('a' - 'A');
-        } else {
-            out[#i(c)] = c;
-        }
-    }
-
-    return out;
-}
-
-fn string::to_lower(string self) {
-    let out = (string)#env.allocator.alloc((self.len() + 1) * #size(char));
-
-    for c in self {
-        if c >= 'A' && c <= 'Z' {
-            out[#i(c)] = c + ('a' - 'A');
-        } else {
-            out[#i(c)] = c;
-        }
-    }
-
-    return out;
-}
+external fn string::contains(string self, string needle) -> bool;
+external fn string::find(string self, string needle) -> i64;
+external fn string::count(string self, char needle) -> i32;
+external fn string::starts_with(string self, string prefix) -> bool;
+external fn string::ends_with(string self, string suffix) -> bool;
+external fn string::default(string self, string default) -> string;
+external fn string::to_upper(string self) -> string;
+external fn string::to_lower(string self) -> string;
 
 // Note: these are null terminated strings, which means this
 // function returns a CLONE of the slice, NOT a string view
-fn string::slice(string self, i32 start, i32 end) -> string {
-    let length = self.len();
-
-    if start < 0 || end > length || start > end {
-        return nil;
-    }
-
-    let new_length = end - start;
-    let sliced = (string)#env.allocator.alloc(new_length + 1);
-
-    if !sliced {
-        return nil;
-    }
-
-    for let i = 0; i < new_length; i += 1 {
-        sliced[i] = self[start + i];
-    }
-
-    sliced[new_length] = '\0';
-    return sliced;
-}
+external fn string::slice(string self, i32 start, i32 end) -> string;
 
 // Concatenates all of the arguments into 1 final string
 //
@@ -121,37 +24,7 @@ fn string::slice(string self, i32 start, i32 end) -> string {
 //
 // "a".concat("b") == "ab"
 // string::concat("me", "ow") == "meow"
-fn string::concat(ElleMeta meta, ...args) -> string {
-    string strings[meta.arity];
-    i32 sizes[meta.arity];
-    i64 length = 0;
-
-    for let i = 0; i < meta.arity; i += 1 {
-        strings[i] = args.yield(string);
-        sizes[i] = strings[i].len();
-        length += sizes[i];
-    }
-
-    let result = (string)#env.allocator.alloc((length + 1) * #size(char));
-
-    if !result {
-        return nil;
-    }
-
-    let index = 0;
-
-    for let i = 0; i < meta.arity; i += 1 {
-        let current = strings[i];
-
-        for let j = 0; j < sizes[i]; j += 1 {
-            result[index] = current[j];
-            index += 1;
-        }
-    }
-
-    result[index] = '\0';
-    return result;
-}
+external fn string::concat(ElleMeta meta, ...args) -> string;
 
 // Concatenates all of the strings provided and then finally reassigns
 // the original string to the new string
@@ -165,408 +38,37 @@ fn string::concat(ElleMeta meta, ...args) -> string {
 // string a = "me";
 // string::extend(a, "ow");
 // a == "meow"
-fn string::extend(ElleMeta meta, string *self, ...args) {
-    // - 1 to account for `string *self` which isnt variadic
-    let res = *self;
-
-    for let i = 0; i < meta.arity - 1; i += 1 {
-        res <>= args.yield(string);
-    }
-
-    *self = res;
-}
-
-fn string::clone(string self) {
-    return self <> "";
-}
-
-fn string::color(string self, string color) {
-    let fmt = "\x1b[%dm";
-    let code = -1;
-
-    if color == "bold" {
-        code = 1;
-    }
-
-    if color == "italic" {
-        code = 3;
-    }
-
-    if color == "underline" {
-        code = 4;
-    }
-
-    if color == "red" {
-        code = 31;
-    }
-
-    if color == "green" {
-        code = 32;
-    }
-
-    if color == "yellow" {
-        code = 33;
-    }
-
-    if color == "blue" {
-        code = 34;
-    }
-
-    if color == "magenta" {
-        code = 35;
-    }
-
-    if color == "cyan" {
-        code = 36;
-    }
-
-    if color == "white" {
-        code = 37;
-    }
-
-    if code == -1 {
-        return self;
-    }
-
-    let result = (string)#env.allocator.alloc(fmt.len() + 1);
-    io::sprintf(result, fmt, code);
-    result <>= self;
-
-    return result;
-}
-
-fn string::reset(string self) {
-    return self <> "\x1b[0m";
-}
-
-// Capitalizes the first character of a string, and lowercases the rest of the string
-fn string::capitalize(string self) {
-    let first = self.slice(0, 1);
-    let rest = self.slice(1, self.len());
-
-    return first.to_upper() <> rest.to_lower();
-}
-
-fn string::replace(string self, string needle, string replacement) -> string {
-    let needle_len = needle.len();
-    let replacement_len = replacement.len();
-    let self_len = self.len();
-
-    if needle_len == 0 || self_len == 0 {
-        return self;
-    }
-
-    let buf_size = self_len;
-    let res = (string)#env.allocator.alloc(buf_size + 1);
-
-    if !res {
-        return nil;
-    }
-
-    let res_index = 0;
-    let i = 0;
-
-    while i < self_len {
-        if strncmp((string)((i64)self + i), needle, needle_len) == 0 {
-            if res_index + replacement_len > buf_size {
-                buf_size += replacement_len;
-                res = (string)#env.allocator.realloc(res, buf_size + 1);
-            }
-
-            strcpy((string)((i64)res + res_index), replacement);
-            res_index += replacement_len;
-            i += needle_len;
-        } else {
-            if res_index + 1 > buf_size {
-                buf_size += 1;
-                res = (string)#env.allocator.realloc(res, buf_size + 1);
-            }
-
-            res[res_index] = self[i];
-            res_index += 1;
-            i += 1;
-        }
-    }
-
-    res[res_index] = '\0';
-    return res;
-}
-
-// Repeats a string `count` amount of times
-//
-// examples:
-//
-// ```
-// io::assert("ab".repeat(4) == "abababab")
-// io::assert(string::repeat("e", 2) == "ee")
-// ```
-fn string::repeat(string self, i32 count) {
-    if count <= 0 {
-        return "";
-    }
-
-    let res = self;
-
-    // count - 1 because we already have 1
-    // in the initial declaration
-    for let i = 0; i < count - 1; i += 1 {
-        res <>= self;
-    }
-
-    return res;
-}
-
-fn string::insert(string *self, i32 index, char c) {
-    let length = (*self).len();
-
-    if index < 0 || index > length {
-        return nil;
-    }
-
-    // +1 for the new char, +1 for the null terminator
-    string result = (string)#env.allocator.alloc((length + 2) * #size(char));
-
-    if !result {
-        return nil;
-    }
-
-    strncpy(result, *self, index);
-    result[index] = c;
-    strcpy((string)((i64)result + index + (i64)1), (string)((i64)(*self) + index));
-
-    result[length + 1] = '\0';
-    *self = result;
-}
-
-// Pops the last character off of a string and returns it
-//
-// This function mutates the string in-place
-//
-// examples:
-//
-// ```
-// string a = "mew";
-// char last = a.pop();
-//
-// io::assert(last == 'w', nil)
-// io::assert(a == "me", nil)
-// ```
-fn string::pop(string *self) -> char {
-    let length = (*self).len();
-
-    if length == 0 {
-        return '\0';
-    }
-
-    let last_char = (*self)[length - 1];
-    let result = (string)#env.allocator.alloc(length * #size(char));
-
-    if !result {
-        return '\0';
-    }
-
-    strncpy(result, *self, length - 1);
-    result[length - 1] = '\0';
-    *self = result;
-
-    return last_char;
-}
-
-fn string::push(string *self, char c) {
-    let length = (*self).len();
-    let result = (string)#env.allocator.alloc((length + 2) * #size(char));
-
-    if (!result) {
-        return nil;
-    }
-
-    strcpy(result, *self);
-    result[length] = c;
-    result[length + 1] = '\0';
-
-    *self = result;
-}
-
-local fn __internal_to_string<T, U>(i64 args, string fmt) {
-    T arg = args.yield(U);
-
-    let length = io::snprintf(nil, 0, fmt, arg);
-    string res = (string)#env.allocator.alloc(length);
-    io::sprintf(res, fmt, arg);
-
-    return res;
-}
+external fn string::extend(ElleMeta meta, string *self, ...args);
+external fn string::clone(string self) -> string;
+external fn string::color(string self, string color) -> string;
+external fn string::reset(string self) -> string;
+external fn string::capitalize(string self);
+external fn string::replace(string self, string needle, string replacement) -> string;
+external fn string::repeat(string self, i32 count) -> string;
+external fn string::insert(string *self, i32 index, char c);
+external fn string::pop(string *self) -> char;
+external fn string::push(string *self, char c);
 
 // !! Do not use this unless you know what you're doing !!
 // If you want to turn a value of arbitrary type to a string
 // please use string::as_string or string::as_string_wrapped
-fn __to_string(string ty, i64 args, bool wrap) {
-    if ty.contains("*") {
-        return __internal_to_string<i64, i64>(args, "%p");
-    }
+external fn __to_string(string ty, i64 args, bool wrap) -> string;
 
-    if ty.starts_with("string") {
-        let arg = args.yield(string);
-
-        if wrap {
-            arg = string::concat("\"", arg, "\"");
-        }
-
-        return arg;
-    }
-
-    if ty.starts_with("i8") {
-        return __internal_to_string<i8, i8>(args, "%d");
-    }
-
-    if ty.starts_with("i16") {
-        return __internal_to_string<i16, i16>(args, "%d");
-    }
-
-    if ty.starts_with("i32") {
-        return __internal_to_string<i32, i32>(args, "%d");
-    }
-
-    if ty.starts_with("i64") {
-        return __internal_to_string<i64, i64>(args, "%ld");
-    }
-
-    if ty.starts_with("u8") {
-        return __internal_to_string<i32, u8>(args, "%u");
-    }
-
-    if ty.starts_with("u16") {
-        return __internal_to_string<i32, u16>(args, "%u");
-    }
-
-    if ty.starts_with("u32") {
-        return __internal_to_string<i32, u32>(args, "%u");
-    }
-
-    if ty.starts_with("u64") {
-        return __internal_to_string<i64, u64>(args, "%lu");
-    }
-
-    if ty.starts_with("f32") {
-        return __internal_to_string<f64, f32>(args, "%f");
-    }
-
-    if ty.starts_with("f64") {
-        return __internal_to_string<f64, f64>(args, "%f");
-    }
-
-    if ty.starts_with("char") {
-        return __internal_to_string<char, char>(args, wrap ? "'%c'" : "%c");
-    }
-
-    if ty.starts_with("bool") {
-        return args.yield(bool).to_string();
-    }
-
-    let arg = args.yield(i64);
-    let fmt = "<%s at %p>";
-    let length = io::snprintf(nil, 0, fmt, ty, arg);
-    let res = (string)#env.allocator.alloc(length);
-    io::sprintf(res, fmt, ty, arg);
-
-    return res;
-}
-
-fn string::as_string(ElleMeta meta, ...args) {
-    return __to_string(meta.types[0], args, false);
-}
-
-fn string::as_string_wrapped(ElleMeta meta, ...args) {
-    return __to_string(meta.types[0], args, true);
-}
+external fn string::as_string(ElleMeta meta, ...args) -> string;
+external fn string::as_string_wrapped(ElleMeta meta, ...args) -> string;
 
 // !! Do not use this unless you know what you're doing !!
 // If you want to format arguments of arbitrary types
 // into a new string, use string::format() instead
-fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
-    let result = "";
-
-    let arg = 0;
-    let is_open = false;
-    let wrapped = false;
-
-    for c in fmt {
-        if is_open {
-            // Allow for escaping { using {{}
-            if c == '{' {
-                is_open = false;
-
-                // Push '{' as it was skipped the first time
-                result.push(c);
-                continue;
-            }
-
-            // {:} enables wrapped mode which means
-            // that strings are printed as "str" not str
-            // and chars are printed as 'c' not c
-            if c == ':' {
-                wrapped = true;
-                continue;
-            }
-
-            if c != '}' {
-                io::fprintf(stderr, "Invalid format at position '%d' (%c)\n", #i(c), c);
-                io::fflush(stderr);
-                return "";
-            }
-
-            arg += 1;
-
-            let out = __to_string(meta.types[arg], args, wrapped);
-            result.extend(out);
-
-            is_open = false;
-            wrapped = false;
-            continue;
-        }
-
-        if c == '{' {
-            is_open = true;
-            continue;
-        }
-
-        result.push(c);
-    }
-
-    return result;
-}
+external fn __internal_fmt(string fmt, ElleMeta meta, i64 args) -> string;
 
 // Internal formatting function that does not automatically run
 // parameters through their formatter (no @fmt attribute)
-fn string::__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(ElleMeta meta, string fmt, ...args) -> string {
-    return __internal_fmt(fmt, meta, args);
-}
+external fn string::__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(ElleMeta meta, string fmt, ...args) -> string;
 
-fn string::format(ElleMeta meta, string fmt, ...args) @fmt -> string {
-    for let i = 0; i < meta.arity; i += 1 {
-        meta.types[i] = "string";
-    }
+// Safe formatter
+external fn string::format(ElleMeta meta, string fmt, ...args) @fmt -> string;
 
-    return __internal_fmt(fmt, meta, args);
-}
-
-fn string::ascii_lower() {
-    return "abcdefghijklmnopqrstuvwxyz";
-}
-
-fn string::ascii_upper() {
-    return string::ascii_lower().to_upper();
-}
-
-fn string::ascii_numerics() {
-    return "0123456789";
-}
-
-fn string::ascii_all() {
-    return string::format(
-        "{}{}{}",
-        string::ascii_lower(),
-        string::ascii_upper(),
-        string::ascii_numerics()
-    )
-}
+external fn string::ascii_lower() -> string;
+external fn string::ascii_upper() -> string;
+external fn string::ascii_numerics() -> string;

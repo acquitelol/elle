@@ -687,26 +687,6 @@ impl Type {
         }
     }
 
-    // Primarily used to create methods that exist
-    // on every primitive type such as __fmt__
-    pub fn get_primitive_types() -> Vec<Type> {
-        vec![
-            Self::Word,
-            Self::UnsignedWord,
-            Self::Long,
-            Self::UnsignedLong,
-            Self::Char,
-            Self::Boolean,
-            Self::Halfword,
-            Self::UnsignedHalfword,
-            Self::Byte,
-            Self::UnsignedByte,
-            Self::Single,
-            Self::Double,
-            Self::Pointer(Box::new(Self::Char)),
-        ]
-    }
-
     pub fn has_generic_type(self, ty: Type) -> bool {
         match ty.clone() {
             Type::Pointer(inner) => self.has_generic_type(*inner),
@@ -1448,7 +1428,7 @@ impl Module {
         self.data.last_mut().unwrap()
     }
 
-    pub fn remove_unused_functions(&mut self) {
+    pub fn remove_unused_functions(&mut self, object_output: bool) {
         let mut passes = 5; // should be enough to remove most if not all unused functions
 
         while passes > 0 {
@@ -1474,8 +1454,9 @@ impl Module {
 
             used_functions.insert("main".to_string());
 
-            self.functions
-                .retain(|func| used_functions.contains(&func.name) || func.volatile);
+            self.functions.retain(|func| {
+                used_functions.contains(&func.name) || func.volatile || object_output
+            });
         }
     }
 

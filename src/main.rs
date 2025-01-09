@@ -26,6 +26,7 @@ static GENERIC_END: &str = "1"; // Allowing for nested generic structs
 static GENERIC_POINTER: &str = "2"; // Pointer to another type
 static GENERIC_UNKNOWN: &str = "3"; // Unknown type T
 static STD_LIB_PATH: &str = "/usr/local/include/elle";
+static RUNTIME_PATH: &str = "/usr/local/lib";
 static LONG_EXTENSION: &str = ".elle";
 static SHORT_EXTENSION: &str = ".le";
 static OBJECT_EXTENSION: &str = ".o";
@@ -139,7 +140,10 @@ fn main() -> ExitCode {
     let mut ast = false;
     let mut hush = false;
     let mut object_output = false;
-    let mut strings_disabled = false;
+    let mut no_strings = false; // no string module
+    let mut no_std = false; // no stdlib
+    let mut no_gc = false; // no gc
+    let mut no_fmt = false; // no primitive fmt methods
     let mut object_files: Vec<String> = vec![];
 
     let mut linker_flags = vec![];
@@ -171,9 +175,12 @@ fn main() -> ExitCode {
             "--hush" | "--silent" => {
                 hush = true;
             }
-            "--no-string-module" | "-nsm" => {
-                strings_disabled = true;
+            "-nosm" | "--no-string-module" => {
+                no_strings = true;
             }
+            "-nogc" | "--no-garbage-collector" => no_gc = true,
+            "-nostd" | "--no-stdlib" => no_std = true,
+            "-nofmt" | "--no-primitive-formatters" => no_fmt = true,
             other if other.ends_with(SHORT_EXTENSION) || other.ends_with(LONG_EXTENSION) => {
                 if input_path.is_none() {
                     input_path = Some(other.to_string())
@@ -300,7 +307,9 @@ fn main() -> ExitCode {
         &struct_pool,
         &parsed_modules,
         &warnings,
-        strings_disabled,
+        no_strings,
+        no_gc,
+        no_fmt,
         debug_time,
         object_output,
         0,
@@ -674,9 +683,19 @@ fn main() -> ExitCode {
         None
     };
 
-    fs::create_dir_all("./.build").expect("Failed to create ./.build.");
+    let build_path = format!(
+        "./.build-{}",
+        Path::new(&input_path)
+            .file_stem()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string()
+    );
 
-    let path_to_qbe_dist = "./.build/target.ssa".to_string();
+    fs::create_dir_all(&build_path).expect("Failed to create ./.build.");
+    let path_to_qbe_dist = format!("{build_path}/target.ssa");
+
     Compiler::compile(
         tree,
         path_to_qbe_dist.clone(),
@@ -716,12 +735,13 @@ fn main() -> ExitCode {
             linker_flags,
             linker_path,
             object_files,
+            no_std,
         );
 
         out = result;
     }
 
-    fs::remove_dir_all("./.build").expect("Failed to delete ./.build.");
+    fs::remove_dir_all(&build_path).expect("Failed to delete ./.build.");
 
     if out != EmitKind::None {
         if !hush {

@@ -1527,6 +1527,9 @@ impl<'a> Statement<'a> {
             TokenKind::LeftBlockBrace => {
                 expression = self.parse_offset_store(Some((position, expression, location)))
             }
+            TokenKind::Question => {
+                expression = self.parse_ternary_node(expression);
+            }
             _ => {}
         }
 

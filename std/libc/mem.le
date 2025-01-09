@@ -1,5 +1,5 @@
-global pub;
 namespace mem;
+global pub;
 
 external fn malloc(i64 size) @alias("mem::malloc") -> void *;
 external fn realloc(void *ptr, i64 size) @alias("mem::realloc") -> void *;

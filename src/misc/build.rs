@@ -2,7 +2,7 @@ use std::{fs, path::Path, process::Command};
 
 use crate::{
     misc::colors::{RED, RESET},
-    EmitKind,
+    EmitKind, RUNTIME_PATH,
 };
 
 pub fn build(
@@ -14,6 +14,7 @@ pub fn build(
     linker_flags: Vec<Option<String>>,
     linker_path: String,
     object_files: Vec<String>,
+    no_std: bool,
 ) -> EmitKind {
     let path = Path::new(&path_to_qbe_dist).with_extension("s");
     let path_string = path.to_str().unwrap().to_string();
@@ -24,7 +25,7 @@ pub fn build(
         .expect(&format!("{RED}Failed to execute QBE."));
 
     if !result.stderr.is_empty() {
-        println!(
+        eprintln!(
             "{RED}ERROR: {}{RESET}",
             String::from_utf8(result.stderr).unwrap()
         );
@@ -59,28 +60,20 @@ pub fn build(
             .unwrap()
             .to_string();
     }
+
     args.extend(vec!["-o", &output_path, &path_string, &objects]);
 
     if object_output {
         args.push("-c");
     }
 
-    // let frame_addr_path = format!("{STD_LIB_PATH}/runtime/stack_top.s");
-    // let frame_addr_out = Path::new(&output_path)
-    //     .with_file_name("stack_top")
-    //     .with_extension("o")
-    //     .to_str()
-    //     .unwrap()
-    //     .to_string();
-
-    // let _ = Command::new(linker_path.clone())
-    //     .args(vec![&frame_addr_path, "-o", &frame_addr_out, "-c"])
-    //     .output()
-    //     .expect(&format!(
-    //         "{RED}Failed to execute CC for {frame_addr_out}.{RESET}"
-    //     ));
-
-    // args.push(&frame_addr_out);
+    let lib_lookup = format!("-L{RUNTIME_PATH}");
+    if !no_std {
+        // explicitly look in for the runtime at this path in case
+        // the user doesnt have rpath set or similar
+        args.push(&lib_lookup);
+        args.push("-lelle"); // must be prebuilt
+    }
 
     let result = Command::new(linker_path)
         .args(args)
@@ -90,7 +83,7 @@ pub fn build(
         ));
 
     if !result.stderr.is_empty() {
-        println!(
+        eprintln!(
             "{RED}ERROR: {}{RESET}",
             String::from_utf8(result.stderr).unwrap()
         );

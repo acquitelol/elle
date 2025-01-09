@@ -1,0 +1,28 @@
+namespace math;
+global pub;
+
+external fn acos(f64 x) @alias("math::acos") -> f64;
+external fn asin(f64 x) @alias("math::asin") -> f64;
+external fn atan(f64 slope) @alias("math::atan") -> f64;
+external fn atan2(f64 y, f64 x) @alias("math::atan2") -> f64;
+external fn cos(f64 x) @alias("math::cos") -> f64;
+external fn cosh(f64 x) @alias("math::cosh") -> f64;
+external fn sin(f64 x) @alias("math::sin") -> f64;
+external fn sinh(f64 x) @alias("math::sinh") -> f64;
+external fn tan(f64 x) @alias("math::tan") -> f64;
+external fn tanh(f64 x) @alias("math::tanh") -> f64;
+external fn exp(f64 x) @alias("math::exp") -> f64;
+external fn frexp(f64 x, i32 *exponent) @alias("math::frexp") -> f64;
+external fn ldexp(f64 x, i32 exponent) @alias("math::ldexp") -> f64;
+external fn log(f64 x) @alias("math::log") -> f64;
+external fn log10(f64 x) @alias("math::log10") -> f64;
+external fn modf(f64 x, f64 *integer) @alias("math::modf") -> f64;
+external fn pow(f64 x, f64 y) @alias("math::pow") -> f64;
+external fn sqrt(f64 x) @alias("math::sqrt") -> f64;
+external fn ceil(f64 x) @alias("math::ceil") -> f64;
+external fn fabs(f64 x) @alias("math::fabs") -> f64;
+external fn floor(f64 x) @alias("math::floor") -> f64;
+external fn fmod(f64 x, f64 y) @alias("math::fmod") -> f64;
+external fn fmin(f64 x, f64 y) @alias("math::fmin") -> f64;
+external fn fmax(f64 x, f64 y) @alias("math::fmax") -> f64;
+external fn round(f64 x) @alias("math::round") -> f64;

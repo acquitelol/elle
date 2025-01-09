@@ -1,0 +1,217 @@
+use std/runtime/string;
+use std/core;
+global pub;
+
+const i64 __internal_EOF = -1;
+
+local fn __print(i64 args, ElleMeta meta, bool wrap, bool full, bool newline) {
+    for let i = 0; i < meta.arity; i += 1 {
+        let ty = meta.types[i];
+        let expr = meta.exprs[i];
+        let res = __to_string("string", args, wrap && ty == "string");
+
+        if full {
+            io::cprintf(
+                "[%s:%d:%d] %s %s = %s\n",
+                meta.file, meta.line, meta.column, ty, expr, res
+            );
+        } else {
+            io::cprintf("%s", res);
+        }
+    }
+
+    if newline {
+        io::putchar('\n');
+    }
+}
+
+local fn __err(i64 args, ElleMeta meta, bool newline) {
+    let stderr = libc::fdopen(2, "w");
+    let fmt = "\x1b[31m[ERROR]: %s\x1b[0m";
+    let error = "";
+
+    for let i = 0; i < meta.arity; i += 1 {
+        string ty = meta.types[i];
+        string expr = meta.exprs[i];
+        string res = __to_string("string", args, false);
+
+        error <>= res;
+    }
+
+    io::fprintf(stderr, fmt, error);
+
+    if newline {
+        io::fprintf(stderr, "\n");
+    }
+}
+
+fn io::dbg(ElleMeta meta, ...args) @fmt {
+    __print(args, meta, true, true, false);
+}
+
+fn io::print(ElleMeta meta, ...args) @fmt {
+    __print(args, meta, false, false, false);
+}
+
+fn io::println(ElleMeta meta, ...args) @fmt {
+    __print(args, meta, false, false, true);
+}
+
+fn io::eprint(ElleMeta meta, ...args) @fmt {
+    __err(args, meta, false);
+}
+
+fn io::eprintln(ElleMeta meta, ...args) @fmt {
+    __err(args, meta, true);
+}
+
+fn io::printf(ElleMeta meta, string fmt, ...args) @fmt {
+    for let i = 0; i < meta.arity; i += 1 {
+        meta.types[i] = "string";
+    }
+
+    io::println(__internal_fmt(fmt, meta, args));
+}
+
+fn io::eprintf(ElleMeta meta, string fmt, ...) @fmt {
+    variadic args;
+
+    for let i = 0; i < meta.arity; i += 1 {
+        meta.types[i] = "string";
+    }
+
+    io::eprintln(__internal_fmt(fmt, meta, args));
+}
+
+fn io::panic(ElleMeta meta, string fmt, ...) @fmt {
+    variadic args;
+
+    for let i = 0; i < meta.arity; i += 1 {
+        meta.types[i] = "string";
+    }
+
+    io::println(
+        "Fatal error in function {}:\n[{}:{}:{}] "
+            .format(meta.caller, meta.file, meta.line, meta.column)
+            .color("red"),
+        __internal_fmt(fmt, meta, args)
+    );
+
+    libc::abort();
+}
+
+fn io::die(ElleMeta meta) {
+    io::eprintf(
+        "[{}:{}:{}] Something has gone extremely wrong with no explanation.",
+        meta.file, meta.line, meta.column
+    );
+
+    libc::abort();
+}
+
+fn io::todo(ElleMeta meta, string message) {
+    io::cprintf("%ld", message);
+    let parsed = message ? ": {}".format(message) : "";
+
+    io::eprintf(
+        "[{}:{}:{}] {}: not yet implemented{}",
+        meta.file, meta.line, meta.column, meta.caller, parsed
+    );
+
+    libc::abort();
+}
+
+fn io::unimplemented(ElleMeta meta) {
+    io::eprintf(
+        "[{}:{}:{}] {}: not yet implemented",
+        meta.file, meta.line, meta.column, meta.caller
+    );
+
+    libc::abort();
+}
+
+
+fn io::assert(ElleMeta meta, bool condition, string message) {
+    if !condition {
+        let parsed = message ?: "No additional information was specified.";
+
+        io::eprintln(
+            meta.caller, ": Assertion '", meta.exprs[0], "' failed.\n",
+            parsed.color("italic").reset()
+        );
+
+        libc::abort();
+    }
+}
+
+fn io::input(string message) -> string {
+    let buf = (string)#env.allocator.alloc(4096 * #size(char));
+
+    io::print(message);
+    io::fgets(buf, 4096, __internal_stdin);
+
+    // I would rather O(n) than O(2n)
+    let length = buf.len();
+
+    buf[buf.len() - 1] = '\0';
+    let result = (string)#env.allocator.alloc(buf.len() + 1);
+    strcpy(result, buf);
+
+    return result;
+}
+
+fn io::read_to_string(string path) -> string {
+    let file = io::fopen(path, "r");
+    defer io::fclose(file);
+
+    if !file {
+        return nil;
+    }
+
+    io::fseek(file, 0, SEEK_END);
+    let file_size = io::ftell(file);
+    io::fseek(file, 0, SEEK_SET);
+    let buf_size = file_size > 0 ? file_size + 1 : (i64)4096;
+
+    let buf = (string)#env.allocator.alloc(buf_size * #size(char));
+
+    if !buf {
+        return nil;
+    }
+
+    i64 pos = 0;
+    i64 read_size;
+
+    while (read_size = io::fread(buf + pos, #size(char), buf_size - pos - 1, file)) > 0 {
+        pos += read_size;
+
+        if pos >= buf_size - 1 {
+            buf_size *= 2;
+            buf = (string)#env.allocator.realloc(buf, buf_size * #size(char));
+
+            if !buf {
+                return nil;
+            }
+        }
+    }
+
+    buf[pos] = '\0';
+    return buf;
+}
+
+fn io::write_to_file(string path, string content) -> bool {
+    let file = io::fopen(path, "w");
+    defer io::fclose(file);
+
+    if !file {
+        return false;
+    }
+
+    let size = io::fwrite(content, #size(char), content.len(), file);
+
+    if size != content.len() {
+        return false;
+    }
+
+    return true;
+}
