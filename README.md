@@ -344,6 +344,51 @@ fn main() {
 
 Keep in mind that you can also use the libc standard manual memory management functions, like `malloc`, `realloc`, and `free`. These methods are defined in `std/libc/mem`. These allocations will **not** be freed automatically because the garbage collector isn't tracking them.
 
+The compiler also provides you handy builtins for easy and quick allocation: `#alloc` and `#realloc`. As these builtins take a *type* and not the *size of a type* they can actually evaluate to exactly `T *` instead of `void *` when called. This means you can write this:
+
+```rs
+let x = #alloc(i32, 5); // x -> i32 *
+```
+
+without needing to explicitly convert anywhere.
+
+`#alloc` uses the form of `#alloc(T, size?)` where `T` is any type and `size?` is an optional count (similar to `calloc` behavior), which can be omitted to form just `#alloc(T)`.
+
+`#realloc` uses the form of `#realloc(ptr, T, size?)` where `ptr` is any expression that evaluates to a pointer, `T` is any type and `size?` is an optional count (similar to `calloc` behavior), which can be omitted to form just `#realloc(ptr, T)`.
+
+Example usage:
+
+```rs
+use std/prelude;
+
+struct Foo {
+    i32 a;
+};
+
+fn Foo::new(i32 a) {
+    let foo = #alloc(Foo);
+    foo.a = a;
+    return foo;
+}
+
+fn main() {
+    let foo = Foo::new(6);
+    $dbg(foo);
+}
+```
+
+Using these directives, you can turn a verbose expression such as:
+
+```rs
+Machine *machine = #env.allocator.alloc(#size(Machine));
+```
+
+into the (much) cleaner:
+
+```rs
+let machine = #alloc(Machine);
+```
+
 <hr />
 
 ### ♡ **Variadic Functions**
@@ -1412,6 +1457,8 @@ The current existing directives are:
 - `#size(T)` - Gives you the size of type T in bytes
 - `#i(ident)` - Gives you the iterator in a foreach loop given the current element
 - `#env` - Gives you a `ElleEnv *` which is a global environment structure
+- `#alloc` - Allows you to allocate a specific type using the global allocator
+- `#realloc` - Allows you to reallocate a pointer with a specific type using the global allocator
 
 <hr />
 

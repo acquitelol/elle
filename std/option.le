@@ -7,30 +7,21 @@ struct Option<T> {
     bool __is_some;
 };
 
-local fn alloc_some<T>(T value) -> Option<T> {
-    Option<T> *option = #env.allocator.alloc(#size(Option<T>));
+local fn Option::new<T>(T value, bool is_some) -> Option<T> {
+    let option = #alloc(Option<T>);
 
     option.__value = value;
-    option.__is_some = true;
-
-    return *option;
-}
-
-local fn alloc_none<T>() -> Option<T> {
-    Option<T> *option = #env.allocator.alloc(#size(Option<T>));
-
-    option.__value = nil;
-    option.__is_some = false;
+    option.__is_some = is_some;
 
     return *option;
 }
 
 fn Option::Some<T>(T value) -> Option<T> {
-    return alloc_some(value);
+    return Option::new(value, true);
 }
 
 fn Option::None<T>() -> Option<T> {
-    return alloc_none();
+    return Option::new((T)nil, false);
 }
 
 // Returns the inner T if the option is some, otherwise aborts with a custom message

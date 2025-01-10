@@ -31,7 +31,7 @@ fn HashSet::__fmt__<T>(HashSet<T> self, i32 nesting) {
 }
 
 fn HashSet::with_capacity<T>(i32 initial_capacity) -> HashSet<T> * {
-    HashSet<T> *set = #env.allocator.alloc(#size(HashSet<T>));
+    let set = #alloc(HashSet<T>);
 
     let capacity = math::next_power_of_2(initial_capacity);
     set.table = Array::with_capacity(capacity);

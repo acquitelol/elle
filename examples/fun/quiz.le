@@ -15,14 +15,13 @@ struct Question {
 };
 
 fn Question::new(Operation *[] operators, i32 index) {
+    let question = #alloc(Question);
     let lhs = rand::random(1, LARGEST_INT);
     let rhs = rand::random(1, LARGEST_INT);
     let operator = rand::random(0, operators.len() - 1);
 
     let operation = operators[operator];
     fn *func = operation.func;
-
-    Question *question = #env.allocator.alloc(#size(Question));
 
     question.display = "What is {} {} {}? -> ".format(lhs, operation.display, rhs);
     question.answer = func(lhs, rhs);
@@ -37,7 +36,7 @@ struct Operation {
 };
 
 fn Operation::new(string display, fn *func) {
-    Operation *op = #env.allocator.alloc(#size(Operation));
+    let op = #alloc(Operation);
     op.display = display;
     op.func = func;
 

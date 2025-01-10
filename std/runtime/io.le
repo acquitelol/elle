@@ -145,7 +145,7 @@ fn io::assert(ElleMeta meta, bool condition, string message) {
 }
 
 fn io::input(string message) -> string {
-    let buf = (string)#env.allocator.alloc(4096 * #size(char));
+    let buf = #alloc(char, 4096);
 
     io::print(message);
     io::fgets(buf, 4096, __internal_stdin);
@@ -154,7 +154,7 @@ fn io::input(string message) -> string {
     let length = buf.len();
 
     buf[buf.len() - 1] = '\0';
-    let result = (string)#env.allocator.alloc(buf.len() + 1);
+    let result = #alloc(char, buf.len() + 1);
     strcpy(result, buf);
 
     return result;
@@ -173,7 +173,7 @@ fn io::read_to_string(string path) -> string {
     io::fseek(file, 0, SEEK_SET);
     let buf_size = file_size > 0 ? file_size + 1 : (i64)4096;
 
-    let buf = (string)#env.allocator.alloc(buf_size * #size(char));
+    let buf = #alloc(char, buf_size);
 
     if !buf {
         return nil;
@@ -187,7 +187,7 @@ fn io::read_to_string(string path) -> string {
 
         if pos >= buf_size - 1 {
             buf_size *= 2;
-            buf = (string)#env.allocator.realloc(buf, buf_size * #size(char));
+            buf = #realloc(buf, char, buf_size);
 
             if !buf {
                 return nil;

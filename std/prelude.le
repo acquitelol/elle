@@ -4,6 +4,7 @@ use std/collections/array;
 use std/string;
 use std/types;
 use std/cast;
+use std/time;
 use std/core;
 use std/math;
 use std/rand;

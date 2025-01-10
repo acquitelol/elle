@@ -7,7 +7,6 @@ external fn __internal_EOF() -> i64;
 const i64 EOF = __internal_EOF();
 
 external fn io::dbg(ElleMeta meta, ...args) @fmt;
-external fn io::dbg(ElleMeta meta, ...args) @fmt @alias("$dbg");
 external fn io::print(ElleMeta meta, ...args) @fmt;
 external fn io::println(ElleMeta meta, ...args) @fmt;
 external fn io::eprint(ElleMeta meta, ...args) @fmt;
@@ -15,15 +14,25 @@ external fn io::eprintln(ElleMeta meta, ...args) @fmt;
 external fn io::printf(ElleMeta meta, string fmt, ...args) @fmt;
 external fn io::eprintf(ElleMeta meta, string fmt, ...) @fmt;
 external fn io::panic(ElleMeta meta, string fmt, ...) @fmt;
-external fn io::panic(ElleMeta meta, string fmt, ...) @fmt @alias("$panic");
 external fn io::die(ElleMeta meta);
-external fn io::die(ElleMeta meta) @alias("$die");
 external fn io::todo(ElleMeta meta, string message);
-external fn io::todo(ElleMeta meta, string message) @alias("$todo");
 external fn io::unimplemented(ElleMeta meta);
-external fn io::unimplemented(ElleMeta meta) @alias("$unimplemented");
 external fn io::assert(ElleMeta meta, bool condition, string message);
-external fn io::assert(ElleMeta meta, bool condition, string message) @alias("$assert");
+
+// These functions shouldn't have aliases because they're not as common
 external fn io::input(string message) -> string;
 external fn io::read_to_string(string path) -> string;
 external fn io::write_to_file(string path, string content) -> bool;
+
+external fn io::dbg(ElleMeta meta, ...args) @fmt @alias("$dbg");
+external fn io::print(ElleMeta meta, ...args) @fmt @alias("$print");
+external fn io::println(ElleMeta meta, ...args) @fmt @alias("$println");
+external fn io::eprint(ElleMeta meta, ...args) @fmt @alias("$eprint");
+external fn io::eprint(ElleMeta meta, ...args) @fmt @alias("$eprintln");
+external fn io::printf(ElleMeta meta, string fmt, ...args) @fmt @alias("$printf");
+external fn io::eprintf(ElleMeta meta, string fmt, ...args) @fmt @alias("$eprintf");
+external fn io::panic(ElleMeta meta, string fmt, ...) @fmt @alias("$panic");
+external fn io::die(ElleMeta meta) @alias("$die");
+external fn io::todo(ElleMeta meta, string message) @alias("$todo");
+external fn io::unimplemented(ElleMeta meta) @alias("$unimplemented");
+external fn io::assert(ElleMeta meta, bool condition, string message) @alias("$assert");

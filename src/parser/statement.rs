@@ -2524,6 +2524,211 @@ impl<'a> Statement<'a> {
             TokenKind::LeftBlockBrace => {
                 expression = self.parse_offset_store(Some((position, expression, location.clone())))
             }
+
+            TokenKind::Question => expression = self.parse_ternary_node(expression),
+            _ => {}
+        }
+
+        expression
+    }
+
+    fn parse_alloc(&mut self) -> AstNode {
+        let position = self.position;
+        let location = self.current_token().location.clone();
+        self.advance();
+
+        self.expect_tokens(vec![TokenKind::LeftParenthesis]);
+        self.advance();
+
+        let ty = self.get_type(Some(self.shared.generics));
+        self.advance();
+
+        let count = if self.current_token().kind == TokenKind::Comma {
+            self.advance();
+            let mut nesting = (self.current_token().kind == TokenKind::LeftParenthesis) as i32;
+
+            let tokens = self.yield_tokens_with_condition(|current, _, _| {
+                if current.kind == TokenKind::LeftParenthesis {
+                    nesting += 1;
+                }
+
+                if current.kind == TokenKind::RightParenthesis {
+                    if nesting > 0 {
+                        nesting -= 1;
+                    } else {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+
+            self.advance();
+            Statement::new(tokens, 0, &self.body, self.shared).parse().0
+        } else {
+            AstNode::Literal {
+                kind: TokenKind::IntegerLiteral,
+                value: ValueKind::Number(1),
+                location: location.clone(),
+            }
+        };
+
+        let mut expression = AstNode::Conversion {
+            r#type: Some(Type::Pointer(Box::new(ty.clone()))),
+            value: Box::new(AstNode::FunctionCall {
+                name: "alloc".into(),
+                generics: vec![],
+                parameters: vec![
+                    (
+                        location.clone(),
+                        AstNode::FieldAccess {
+                            left: Box::new(AstNode::Environment {
+                                value: None,
+                                location: location.clone(),
+                            }),
+                            right: Box::new(AstNode::Literal {
+                                kind: TokenKind::Identifier,
+                                value: ValueKind::String("allocator".into()),
+                                location: location.clone(),
+                            }),
+                            value: None,
+                            location: location.clone(),
+                        },
+                    ),
+                    (
+                        location.clone(),
+                        AstNode::BinaryOperation {
+                            left: Box::new(AstNode::Size {
+                                value: Ok(ty),
+                                location: location.clone(),
+                            }),
+                            right: Box::new(count),
+                            operator: TokenKind::Multiply,
+                            treat_as_string: false,
+                            dunder_methods: true,
+                            location: location.clone(),
+                        },
+                    ),
+                ],
+                type_method: true,
+                ignore_no_def: false,
+                location: location.clone(),
+            }),
+            location: location.clone(),
+        };
+
+        match self.current_token().kind {
+            TokenKind::Dot => {
+                expression = self.parse_field_access(Some((position, expression, location.clone())))
+            }
+
+            TokenKind::LeftBlockBrace => {
+                expression = self.parse_offset_store(Some((position, expression, location.clone())))
+            }
+            _ => {}
+        }
+
+        expression
+    }
+
+    fn parse_realloc(&mut self) -> AstNode {
+        let position = self.position;
+        let location = self.current_token().location.clone();
+        self.advance();
+
+        self.expect_tokens(vec![TokenKind::LeftParenthesis]);
+        self.advance();
+
+        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Comma]);
+        let ptr = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
+        self.advance();
+
+        let ty = self.get_type(Some(self.shared.generics));
+        self.advance();
+
+        let count = if self.current_token().kind == TokenKind::Comma {
+            self.advance();
+            let mut nesting = (self.current_token().kind == TokenKind::LeftParenthesis) as i32;
+
+            let tokens = self.yield_tokens_with_condition(|current, _, _| {
+                if current.kind == TokenKind::LeftParenthesis {
+                    nesting += 1;
+                }
+
+                if current.kind == TokenKind::RightParenthesis {
+                    if nesting > 0 {
+                        nesting -= 1;
+                    } else {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+
+            self.advance();
+            Statement::new(tokens, 0, &self.body, self.shared).parse().0
+        } else {
+            AstNode::Literal {
+                kind: TokenKind::IntegerLiteral,
+                value: ValueKind::Number(1),
+                location: location.clone(),
+            }
+        };
+
+        let mut expression = AstNode::Conversion {
+            r#type: Some(Type::Pointer(Box::new(ty.clone()))),
+            value: Box::new(AstNode::FunctionCall {
+                name: "realloc".into(),
+                generics: vec![],
+                parameters: vec![
+                    (
+                        location.clone(),
+                        AstNode::FieldAccess {
+                            left: Box::new(AstNode::Environment {
+                                value: None,
+                                location: location.clone(),
+                            }),
+                            right: Box::new(AstNode::Literal {
+                                kind: TokenKind::Identifier,
+                                value: ValueKind::String("allocator".into()),
+                                location: location.clone(),
+                            }),
+                            value: None,
+                            location: location.clone(),
+                        },
+                    ),
+                    (location.clone(), ptr),
+                    (
+                        location.clone(),
+                        AstNode::BinaryOperation {
+                            left: Box::new(AstNode::Size {
+                                value: Ok(ty),
+                                location: location.clone(),
+                            }),
+                            right: Box::new(count),
+                            operator: TokenKind::Multiply,
+                            treat_as_string: false,
+                            dunder_methods: true,
+                            location: location.clone(),
+                        },
+                    ),
+                ],
+                type_method: true,
+                ignore_no_def: false,
+                location: location.clone(),
+            }),
+            location: location.clone(),
+        };
+
+        match self.current_token().kind {
+            TokenKind::Dot => {
+                expression = self.parse_field_access(Some((position, expression, location.clone())))
+            }
+
+            TokenKind::LeftBlockBrace => {
+                expression = self.parse_offset_store(Some((position, expression, location.clone())))
+            }
             _ => {}
         }
 
@@ -2781,6 +2986,8 @@ impl<'a> Statement<'a> {
             TokenKind::ArrayLength => self.parse_array_length(),
             TokenKind::IndexOf => self.parse_indexof(),
             TokenKind::Environment => self.parse_env(),
+            TokenKind::Alloc => self.parse_alloc(),
+            TokenKind::Realloc => self.parse_realloc(),
             TokenKind::Let => {
                 self.advance();
                 self.parse_declare(Some(Some(Type::Infer)))

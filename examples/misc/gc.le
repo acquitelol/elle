@@ -27,7 +27,7 @@ struct GC {
 };
 
 fn GC::new() {
-    GC *gc = #env.allocator.alloc(#size(GC));
+    let gc = #alloc(GC);
     gc.heap = [];
 
     return gc;

@@ -104,6 +104,8 @@ pub enum TokenKind {
     Range,
     RangeEqual,
     Environment,
+    Alloc,
+    Realloc,
 }
 
 impl TokenKind {

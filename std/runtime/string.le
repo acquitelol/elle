@@ -64,7 +64,7 @@ fn string::default(string self, string default) {
 }
 
 fn string::to_upper(string self) {
-    let out = (string)#env.allocator.alloc((self.len() + 1) * #size(char));
+    let out = #alloc(char, self.len() + 1);
 
     for c in self {
         if c >= 'a' && c <= 'z' {
@@ -78,7 +78,7 @@ fn string::to_upper(string self) {
 }
 
 fn string::to_lower(string self) {
-    let out = (string)#env.allocator.alloc((self.len() + 1) * #size(char));
+    let out = #alloc(char, self.len() + 1);
 
     for c in self {
         if c >= 'A' && c <= 'Z' {
@@ -101,7 +101,7 @@ fn string::slice(string self, i32 start, i32 end) -> string {
     }
 
     let new_length = end - start;
-    let sliced = (string)#env.allocator.alloc(new_length + 1);
+    let sliced = #alloc(char, new_length + 1);
 
     if !sliced {
         return nil;
@@ -132,7 +132,7 @@ fn string::concat(ElleMeta meta, ...args) -> string {
         length += sizes[i];
     }
 
-    let result = (string)#env.allocator.alloc((length + 1) * #size(char));
+    let result = #alloc(char, length + 1);
 
     if !result {
         return nil;
@@ -228,7 +228,7 @@ fn string::color(string self, string color) {
         return self;
     }
 
-    let result = (string)#env.allocator.alloc(fmt.len() + 1);
+    let result = #alloc(char, fmt.len() + 1);
     io::sprintf(result, fmt, code);
     result <>= self;
 
@@ -289,7 +289,7 @@ fn string::replace(string self, string needle, string replacement) -> string {
     }
 
     let buf_size = self_len;
-    let res = (string)#env.allocator.alloc(buf_size + 1);
+    let res = #alloc(char, buf_size + 1);
 
     if !res {
         return nil;
@@ -302,7 +302,7 @@ fn string::replace(string self, string needle, string replacement) -> string {
         if strncmp((string)((i64)self + i), needle, needle_len) == 0 {
             if res_index + replacement_len > buf_size {
                 buf_size += replacement_len;
-                res = (string)#env.allocator.realloc(res, buf_size + 1);
+                res = #realloc(res, char, buf_size + 1);
             }
 
             strcpy((string)((i64)res + res_index), replacement);
@@ -311,7 +311,7 @@ fn string::replace(string self, string needle, string replacement) -> string {
         } else {
             if res_index + 1 > buf_size {
                 buf_size += 1;
-                res = (string)#env.allocator.realloc(res, buf_size + 1);
+                res = #realloc(res, char, buf_size + 1);
             }
 
             res[res_index] = self[i];
@@ -356,7 +356,7 @@ fn string::insert(string *self, i32 index, char c) {
     }
 
     // +1 for the new char, +1 for the null terminator
-    string result = (string)#env.allocator.alloc((length + 2) * #size(char));
+    string result = #alloc(char, length + 2);
 
     if !result {
         return nil;
@@ -391,7 +391,7 @@ fn string::pop(string *self) -> char {
     }
 
     let last_char = (*self)[length - 1];
-    let result = (string)#env.allocator.alloc(length * #size(char));
+    let result = #alloc(char, length);
 
     if !result {
         return '\0';
@@ -406,7 +406,7 @@ fn string::pop(string *self) -> char {
 
 fn string::push(string *self, char c) {
     let length = (*self).len();
-    let result = (string)#env.allocator.alloc((length + 2) * #size(char));
+    let result = #alloc(char, length + 2);
 
     if (!result) {
         return nil;
@@ -423,7 +423,7 @@ fn __internal_to_string<T, U>(i64 args, string fmt) {
     T arg = args.yield(U);
 
     let length = io::snprintf(nil, 0, fmt, arg);
-    string res = (string)#env.allocator.alloc(length);
+    let res = #alloc(char, length);
     io::sprintf(res, fmt, arg);
 
     return res;
@@ -498,7 +498,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
     let arg = args.yield(i64);
     let fmt = "<%s at %p>";
     let length = io::snprintf(nil, 0, fmt, ty, arg);
-    let res = (string)#env.allocator.alloc(length);
+    let res = #alloc(char, length);
     io::sprintf(res, fmt, ty, arg);
 
     return res;

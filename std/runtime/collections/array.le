@@ -76,9 +76,9 @@ fn Array::is_empty<T>(T[] self) -> bool {
 }
 
 fn Array::with_capacity<T>(i32 initialCapacity) -> T[] {
-    T[] array = #env.allocator.alloc(#size(Array<T>));
+    T[] array = #alloc(Array<T>);
 
-    array.elements = #env.allocator.alloc(initialCapacity * #size(T));
+    array.elements = #alloc(T, initialCapacity);
     array.size = 0;
     array.capacity = initialCapacity;
 
@@ -96,7 +96,7 @@ fn Array::new<T>(ElleMeta meta, ...args) -> T[] {
 }
 
 fn Array::resize<T>(T[] self, i32 newCapacity) {
-    self.elements = #env.allocator.realloc(self.elements, newCapacity * #size(T));
+    self.elements = #realloc(self.elements, T, newCapacity);
     self.capacity = newCapacity;
 }
 

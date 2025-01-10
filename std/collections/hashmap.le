@@ -15,7 +15,7 @@ struct Bucket {
 };
 
 fn Bucket::new(void *key, void *value, bool full) {
-    Bucket *bucket = #env.allocator.alloc(#size(Bucket));
+    let bucket = #alloc(Bucket);
 
     bucket.key = key;
     bucket.value = value;
@@ -78,7 +78,7 @@ fn HashMap::__fmt__<T, U>(HashMap<T, U> self, i32 nesting) {
 }
 
 fn HashMap::with_capacity<T, U>(i32 initial_capacity) -> HashMap<T, U> * {
-    HashMap<T, U> *map = #env.allocator.alloc(#size(HashMap<T, U>));
+    let map = #alloc(HashMap<T, U>);
 
     map.table = Array::with_capacity(initial_capacity);
     map.capacity = initial_capacity;

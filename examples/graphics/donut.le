@@ -74,8 +74,8 @@ fn main() {
     let rotX = 0.0;
     let rotZ = 0.0;
 
-    f32 *zBuffer = #env.allocator.alloc(SIZE * #size(f32));
-    let output = (string)#env.allocator.alloc(SIZE * #size(char));
+    let zBuffer = #alloc(f32, SIZE);
+    let output = #alloc(char, SIZE);
     let lightDirection = Vector3 { x = 0, y = 1, z = -1 };
     io::print("\x1b[2J");
 
