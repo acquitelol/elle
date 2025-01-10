@@ -1,3 +1,4 @@
+use std/runtime/collections/array;
 use std/runtime/libc/io;
 use std/libc/string;
 global pub;
@@ -13,6 +14,8 @@ external fn string::ends_with(string self, string suffix) -> bool;
 external fn string::default(string self, string default) -> string;
 external fn string::to_upper(string self) -> string;
 external fn string::to_lower(string self) -> string;
+external fn string::split(string self, string delimiter) -> string[];
+external fn string::split(string self, string delimiter) @alias("string::explode") -> string[];
 
 // Note: these are null terminated strings, which means this
 // function returns a CLONE of the slice, NOT a string view

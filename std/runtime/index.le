@@ -1,11 +1,10 @@
 use std/runtime/allocators/gc;
+use std/runtime/vectors;
 use std/runtime/libc/fd;
 use std/runtime/string;
 use std/runtime/fmt;
-use std/runtime/io;
-use std/runtime/rand;
-use std/runtime/math;
-use std/runtime/split;
-use std/runtime/cast;
 use std/runtime/hashes;
-use std/runtime/vectors;
+use std/runtime/rand;
+use std/runtime/cast;
+use std/runtime/math;
+use std/runtime/io;

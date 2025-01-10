@@ -1,3 +1,4 @@
+use std/runtime/libc/io;
 use std/libc/mem;
 use std/core;
 global pub;

@@ -1,5 +1,0 @@
-use std/collections/array;
-global pub;
-
-external fn string::split(string self, string delimiter) -> string[];
-external fn string::split(string self, string delimiter) @alias("string::explode") -> string[];
