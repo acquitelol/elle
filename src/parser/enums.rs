@@ -78,6 +78,7 @@ pub enum AstNode {
     },
     /// Declares an array literal of size `values.len()` and values `values` and returns a pointer to the start of it
     ArrayLiteral {
+        explicit_inner: Option<Type>,
         known_generics: Vec<Type>,
         values: Vec<(Location, AstNode)>,
         location: Location,

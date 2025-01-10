@@ -448,6 +448,20 @@ x[0][0]; // a
 x[1][1]; // d
 ```
 
+Specifically for dynamic arrays, you can initialize them without giving them a value or explicitly using the array contructor of Array::new<T>() to create them:
+
+```rs
+fn main() {
+    let x = [i32;]; // x -> i32[]
+    let y = [f32; 1, 2, 3]; // 1, 2, 3 inferred as f32 and overall y -> f32[]
+    let z = ["a", "b", "c"]; // z -> string[], no explicit type means inferred
+    let w = []; // compilation error
+    $dbg(x, y, z, w);
+}
+```
+
+This syntax essentially has 2 parts: the type and the values. You can specify the type and no values, values and no type, or both. But you must specify at least one most of the time for the compiler to be able to determine a type for the array;
+
 It's worth noting that the `T[]` type syntax is actually sugar for `Array<T> *`. `T[][]` is equivalent to `Array<Array<T> *> *`.
 
 <hr />

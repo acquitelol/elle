@@ -33,18 +33,6 @@ fn math::fact(i64 n) -> i64 {
     return n <= 1 ? 1 : n * math::fact(n - 1);
 }
 
-fn math::min(i64 a, i64 b) -> i64 {
-    return a < b ? a : b;
-}
-
-fn math::max(i64 a, i64 b) -> i64 {
-    return a > b ? a : b;
-}
-
-fn math::clamp(i64 value, i64 min_value, i64 max_value) -> i64 {
-    return math::max(min_value, math::min(value, max_value));
-}
-
 fn math::fclamp(f64 value, f64 min_value, f64 max_value) -> f64 {
     return math::fmax(min_value, math::fmin(value, max_value));
 }

@@ -190,18 +190,28 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let value_location = self.current_token().location.clone();
-        let mut nesting = 0;
+        // Parser skips the first token
+        let mut curly_nesting = (self.current_token().kind == TokenKind::LeftCurlyBrace) as i32;
+        let mut block_nesting = (self.current_token().kind == TokenKind::LeftBlockBrace) as i32;
 
         let tokens = self.yield_tokens_with_condition(|token, _, _| {
             if token.kind == TokenKind::LeftCurlyBrace {
-                nesting += 1;
+                curly_nesting += 1;
             }
 
             if token.kind == TokenKind::RightCurlyBrace {
-                nesting -= 1;
+                curly_nesting -= 1;
             }
 
-            token.kind == TokenKind::Semicolon && nesting == 0
+            if token.kind == TokenKind::LeftBlockBrace {
+                block_nesting += 1;
+            }
+
+            if token.kind == TokenKind::RightBlockBrace {
+                block_nesting -= 1;
+            }
+
+            token.kind == TokenKind::Semicolon && curly_nesting == 0 && block_nesting == 0
         });
 
         let res = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
@@ -767,13 +777,42 @@ impl<'a> Statement<'a> {
 
     fn parse_array(&mut self, dynamic: bool) -> AstNode {
         let position = self.position.clone();
-        let location = self.current_token().location.clone();
+        let mut location = self.current_token().location.clone();
         self.expect_tokens(vec![TokenKind::LeftBlockBrace]);
         self.advance();
 
         let mut values = vec![];
+        let mut inner_ty = None;
 
         while self.current_token().kind != TokenKind::RightBlockBrace && !self.is_eof() {
+            let ty_name = self
+                .current_token()
+                .value
+                .get_string_inner()
+                .unwrap_or("".into());
+
+            if dynamic
+                && (self.current_token().kind == TokenKind::Identifier
+                    && (self.shared.struct_pool.borrow().contains_key(&ty_name)
+                        || self.shared.generics.contains(&ty_name)
+                        || self.current_token().value.is_base_type())
+                    && !self
+                        .next_token()
+                        .is_some_and(|token| token.kind == TokenKind::Colon)
+                    || self.current_token().kind == TokenKind::LeftParenthesis)
+            {
+                inner_ty = Some(self.get_type(Some(self.shared.generics)));
+                self.advance();
+                self.expect_tokens(vec![TokenKind::Semicolon]);
+                self.advance();
+
+                // if the token *is* now right block brace after getting a ty
+                // then break out early because there are no values
+                if self.current_token().kind == TokenKind::RightBlockBrace {
+                    break;
+                }
+            }
+
             let location = self.current_token().location.clone();
             let mut tmp_tokens = vec![];
             let mut paren_nesting = 0;
@@ -889,11 +928,18 @@ impl<'a> Statement<'a> {
         }
 
         self.advance();
+        let end_loc = self.current_token().location;
+
+        if end_loc.ctx == location.ctx {
+            location.length += end_loc.column - location.column;
+            location.column += end_loc.column - location.column;
+        }
 
         let array = AstNode::ArrayLiteral {
             values,
+            explicit_inner: inner_ty.or(self.shared.known_generics.get(0).cloned()),
             known_generics: self.shared.known_generics.clone(),
-            location: self.current_token().location,
+            location: location.clone(),
             dynamic,
         };
 

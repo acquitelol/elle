@@ -35,3 +35,15 @@ fn math::sign<T>(T x) -> bool {
 fn math::abs<T>(T x) -> T {
     return x > 0 ? x : -x;
 }
+
+fn math::min<T>(T a, T b) -> T {
+    return a < b ? a : b;
+}
+
+fn math::max<T>(T a, T b) -> T {
+    return a > b ? a : b;
+}
+
+fn math::clamp<T>(T value, T min_value, T max_value) -> T {
+    return math::max(min_value, math::min(value, max_value));
+}

@@ -2572,6 +2572,7 @@ impl Compiler {
                 ))
             }
             AstNode::ArrayLiteral {
+                explicit_inner,
                 known_generics,
                 values,
                 location,
@@ -2585,8 +2586,9 @@ impl Compiler {
 
                 if dynamic {
                     let new_func = func.borrow_mut().to_owned();
-
-                    let node = if values.len() > 0 {
+                    let inner_ty = if let Some(ref ty) = explicit_inner {
+                        Some(ty.clone())
+                    } else if values.len() > 0 {
                         let (ty, _) = self
                             .generate_statement(
                                 &RefCell::new(new_func),
@@ -2600,23 +2602,48 @@ impl Compiler {
                                 "Unexpected error when trying to compile the first item in an array"
                             )));
 
-                        AstNode::FunctionCall {
-                            name: "Array.new".into(),
-                            generics: vec![ty],
-                            parameters: values,
-                            type_method: false,
-                            ignore_no_def: false,
-                            location: location.clone(),
-                        }
+                        Some(ty.clone())
+                    } else if !known_generics.is_empty() {
+                        Some(known_generics.get(0).unwrap().clone())
+                    } else if let Some(ref ty) = ty {
+                        Some(ty.clone())
+                    // } else if is_return {
+                    //     None
                     } else {
-                        AstNode::FunctionCall {
-                            name: "Array.new".into(),
-                            generics: known_generics,
-                            parameters: vec![],
-                            type_method: false,
-                            ignore_no_def: false,
-                            location: location.clone(),
-                        }
+                        // panic!(
+                        //     "{}",
+                        //     location.with_extra_info("Try specifying a type here").error(format!("Could not determine any type for this array.\nPlease specify a type explicitly with the {GREEN}[T;]{RESET} syntax."))
+                        // )
+                        None
+                    };
+
+                    let node = AstNode::FunctionCall {
+                        name: "Array.new".into(),
+                        generics: if let Some(ref ty) = inner_ty {
+                            vec![ty.clone()]
+                        } else {
+                            vec![]
+                        },
+                        parameters: if let Some(ty) = inner_ty {
+                            values
+                                .into_iter()
+                                .map(|(loc, node)| {
+                                    (
+                                        loc.clone(),
+                                        AstNode::Conversion {
+                                            r#type: Some(ty.clone()),
+                                            value: Box::new(node),
+                                            location: loc.clone(),
+                                        },
+                                    )
+                                })
+                                .collect()
+                        } else {
+                            values
+                        },
+                        type_method: false,
+                        ignore_no_def: false,
+                        location: location.clone(),
                     };
 
                     let (ty, val) = self
@@ -3307,6 +3334,7 @@ impl Compiler {
                             })
                             .collect(),
                         location: location.clone(),
+                        explicit_inner: None,
                         known_generics: vec![],
                         dynamic: false,
                     }),
@@ -3330,6 +3358,7 @@ impl Compiler {
                             })
                             .collect(),
                         location: location.clone(),
+                        explicit_inner: None,
                         known_generics: vec![],
                         dynamic: false,
                     }),
