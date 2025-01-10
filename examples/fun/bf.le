@@ -19,9 +19,7 @@ fn skip(string *pc, i32 dir) -> string {
 }
 
 fn interpret(string program) {
-    char memory[MEMORY_SIZE];
-    memset(memory, 0, MEMORY_SIZE * #size(char));
-
+    let memory = #alloc(char, MEMORY_SIZE);
     let ptr = memory;
     let pc = program;
 
