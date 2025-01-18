@@ -432,3 +432,12 @@ fn Array::slice<T>(T[] self, i32 _start, i32 _end) -> T[] {
 
     return temp;
 }
+
+fn Array::fill<T>(T[] self, T element) {
+    self.size = self.capacity;
+    for i := 0; i < self.capacity; i += 1 {
+        self[i] = element;
+    }
+
+    return self;
+}

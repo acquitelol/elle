@@ -91,10 +91,17 @@ fn HashMap::with_capacity<T, U>(i32 initial_capacity) -> HashMap<T, U> * {
     return map;
 }
 
-fn HashMap::new<T, U>(ElleMeta meta, ...args) -> HashMap<T, U> * {
-    let map = HashMap::with_capacity(4);
+fn HashMap::new<T, U>() -> HashMap<T, U> * {
+    return HashMap::with_capacity(4);
+}
 
-    for let i = 0; i < meta.arity; i += 2 {
+// first_key, first_value are to infer T and U
+fn HashMap::with_entries<T, U>(ElleMeta meta, T first_key, U first_value, ...args) -> HashMap<T, U> * {
+    let map = HashMap::with_capacity(4);
+    map[first_key] = first_value;
+
+    // subtract the first_key and first_value;
+    for let i = 0; i < meta.arity - 2; i += 2 {
         T key = args.yield(T);
         U value = args.yield(U);
 

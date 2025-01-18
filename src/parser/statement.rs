@@ -186,6 +186,22 @@ impl<'a> Statement<'a> {
             };
         }
 
+        if self.current_token().kind == TokenKind::Colon {
+            if r#type.clone().is_none_or(|ty| !ty.is_infer()) {
+                panic!(
+                    "{}",
+                    self.current_token()
+                        .location
+                        .with_extra_info(format!("Remove this colon to declare \"{name}\" explicitly"))
+                        .error(format!(
+                            "Cannot use \"{GREEN}:={RESET}\" to declare a variable with a non-inferred type.\nYou can remove the \"{GREEN}:{RESET}\" to declare a variable explicitly."
+                        ))
+                );
+            }
+
+            self.advance();
+        }
+
         self.expect_tokens(vec![TokenKind::Equal]);
         self.advance();
 
@@ -3082,6 +3098,15 @@ impl<'a> Statement<'a> {
                         }
                     } else if next.kind == TokenKind::Equal {
                         self.parse_declare(Some(None))
+                    } else if next.kind == TokenKind::Colon {
+                        if self
+                            .next_token_seek(2)
+                            .is_some_and(|token| token.kind == TokenKind::Equal)
+                        {
+                            self.parse_declare(Some(Some(Type::Infer)))
+                        } else {
+                            panic!("{}", next.location.error("Cannot use a colon in this context. What were you trying to do?"))
+                        }
                     } else if next.kind.is_declarative() {
                         self.parse_declarative_like()
                     } else if next.kind == TokenKind::LessThan {

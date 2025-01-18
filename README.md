@@ -42,19 +42,21 @@ Let's dissect the code:
 
 ### ♡ **Variable declarations**
 
-* Variables can be declared in 2 ways:
+* Variables can be declared in 3 ways:
   - Using their type (useful for inference of information like generics)
   - Using let (useful for inferring based on the right hand side)
+  - Using the walrus operator `:=` (cannot be used with a type)
 
 * Example:
 ```rs
 let a = 0; // a is inferred to be i32 because 0 is i32
 i64 a = 5; // 5 is inferred to be i64 because a is i64
+a := 0;    // acts the same as `let a = 0;`
 ```
 
 This is especially useful for dynamic array declarations:
 ```rs
-let arr = Array::new<i64>();
+arr := [i64;];
 i64[] arr = [];
 ```
 

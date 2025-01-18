@@ -821,6 +821,13 @@ impl Type {
         }
     }
 
+    pub fn is_infer(&self) -> bool {
+        match self {
+            Self::Infer => true,
+            _ => false,
+        }
+    }
+
     pub fn is_int(&self) -> bool {
         !self.is_float()
     }
