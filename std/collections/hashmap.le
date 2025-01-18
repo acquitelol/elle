@@ -6,16 +6,16 @@ use std/core;
 use std/math;
 global pub;
 
-const void *EMPTY = i32::min();
+const void *HashMap_EMPTY = i32::min();
 
-struct Bucket {
+struct HashMap_Bucket {
     void *key;
     void *value;
     bool full;
 };
 
-fn Bucket::new(void *key, void *value, bool full) {
-    let bucket = #alloc(Bucket);
+fn HashMap_Bucket::new(void *key, void *value, bool full) {
+    let bucket = #alloc(HashMap_Bucket);
 
     bucket.key = key;
     bucket.value = value;
@@ -25,7 +25,7 @@ fn Bucket::new(void *key, void *value, bool full) {
 }
 
 struct HashMap<T, U> {
-    Bucket *[] table;
+    HashMap_Bucket *[] table;
     i32 size;
     i32 capacity;
 };
@@ -85,7 +85,7 @@ fn HashMap::with_capacity<T, U>(i32 initial_capacity) -> HashMap<T, U> * {
     map.size = 0;
 
     for let i = 0; i < initial_capacity; i += 1 {
-        map.table.push(Bucket::new(EMPTY, EMPTY, false));
+        map.table.push(HashMap_Bucket::new(HashMap_EMPTY, HashMap_EMPTY, false));
     }
 
     return map;
@@ -190,8 +190,8 @@ fn HashMap::remove<T, U>(HashMap<T, U> *self, T key) -> U {
         if (T)(self.table[idx].key) == key {
             U value = self.table[idx].value;
 
-            self.table[idx].key = EMPTY;
-            self.table[idx].value = EMPTY;
+            self.table[idx].key = HashMap_EMPTY;
+            self.table[idx].value = HashMap_EMPTY;
             self.table[idx].full = false;
             self.size -= 1;
 
@@ -240,14 +240,14 @@ fn HashMap::keys<T, U>(HashMap<T, U> *self) -> T[] {
 }
 
 fn HashMap::resize<T, U>(HashMap<T, U> *self, i32 new_capacity) {
-    Bucket *[] old_table = self.table;
+    HashMap_Bucket *[] old_table = self.table;
 
     self.table = Array::with_capacity(new_capacity);
     self.capacity = new_capacity;
     self.size = 0;
 
     for i32 i = 0; i < new_capacity; i += 1 {
-        self.table.push(Bucket::new(EMPTY, EMPTY, false));
+        self.table.push(HashMap_Bucket::new(HashMap_EMPTY, HashMap_EMPTY, false));
     }
 
     for i32 i = 0; i < old_table.len(); i += 1 {
@@ -270,7 +270,7 @@ fn HashMap::clear<T, U>(HashMap<T, U> *self) {
 
     for i32 i = 0; i < self.capacity; i += 1 {
         self.table[i].full = false;
-        self.table[i].key = EMPTY;
-        self.table[i].value = EMPTY;
+        self.table[i].key = HashMap_EMPTY;
+        self.table[i].value = HashMap_EMPTY;
     }
 }
