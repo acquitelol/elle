@@ -1,0 +1,98 @@
+use examples/resources/raylib;
+use std/vectors;
+
+const i32 SCREEN_WIDTH = 800;
+const i32 SCREEN_HEIGHT = 450;
+
+const i32 PADDLE_WIDTH = 20;
+const i32 PADDLE_HEIGHT = 100;
+const f32 PADDLE_SPEED = 5.0;
+
+const i32 BALL_SIZE = 10;
+const f32 BALL_SPEED = 5.0;
+
+const Color BLACK = raylib::get_color(0x00000000);
+const Color WHITE = raylib::get_color(0xFFFFFFFF);
+
+fn main() {
+    raylib::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Pong :3");
+    defer raylib::close_window();
+
+    raylib::set_target_fps(60);
+
+    leftPaddle := Rectangle {
+        x = 50,
+        y = SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2,
+        width = PADDLE_WIDTH,
+        height = PADDLE_HEIGHT
+    };
+
+    rightPaddle := Rectangle {
+        x = SCREEN_WIDTH - 50 - PADDLE_WIDTH,
+        y = SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2,
+        width = PADDLE_WIDTH,
+        height = PADDLE_HEIGHT
+    };
+
+    ballPosition := Vector2::new(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+    ballVelocity := Vector2::from(BALL_SPEED);
+
+    leftScore := 0;
+    rightScore := 0;
+
+    while !raylib::window_should_close() {
+        if raylib::is_key_down('W') && leftPaddle.y > 0 {
+            leftPaddle.y -= PADDLE_SPEED;
+        }
+
+        if raylib::is_key_down('S') && leftPaddle.y < SCREEN_HEIGHT - PADDLE_HEIGHT {
+            leftPaddle.y += PADDLE_SPEED;
+        }
+
+        // KEY_UP = 265
+        if raylib::is_key_down(265) && rightPaddle.y > 0 {
+            rightPaddle.y -= PADDLE_SPEED;
+        }
+
+        // KEY_DOWN = 264
+        if raylib::is_key_down(264) && rightPaddle.y < SCREEN_HEIGHT - PADDLE_HEIGHT {
+            rightPaddle.y += PADDLE_SPEED;
+        }
+
+        ballPosition.x += ballVelocity.x;
+        ballPosition.y += ballVelocity.y;
+
+        if ballPosition.y <= 0 || ballPosition.y >= SCREEN_HEIGHT - BALL_SIZE {
+            ballVelocity.y *= -1;
+        }
+
+        if raylib::check_collision_circle_rec(ballPosition, BALL_SIZE / 2, leftPaddle) ||
+            raylib::check_collision_circle_rec(ballPosition, BALL_SIZE / 2, rightPaddle) {
+            ballVelocity.x *= -1;
+        }
+
+        if ballPosition.x <= 0 {
+            rightScore += 1;
+            ballPosition = Vector2::new(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+            ballVelocity = Vector2::from(BALL_SPEED);
+        }
+
+        if ballPosition.x >= SCREEN_WIDTH {
+            leftScore += 1;
+            ballPosition = Vector2::new(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+            ballVelocity = Vector2::from(BALL_SPEED);
+        }
+
+        raylib::begin_drawing();
+        raylib::clear_background(BLACK);
+
+        raylib::draw_rectangle_rec(leftPaddle, WHITE);
+        raylib::draw_rectangle_rec(rightPaddle, WHITE);
+        raylib::draw_circle_v(ballPosition, BALL_SIZE / 2, WHITE);
+
+        raylib::draw_text("{}".format(leftScore), SCREEN_WIDTH / 4, 20, 40, WHITE);
+        raylib::draw_text("{}".format(rightScore), 3 * SCREEN_WIDTH / 4, 20, 40, WHITE);
+
+        raylib::end_drawing();
+    }
+}

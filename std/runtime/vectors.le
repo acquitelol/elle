@@ -28,6 +28,20 @@ fn Vector2::clone(Vector2 self) {
     };
 }
 
+fn Vector2::new(f32 x, f32 y) {
+    return Vector2 {
+        x = x,
+        y = y
+    };
+}
+
+fn Vector2::from(f32 scalar) {
+    return Vector2 {
+        x = scalar,
+        y = scalar
+    };
+}
+
 fn Vector2::dot(Vector2 self, Vector2 v2) {
     return self.x * v2.x + self.y * v2.y;
 }
@@ -99,6 +113,22 @@ fn Vector3::clone(Vector3 self) {
         x = self.x,
         y = self.y,
         z = self.z
+    };
+}
+
+fn Vector3::new(f32 x, f32 y, f32 z) {
+    return Vector3 {
+        x = x,
+        y = y,
+        z = z
+    };
+}
+
+fn Vector3::from(f32 scalar) {
+    return Vector3 {
+        x = scalar,
+        y = scalar,
+        z = scalar
     };
 }
 

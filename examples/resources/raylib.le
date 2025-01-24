@@ -82,5 +82,8 @@ external fn DrawTextureRec(Texture texture, Rectangle source, Vector2 position, 
 external fn SetTextureFilter(Texture texture, i32 filter) @alias("raylib::set_texture_filter");
 external fn DrawFPS(i32 posX, i32 posY) @alias("raylib::draw_fps");
 external fn GetFPS() @alias("raylib::get_fps");
+external fn CheckCollisionCircleRec(Vector2 center, f32 radius, Rectangle rec) @alias("raylib::check_collision_circle_rec");
+external fn DrawRectangleRec(Rectangle rec, Color color) @alias("raylib::draw_rectangle_rec");
+external fn DrawCircleV(Vector2 center, f32 radius, Color color) @alias("raylib::draw_circle_v");
 
 namespace raylib;
