@@ -53,7 +53,7 @@ impl Lexer {
             return Some(Token {
                 kind,
                 value,
-                location: self.get_location(),
+                location: Rc::new(self.get_location()),
             });
         }
 
@@ -63,7 +63,7 @@ impl Lexer {
             return Some(Token {
                 kind,
                 value,
-                location: self.get_location(),
+                location: Rc::new(self.get_location()),
             });
         }
 
@@ -433,7 +433,7 @@ impl Lexer {
         return Some(Token {
             kind,
             value,
-            location: self.get_location(),
+            location: Rc::new(self.get_location()),
         });
     }
 
@@ -477,17 +477,17 @@ impl Lexer {
 
     fn get_location(&mut self) -> Location {
         Location {
-            file: Rc::new(self.file.clone()),
+            file: Rc::from(self.file.clone()),
             row: self.row,
             column: self.position - self.bol,
-            ctx: Rc::new(self.get_line(self.row).unwrap_or("".into())),
+            ctx: Rc::from(self.get_line(self.row).unwrap_or("".into())),
             above: if self.row == 0 {
                 None
             } else {
-                self.get_line(self.row - 1).map(Rc::new)
+                self.get_line(self.row - 1).map(Rc::from)
             },
             length: self.position_no_whitespace - self.prev_position_no_whitespace,
-            extra_info: Rc::new("".into()),
+            extra_info: Rc::from(""),
         }
     }
 

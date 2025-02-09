@@ -39,6 +39,7 @@ fn main() {
 
     leftScore := 0;
     rightScore := 0;
+    velocitySign := 1;
 
     while !raylib::window_should_close() {
         if raylib::is_key_down('W') && leftPaddle.y > 0 {
@@ -49,13 +50,13 @@ fn main() {
             leftPaddle.y += PADDLE_SPEED;
         }
 
-        // KEY_UP = 265
-        if raylib::is_key_down(265) && rightPaddle.y > 0 {
+        // KEY_LEFT = 263
+        if raylib::is_key_down(263) && rightPaddle.y > 0 {
             rightPaddle.y -= PADDLE_SPEED;
         }
 
-        // KEY_DOWN = 264
-        if raylib::is_key_down(264) && rightPaddle.y < SCREEN_HEIGHT - PADDLE_HEIGHT {
+        // KEY_RIGHT = 262
+        if raylib::is_key_down(262) && rightPaddle.y < SCREEN_HEIGHT - PADDLE_HEIGHT {
             rightPaddle.y += PADDLE_SPEED;
         }
 
@@ -73,14 +74,16 @@ fn main() {
 
         if ballPosition.x <= 0 {
             rightScore += 1;
+            velocitySign = -velocitySign;
             ballPosition = Vector2::new(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
-            ballVelocity = Vector2::from(BALL_SPEED);
+            ballVelocity = Vector2::from(BALL_SPEED * velocitySign);
         }
 
         if ballPosition.x >= SCREEN_WIDTH {
             leftScore += 1;
+            velocitySign = -velocitySign;
             ballPosition = Vector2::new(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
-            ballVelocity = Vector2::from(BALL_SPEED);
+            ballVelocity = Vector2::from(BALL_SPEED * velocitySign);
         }
 
         raylib::begin_drawing();

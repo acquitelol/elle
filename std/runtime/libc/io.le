@@ -11,10 +11,6 @@ struct FILE @nofmt {
     i32 mode;               // Mode in which the file is opened
 };
 
-const i32 SEEK_SET = 0;
-const i32 SEEK_CUR = 1;
-const i32 SEEK_END = 2;
-
 external fn fdopen(i64 descriptor, string mode) @alias("libc::fdopen") -> FILE *;
 external fn printf(string formatter, ...) @alias("io::cprintf") -> i32;
 external fn fprintf(FILE *fd, string formatter, ...) @alias("io::fprintf") -> i32;

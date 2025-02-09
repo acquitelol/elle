@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::path::Path;
 use std::process::{exit, ExitCode};
+use std::rc::Rc;
 use std::time::Instant;
 use std::{cell::RefCell, fs};
 
@@ -285,7 +286,7 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     };
 
-    let loc = Location::default(input_path.clone());
+    let loc = Rc::new(Location::default(input_path.clone()));
 
     pool.insert(
         META_STRUCT_NAME.into(),

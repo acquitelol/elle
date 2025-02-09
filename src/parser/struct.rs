@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     compiler::enums::Type,
     hashmap,
@@ -31,7 +33,7 @@ impl<'a> Struct<'a> {
         if namespace {
             match self.parser.current_token().kind {
                 TokenKind::LeftCurlyBrace => {
-                    let mut location = self.parser.current_token().location;
+                    let mut location = (*self.parser.current_token().location).clone();
                     location.length = location.ctx.len() - location.column + 1;
                     location.column += location.ctx.len() - location.column;
 
@@ -209,7 +211,7 @@ impl<'a> Struct<'a> {
                         },
                     )
                 })
-                .collect::<Vec<(Location, AstNode)>>();
+                .collect::<Vec<(Rc<Location>, AstNode)>>();
 
             let mut interleaved = interleave_with(
                 parameters,

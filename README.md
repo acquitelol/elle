@@ -14,7 +14,7 @@
 ### ♡ **How is this better than C?**
 
 - It's not. It never will be. As it stands, this is a project developed by a single person, me. I am neither smart enough nor efficient enough to mimic an enterprise programming language compiler such as clang.
-- Elle does, however, provide deferring, generic types, methods on structs (allowing for OOP-like semantics), pseudo-namespaces, and function call metadata. There are still many issues with the parser, compiler, and there is a huge lack of optimisations, but you may view these features as an improvement to C.
+- Elle does, however, provide deferring, generic types, methods on structs (allowing for OOP-like semantics), pseudo-namespaces, function call metadata, custom allocators, a built-in GC, type inference, and more. There are still many issues with the parser, compiler, and there is a huge lack of optimisations, but you may view these features as an improvement to C.
 
 ### ✩ *If you like this project, consider giving it a star!* ✩
 
@@ -32,9 +32,9 @@ fn main() {
 
 Let's dissect the code:
 
-* The `fn` keyword declares the identifier as a function
-* The word `main` defines the function as the entry point of our program.
-* The function call `io::println` is a function which prints all of its arguments.
+* The `fn` keyword declares the statement as a function declaration.
+* The word `main` is the function's name and defines the function as the entry point of our program.
+* The function call `io::println` is a function which prints all of its arguments using their formatter.
 
 * Simple enough! ♡
 
@@ -43,9 +43,9 @@ Let's dissect the code:
 ### ♡ **Variable declarations**
 
 * Variables can be declared in 3 ways:
-  - Using their type (useful for inference of information like generics)
-  - Using let (useful for inferring based on the right hand side)
-  - Using the walrus operator `:=` (cannot be used with a type)
+  - Using their type (useful for inference of information based on the left-hand side like generics)
+  - Using let (useful for inferring based on the right-hand side)
+  - Using the walrus operator `:=` (cannot be used with a type, equivalent to `let`)
 
 * Example:
 ```rs
@@ -67,7 +67,7 @@ i64[] arr = [];
 * An if statement is an expression that evaluates a block if the condition is non-zero, with an optional `else` block which is evaluated if the condition **is** zero.
 
 * You can define an `if` statement and then an optional `else` statement
-* If statement expressions can be wrapped in `()` but this is not mandatory
+* If statement conditions can be wrapped in `()` but this is not mandatory
 * There is currently no `else if` or similar. A workaround is to just define another `if statement` with your new condition.
 * Example:
 
@@ -169,7 +169,7 @@ Please keep in mind that you also have access to the `break` and `continue` keyw
 * A foreach loop is an expression that has 2 main parts:
 
 1. Variable declaration - Declaring a variable for each element
-2. Iterator - The iterator value (which must have an `__len__` function)
+2. Iterator - The iterator value (which must have a `__len__` function defined on its type)
 
 * Example:
 ```rs
@@ -179,6 +179,7 @@ for x in ["a", "b", "c"] {
 ```
 
 * Any iterable type can be used as an iterator:
+
 ```rs
 for c in "hello world" {
     $dbg(c);
@@ -202,7 +203,7 @@ You can also assign to this variable if you need to (such as stepping by 2):
 ```rs
 for x in [1, 2, 3, 4] {
     $dbg(#i(x), #i(x) + 1, x);
-    #i(x) += 1; // Will now increment by 2
+    #i(x) += 1; // Will now increment by 2 because there is an implicit increment each iteration
 }
 ```
 
@@ -228,6 +229,8 @@ fn main() {
 }
 ```
 
+This block has a different scope, which means you can declare variables with the same name but a different type in it. You can learn more about this in the `Variable Shadowing` section.
+
 And it is relatively clear how this code is essentially equal to:
 
 ```rs
@@ -244,13 +247,74 @@ fn main() {
 
 <hr />
 
+### ♡ **Variable Shadowing**
+
+Variable shadowing is when the variable defined in the previous scope is accessible in the current scope.
+
+For example:
+
+```rs
+fn main() {
+    x := 1;
+
+    {
+        // should x exist here? yes
+        // whats its value? its 1
+        $assert(x == 1, nil);
+
+        // what if we redeclare it?
+        x = 2;
+
+        // now whats its value? its 2
+        $assert(x == 2, nil);
+
+        // what if we declare a new x?
+        x := 3;
+
+        // now whats its value? its 3
+        $assert(x == 3, nil);
+    }
+
+    // now the scope ended, what should this x be?
+    // well it should be 2 because the x in this scope was redeclared to 2
+    // the newly-declared x in that scope doesnt exist in this scope
+    $assert(x == 2, nil);
+}
+```
+
+More complex example
+
+```rs
+fn main() {
+    x := "foo"; // x is "foo"
+
+    x := 1; // x is 2, it changes type!
+
+    {
+        x = 2; // x is 2
+        x := "a"; // x is "a", now string again
+
+        {
+            x = "b"; // x is "b"
+            // note: no := usage, so modifies previous scope's x
+        }
+
+        // x is "b" here
+    }
+
+    // x is 2 here
+}
+```
+
+<hr />
+
 ### ♡ **Function Metadata**
 
 * Elle can provide you with extra metadata using the `ElleMeta` struct.
 
-This is done by ensuring the 0th argument of your function is typed to use the ElleMeta struct.
+This is done by ensuring the 0th argument of your function has the type `ElleMeta`.
 <br />
-The compiler will automatically supply the struct to you when the function is called, you do not need to manually call it.
+The compiler will automatically supply the struct to you when the function is called, you do not need to manually pass it to the function.
 
 This struct is not defined in Elle code, however its equivalent structure may look like:
 ```rs
@@ -272,7 +336,7 @@ This means that here:
 
 ```rs
 fn square(i32 a) {
-    return a * 2;
+    return a * a;
 }
 
 fn main() {
@@ -286,7 +350,7 @@ However, here:
 
 ```rs
 fn square(ElleMeta meta, i32 a) {
-    return a * 2 + meta.arity;
+    return a * a + meta.arity;
 }
 
 fn main() {
@@ -320,7 +384,7 @@ struct Foo {
 };
 
 fn Foo::new(i32 a) {
-    Foo *foo = #env.allocator.alloc(#size(Foo));
+    foo := #alloc(Foo);
     foo.a = a;
     return foo;
 }
@@ -336,7 +400,7 @@ Another example:
 ```rs
 fn main() {
     // allocate space for 10 integers
-    i32 *numbers = #env.allocator.alloc(#size(i32) * 10);
+    i32 *numbers = #alloc(i32, 10);
     numbers[1] = 39;
 
     $dbg(numbers[1]); // 39
@@ -388,22 +452,22 @@ Machine *machine = #env.allocator.alloc(#size(Machine));
 into the (much) cleaner:
 
 ```rs
-let machine = #alloc(Machine);
+machine := #alloc(Machine);
 ```
 
 <hr />
 
 ### ♡ **Variadic Functions**
 
-* A variadic function is a function that can take in a variable amount of arguments. This works similar to C except that Elle provides you with mechanisms to make this much nicer to use.
+* A variadic function is a function that can take in a variable amount of arguments. This works similar to C except that Elle provides you with mechanisms to make this much nicer to use, both as the producer and consumer of the function.
 
 Here's a basic example of a variadic function which takes in any amount of arguments and returns their sum:
 
 ```rs
 fn add(ElleMeta meta, ...args) {
-    let res = 0;
+    res := 0;
 
-    for let i = 0; i < meta.arity; i += 1 {
+    for i := 0; i < meta.arity; i += 1 {
         res += args.yield(i32);
     }
 
@@ -415,7 +479,7 @@ At the call-site, using this function is easy. It can be done like this:
 
 ```rs
 fn main() {
-    let res = add(1, 2, 3, 4);
+    res := add(1, 2, 3, 4);
     io::println(res);
 }
 ```
@@ -428,9 +492,19 @@ Examples that contain variadic functions include [`variadic.le`](https://github.
 
 There are 2 kinds of arrays in Elle: *dynamic* and *static*.
 
-Dynamic arrays are allocated on the heap, and are designed to grow or shrink, allowing you to push and pop values. They also have far more utility methods on them. These kinds of arrays are created with the `[1, 2, 3]` syntax.
+Dynamic arrays are allocated on the heap, and are designed to grow or shrink, allowing you to push and pop values. They also have far more utility methods on them compared to static arrays. These kinds of arrays are created with the following syntax:
 
-Static arrays are allocated on the stack, and are designed to be static in size. These arrays have basically no utility methods on them, and decay to just a pointer (`#[1, 2, 3]` -> `i32 *`) but are faster. They're declared with the `#[1, 2, 3]` syntax.
+```bnf
+array = "[" [type ";"] [elements] "]" ;
+elements = expression {"," expression} ;
+```
+
+Static arrays are allocated on the stack, and are designed to be static in size. These arrays have basically no utility methods on them, and decay to just a pointer (`#[1, 2, 3]` -> `i32 *`) but are faster. They're declared with the following syntax:
+
+```bnf
+array = "#" "[" [elements] "]" ;
+elements = expression {"," expression} ;
+```
 
 Both implement the `__len__` method, which means this is valid:
 
@@ -456,27 +530,32 @@ let x = Array::new<i64>();
 // ... equivalent to ...
 
 Array<i64> *x = Array::new();
+
+// ... the most concise form ...
+
+x := [i64;];
 ```
 
-Static arrays do not, but you can still use `let`:
+Static arrays do not, but you can still use `let`/`:=`:
 
 ```rs
 let x = #[1, 2, 3]; // x's type is `i32 *`
+x := #[1, 2, 3]; // x's type is `i32 *`
 
 // ... OR if you need the inference ...
 
 f32 *x = #[1, 2, 3]; // 1, 2, 3 are casted to floats
 ```
 
-You can also use `let` when declaring dynamic arrays which have values:
+You can also use `let`/`:=` when declaring dynamic arrays which have values:
 ```rs
-let x = [1, 2, 3]; // x's type is i32[]
-let y = ["a", "b", "c"]; // y's type is string[]
+x := [1, 2, 3]; // x's type is i32[]
+y := ["a", "b", "c"]; // y's type is string[]
 ```
 
 You can also define multi-dimensional arrays:
 ```rs
-let grid = [
+grid := [
     [1, 2],
     [3, 4]
 ];
@@ -499,10 +578,10 @@ Specifically for dynamic arrays, you can initialize them without giving them a v
 
 ```rs
 fn main() {
-    let x = [i32;]; // x -> i32[]
-    let y = [f32; 1, 2, 3]; // 1, 2, 3 inferred as f32 and overall y -> f32[]
-    let z = ["a", "b", "c"]; // z -> string[], no explicit type means inferred
-    let w = []; // compilation error
+    x := [i32;]; // x -> i32[]
+    y := [f32; 1, 2, 3]; // 1, 2, 3 inferred as f32 and overall y -> f32[]
+    z := ["a", "b", "c"]; // z -> string[], no explicit type means inferred
+    w := []; // compilation error because T cannot be inferred
     $dbg(x, y, z, w);
 }
 ```
@@ -515,7 +594,7 @@ It's worth noting that the `T[]` type syntax is actually sugar for `Array<T> *`.
 
 ### ♡ **Tuples and triples**
 
-Tuples and triples are distinct data structures in Elle. Tuples have 2 items inside, triples have 3 items.
+Tuples and triples are distinct data structures in Elle. Tuples have 2 items inside, Triples have 3 items.
 
 Tuples have special sugar for their types, just like arrays. `(T, U)` is equivalent to `Tuple<T, U> *`. Triples have no sugar, simply `Triple<T, U, V> *`.
 
@@ -533,7 +612,7 @@ let foo = [$(1, "a"), $(2, "b")];
 
 // if you don't wanna put values inside but wanna use the `let` keyowrd you can do this
 
-let foo = Array::new<(i32, string)>();
+let foo = [(i32, string);];
 
 // ... nothing new here
 ```
@@ -542,14 +621,14 @@ let foo = Array::new<(i32, string)>();
 
 ### ♡ **Ranges**
 
-Ranges are ways you can define the start and end of a number. There are 2 kinds of ranges in elle: exclusive and inclusive.
+Ranges are ways you can define the start and end of a "`range`" of numbers. There are 2 kinds of ranges in elle: exclusive and inclusive.
 
 Exclusive ranges are defined with `x..y`, where `x` and `y` are expressions.
 Inclusive ranges are defined with `x..=y`, where `x` and `y` are expressions.
 
 An exclusive range means that `x` is inclusive but `y` is exclusive. An inclusive range means both are inclusive.
 
-At the moment, ranges are just aliases for `Array::range(x, y, inclusive)`. This means they are not lazy, they create dynamic arrays.
+At the moment, ranges are just aliases for `Array::range(x, y, inclusive)`. This means they are not lazy, they create dynamic arrays of the specified range.
 
 They can be used in `foreach` loops however, because they're arrays:
 
@@ -574,7 +653,7 @@ for i in 5..=10 {
 
 ### ♡ **Lambda functions**
 
-Elle allows you to create single line or multi line lambda (anonymous) functions.
+Elle allows you to create single-line or multi-line lambda (anonymous) functions.
 
 Here are basic examples of how you can use them:
 
@@ -644,7 +723,7 @@ fn main() {
 
 You can create an "exact literal" by wrapping the inline IR with "`" on both sides of the expression, and ensuring you include a semicolon at the end.
 
-You can also use the manual return directive, which states that Elle should **NOT** include an automatic return if the function does not return anything by default. You can do this by adding the @manual attribute to your function.
+You can also use the manual return directive, which states that Elle should **NOT** include an automatic return if the function does not return anything by default. You can do this by adding the `@manual` attribute to your function.
 
 Here is a basic example that dereferences an `i32 *` to the underlying `i32`:
 
@@ -743,7 +822,7 @@ fn main() {
 
     // If this were not in a defer statement, then this would print 0
     // However, it will print 25 instead.
-    // Realistically this code only runs right before `return 0`.
+    // Realistically this code only runs right before the main function leaves scope.
     defer io::print(i);
 
     i += 5;
@@ -1201,7 +1280,7 @@ You can then create these structures like this:
 
 ```rs
 fn main() {
-    Foo foo = Foo {
+    foo := Foo {
         a = 12,
         bar = Bar {
             myFloat = 10.2
@@ -1224,7 +1303,7 @@ fn other(Foo *foo) {
 }
 
 fn main() {
-    Foo foo = ; // create Foo
+    foo := ; // create Foo
     other(&foo);
 }
 ```
@@ -1275,9 +1354,28 @@ fn main() {
 }
 ```
 
-You can define `fn <Struct name>::<method name>(<Struct name> self, <args>)` to create instance methods.
-<br />
-You can then either call them through `instance.<method name>()` or `<Struct name>::<method name>(instance)`.
+You can define it like this to create instance methods:
+
+```bnf
+instance_method = "fn" namespace "::" name "(" [args] ")"
+args = arg {"," arg} ;
+arg = type name ;
+```
+
+You can then either call them like this:
+
+```rs
+let foo = Foo::new();
+foo.bar();
+```
+
+or like this:
+
+```rs
+let foo = Foo::new();
+Foo::bar(foo);
+```
+
 <br />
 In this case, `foo1.add(foo2)` is an identical expression to `Foo::add(foo1, foo2)`
 <br />
@@ -1305,7 +1403,7 @@ fn main() {
 
 The compiler will automatically pass the **address** of `foo` instead of `foo` itself to the function.
 <br />
-In the case of a method that takes in a `self` pointer, the identical expression to `foo1.divideBy(2)` is `Foo::divideBy(&foo1, 2)`.
+In the case of a method that takes in a `self` *pointer*, the equivalent expression to `foo1.divideBy(2)` is `Foo::divideBy(&foo1, 2)`.
 
 <hr />
 
@@ -1406,7 +1504,7 @@ fn main(string[] args) {
 
     for arg in args {
         if arg == "foo" {
-            io::println("i received a foo!");
+            io::printf("i received a foo in my {}!", program);
         }
     }
 }

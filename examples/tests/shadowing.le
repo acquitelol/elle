@@ -1,0 +1,25 @@
+use std/prelude;
+
+fn main() {
+    x := "foo";
+    $assert(x == "foo", nil);
+    x := 1;
+    $assert(x == 1, nil);
+
+    {
+        x = 2;
+
+        x := "a";
+        $assert(x == "a", nil);
+
+        {
+            x = "b";
+            $assert(x == "b", nil);
+        }
+
+        $assert(x == "b", nil);
+    }
+
+    $assert(x == 2, nil);
+    io::println("All variable shadowing tests have passed!".color("green").reset());
+}

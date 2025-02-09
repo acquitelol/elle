@@ -68,8 +68,8 @@ pub fn build(
     }
 
     let lib_lookup = format!("-L{RUNTIME_PATH}");
-    if !no_std {
-        // explicitly look in for the runtime at this path in case
+    if !no_std && !object_output {
+        // explicitly look for the runtime at this path in case
         // the user doesnt have rpath set or similar
         args.push(&lib_lookup);
         args.push("-lelle"); // must be prebuilt

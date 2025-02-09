@@ -413,8 +413,8 @@ impl<'a> Statement<'a> {
 
     fn parse_function(
         &mut self,
-        maybe_name: Option<(Location, String)>,
-        maybe_params: Option<Vec<(Location, AstNode)>>,
+        maybe_name: Option<(Rc<Location>, String)>,
+        maybe_params: Option<Vec<(Rc<Location>, AstNode)>>,
         maybe_generics: Option<Vec<Type>>,
         maybe_position: Option<usize>,
         type_method: bool,
@@ -762,7 +762,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let mut size = None;
-        let mut location = self.current_token().location.clone();
+        let mut location = (*self.current_token().location).clone();
 
         if self.current_token().kind != TokenKind::RightBlockBrace {
             let tokens = self.yield_tokens_with_condition(|token, _, _| {
@@ -787,13 +787,13 @@ impl<'a> Statement<'a> {
             name,
             r#type: Some(ty.unwrap_or(Type::Byte)),
             size: Box::new(size.unwrap()),
-            location,
+            location: Rc::new(location),
         }
     }
 
     fn parse_array(&mut self, dynamic: bool) -> AstNode {
         let position = self.position.clone();
-        let mut location = self.current_token().location.clone();
+        let mut location = (*self.current_token().location).clone();
         self.expect_tokens(vec![TokenKind::LeftBlockBrace]);
         self.advance();
 
@@ -955,16 +955,16 @@ impl<'a> Statement<'a> {
             values,
             explicit_inner: inner_ty.or(self.shared.known_generics.get(0).cloned()),
             known_generics: self.shared.known_generics.clone(),
-            location: location.clone(),
+            location: Rc::new(location.clone()),
             dynamic,
         };
 
         match self.current_token().kind {
             TokenKind::Dot => {
-                return self.parse_field_access(Some((position, array, location)));
+                return self.parse_field_access(Some((position, array, Rc::new(location.clone()))));
             }
             TokenKind::LeftBlockBrace => {
-                return self.parse_offset_store(Some((position, array, location)));
+                return self.parse_offset_store(Some((position, array, Rc::new(location))));
             }
             other if other.is_ternary_start() => return self.parse_ternary_node(array),
             other if other.is_arithmetic() => {
@@ -1195,7 +1195,7 @@ impl<'a> Statement<'a> {
     }
 
     /// for i32 x in Array::new<i32>(1, 2, 3) {}
-    fn parse_foreach_statement(&mut self, ty: Type, name: String, location: Location) -> AstNode {
+    fn parse_foreach_statement(&mut self, ty: Type, name: String, location: Rc<Location>) -> AstNode {
         self.advance(); // in
 
         let mut nesting = 0;
@@ -1416,7 +1416,7 @@ impl<'a> Statement<'a> {
         expression
     }
 
-    fn parse_offset_store(&mut self, lhs: Option<(usize, AstNode, Location)>) -> AstNode {
+    fn parse_offset_store(&mut self, lhs: Option<(usize, AstNode, Rc<Location>)>) -> AstNode {
         let position = if lhs.is_some() {
             lhs.clone().unwrap().0
         } else {
@@ -1454,7 +1454,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::LeftBlockBrace]);
         self.advance();
 
-        let mut right_location = self.current_token().location.clone();
+        let mut right_location = (*self.current_token().location).clone();
         let mut nesting = 0;
         let right_tokens = self.yield_tokens_with_condition(|token, _, _| {
             if token.kind == TokenKind::LeftBlockBrace {
@@ -1491,7 +1491,7 @@ impl<'a> Statement<'a> {
             right: right.clone(),
             value: None,
             left_location: left_location.clone(),
-            right_location: right_location.clone(),
+            right_location: Rc::new(right_location.clone()),
             value_location: value_location.clone(),
             is_deref: false,
         };
@@ -1513,7 +1513,7 @@ impl<'a> Statement<'a> {
                     right: right.clone(),
                     value,
                     left_location: left_location.clone(),
-                    right_location: right_location.clone(),
+                    right_location: Rc::new(right_location.clone()),
                     value_location,
                     is_deref: false,
                 };
@@ -1526,7 +1526,7 @@ impl<'a> Statement<'a> {
                     right: right.clone(),
                     value,
                     left_location: left_location.clone(),
-                    right_location: right_location.clone(),
+                    right_location: Rc::new(right_location.clone()),
                     value_location,
                     is_deref: false,
                 };
@@ -1786,7 +1786,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
         self.advance();
 
-        let mut location = self.current_token().location.clone();
+        let mut location = (*self.current_token().location).clone();
         let ty_name = self
             .current_token()
             .value
@@ -1860,7 +1860,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
-        let mut expression = AstNode::Size { value, location };
+        let mut expression = AstNode::Size { value, location: Rc::new(location) };
 
         match self.current_token().kind {
             other if other.is_ternary_start() => {
@@ -1884,7 +1884,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
         self.advance();
 
-        let mut location = self.current_token().location.clone();
+        let mut location = (*self.current_token().location).clone();
 
         let mut tokens = vec![];
         let mut nesting = 0;
@@ -1942,7 +1942,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
-        let mut expression = AstNode::ArrayLength { value, location };
+        let mut expression = AstNode::ArrayLength { value, location: Rc::new(location) };
 
         match self.current_token().kind {
             other if other.is_ternary_start() => {
@@ -2191,7 +2191,7 @@ impl<'a> Statement<'a> {
         }
     }
 
-    fn parse_field_access(&mut self, lhs: Option<(usize, AstNode, Location)>) -> AstNode {
+    fn parse_field_access(&mut self, lhs: Option<(usize, AstNode, Rc<Location>)>) -> AstNode {
         let location = if lhs.is_some() {
             lhs.clone().unwrap().2
         } else {
@@ -3167,13 +3167,13 @@ impl<'a> Statement<'a> {
                 || kind == TokenKind::Semicolon)
             {
                 let token = self.tokens.get(self.position - 2).unwrap_or(&prev);
-                let mut location = token.location.clone();
+                let mut location = (*token.location).clone();
 
                 if location.column == location.ctx.len() - 1 {
                     location.column += 1;
                 }
 
-                location.ctx = Rc::new(format!("{} ", location.ctx));
+                location.ctx = Rc::from(format!("{} ", location.ctx));
 
                 panic!(
                     "{}",

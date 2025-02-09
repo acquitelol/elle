@@ -21,7 +21,7 @@ pub enum DoOnly {
     Structs,
 }
 
-pub type StructPool = HashMap<String, (Vec<String>, Vec<Argument>, Location)>;
+pub type StructPool = HashMap<String, (Vec<String>, Vec<Argument>, Rc<Location>)>;
 
 pub fn create_generic_struct(
     name: String,
@@ -45,10 +45,10 @@ pub fn create_generic_struct(
             .collect::<Vec<String>>();
 
         location.column -= location.ctx.len() - location.ctx.trim().len();
-        location.ctx = Rc::new(location.ctx.trim().into());
+        location.ctx = Rc::from(location.ctx.trim());
         location.length = location.column;
         location.column = 0;
-        location.above = Some(Rc::new(format!(
+        location.above = Some(Rc::from(format!(
             "In struct:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
             " ".repeat(
                 location.ctx.len() - location.ctx.trim().len()
@@ -100,14 +100,14 @@ pub fn create_generic_struct(
         generics: vec![],
         known_generics: parsed_generics,
         members: parsed_members.clone(),
-        keyword_location: location.clone(),
-        location: location.clone(),
+        keyword_location: Rc::new(location.clone()),
+        location: Rc::new(location.clone()),
         ignore_empty: false,
     });
 
     struct_pool
         .borrow_mut()
-        .insert(generic_name.clone(), (vec![], parsed_members, location));
+        .insert(generic_name.clone(), (vec![], parsed_members, Rc::new(location)));
 }
 
 #[macro_export]
@@ -118,13 +118,13 @@ macro_rules! get_type {
         let name;
 
         let mut ty = if $self.current_token().kind == TokenKind::LeftParenthesis {
-            let mut location = $self.current_token().location;
+            let mut location = (*$self.current_token().location).clone();
 
             if !$struct_pool.borrow().contains_key("Tuple") {
                 let import_text = "use std/collections/tuple;";
 
-                location.ctx = Rc::new(location.ctx.trim().into());
-                location.above = Some(Rc::new(format!(
+                location.ctx = Rc::from(location.ctx.trim());
+                location.above = Some(Rc::from(format!(
                     "Add this to your file:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
                     " ".repeat(
                         location.ctx.len() - location.ctx.trim().len()
@@ -223,13 +223,13 @@ macro_rules! get_type {
                         $self.advance();
                         $self.advance();
 
-                        let mut location = $self.current_token().location;
+                        let mut location = (*$self.current_token().location).clone();
 
                         if !$struct_pool.borrow().contains_key("Array") {
                             let import_text = "use std/collections/array;";
 
-                            location.ctx = Rc::new(location.ctx.trim().into());
-                            location.above = Some(Rc::new(format!(
+                            location.ctx = Rc::from(location.ctx.trim());
+                            location.above = Some(Rc::from(format!(
                                 "Add this to your file:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
                                 " ".repeat(
                                     location.ctx.len() - location.ctx.trim().len()
@@ -276,7 +276,7 @@ macro_rules! get_type {
                             }
                         }
 
-                        let location = $self.current_token().location;
+                        let location = (*$self.current_token().location).clone();
 
                         let generic_name = format!(
                             "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
@@ -546,14 +546,14 @@ impl Parser {
                             && ![TokenKind::Semicolon, TokenKind::RightCurlyBrace]
                                 .contains(&self.tokens[position].kind)
                         {
-                            let mut location = self
+                            let mut location = (*self
                                 .tokens
                                 .get(self.position - 2)
                                 .unwrap_or(&self.tokens[self.position - 2])
-                                .location
+                                .location)
                                 .clone();
 
-                            location.ctx = Rc::new(format!("{} ", location.ctx));
+                            location.ctx = Rc::from(format!("{} ", location.ctx));
                             location.column += 1;
 
                             panic!(

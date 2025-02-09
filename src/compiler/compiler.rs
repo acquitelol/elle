@@ -204,7 +204,7 @@ impl Compiler {
         name: &String,
         func: Option<&RefCell<Function>>,
         module: Option<&RefCell<Module>>,
-        location: Location,
+        location: Rc<Location>,
         // (Ty, Val, Init)
     ) -> Option<(Type, Value)> {
         let var = self.get_variable(&name, func, module);
@@ -281,8 +281,8 @@ impl Compiler {
         return_type: Option<Type>,
         body: Vec<AstNode>,
         module: &RefCell<Module>,
-        location: Location,
-        return_location: Location,
+        location: Rc<Location>,
+        return_location: Rc<Location>,
     ) -> Function {
         self.scopes.push(hashmap!());
 
@@ -639,7 +639,7 @@ impl Compiler {
 
                 let res = self.get_variable(&format!("{}.addr", name), Some(func), Some(module));
                 let mut local_ty = r#type.clone().unwrap_or(existing);
-                let mut temp = Some(self.new_variable(&local_ty, &name, Some(func), false, false));
+                let mut temp = Some(self.new_variable(&local_ty, &name, Some(func), true, false));
 
                 let parsed = self.generate_statement(
                     func,
@@ -1245,8 +1245,9 @@ impl Compiler {
                 parameters,
                 type_method,
                 ignore_no_def,
-                location: mut call_location,
+                location: call_location,
             } => {
+                let mut call_location = (*call_location).clone();
                 let declarative_ty = ty.clone().unwrap_or(Type::Void);
                 let mut should_get_address = false; // Gets address if first arg's ty is the same as ty predicate
                 let mut first_param = None;
@@ -1499,7 +1500,7 @@ impl Compiler {
 
                             parameter.1 = AstNode::Address {
                                 value: Box::new(parameter.1),
-                                location: call_location.clone(),
+                                location: Rc::new(call_location.clone()),
                             }
                         }
                     }
@@ -1542,7 +1543,7 @@ impl Compiler {
                     func,
                     &params,
                     parameters.clone(),
-                    call_location.clone(),
+                    Rc::new(call_location.clone()),
                 );
 
                 if tmp_function.format {
@@ -1580,11 +1581,11 @@ impl Compiler {
                                         vec![
                                             parameters[i].clone(),
                                             (
-                                                call_location.clone(),
+                                                Rc::new(call_location.clone()),
                                                 AstNode::Literal {
                                                     kind: TokenKind::IntegerLiteral,
                                                     value: ValueKind::Number(0),
-                                                    location: call_location.clone(),
+                                                    location: Rc::new(call_location.clone()),
                                                 },
                                             ),
                                         ],
@@ -1619,11 +1620,11 @@ impl Compiler {
                                     vec![
                                         parameters[i].clone(),
                                         (
-                                            call_location.clone(),
+                                            Rc::new(call_location.clone()),
                                             AstNode::Literal {
                                                 kind: TokenKind::IntegerLiteral,
                                                 value: ValueKind::Number(0),
-                                                location: call_location.clone(),
+                                                location: Rc::new(call_location.clone()),
                                             },
                                         ),
                                     ],
@@ -1695,7 +1696,7 @@ impl Compiler {
                             AstNode::Literal {
                                 kind: TokenKind::ExactLiteral,
                                 value: ValueKind::String("...".into()),
-                                location: call_location.clone(),
+                                location: Rc::new(call_location.clone()),
                             },
                             Some(ty.clone()),
                             None,
@@ -3192,8 +3193,8 @@ impl Compiler {
         known_generics: HashMap<String, Type>,
         members: Vec<Argument>,
         ignore_empty: bool,
-        keyword_location: Location,
-        _location: Location,
+        keyword_location: Rc<Location>,
+        _location: Rc<Location>,
     ) -> TypeDef {
         let mut items = vec![];
 
@@ -3225,8 +3226,8 @@ impl Compiler {
     fn generate_meta_struct(
         func: &RefCell<Function>,
         params: &Vec<(Type, Value)>,
-        parameters: Vec<(Location, AstNode)>,
-        location: Location,
+        parameters: Vec<(Rc<Location>, AstNode)>,
+        location: Rc<Location>,
     ) -> AstNode {
         let node = AstNode::StructLiteral {
             name: META_STRUCT_NAME.into(),
@@ -3542,7 +3543,7 @@ impl Compiler {
         module: &RefCell<Module>,
         ty: Option<Type>,
         is_return: bool,
-        location: Location,
+        location: Rc<Location>,
         kind: TokenKind,
     ) -> (Type, Value) {
         self.tmp_counter += 1;
@@ -3866,7 +3867,7 @@ impl Compiler {
             (
                 vec![],
                 parsed_members,
-                Location::default(self.output_path.clone()),
+                Rc::new(Location::default(self.output_path.clone())),
             ),
         );
     }
@@ -3877,7 +3878,7 @@ impl Compiler {
         add_meta: &mut bool,
         base_known_generics: Vec<Type>,
         known_generics: &mut HashMap<String, Type>,
-        parameters: Vec<(Location, AstNode)>,
+        parameters: Vec<(Rc<Location>, AstNode)>,
         module: &RefCell<Module>,
         func: &RefCell<Function>,
         call_location: &mut Location,
@@ -4063,8 +4064,8 @@ impl Compiler {
 
                     call_location.column -=
                         call_location.ctx.len() - call_location.ctx.trim().len();
-                    call_location.ctx = Rc::new(call_location.ctx.trim().into());
-                    call_location.above = Some(Rc::new(format!(
+                    call_location.ctx = Rc::from(call_location.ctx.trim());
+                    call_location.above = Some(Rc::from(format!(
                         "In function:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
                         " ".repeat(
                             call_location.ctx.len() - call_location.ctx.trim().len()

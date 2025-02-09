@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
@@ -34,7 +34,7 @@ pub fn lex_and_parse(
     debug_time: bool,
     object_output: bool,
     nesting: usize,
-    _import_location: Location,
+    _import_location: Rc<Location>,
     string_module_methods: &mut Vec<String>,
 ) -> Vec<Primitive> {
     let content = {
@@ -123,13 +123,15 @@ pub fn lex_and_parse(
     // Non-generic imports and generic declarations
     let (mut imports, new_struct_pool, ..) = parser.parse(&DoOnly::Imports, None);
     struct_pool.replace_with(|_| new_struct_pool);
+    let loc = Rc::new(Location::default(input_path.clone()));
+
 
     if nesting == 0 && !no_fmt {
         imports.insert(
             0,
             Primitive::Use {
                 module: "std/fmt".into(),
-                location: Location::default(input_path.clone()),
+                location: loc.clone(),
             },
         );
     }
@@ -139,7 +141,7 @@ pub fn lex_and_parse(
             0,
             Primitive::Use {
                 module: "std/string".into(),
-                location: Location::default(input_path.clone()),
+                location: loc.clone(),
             },
         );
     }
@@ -149,7 +151,7 @@ pub fn lex_and_parse(
             0,
             Primitive::Use {
                 module: PRIMARY_ALLOCATOR_MODULE.into(),
-                location: Location::default(input_path.clone()),
+                location: loc.clone(),
             },
         );
     }
@@ -158,7 +160,7 @@ pub fn lex_and_parse(
         match import {
             Primitive::Use {
                 module,
-                mut location,
+                location,
                 ..
             } if !parsed_modules.borrow().contains(&module) => {
                 let now = if debug_time {
@@ -179,6 +181,7 @@ pub fn lex_and_parse(
                     );
                 }
 
+                let mut location = (*location).clone();
                 location.length = location.ctx.len();
                 location.column = location.ctx.len();
 
@@ -194,7 +197,7 @@ pub fn lex_and_parse(
                     debug_time,
                     object_output,
                     nesting + 1,
-                    location,
+                    Rc::new(location),
                     string_module_methods,
                 );
 
@@ -295,8 +298,6 @@ pub fn lex_and_parse(
     // - nil => 0 (nullptr)
     // - ElleMeta => Utility struct
     if nesting == 0 {
-        let loc = Location::default(input_path.clone());
-
         tree.insert(
             0,
             Primitive::Constant {

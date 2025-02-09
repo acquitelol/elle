@@ -351,19 +351,20 @@ impl fmt::Display for ValueKind {
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Location {
-    pub file: Rc<String>,
+    pub file: Rc<str>,
     pub row: usize,
     pub column: usize,
-    pub ctx: Rc<String>,
-    pub above: Option<Rc<String>>,
     pub length: usize,
-    pub extra_info: Rc<String>,
+    pub ctx: Rc<str>,
+    pub above: Option<Rc<str>>,
+    pub extra_info: Rc<str>,
 }
 
 impl Location {
-    pub fn with_extra_info(mut self, extra_info: impl Into<String>) -> Self {
-        self.extra_info = Rc::new(extra_info.into());
-        self
+    pub fn with_extra_info(&self, extra_info: impl Into<String>) -> Self {
+        let mut owned = (*self).clone();
+        owned.extra_info = Rc::from(extra_info.into());
+        owned
     }
 
     pub fn display(&self, is_warning: bool) -> String {
@@ -392,7 +393,7 @@ impl Location {
         self.ctx.trim_start().split_at(left).1.into()
     }
 
-    fn trim_indentation(&self, ctx: Rc<String>, above: Rc<String>) -> (String, String) {
+    fn trim_indentation(&self, ctx: Rc<str>, above: Rc<str>) -> (String, String) {
         let lines: Vec<&str> = ctx.lines().chain(above.lines()).collect();
 
         let min_indent = lines
@@ -402,7 +403,7 @@ impl Location {
             .min()
             .unwrap_or(0);
 
-        let trim_string = |input: Rc<String>| {
+        let trim_string = |input: Rc<str>| {
             input
                 .lines()
                 .map(|line| {
@@ -499,13 +500,13 @@ impl Location {
 
     pub fn default(file: String) -> Location {
         Location {
-            file: Rc::new(file),
+            file: Rc::from(file),
             row: 0,
             column: 0,
-            ctx: Rc::new("_".into()),
+            ctx: Rc::from("_"),
             above: None,
             length: 1,
-            extra_info: Rc::new("".into()),
+            extra_info: Rc::from(""),
         }
     }
 }
@@ -525,8 +526,8 @@ impl fmt::Debug for Location {
 #[derive(Debug, Clone)]
 pub struct Token {
     pub kind: TokenKind,
-    pub location: Location,
     pub value: ValueKind,
+    pub location: Rc<Location>,
 }
 
 #[derive(Debug, Clone)]

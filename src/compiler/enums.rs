@@ -1,13 +1,7 @@
 // Roughly references https://github.com/garritfra/qbe-rs/blob/main/src/lib.rs
 // https://github.com/garritfra/qbe-rs/blob/main/LICENSE-MIT
 use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet},
-    fmt,
-    iter::Peekable,
-    mem,
-    num::ParseIntError,
-    u8,
+    cell::RefCell, collections::{HashMap, HashSet}, fmt, iter::Peekable, mem, num::ParseIntError, rc::Rc, u8
 };
 
 use crate::{
@@ -45,7 +39,7 @@ pub enum Instruction {
     Compare(Type, Comparison, Value, Value),
     Copy(Value),
     // Location in AST for reporting inconsistent return types
-    Return(Option<(Type, Value, Location)>),
+    Return(Option<(Type, Value, Rc<Location>)>),
     JumpNonZero(Value, String, String),
     Jump(String),
     Call(Value, Vec<(Type, Value)>),

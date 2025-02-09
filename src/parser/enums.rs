@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
     compiler::enums::Type,
@@ -13,37 +13,37 @@ pub enum AstNode {
     Literal {
         kind: TokenKind,
         value: ValueKind,
-        location: Location,
+        location: Rc<Location>,
     },
     /// A declaration of name `name` with type `r#type` to value `value
     Declare {
         name: String,
         r#type: Option<Type>,
         value: Option<Box<AstNode>>,
-        location: Location,
-        value_location: Location,
+        location: Rc<Location>,
+        value_location: Rc<Location>,
     },
     /// Allocates stack memory of size `valist`, assigns it to `name`, and calls `vastart` on it
-    VariadicStart { name: String, location: Location },
+    VariadicStart { name: String, location: Rc<Location> },
     /// Yields a new argument of type `r#type` from `name`
     VariadicArgument {
         name: String,
         r#type: Option<Type>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Returns value `value`
     Return {
         value: Box<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Calls function `name` with parameters `parameters`
     FunctionCall {
         name: String,
         generics: Vec<Type>,
-        parameters: Vec<(Location, AstNode)>,
+        parameters: Vec<(Rc<Location>, AstNode)>,
         type_method: bool,
         ignore_no_def: bool,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Performs an arithmetic operation with `operator` using `left` and `right
     BinaryOperation {
@@ -52,14 +52,14 @@ pub enum AstNode {
         operator: TokenKind,
         treat_as_string: bool,
         dunder_methods: bool,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Runs `body` if condition `condition` is true, otherwise runs `else_body`
     IfStatement {
         condition: Box<AstNode>,
         body: Vec<AstNode>,
         else_body: Vec<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Runs `body` while condition `condition` is true, using step `step`
     /// (`step` is used for easy merging between while loops and for loops)
@@ -67,35 +67,35 @@ pub enum AstNode {
         condition: Box<AstNode>,
         step: Option<Box<AstNode>>,
         body: Vec<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Declares a buffer named `name` with an inner type `r#type` and size `size`
     Buffer {
         name: String,
         r#type: Option<Type>,
         size: Box<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Declares an array literal of size `values.len()` and values `values` and returns a pointer to the start of it
     ArrayLiteral {
         explicit_inner: Option<Type>,
         known_generics: Vec<Type>,
-        values: Vec<(Location, AstNode)>,
-        location: Location,
+        values: Vec<(Rc<Location>, AstNode)>,
+        location: Rc<Location>,
         dynamic: bool,
     },
     /// Declares a struct named `name` with values `values`
     StructLiteral {
         name: String,
         values: Vec<(String, Box<AstNode>)>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Accesses the fields of a struct, optionally assigning a value to the result
     FieldAccess {
         left: Box<AstNode>,
         right: Box<AstNode>,
         value: Option<Box<AstNode>>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Loads or stores information from a pointer through pointer arithmetic
     /// In an expression like a[10], left is `a` and right is `10`
@@ -103,74 +103,74 @@ pub enum AstNode {
         left: Box<AstNode>,
         right: Box<AstNode>,
         value: Option<Box<AstNode>>,
-        left_location: Location,
-        right_location: Location,
-        value_location: Location,
+        left_location: Rc<Location>,
+        right_location: Rc<Location>,
+        value_location: Rc<Location>,
         is_deref: bool,
     },
     /// Only executes code from value `value` when the current scope is about to exit
     /// This can be function return or an implicit scope exit through `break` or `continue`
     DeferStatement {
         value: Box<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// A standalone block that executes code in its scope
     /// This can be useful for micro-managing memory allocation with defer
     BlockStatement {
         body: Vec<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Takes value `value` and negates it (compares it to 0)
     LogicalNot {
         value: Box<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Takes value `value` and flips all its bits
     BitWiseNot {
         value: Box<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Returns the address of some value `value`
     Address {
         value: Box<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Performs an explicit conversion of value `value` to type `r#type`
     Conversion {
         r#type: Option<Type>,
         value: Box<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Returns the size (in bytes) or length, depending on if `standalone` is set to true
     /// The result is used to allow for getting the size of both expressions and types
     Size {
         value: Result<Type, Box<AstNode>>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Creates a capturing closure that takes in some number of arguments
     /// and returns a single line statement result
     Lambda {
         arguments: Vec<Argument>,
         value: Vec<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Calculates the array length of an Elle-generated array
     /// Uses the formula *(array_ptr - #size(i32))
     ArrayLength {
         value: Box<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// An expression which allows you to declare a value to something conditionally.
     Ternary {
         condition: Box<AstNode>,
         if_true: Box<AstNode>,
         if_false: Box<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
     /// Allows for getting and setting the global environment pointer, in static memory
     Environment {
         value: Option<Box<AstNode>>,
-        location: Location,
+        location: Rc<Location>,
     },
 }
 
@@ -440,7 +440,7 @@ fn modify_type(
 pub enum Primitive {
     Use {
         module: String,
-        location: Location,
+        location: Rc<Location>,
     },
     Struct {
         name: String,
@@ -450,8 +450,8 @@ pub enum Primitive {
         generics: Vec<String>,
         known_generics: HashMap<String, Type>,
         members: Vec<Argument>,
-        keyword_location: Location,
-        location: Location,
+        keyword_location: Rc<Location>,
+        location: Rc<Location>,
         ignore_empty: bool,
     },
     Function {
@@ -470,8 +470,8 @@ pub enum Primitive {
         arguments: Vec<Argument>,
         r#return: Option<Type>,
         body: Vec<AstNode>,
-        location: Location,
-        return_location: Location,
+        location: Rc<Location>,
+        return_location: Rc<Location>,
     },
     Constant {
         name: String,
@@ -480,7 +480,7 @@ pub enum Primitive {
         imported: bool,
         r#type: Option<Type>,
         value: Box<AstNode>,
-        location: Location,
+        location: Rc<Location>,
     },
 }
 
