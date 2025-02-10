@@ -4,11 +4,7 @@ fn main() {
     // Ranges create arrays for the time being
     $assert(5..10 == [5, 6, 7, 8, 9], nil);
     $assert(3..=8 == [3, 4, 5, 6, 7, 8], nil);
+    $assert(0..0 == Array::new<i32>(), nil);
 
-    for i in (let res = 1)..=10 {
-        res *= i;
-    }
-
-    $assert(res == 3628800, nil); // 10! (factorial)
     io::println("All range tests have passed!".color("green").reset());
 }

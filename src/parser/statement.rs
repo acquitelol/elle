@@ -1179,18 +1179,24 @@ impl<'a> Statement<'a> {
         };
 
         let body = self.yield_block(false); // For loops are statements
+        let mut statements = vec![];
 
         self.position -= 1;
 
         if declare_tokens.len() > 0 {
-            self.body.borrow_mut().push(declare);
+            statements.push(declare);
         }
 
-        AstNode::WhileLoopStatement {
+        statements.push(AstNode::WhileLoopStatement {
             condition: Box::new(condition),
             step: Some(Box::new(step)),
             body,
             location: self.current_token().location,
+        });
+
+        AstNode::BlockStatement {
+            body: statements,
+            location: self.current_token().location
         }
     }
 
@@ -1299,7 +1305,9 @@ impl<'a> Statement<'a> {
             value_location: location.clone(),
         };
 
-        self.body.borrow_mut().push(AstNode::Declare {
+        let mut statements = vec![];
+
+        statements.push(AstNode::Declare {
             name: index,
             r#type: Some(Type::Word),
             value: Some(Box::new(AstNode::Literal {
@@ -1311,20 +1319,26 @@ impl<'a> Statement<'a> {
             value_location: location.clone(),
         });
 
-        self.body.borrow_mut().push(AstNode::Declare {
+        statements.push(AstNode::Declare {
             name: iter,
             r#type: Some(Type::Infer),
             value: Some(Box::new(iterator)),
             location: location.clone(),
             value_location: location.clone(),
         });
+
         body.insert(0, element_node);
 
-        AstNode::WhileLoopStatement {
+        statements.push(AstNode::WhileLoopStatement {
             condition: Box::new(condition_node),
             step: Some(Box::new(step_node)),
             body,
             location: self.current_token().location,
+        });
+
+        AstNode::BlockStatement {
+            body: statements,
+            location: self.current_token().location
         }
     }
 
