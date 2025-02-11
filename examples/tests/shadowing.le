@@ -21,5 +21,18 @@ fn main() {
     }
 
     $assert(x == 2, nil);
+
+    // Redeclare a new `y` using `:=`
+    y := 13;
+    y := y * 3;
+
+    $assert(y == 39, nil);
+
+    // Redeclare a new `z` using `=`
+    z := "foo";
+    z = z <> "bar";
+    z <>= "baz";
+
+    $assert(z == "foobarbaz", nil);
     io::println("All variable shadowing tests have passed!".color("green").reset());
 }

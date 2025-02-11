@@ -1,11 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    compiler::enums::Type,
-    hashmap,
-    lexer::enums::{Attribute, Location, TokenKind, ValueKind},
-    misc::{colors::*, interleave_with},
-    FORMAT_CONSTANT, GENERIC_END, GENERIC_IDENTIFIER, INTERNAL_FORMATTER,
+    compiler::enums::Type, elle_error, hashmap, lexer::enums::{Attribute, Location, TokenKind, ValueKind}, misc::{colors::*, interleave_with}, FORMAT_CONSTANT, GENERIC_END, GENERIC_IDENTIFIER, INTERNAL_FORMATTER
 };
 
 use super::{
@@ -37,10 +33,12 @@ impl<'a> Struct<'a> {
                     location.length = location.ctx.len() - location.column + 1;
                     location.column += location.ctx.len() - location.column;
 
-                    panic!(
-                        "{}",
+                    elle_error!(
                         location.with_extra_info("Remove this part").error(format!(
-                            "Cannot declare members on a namespace.\nTo declare members, use the '{GREEN}struct{RESET}' keyword instead."))
+                            "Cannot declare members on a namespace.\nTo declare members, use the '{GREEN}struct{RESET}' keyword instead.",
+                            GREEN = get_GREEN!(),
+                            RESET = get_RESET!()
+                        ))
                     )
                 }
                 _ => self.parser.expect_tokens(vec![TokenKind::Semicolon]),
@@ -99,8 +97,7 @@ impl<'a> Struct<'a> {
                         should_add_fmt_builtin = false;
                         self.parser.advance();
                     }
-                    _ => panic!(
-                        "{}",
+                    _ => elle_error!(
                         self.parser.current_token().location.error(format!(
                             "Unknown attribute for struct '{}'",
                             self.parser

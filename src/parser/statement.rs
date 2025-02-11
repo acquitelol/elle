@@ -11,7 +11,7 @@ use crate::{
     misc::colors::*,
     not_valid_struct_or_type, token_to_node, GENERIC_END, GENERIC_IDENTIFIER,
 };
-use crate::{get_type, INTERNAL_IDX_FORMAT, INTERNAL_ITERATOR_FORMAT, LEN_CONSTANT};
+use crate::{elle_error, get_type, INTERNAL_IDX_FORMAT, INTERNAL_ITERATOR_FORMAT, LEN_CONSTANT};
 
 #[derive(Clone, Copy)]
 pub struct Shared<'a> {
@@ -83,8 +83,7 @@ impl<'a> Statement<'a> {
 
     fn expect_tokens_with_message(&self, expected: Vec<TokenKind>, message: Option<&str>) {
         if !expected.contains(&self.current_token().kind) {
-            panic!(
-                "{}",
+            elle_error!(
                 self.current_token().location.error(format!(
                     "Expected one of [{}], got {:?}. {}",
                     expected
@@ -94,7 +93,7 @@ impl<'a> Statement<'a> {
                         .join(", "),
                     self.current_token().kind,
                     message.unwrap_or("")
-                )),
+                ))
             )
         }
     }
@@ -116,8 +115,7 @@ impl<'a> Statement<'a> {
         let token = self.current_token();
 
         if !found {
-            panic!(
-                "{}",
+            elle_error!(
                 token.location.error(format!(
                     "Expected one of {:?} but got {:?}",
                     expected, token.kind
@@ -166,10 +164,7 @@ impl<'a> Statement<'a> {
 
         if self.current_token().kind == TokenKind::LeftBlockBrace {
             if r#type.as_ref().is_some_and(|x| x == &Type::Infer) {
-                panic!(
-                    "{}",
-                    location.error("Cannot declare a buffer with an inferred inner type.")
-                );
+                elle_error!(location.error("Cannot declare a buffer with an inferred inner type."));
             }
 
             return self.parse_buffer(Some(name), r#type);
@@ -188,13 +183,14 @@ impl<'a> Statement<'a> {
 
         if self.current_token().kind == TokenKind::Colon {
             if r#type.clone().is_none_or(|ty| !ty.is_infer()) {
-                panic!(
-                    "{}",
+                elle_error!(
                     self.current_token()
                         .location
                         .with_extra_info(format!("Remove this colon to declare \"{name}\" explicitly"))
                         .error(format!(
-                            "Cannot use \"{GREEN}:={RESET}\" to declare a variable with a non-inferred type.\nYou can remove the \"{GREEN}:{RESET}\" to declare a variable explicitly."
+                            "Cannot use \"{GREEN}:={RESET}\" to declare a variable with a non-inferred type.\nYou can remove the \"{GREEN}:{RESET}\" to declare a variable explicitly.",
+                            GREEN = get_GREEN!(),
+                            RESET = get_RESET!()
                         ))
                 );
             }
@@ -292,7 +288,7 @@ impl<'a> Statement<'a> {
         };
 
         if !value.contains(".") {
-            panic!("Invalid float literal provided");
+            elle_error!(token.location.error("Invalid float literal provided"));
         }
 
         let nodes: Vec<&str> = value.split('.').collect();
@@ -542,12 +538,7 @@ impl<'a> Statement<'a> {
                     if block_nesting > 0 {
                         block_nesting -= 1;
                     } else {
-                        panic!(
-                            "{}",
-                            self.current_token()
-                                .location
-                                .error("Invalid balance of block braces")
-                        )
+                        elle_error!(self.current_token().location.error("Invalid balance of block braces"))
                     }
                 }
 
@@ -555,12 +546,7 @@ impl<'a> Statement<'a> {
                     if curly_nesting > 0 {
                         curly_nesting -= 1;
                     } else {
-                        panic!(
-                            "{}",
-                            self.current_token()
-                                .location
-                                .error("Invalid balance of curly braces")
-                        )
+                        elle_error!(self.current_token().location.error("Invalid balance of curly braces"))
                     }
                 }
 
@@ -890,12 +876,7 @@ impl<'a> Statement<'a> {
                     if paren_nesting > 0 {
                         paren_nesting -= 1;
                     } else {
-                        panic!(
-                            "{}",
-                            self.current_token()
-                                .location
-                                .error("Invalid balance of parenthesis")
-                        )
+                        elle_error!(self.current_token().location.error("Invalid balance of parenthesis"))
                     }
                 }
 
@@ -911,12 +892,7 @@ impl<'a> Statement<'a> {
                     if curly_nesting > 0 {
                         curly_nesting -= 1;
                     } else {
-                        panic!(
-                            "{}",
-                            self.current_token()
-                                .location
-                                .error("Invalid balance of curly braces")
-                        )
+                        elle_error!(self.current_token().location.error("Invalid balance of curly braces"))
                     }
                 }
 
@@ -1636,12 +1612,7 @@ impl<'a> Statement<'a> {
 
         while self.current_token().kind != TokenKind::RightParenthesis {
             if self.current_token().kind == TokenKind::Ellipsis {
-                panic!(
-                    "{}",
-                    self.current_token()
-                        .location
-                        .error("Cannot create a variadic lambda function...")
-                )
+                elle_error!(self.current_token().location.error("Cannot create a variadic lambda function..."))
             }
 
             let ty = self.get_type(Some(self.shared.generics));
@@ -1732,12 +1703,7 @@ impl<'a> Statement<'a> {
         let mut nesting = 0;
 
         if self.current_token().kind == TokenKind::Semicolon {
-            panic!(
-                "{}",
-                self.current_token()
-                    .location
-                    .error("Expected type conversion but got empty passthrough")
-            )
+            elle_error!(self.current_token().location.error("Expected type conversion but got empty passthrough"))
         }
 
         loop {
@@ -1819,12 +1785,7 @@ impl<'a> Statement<'a> {
             let mut nesting = 0;
 
             if self.current_token().kind == TokenKind::Semicolon {
-                panic!(
-                    "{}",
-                    self.current_token()
-                        .location
-                        .error("Expected size directive but got empty passthrough")
-                )
+                elle_error!(self.current_token().location.error("Expected size directive but got empty passthrough"))
             }
 
             loop {
@@ -1904,12 +1865,7 @@ impl<'a> Statement<'a> {
         let mut nesting = 0;
 
         if self.current_token().kind == TokenKind::Semicolon {
-            panic!(
-                "{}",
-                self.current_token()
-                    .location
-                    .error("Expected array length directive but got empty passthrough")
-            )
+            elle_error!(self.current_token().location.error("Expected array length directive but got empty passthrough"))
         }
 
         loop {
@@ -2103,8 +2059,7 @@ impl<'a> Statement<'a> {
         let location = self.current_token().location.clone();
 
         if !(self.shared.struct_pool.borrow().contains_key(&name)) {
-            panic!(
-                "{}",
+            elle_error!(
                 self.current_token().location.error(format!(
                     "Struct named '{}' could not be found. Are you sure you typed it correctly?",
                     name
@@ -2834,8 +2789,7 @@ impl<'a> Statement<'a> {
 
     fn yield_tokens_with_delimiters(&mut self, delimiters: Vec<TokenKind>) -> Vec<Token> {
         if delimiters.contains(&self.current_token().kind) {
-            panic!(
-                "{}",
+            elle_error!(
                 self.current_token().location.error(format!(
                     "Expected expression but got {:?}",
                     self.current_token().kind
@@ -3059,12 +3013,11 @@ impl<'a> Statement<'a> {
 
                 match self.current_token().kind {
                     TokenKind::LeftBlockBrace => self.parse_array(false),
-                    _ => panic!(
-                        "{}",
+                    _ => elle_error!(
                         self.current_token().location.error(format!(
                             "Expected left block brace or identifier, got {:?}",
                             self.current_token().kind
-                        )),
+                        ))
                     ),
                 }
             }
@@ -3108,7 +3061,7 @@ impl<'a> Statement<'a> {
                         match tie.clone().kind {
                             TokenKind::Yield => self.parse_yield_variadic(),
                             TokenKind::Identifier => self.parse_field_access(None),
-                            other => panic!("{}", unexpected_error(tie, format!("{:?}", other))),
+                            other => elle_error!(unexpected_error(tie, format!("{other:?}"))),
                         }
                     } else if next.kind == TokenKind::Equal {
                         self.parse_declare(Some(None))
@@ -3119,7 +3072,7 @@ impl<'a> Statement<'a> {
                         {
                             self.parse_declare(Some(Some(Type::Infer)))
                         } else {
-                            panic!("{}", next.location.error("Cannot use a colon in this context. What were you trying to do?"))
+                            elle_error!(next.location.error("Cannot use a colon in this context. What were you trying to do?"))
                         }
                     } else if next.kind.is_declarative() {
                         self.parse_declarative_like()
@@ -3150,22 +3103,20 @@ impl<'a> Statement<'a> {
                     } else if next.kind == TokenKind::DoubleColon {
                         not_valid_struct_or_type!(self)
                     } else {
-                        panic!(
-                            "{}",
+                        elle_error!(
                             next.location.error(format!(
                                 "Expected left parenthesis or arithmetic, got {:?}",
                                 next.kind
-                            )),
+                            ))
                         )
                     }
                 }
             }
-            _ => panic!(
-                "{}",
+            _ => elle_error!(
                 self.current_token().location.error(format!(
                     "Expected expression, got {:?}\nMaybe you forgot a semicolon nearby?",
                     self.current_token().kind
-                )),
+                ))
             ),
         }
     }
@@ -3188,11 +3139,7 @@ impl<'a> Statement<'a> {
                 }
 
                 location.ctx = Rc::from(format!("{} ", location.ctx));
-
-                panic!(
-                    "{}",
-                    location.error(format!("Expected semicolon here, but got {:?}", token.kind))
-                )
+                elle_error!(location.error(format!("Expected semicolon here, but got {:?}", token.kind)))
             }
         }
 
@@ -3235,8 +3182,7 @@ impl<'a> Statement<'a> {
                     if token.kind == TokenKind::LeftCurlyBrace {
                         self.parse_struct_init()
                     } else if token.kind == TokenKind::Dot {
-                        panic!(
-                            "{}",
+                        elle_error!(
                             token.location.error(format!(
                                 "Cannot access methods on a struct or type '{}' using '.'\nPlease use '::' for non-instance method access.",
                                 self.current_token().value.get_string_inner().unwrap()
@@ -3252,8 +3198,7 @@ impl<'a> Statement<'a> {
                                 )));
 
                         if method.kind != TokenKind::Identifier {
-                            panic!(
-                                "{}",
+                            elle_error!(
                                 method.location.error(format!(
                                     "Expected method name in '{}::{}', but got '{:?}' instead.",
                                     ty.value.get_string_inner().unwrap(),

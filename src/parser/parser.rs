@@ -1,12 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
-    compiler::enums::Type,
-    ensure_fn_pointer,
-    lexer::enums::{Location, Token, TokenKind, ValueKind},
-    misc::colors::*,
-    parser::{constant::Constant, function::Function, r#struct::Struct},
-    Warnings, GENERIC_END, GENERIC_IDENTIFIER,
+    compiler::enums::Type, elle_error, ensure_fn_pointer, lexer::enums::{Location, Token, TokenKind, ValueKind}, misc::colors::*, parser::{constant::Constant, function::Function, r#struct::Struct}, Warnings, GENERIC_END, GENERIC_IDENTIFIER
 };
 
 use super::{
@@ -55,11 +50,13 @@ pub fn create_generic_struct(
                     + format!("{}", location.row + 1).len()
                     + 8
             ),
-            struct_location.ctx
+            struct_location.ctx,
+            GREEN = get_GREEN!(),
+            BOLD = get_BOLD!(),
+            RESET = get_RESET!()
         )));
 
-        panic!(
-            "{}",
+        elle_error!(
             location.error(format!(
                 "Mismatched number of generics in struct {}<{}>.\nCould not find generic{} {} where the function specifies <{}>.",
                 name.replace(".", "::"),
@@ -131,14 +128,13 @@ macro_rules! get_type {
                             + format!("{}", location.row + 1).len()
                             + 8
                     ),
-                    import_text
+                    import_text,
+                    GREEN = get_GREEN!(),
+                    BOLD = get_BOLD!(),
+                    RESET = get_RESET!()
                 )));
 
-                panic!(
-                    "{}",
-                    location
-                        .error("The tuple module is not imported. Please import it to use tuples.")
-                );
+                elle_error!(location.error("The tuple module is not imported. Please import it to use tuples."));
             }
 
             $self.advance(); // Skip left parenthesis
@@ -193,8 +189,7 @@ macro_rules! get_type {
                 || ValueKind::String(name.clone()).is_base_type();
 
             if !is_valid {
-                panic!(
-                    "{}",
+                elle_error!(
                     $self.current_token().location.error(format!(
                         "Type or struct named '{}' could not be found. Are you sure you spelt it correctly?",
                         name
@@ -236,10 +231,13 @@ macro_rules! get_type {
                                         + format!("{}", location.row + 1).len()
                                         + 8
                                 ),
-                                import_text
+                                import_text,
+                                GREEN = get_GREEN!(),
+                                BOLD = get_BOLD!(),
+                                RESET = get_RESET!()
                             )));
 
-                            panic!("{}", location.error("The array module is not imported. Please import it to use dynamic arrays."));
+                            elle_error!(location.error("The array module is not imported. Please import it to use dynamic arrays."));
                         }
 
                         let generic_name = format!(
@@ -382,8 +380,7 @@ impl Parser {
 
     pub fn expect_tokens(&self, expected: Vec<TokenKind>) {
         if !expected.contains(&self.current_token().kind) {
-            panic!(
-                "{}",
+            elle_error!(
                 self.current_token().location.error(format!(
                     "Expected one of [{}], got {:?}.",
                     expected
@@ -392,7 +389,7 @@ impl Parser {
                         .collect::<Vec<String>>()
                         .join(", "),
                     self.current_token().kind
-                )),
+                ))
             )
         }
     }
@@ -410,8 +407,7 @@ impl Parser {
         let token = self.current_token();
 
         if !found {
-            panic!(
-                "{}",
+            elle_error!(
                 token.location.error(format!(
                     "Expected one of {:?} but got {:?}",
                     expected, token.kind
@@ -426,10 +422,12 @@ impl Parser {
         {
             identifier.clone()
         } else {
-            panic!(
-                "Expected one of {:?} for function name, got {:?}",
-                expected.clone(),
-                self.current_token()
+            elle_error!(
+                token.location.error(format!(
+                    "Expected one of {:?} for function name, got {:?}",
+                    expected.clone(),
+                    self.current_token()
+                ))
             );
         };
 
@@ -473,10 +471,9 @@ impl Parser {
                         TokenKind::Public => {
                             global_public = true;
                         }
-                        _ => panic!(
-                            "{}",
+                        _ => elle_error!(
                             self.current_token().location.error(format!(
-                                "Invalid global specifier '{}'",
+                                "Invalid global identifier named '{}'",
                                 self.current_token()
                                     .value
                                     .get_string_inner()
@@ -512,8 +509,7 @@ impl Parser {
                 }
                 TokenKind::Function if do_only == &DoOnly::FunctionsAndConstants => {
                     if local && public {
-                        panic!(
-                            "{}",
+                        elle_error!(
                             self.current_token()
                                 .location
                                 .error("Cannot specify a function as both private and public")
@@ -555,11 +551,7 @@ impl Parser {
 
                             location.ctx = Rc::from(format!("{} ", location.ctx));
                             location.column += 1;
-
-                            panic!(
-                                "{}",
-                                location.error("Expected semicolon here, but definition has ended")
-                            )
+                            elle_error!(location.error("Expected semicolon here, but definition has ended"))
                         }
                     }
 
@@ -582,12 +574,11 @@ impl Parser {
                 }
                 TokenKind::Constant if do_only == &DoOnly::FunctionsAndConstants => {
                     if external {
-                        panic!("{}", self.current_token().location.error("Cannot have an external constant. Please remove the `external` keyword."))
+                        elle_error!(self.current_token().location.error("Cannot have an external constant. Please remove the `external` keyword."))
                     }
 
                     if local && public {
-                        panic!(
-                            "{}",
+                        elle_error!(
                             self.current_token()
                                 .location
                                 .error("Cannot specify a constant as both private and public")
@@ -610,12 +601,11 @@ impl Parser {
                 }
                 TokenKind::Struct if do_only == &DoOnly::Structs => {
                     if external {
-                        panic!("{}", self.current_token().location.error("Cannot have an external struct. Please remove the `external` keyword."))
+                        elle_error!(self.current_token().location.error("Cannot have an external struct. Please remove the `external` keyword."))
                     }
 
                     if local && public {
-                        panic!(
-                            "{}",
+                        elle_error!(
                             self.current_token()
                                 .location
                                 .error("Cannot specify a struct as both private and public")
@@ -642,7 +632,7 @@ impl Parser {
                 }
                 TokenKind::Namespace if do_only == &DoOnly::Structs => {
                     if external {
-                        panic!("{}", self.current_token().location.error("Cannot have an external namespace. Please remove the `external` keyword."))
+                        elle_error!(self.current_token().location.error("Cannot have an external namespace. Please remove the `external` keyword."))
                     }
 
                     let mut r#struct = Struct::new(self);

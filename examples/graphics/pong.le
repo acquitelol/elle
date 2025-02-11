@@ -1,4 +1,4 @@
-use examples/resources/raylib;
+use ../resources/raylib;
 use std/vectors;
 
 const i32 SCREEN_WIDTH = 800;

@@ -51,6 +51,35 @@ macro_rules! hashmap {
 }
 
 #[macro_export]
+macro_rules! global {
+    ($name:ident : $type:ty = $value:expr, $getter:ident) => {
+        pub static mut $name: Option<$type> = Some($value);
+
+        macro_rules! $getter {
+            () => { unsafe { $name.unwrap() } }
+        }
+
+        #[allow(unused)]
+        pub(crate) use $getter;
+    };
+}
+
+#[macro_export]
+macro_rules! elle_error {
+    ($loc:expr) => {{
+        let _ = std::fs::remove_dir_all(unsafe { crate::misc::constants::BUILD_PATH.unwrap() });
+
+        // Panic in debug mode so you can see the line number where the error occured in the compiler
+        if cfg!(debug_assertions) {
+            panic!("{}", $loc);
+        }
+
+        eprintln!("{}", $loc);
+        std::process::exit(1);
+    }};
+}
+
+#[macro_export]
 macro_rules! is_generic {
     ($name:expr $(,)?) => {
         $name.contains(&format!(".{}.", crate::GENERIC_IDENTIFIER))
@@ -108,12 +137,12 @@ macro_rules! override_and_add_node {
 macro_rules! elapsed_with_color {
     ($elapsed:expr) => {{
         let color = match $elapsed.as_millis() {
-            val if val < 1000 => crate::misc::colors::GREEN,
-            val if val < 3000 => crate::misc::colors::YELLOW,
-            _ => crate::misc::colors::RED,
+            val if val < 1000 => crate::misc::colors::get_GREEN!(),
+            val if val < 3000 => crate::misc::colors::get_YELLOW!(),
+            _ => crate::misc::colors::get_RED!(),
         };
 
-        format!("{color}{:?}{}", $elapsed, crate::misc::colors::RESET)
+        format!("{color}{:?}{}", $elapsed, crate::misc::colors::get_RESET!())
     }};
 }
 
@@ -124,8 +153,7 @@ macro_rules! not_valid_struct_or_type {
     ($self:expr $(,)?) => {{
         let name = $self.current_token().value.get_string_inner().unwrap();
 
-        panic!(
-            "{}",
+        elle_error!(
             $self.current_token().location.error(format!(
                 "Identifier '{}' isn't a struct or primitive type.\n{}",
                 name.clone(),
@@ -137,7 +165,7 @@ macro_rules! not_valid_struct_or_type {
                 } else {
                     format!("Are you sure you spelt '{}' correctly?", name)
                 }
-            )),
+            ))
         )
     }};
 }
@@ -191,8 +219,7 @@ macro_rules! unknown_function {
             }
         }
 
-        panic!(
-            "{}",
+        elle_error!(
             $location.error(format!(
                 "Function named '{}' has an unknown interface.{}",
                 $name.clone().replace(".", "::"),

@@ -1,8 +1,7 @@
 use std::{fs, path::Path, process::Command};
 
 use crate::{
-    misc::colors::{RED, RESET},
-    EmitKind, RUNTIME_PATH,
+    misc::{colors::*, constants::*}, EmitKind
 };
 
 pub fn build(
@@ -22,12 +21,14 @@ pub fn build(
     let result = Command::new(qbe_path)
         .args(["-o", &path_string, &path_to_qbe_dist])
         .output()
-        .expect(&format!("{RED}Failed to execute QBE."));
+        .expect(&format!("{}Failed to execute QBE.", get_RED!()));
 
     if !result.stderr.is_empty() {
         eprintln!(
-            "{RED}ERROR: {}{RESET}",
-            String::from_utf8(result.stderr).unwrap()
+            "{}ERROR: {}{}",
+            get_RED!(),
+            String::from_utf8(result.stderr).unwrap(),
+            get_RESET!()
         );
 
         return EmitKind::None;
@@ -39,7 +40,9 @@ pub fn build(
             Path::new(&output_path).with_extension("s"),
         )
         .expect(&format!(
-            "{RED}Failed to rename {path_string} to {output_path}{RESET}"
+            "{}Failed to rename {path_string} to {output_path}{}",
+            get_RED!(),
+            get_RESET!()
         ));
 
         return EmitKind::AsmFile(output_path);
@@ -67,7 +70,7 @@ pub fn build(
         args.push("-c");
     }
 
-    let lib_lookup = format!("-L{RUNTIME_PATH}");
+    let lib_lookup = format!("-L{}", get_RUNTIME_PATH!());
     if !no_std && !object_output {
         // explicitly look for the runtime at this path in case
         // the user doesnt have rpath set or similar
@@ -79,13 +82,17 @@ pub fn build(
         .args(args)
         .output()
         .expect(&format!(
-            "{RED}Failed to execute CC for {path_string}.{RESET}"
+            "{}Failed to execute CC for {path_string}.{}",
+            get_RED!(),
+            get_RESET!()
         ));
 
     if !result.stderr.is_empty() {
         eprintln!(
-            "{RED}ERROR: {}{RESET}",
-            String::from_utf8(result.stderr).unwrap()
+            "{}ERROR: {}{}",
+            get_RED!(),
+            String::from_utf8(result.stderr).unwrap(),
+            get_RESET!()
         );
 
         return EmitKind::None;

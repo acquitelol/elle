@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::RESERVED_KEYWORDS;
+use crate::{elle_error, RESERVED_KEYWORDS};
 
 use super::enums::{Location, ParseResult, Token, TokenKind, ValueKind};
 
@@ -154,8 +154,7 @@ impl Lexer {
                 } else if self.current_char() == '-' {
                     self.advance();
 
-                    panic!(
-                        "{}",
+                    elle_error!(
                         self.get_location().error(
                             format!("Invalid token: Elle does not support '--' incrementing.\nPlease use '-= 1' for incrementing instead.")
                         )
@@ -228,8 +227,7 @@ impl Lexer {
                 } else if self.current_char() == '+' {
                     self.advance();
 
-                    panic!(
-                        "{}",
+                    elle_error!(
                         self.get_location().error(
                             format!("Invalid token: Elle does not support '++' incrementing.\nPlease use '+= 1' for incrementing instead.")
                         )
@@ -404,11 +402,7 @@ impl Lexer {
                                 "env" => (TokenKind::Environment, ValueKind::Nil),
                                 "alloc" => (TokenKind::Alloc, ValueKind::Nil),
                                 "realloc" => (TokenKind::Realloc, ValueKind::Nil),
-                                other => panic!(
-                                    "{}",
-                                    self.get_location()
-                                        .error(format!("Unimplemented directive: '{}'", other))
-                                ),
+                                other => elle_error!(self.get_location().error(format!("Unimplemented directive: '{}'", other))),
                             },
                             _ => unreachable!(),
                         }
@@ -417,12 +411,7 @@ impl Lexer {
             }
             _ => {
                 self.advance();
-
-                panic!(
-                    "{}",
-                    self.get_location()
-                        .error(format!("Unexpected character: '{}'", c))
-                )
+                elle_error!(self.get_location().error(format!("Unexpected character: '{}'", c)))
             }
         };
 
@@ -523,8 +512,7 @@ impl Lexer {
         let identifier: String = self.input[start..self.position].iter().collect();
 
         if RESERVED_KEYWORDS.contains(&identifier.as_str()) {
-            panic!(
-                "{}",
+            elle_error!(
                 self.get_location().error(format!(
                     "Use of the reserved keyword '{}' is disallowed.\nThis keyword is currently not in use, but it is reserved\nbecause it may be used in the language in the future.",
                     identifier
@@ -637,8 +625,7 @@ impl Lexer {
 
         if radix != 10 {
             if self.current_char().is_digit(10) {
-                panic!(
-                    "{}",
+                elle_error!(
                     self.get_location().error(format!(
                         "Character '{}' is not a valid digit of radix {}.",
                         self.current_char(),
@@ -648,8 +635,7 @@ impl Lexer {
             }
 
             if float {
-                panic!(
-                    "{}",
+                elle_error!(
                     self.get_location().error(format!(
                         "Cannot have a floating point or scientific literal of a base other than 10."
                     ))
@@ -789,14 +775,17 @@ impl Lexer {
                 'v' => '\x0B',
                 '0' => '\0',
                 '\'' => '\'',
-                _ => panic!("Invalid escape sequence: '{}'", character),
+                _ => elle_error!(self.get_location().error(format!("Invalid escape sequence: '{}'", character))),
             };
 
             self.advance();
         }
 
         if self.current_char() != '\'' {
-            panic!("Using single quotes is for single characters only. Expected the end of a character literal, got '{}'", self.current_char());
+            elle_error!(self.get_location().error(format!(
+                "Using single quotes is for single characters only.\nExpected the end of a character literal, got '{}'",
+                self.current_char()
+            )));
         }
 
         self.advance(); // Advance once more to leave the char expr

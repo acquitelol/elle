@@ -1,17 +1,14 @@
 // Roughly references https://github.com/garritfra/qbe-rs/blob/main/src/lib.rs
 // https://github.com/garritfra/qbe-rs/blob/main/LICENSE-MIT
 use std::{
-    cell::RefCell, collections::{HashMap, HashSet}, fmt, iter::Peekable, mem, num::ParseIntError, rc::Rc, u8
+    cell::RefCell, collections::{HashMap, HashSet}, fmt, iter::Peekable, mem, num::ParseIntError, rc::Rc
 };
 
 use crate::{
-    hashmap, is_generic, is_unknown,
-    lexer::enums::Location,
-    parser::{
+    elle_error, hashmap, is_generic, is_unknown, lexer::enums::Location, parser::{
         enums::{Argument, Primitive},
         parser::StructPool,
-    },
-    GENERIC_END, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN, POINTER_ID, VOID_POINTER_ID,
+    }, DEAD_CODE_ELIMINATION_PASSES, GENERIC_END, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN, MAIN_ID, POINTER_ID, VOID_POINTER_ID
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Copy)]
@@ -981,8 +978,8 @@ impl fmt::Display for Type {
             Self::Null => write!(formatter, ""),
             Self::Struct(td) => write!(formatter, ":{}", td),
             Self::Function(_) => write!(formatter, "l"),
-            Self::Unknown(name) => panic!("Tried to compile with a generic type {name}"),
-            _ => unreachable!(),
+            Self::Unknown(name) => elle_error!(Location::base().internal_error(format!("Tried to compile with a generic type {name}"))),
+            x => elle_error!(Location::base().internal_error(format!("Attempted to format an invalid type: {x:?}")))
         }
     }
 }
@@ -1010,10 +1007,10 @@ impl TypeDef {
                     .types
                     .iter()
                     .find(|td| td.name == ty.get_struct_inner().unwrap())
-                    .expect(&format!(
+                    .expect(&Location::base().internal_error(format!(
                         "Unable to find struct named '{}'",
                         ty.get_struct_inner().unwrap(),
-                    ))
+                    )))
                     .size(module);
 
                 size += tmp_size
@@ -1080,7 +1077,7 @@ impl Value {
             Self::Temporary(val) => val,
             Self::Global(val) => val,
             Self::Literal(val) => val,
-            _ => panic!("Invalid value type {}", self),
+            _ => elle_error!(Location::base().internal_error(format!("Invalid value type {}", self))),
         }
     }
 }
@@ -1282,20 +1279,20 @@ impl Function {
     pub fn last_block(&self) -> &Block {
         self.blocks
             .last()
-            .expect("Function must have at least one block")
+            .expect(&Location::base().internal_error("Function must have at least one block"))
     }
 
     pub fn add_instruction(&mut self, instruction: Instruction) {
         self.blocks
             .last_mut()
-            .expect("Couldn't find last block!")
+            .expect(&Location::base().internal_error("Couldn't find last block!"))
             .add_instruction(instruction);
     }
 
     pub fn assign_instruction(&mut self, temp: &Value, r#type: &Type, instruction: Instruction) {
         self.blocks
             .last_mut()
-            .expect("Couldn't find last block!")
+            .expect(&Location::base().internal_error("Couldn't find last block!"))
             .assign_instruction(temp, r#type, instruction);
     }
 
@@ -1307,7 +1304,7 @@ impl Function {
     ) {
         self.blocks
             .first_mut()
-            .expect("Couldn't find last block!")
+            .expect(&Location::base().internal_error("Couldn't find last block!"))
             .assign_instruction_front(temp, r#type, instruction);
     }
 
@@ -1430,7 +1427,7 @@ impl Module {
     }
 
     pub fn remove_unused_functions(&mut self, object_output: bool) {
-        let mut passes = 5; // should be enough to remove most if not all unused functions
+        let mut passes = DEAD_CODE_ELIMINATION_PASSES; // should be enough to remove most if not all unused functions
 
         while passes > 0 {
             passes -= 1;
@@ -1453,7 +1450,8 @@ impl Module {
                 }
             }
 
-            used_functions.insert("main".to_string());
+            used_functions.insert("main".into());
+            used_functions.insert(MAIN_ID.into());
 
             self.functions.retain(|func| {
                 used_functions.contains(&func.name) || func.volatile || object_output

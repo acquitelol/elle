@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use crate::compiler::enums::Type;
 use crate::misc::colors::*;
+use crate::{elle_error, ISSUE_URL};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum TokenKind {
@@ -262,7 +263,7 @@ impl TokenKind {
             Self::BitwiseOrEqual => TokenKind::BitwiseOr,
             Self::ShiftLeftEqual => TokenKind::ShiftLeft,
             Self::ShiftRightEqual => TokenKind::ShiftRight,
-            other => panic!("Invalid identifier operation {:?}", other),
+            other => elle_error!(Location::base().internal_error(format!("Invalid identifier operation {other:?}"))),
         }
     }
 }
@@ -373,7 +374,12 @@ impl Location {
             self.file,
             self.row + 1,
             self.column + 1,
-            fmt = if is_warning { YELLOW } else { RED }
+            GREEN = get_GREEN!(),
+            RESET = get_RESET!(),
+            BOLD = get_BOLD!(),
+            UNDERLINE = get_UNDERLINE!(),
+            YELLOW = get_YELLOW!(),
+            fmt = if is_warning { get_YELLOW!() } else { get_RED!() }
         );
     }
 
@@ -435,7 +441,8 @@ impl Location {
             "―".repeat(20),
             self.display(is_warning),
             "―".repeat(20),
-            fmt = if is_warning { YELLOW } else { RED }
+            RESET = get_RESET!(),
+            fmt = if is_warning { get_YELLOW!() } else { get_RED!() }
         );
 
         // Used for calculating the bottom width
@@ -456,7 +463,7 @@ impl Location {
         };
 
         let string = ctx.split_at(left);
-        let fallback_char = format!("{}", string.1.chars().nth(0).unwrap());
+        let fallback_char = format!("{}", string.1.chars().nth(0).expect(&self.basic_error("Failed to format this location.")));
         let mut fallback_rest = string.1.to_string();
         fallback_rest.remove(0);
 
@@ -467,7 +474,7 @@ impl Location {
         let line = format!("{} | ", self.row + 1);
 
         return format!(
-            "\n{upper}\n{user_mesage}\n\n{above}{line_number}{}{lhs}{BOLD}{fmt}{UNDERLINE}{issue}{RESET}{rhs}\n{}{}{BOLD}{GREEN}^{}{}{RESET}\n{fmt}{}{RESET}\n",
+            "\n{upper}\n{user_message}\n\n{above}{line_number}{}{lhs}{BOLD}{fmt}{UNDERLINE}{issue}{RESET}{rhs}\n{}{}{BOLD}{GREEN}^{}{}{RESET}\n{fmt}{}{RESET}\n",
             " ".repeat(padding),
             " ".repeat(padding + format!("{} | ", self.row + 1).len()),
             " ".repeat(left),
@@ -484,10 +491,25 @@ impl Location {
             } else {
                 "".into()
             },
-            user_mesage = message.into(),
+            user_message = message.into(),
             line_number = line,
-            fmt = if is_warning { YELLOW } else { RED }
+            BOLD = get_BOLD!(),
+            UNDERLINE = get_UNDERLINE!(),
+            GREEN = get_GREEN!(),
+            RESET = get_RESET!(),
+            fmt = if is_warning { get_YELLOW!() } else { get_RED!() }
         );
+    }
+
+    pub fn display_pretty_no_lines(&self, message: impl Into<String>, is_warning: bool) -> String {
+        let lines = format!(
+            "{fmt}{}{RESET}",
+            "―".repeat(50),
+            RESET = get_RESET!(),
+            fmt = if is_warning { get_YELLOW!() } else { get_RED!() }
+        );
+
+        return format!("\n{lines}\n{}\n{lines}\n", message.into());
     }
 
     pub fn warning(&self, message: impl Into<String>) -> String {
@@ -498,9 +520,34 @@ impl Location {
         self.display_pretty(message, false)
     }
 
+    pub fn basic_error(&self, message: impl Into<String>) -> String {
+        self.display_pretty_no_lines(message, false)
+    }
+
+    pub fn internal_error(&self, message: impl Into<String>) -> String {
+        self.display_pretty_no_lines(format!(
+            "An internal error occured during compilation:\n{}\n\nPlease report this so that it can be fixed:\n{MAGENTA}{ISSUE_URL}{RESET}",
+            message.into(),
+            MAGENTA = get_MAGENTA!(),
+            RESET = get_RESET!()
+        ), false)
+    }
+
     pub fn default(file: String) -> Location {
         Location {
             file: Rc::from(file),
+            row: 0,
+            column: 0,
+            ctx: Rc::from("_"),
+            above: None,
+            length: 1,
+            extra_info: Rc::from(""),
+        }
+    }
+
+    pub fn base() -> Location {
+        Location {
+            file: Rc::from("_"),
             row: 0,
             column: 0,
             ctx: Rc::from("_"),
@@ -548,11 +595,7 @@ impl Token {
     /// Ensures an attribute is valid and returns its enum variant
     pub fn parse_attribute(&self) -> Attribute {
         if self.kind != TokenKind::Identifier {
-            panic!(
-                "{}",
-                self.location
-                    .error("Tried to parse an attribute on a non-identifier token")
-            );
+            elle_error!(self.location.error("Tried to parse an attribute on a non-identifier token"));
         }
 
         let attribute = self.value.get_string_inner().unwrap();

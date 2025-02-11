@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use crate::lexer::enums::{Token, TokenKind};
+use crate::{elle_error, lexer::enums::{Token, TokenKind}};
 
 use super::{
     enums::{AstNode, Primitive},
@@ -21,8 +21,7 @@ impl<'a> Constant<'a> {
         let mut tokens = vec![];
 
         if delimiters.contains(&self.parser.current_token().kind) {
-            panic!(
-                "{}",
+            elle_error!(
                 self.parser.current_token().location.error(format!(
                     "Expected expression but got {:?}",
                     self.parser.current_token().kind

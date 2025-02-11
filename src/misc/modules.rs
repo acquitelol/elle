@@ -1,3 +1,4 @@
+use std::env::{current_dir, set_current_dir};
 use std::{cell::RefCell, rc::Rc};
 use std::collections::HashSet;
 use std::fs;
@@ -5,6 +6,7 @@ use std::path::Path;
 use std::process::exit;
 use std::time::Instant;
 
+use crate::{elle_error, get_STD_LIB_PATH};
 use crate::{
     compiler::enums::Type,
     elapsed_with_color,
@@ -18,7 +20,7 @@ use crate::{
         enums::{Argument, AstNode, Primitive},
         parser::{DoOnly, Parser, StructPool},
     },
-    Warnings, LEN_CONSTANT, LONG_EXTENSION, POINTER_ID, PRIMARY_ALLOCATOR_MODULE, SHORT_EXTENSION,
+    Warnings, LEN_CONSTANT, POINTER_ID, PRIMARY_ALLOCATOR_MODULE, SHORT_EXTENSION,
     STD_LIB_PATH,
 };
 
@@ -37,41 +39,44 @@ pub fn lex_and_parse(
     _import_location: Rc<Location>,
     string_module_methods: &mut Vec<String>,
 ) -> Vec<Primitive> {
-    let content = {
-        let with_elle = fs::metadata(format!("{}{}", input_path, LONG_EXTENSION)).is_ok();
-        let base = fs::metadata(input_path).is_ok();
+    let is_std_import;
+    let final_path;
 
+    let content = {
+        let base = fs::metadata(input_path).is_ok();
         let file_path = &format!(
             "{}{}",
             input_path,
             if base {
                 ""
             } else {
-                if with_elle {
-                    LONG_EXTENSION
-                } else {
-                    SHORT_EXTENSION
-                }
+                SHORT_EXTENSION
             }
         );
 
         // Try to see if the file is installed as a library first
-        let base_path = Path::new(STD_LIB_PATH);
+        let base_path = Path::new(get_STD_LIB_PATH!());
         let relative_path = Path::new(&file_path);
         let full_path = base_path.join(relative_path);
 
-        let final_path = if fs::metadata(&full_path).is_ok() {
+        is_std_import = fs::metadata(&full_path).is_ok();
+        final_path = if is_std_import {
             full_path
         } else {
             relative_path.to_path_buf()
         };
 
-        let content = match fs::read_to_string(final_path) {
+        let content = match fs::read_to_string(final_path.clone()) {
             Ok(content) => content,
             Err(err) => {
                 eprintln!(
-                    "\n{RED}ERROR: Could not load module \"{}\": {}\n",
-                    input_path, err
+                    "{}",
+                    _import_location.error(format!(
+                        "Could not load module \"{RED}{}{RESET}\":\n{}",
+                        input_path, err,
+                        RED = get_RED!(),
+                        RESET = get_RESET!()
+                    ))
                 );
 
                 if nesting == 0 {
@@ -86,12 +91,14 @@ pub fn lex_and_parse(
     };
 
     if content.trim().is_empty() && !object_output {
-        panic!(
-            "\n{}\nERROR: Could not load module \"{input_path}\"\n{}\n\n{}\n{}\n",
-            "-".repeat(40),
-            "Module is empty. To create an entry-point, write:",
-            "use std/io;\n\nfn main() {\n\n}",
-            "-".repeat(40),
+        elle_error!(
+            _import_location.internal_error(format!(
+                "Could not load module \"{MAGENTA}{input_path}{RESET}\"{}\n\n{}{RESET}",
+                "Module is empty. To create an entry-point, write:",
+                format!("{}+ use std/prelude;\n+ \n+ fn main() {{\n+ \n+ }}{}", get_GREEN!(), get_RESET!()),
+                MAGENTA = get_MAGENTA!(),
+                RESET = get_RESET!()
+            ))
         )
     }
 
@@ -178,12 +185,24 @@ pub fn lex_and_parse(
                             "".into()
                         },
                         module,
+                        GREEN = get_GREEN!(),
+                        RESET = get_RESET!(),
                     );
                 }
 
                 let mut location = (*location).clone();
                 location.length = location.ctx.len();
                 location.column = location.ctx.len();
+                let current = current_dir().unwrap();
+
+                if !is_std_import {
+                    // Set the path to where the current file is so that imports are relative in that regard
+                    set_current_dir(Path::new(final_path.parent()
+                        .expect(&location
+                            .basic_error(format!("Failed to get the parent directory of {final_path:#?}")))))
+                        .expect(&location
+                            .basic_error(format!("Failed to set the current directory of {final_path:#?}")));
+                }
 
                 let nodes = lex_and_parse(
                     &module,
@@ -197,9 +216,15 @@ pub fn lex_and_parse(
                     debug_time,
                     object_output,
                     nesting + 1,
-                    Rc::new(location),
+                    Rc::new(location.clone()),
                     string_module_methods,
                 );
+
+                if !is_std_import {
+                    // Set the path back
+                    set_current_dir(current.clone()).expect(&location
+                        .basic_error(format!("Failed to set the current directory to {current:#?}")));
+                }
 
                 for symbol in nodes.iter().rev() {
                     match symbol.clone() {
@@ -270,7 +295,9 @@ pub fn lex_and_parse(
                             "".into()
                         },
                         module,
-                        elapsed_with_color!(now.unwrap().elapsed())
+                        elapsed_with_color!(now.unwrap().elapsed()),
+                        GREEN = get_GREEN!(),
+                        RESET = get_RESET!(),
                     );
                 }
 

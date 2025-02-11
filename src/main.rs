@@ -15,63 +15,8 @@ mod parser;
 use compiler::compiler::Compiler;
 use compiler::enums::Type;
 use lexer::enums::{Location, TokenKind, ValueKind};
-use misc::{build::build, colors::*, help::print_help, modules::lex_and_parse};
+use misc::{build::build, colors::*, help::print_help, modules::lex_and_parse, constants::*};
 use parser::enums::{Argument, AstNode, Primitive};
-
-static META_STRUCT_NAME: &str = "ElleMeta";
-static ENV_STRUCT_NAME: &str = "ElleEnv";
-static PRIMARY_ALOCATOR_NAME: &str = "GCAllocator";
-static PRIMARY_ALLOCATOR_MODULE: &str = "std/allocators/gc";
-static GENERIC_IDENTIFIER: &str = "0"; // Start of a generic
-static GENERIC_END: &str = "1"; // Allowing for nested generic structs
-static GENERIC_POINTER: &str = "2"; // Pointer to another type
-static GENERIC_UNKNOWN: &str = "3"; // Unknown type T
-static STD_LIB_PATH: &str = "/usr/local/include/elle";
-static RUNTIME_PATH: &str = "/usr/local/lib";
-static LONG_EXTENSION: &str = ".elle";
-static SHORT_EXTENSION: &str = ".le";
-static OBJECT_EXTENSION: &str = ".o";
-static VOID_POINTER_ID: &str = "__void_ptr__";
-static POINTER_ID: &str = "__ptr__";
-static ENV_ID: &str = "__internal.elle.__env__";
-static MAIN_ID: &str = "__internal.elle.__main__";
-static GC_NOOP: &str = "__internal_gc_noop";
-static FORMAT_CONSTANT: &str = "__fmt__";
-static LOAD_CONSTANT: &str = "__load__";
-static STORE_CONSTANT: &str = "__store__";
-static LEN_CONSTANT: &str = "__len__";
-static HASH_CONSTANT: &str = "__hash__";
-static EQUALS_CONSTANT: &str = "__equals__";
-static INTERNAL_FORMATTER: &str =
-    "__internal_formatter_do_not_use_unless_you_know_what_youre_doing__";
-static DUNDER_CONSTANTS: &[&'static str] = &[
-    FORMAT_CONSTANT,
-    LOAD_CONSTANT,
-    STORE_CONSTANT,
-    LEN_CONSTANT,
-    HASH_CONSTANT,
-    EQUALS_CONSTANT,
-];
-static PTR_PRIORITY_CONSTANTS: &[&'static str] = &[FORMAT_CONSTANT];
-static RESERVED_KEYWORDS: &[&'static str] = &[
-    "as", "mut", "enum", "match", "static", "super", "do", "macro", "step", "of", "class", "var",
-    "impl",
-];
-static VA_LIST_SIZE_BYTES: usize = 32;
-
-#[macro_export]
-macro_rules! INTERNAL_IDX_FORMAT {
-    () => {
-        "__internal_{}_idx"
-    };
-}
-
-#[macro_export]
-macro_rules! INTERNAL_ITERATOR_FORMAT {
-    () => {
-        "__internal_{}_iterator"
-    };
-}
 
 pub enum Warning {
     StructFieldsMissing = 1 << 0,
@@ -125,6 +70,10 @@ fn main() -> ExitCode {
     let mut args = env::args().peekable();
     let program = args.next().expect("program");
 
+    if env::var("NO_COLOR").is_ok_and(|x| !x.is_empty()) {
+        disable_colors!()
+    }
+
     if args.peek().is_none() {
         print_help(program);
         exit(0);
@@ -159,9 +108,9 @@ fn main() -> ExitCode {
             "-Wc-style-void" => warnings.set_warning(Warning::CStyleVoid),
             "-Wall" => warnings.set_all(),
             "-t" | "--time" | "--elapsed-time" => debug_time = true,
-            "-ssa" | "--emit-ssa" | "--emit-qbe" => emit_qbe = true,
-            "-asm" | "--emit-s" | "--emit-asm" => emit_asm = true,
-            "-ast" | "--emit-ast" | "--emit-tree" => ast = true,
+            "--ssa" | "--emit-ssa" | "--emit-qbe" => emit_qbe = true,
+            "--asm" | "--emit-s" | "--emit-asm" => emit_asm = true,
+            "--ast" | "--emit-ast" | "--emit-tree" => ast = true,
             "-o" => output_path = args.next(),
             "-h" | "--help" => {
                 print_help(program);
@@ -173,34 +122,43 @@ fn main() -> ExitCode {
             "-z" | "--link-flag" => linker_flags.push(args.next()),
             "-Z" | "--link-path" => linker_path = args.next().unwrap_or("cc".into()),
             "-Q" | "--qbe-path" => qbe_path = args.next().unwrap_or("qbe".into()),
+            "-S" | "--std-path" => if let Some(arg) = args.next() {
+                let leaked: &'static mut str = Box::leak(arg.into_boxed_str());
+                unsafe { STD_LIB_PATH = Some(leaked) };
+            }
+            "-R" | "--runtime-path" => if let Some(arg) = args.next() {
+                let leaked: &'static mut str = Box::leak(arg.into_boxed_str());
+                unsafe { RUNTIME_PATH = Some(leaked) };
+            }
             "--hush" | "--silent" => {
                 hush = true;
             }
-            "-nosm" | "--no-string-module" => {
-                no_strings = true;
-            }
-            "-nogc" | "--no-garbage-collector" => no_gc = true,
-            "-nostd" | "--no-stdlib" => no_std = true,
-            "-nofmt" | "--no-primitive-formatters" => no_fmt = true,
-            other if other.ends_with(SHORT_EXTENSION) || other.ends_with(LONG_EXTENSION) => {
+            "--nosm" | "--no-string-module" => no_strings = true,
+            "--nogc" | "--no-garbage-collector" => no_gc = true,
+            "--nostd" | "--no-stdlib" => no_std = true,
+            "--nofmt" | "--no-primitive-formatters" => no_fmt = true,
+            "--noclr" | "--no-ansi" => disable_colors!(),
+            other if other.ends_with(SHORT_EXTENSION) => {
                 if input_path.is_none() {
                     input_path = Some(other.to_string())
                 }
             }
             other if other.ends_with(OBJECT_EXTENSION) => object_files.push(other.into()),
             other => {
-                println!("{RED}Invalid argument: {}", other);
-                println!("For help, please use the following command:");
-                println!("\n{program} [-h | --help]\n");
-                println!("If this is a file, please include its file extension.{RESET}",);
-
-                exit(1);
+                elle_error!(Location::base().basic_error(format!(
+                    "{title}\n{help}\n{usage}\n{info}\n{extensions}",
+                    title = format!("An invalid argument was provided: {RED}{other}{RESET}\n", RED = get_RED!(), RESET = get_RESET!()),
+                    help = format!("For help, please use the following command:"),
+                    usage = format!("{}{GREEN}{program} [-h | --help]{RESET}\n", " ".repeat(4), GREEN = get_GREEN!(), RESET = get_RESET!()),
+                    info = format!("If this is a file, please include its file extension."),
+                    extensions = format!("Possible extensions include: {GREEN}{FILE_EXTENSIONS:?}{RESET}", GREEN = get_GREEN!(), RESET = get_RESET!()),
+                )))
             }
         }
     }
 
     if emit_qbe && emit_asm {
-        panic!("{RED}Cannot generate both assembly and QBE.")
+        elle_error!(Location::base().basic_error(format!("{}Cannot generate both assembly and QBE.", get_RED!())))
     }
 
     let now = if debug_time {
@@ -368,7 +326,12 @@ fn main() -> ExitCode {
                     if main_arg_len > 1 {
                         panic!(
                             "{}",
-                            location.error(format!("You cannot expect more than 1 argument ({RED}{main_arg_len}{RESET}) in the main function.\nOnly a single argument is supplied of type \"{GREEN}string[]{RESET}\"."))
+                            location.error(format!(
+                                "You cannot expect more than 1 argument ({RED}{main_arg_len}{RESET}) in the main function.\nOnly a single argument is supplied of type \"{GREEN}string[]{RESET}\".",
+                                RED = get_RED!(),
+                                GREEN = get_GREEN!(),
+                                RESET = get_RESET!()
+                            ))
                         )
                     }
 
@@ -384,7 +347,9 @@ fn main() -> ExitCode {
                             location.error(
                                 format!(
                                     "Mismatched type for argument in main function.\nExpected type \"{GREEN}string[]{RESET}\" but got \"{GREEN}{}{RESET}\".",
-                                    arguments[0].r#type.display()
+                                    arguments[0].r#type.display(),
+                                    GREEN = get_GREEN!(),
+                                    RESET = get_RESET!()
                                 )
                             )
                         )
@@ -694,8 +659,12 @@ fn main() -> ExitCode {
             .to_string()
     );
 
-    fs::create_dir_all(&build_path).expect("Failed to create ./.build.");
-    let path_to_qbe_dist = format!("{build_path}/target.ssa");
+    // Set the build path so it can be deleted during an error
+    let leaked: &'static mut str = Box::leak(build_path.into_boxed_str());
+    unsafe { BUILD_PATH = Some(leaked) };
+
+    fs::create_dir_all(get_BUILD_PATH!()).expect("Failed to create ./.build.");
+    let path_to_qbe_dist = format!("{}/target.ssa", get_BUILD_PATH!());
 
     Compiler::compile(
         tree,
@@ -742,13 +711,15 @@ fn main() -> ExitCode {
         out = result;
     }
 
-    fs::remove_dir_all(&build_path).expect("Failed to delete ./.build.");
+    fs::remove_dir_all(get_BUILD_PATH!()).expect("Failed to delete ./.build.");
 
     if out != EmitKind::None {
         if !hush {
             println!(
                 "{GREEN}Finished compiling '{path}' successfully! ヽ(•ᴗ•)ﾉ{RESET}",
-                path = input_path.split("/").last().unwrap()
+                path = input_path.split("/").last().unwrap(),
+                GREEN = get_GREEN!(),
+                RESET = get_RESET!()
             );
         }
 
@@ -757,7 +728,9 @@ fn main() -> ExitCode {
         if !hush {
             println!(
                 "{RED}Compilation of '{path}' finished with errors. (っ◞‸◟ c){RESET}",
-                path = input_path.split("/").last().unwrap()
+                path = input_path.split("/").last().unwrap(),
+                RED = get_RED!(),
+                RESET = get_RESET!()
             );
         }
 

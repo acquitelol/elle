@@ -1,4 +1,4 @@
-use examples/resources/raylib;
+use ../resources/raylib;
 use std/math;
 use std/io;
 

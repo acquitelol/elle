@@ -1,10 +1,7 @@
 use std::cell::RefCell;
 
 use crate::{
-    compiler::enums::Type,
-    lexer::enums::{Attribute, TokenKind, ValueKind},
-    parser::statement::Shared,
-    Warning, META_STRUCT_NAME,
+    compiler::enums::Type, elle_error, lexer::enums::{Attribute, TokenKind, ValueKind}, parser::statement::Shared, Warning, META_STRUCT_NAME
 };
 
 use super::{
@@ -31,8 +28,7 @@ impl<'a> Function<'a> {
         self.parser.advance();
 
         if self.parser.current_token().kind == TokenKind::Dot {
-            panic!(
-                "{}",
+            elle_error!(
                 self.parser.current_token().location.error(format!(
                     "Cannot create a method for '{}' using '.'\nPlease use '::' instead.",
                     name
@@ -44,8 +40,7 @@ impl<'a> Function<'a> {
             if !(self.parser.struct_pool.borrow().contains_key(&name)
                 || ValueKind::String(name.clone()).is_base_type())
             {
-                panic!(
-                    "{}",
+                elle_error!(
                     location.error(format!(
                         "Cannot create a method for '{}' because it isn't a struct or primitive type.\n{}",
                         name.clone(), if let Some(map) = ValueKind::similar_mapping(name.clone()) {
@@ -151,8 +146,7 @@ impl<'a> Function<'a> {
                         manual = true;
                         self.parser.get_identifier()
                     }
-                    other => panic!(
-                        "{}",
+                    other => elle_error!(
                         self.parser
                             .current_token()
                             .location
@@ -245,8 +239,7 @@ impl<'a> Function<'a> {
                         manual = true;
                         self.parser.advance();
                     }
-                    _ => panic!(
-                        "{}",
+                    _ => elle_error!(
                         self.parser.current_token().location.error(format!(
                             "Unknown attribute for function '{}'",
                             self.parser

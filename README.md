@@ -1215,7 +1215,7 @@ The syntax for importing is as follows:
 use path/to/module;
 ```
 
-where, in your current directory, there is a `./path/to/module.elle` or a `./path/to/module.le` file.
+where, in the directory where the file is importing from, there is a `./path/to/module.le` file.
 
 The syntax to export a symbol from your current file is as follows:
 

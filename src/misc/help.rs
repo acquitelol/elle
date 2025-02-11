@@ -3,9 +3,9 @@ use crate::misc::colors::*;
 const DIVIDER_SIZE: usize = 50;
 
 pub fn print_help(program: String) {
-    println!("{GREEN}Welcome to the Elle compiler! (˶ᵔ ᵕ ᵔ˶){RESET}");
+    println!("{}Welcome to the Elle compiler! (˶ᵔ ᵕ ᵔ˶){}", get_GREEN!(), get_RESET!());
     println!("{}", "―".repeat(DIVIDER_SIZE));
-    println!("{GREEN}Usage: {program} [..options] <entry.le> [<file1.o>, <file2.o>...]{RESET}");
+    println!("{}Usage: {program} [..options] <entry.le> [<file1.o>, <file2.o>...]{}", get_GREEN!(), get_RESET!());
 
     let help_message_options = vec![
         (
@@ -30,15 +30,15 @@ pub fn print_help(program: String) {
                     "Displays how long each compilation step takes",
                 ),
                 (
-                    "-ssa, --emit-qbe, --emit-ssa",
+                    "--ssa, --emit-qbe, --emit-ssa",
                     "Emits the QBE IR file in the form of .ssa instead of an executable",
                 ),
                 (
-                    "-asm, --emit-asm, --emit-s",
+                    "--asm, --emit-asm, --emit-s",
                     "Emits the Assembly file in the form of .s instead of an executable",
                 ),
                 (
-                    "-ast, --emit-ast, --emit-tree",
+                    "--ast, --emit-ast, --emit-tree",
                     "Prints the AST representation of the program to standard output",
                 ),
             ],
@@ -66,27 +66,36 @@ pub fn print_help(program: String) {
             ],
         ),
         (
+            "Utility Flags",
+            vec![
+                (
+                    "--nosm, --no-string-module",
+                    "Doesn't import the string module by default. May break things.",
+                ),
+                (
+                    "--nogc, --no-garbage-collector",
+                    "Doesn't import the GC, so you can implement your own alloc methods.",
+                ),
+                (
+                    "--nofmt, --no-primitive-formatters",
+                    "Doesn't import the primitive formatter module.",
+                ),
+                (
+                    "--nostd, --no-stdlib",
+                    "Doesn't link with the Elle runtime library during compilation.",
+                ),
+                (
+                    "--noclr, --no-ansi",
+                    "Disables ANSI color output (alternative to NO_COLOR=1)"
+                )
+            ]
+        ),
+        (
             "Compilation Flags",
             vec![
                 (
                     "-c, --compile-only",
                     "Compiles but does not link anything. Produces an object file.",
-                ),
-                (
-                    "-nosm, --no-string-module",
-                    "Doesn't import the string module by default. May break things.",
-                ),
-                (
-                    "-nogc, --no-garbage-collector",
-                    "Doesn't import the GC, so you can implement your own alloc methods.",
-                ),
-                (
-                    "-nofmt, --no-primitive-formatters",
-                    "Doesn't import the primitive formatter module.",
-                ),
-                (
-                    "-nostd, --no-stdlib",
-                    "Doesn't link with the Elle runtime library during compilation.",
                 ),
                 (
                     "-z, --link-flag <flag>",
@@ -100,8 +109,25 @@ pub fn print_help(program: String) {
                     "-Q, --qbe-path <path>",
                     "Allows you to pass a custom QBE path, the default is \"qbe\"",
                 ),
+                (
+                    "-S, --std-path <path>",
+                    "Pass a custom std path, the default is \"/usr/local/include/elle\"",
+                ),
+                (
+                    "-R, --runtime-path <path>",
+                    "Pass a custom runtime path, the default is \"/usr/local/lib\"",
+                ),
             ],
         ),
+        (
+            "Environment Variables",
+            vec![
+                (
+                    "NO_COLOR",
+                    "Disables colored output, see https://no-color.org/ (same as --noclr)"
+                )
+            ]
+        )
     ];
 
     print_options(help_message_options);
@@ -124,7 +150,9 @@ fn print_options(options: Vec<(impl Into<String>, Vec<(&str, &str)>)>) {
         for (option, description) in options {
             let spaces = " ".repeat(4 + max_option_length - option.len());
             println!(
-                "{GREEN}    {opt}{RESET}{spaces}{desc}",
+                "{}    {opt}{}{spaces}{desc}",
+                get_GREEN!(),
+                get_RESET!(),
                 opt = option,
                 spaces = spaces,
                 desc = description

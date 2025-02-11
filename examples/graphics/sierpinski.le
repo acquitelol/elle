@@ -1,6 +1,6 @@
 // This code was intended to draw snowflakes however
 // it was repurposed to draw the Sierpinski Triangle
-use examples/resources/raylib;
+use ../resources/raylib;
 use std/math;
 
 const i32 SCREEN_FACTOR = 80;

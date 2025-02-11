@@ -8,17 +8,10 @@ use std::{
 };
 
 use crate::{
-    advance, hashmap, is_generic,
-    lexer::enums::{Location, TokenKind, ValueKind},
-    misc::colors::*,
-    parser::{
+    advance, elle_error, hashmap, is_generic, lexer::enums::{Location, TokenKind, ValueKind}, misc::colors::*, parser::{
         enums::{modify_type_in_ast, Argument, AstNode, Primitive},
         parser::StructPool,
-    },
-    unknown_field, unknown_function, Warning, Warnings, DUNDER_CONSTANTS, ENV_ID, ENV_STRUCT_NAME,
-    EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT,
-    MAIN_ID, META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT,
-    VA_LIST_SIZE_BYTES, VOID_POINTER_ID,
+    }, unknown_field, unknown_function, Warning, Warnings, DUNDER_CONSTANTS, ENV_ID, ENV_STRUCT_NAME, EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID, META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES, VOID_POINTER_ID
 };
 
 use super::enums::{
@@ -138,8 +131,7 @@ impl Compiler {
                     } => {
                         if name == const_name && func.is_some() {
                             if !usable && !func.unwrap().borrow_mut().imported {
-                                panic!(
-                                    "{}",
+                                elle_error!(
                                     location.error(format!(
                                         "Constant named '{}' was not imported and can't be used",
                                         name
@@ -167,8 +159,7 @@ impl Compiler {
                     } => {
                         if name == op_name {
                             if !usable && !func.unwrap().borrow_mut().imported && !builtin {
-                                panic!(
-                                    "{}",
+                                elle_error!(
                                     location.error(format!(
                                         "Function named '{}' was not imported and can't be used",
                                         name.replace(".", "::")
@@ -230,8 +221,7 @@ impl Compiler {
             Err(msg) => {
                 macro_rules! undefined_error {
                     () => {
-                        panic!(
-                            "{}",
+                        elle_error!(
                             location.error(format!(
                                 "Unexpected error when trying to get a variable called '{}': {}",
                                 name, msg
@@ -455,8 +445,7 @@ impl Compiler {
                             Type::from_internal_id($first_type.get_struct_inner().unwrap());
 
                         if a != b || a_parts != b_parts {
-                            panic!(
-                                "{}",
+                            elle_error!(
                                 ty_err_message!(
                                     $return_type.display(),
                                     $first_type.display(),
@@ -473,8 +462,7 @@ impl Compiler {
                             )
                         }
                     } else {
-                        panic!(
-                            "{}",
+                        elle_error!(
                             ty_err_message!(
                                 $return_type.display(),
                                 $first_type.display(),
@@ -526,8 +514,7 @@ impl Compiler {
                                     );
 
                                     if a != b || a_parts != b_parts {
-                                        panic!(
-                                            "{}",
+                                        elle_error!(
                                             ty_err_message!(
                                                 return_type.display(),
                                                 first_type.display(),
@@ -543,8 +530,7 @@ impl Compiler {
                                         )
                                     }
                                 } else {
-                                    panic!(
-                                        "{}",
+                                    elle_error!(
                                         ty_err_message!(
                                             ty.display(),
                                             first_ty.unwrap().display(),
@@ -630,16 +616,20 @@ impl Compiler {
                         .get_variable(name.as_str(), Some(func), Some(module))
                         .is_err()
                 {
-                    panic!("{}", location.error(format!("Variable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.", name)));
+                    elle_error!(location.error(format!("Variable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.", name)));
                 }
 
                 if r#type.clone().is_some_and(|ty| ty == Type::Infer) && value.is_none() {
-                    panic!("{}", location.error(format!("Failed to determine a type for '{}'.\nPlease give this variable a type or a value.", name)));
+                    elle_error!(location.error(format!("Failed to determine a type for '{}'.\nPlease give this variable a type or a value.", name)));
                 }
 
                 let res = self.get_variable(&format!("{}.addr", name), Some(func), Some(module));
                 let mut local_ty = r#type.clone().unwrap_or(existing);
-                let mut temp = Some(self.new_variable(&local_ty, &name, Some(func), true, false));
+                let mut temp = if local_ty == Type::Infer {
+                    None
+                } else {
+                    Some(self.new_variable(&local_ty, &name, Some(func), true, false))
+                };
 
                 let parsed = self.generate_statement(
                     func,
@@ -672,7 +662,7 @@ impl Compiler {
                     if local_ty == Type::Infer {
                         local_ty = ret_ty.clone();
 
-                        temp = Some(self.new_variable(&local_ty, &name, Some(func), false, false));
+                        temp = Some(self.new_variable(&local_ty, &name, Some(func), true, false));
 
                         let scope = self
                             .scopes
@@ -717,8 +707,7 @@ impl Compiler {
                                 && final_ty.is_pointer()
                                 && final_ty.get_pointer_inner().unwrap().is_void())
                         {
-                            panic!(
-                                "{}",
+                            elle_error!(
                                 location.error(format!(
                                     "Cannot redeclare '{}' which has type {} to type {}",
                                     name,
@@ -982,7 +971,13 @@ impl Compiler {
                             .find(|func| func.name == func_name);
 
                         if tmp_function_option.is_none() {
-                            panic!("{}", location.error(format!("Cannot use the '{}' operator because the string module is not imported.\nPlease import it with {GREEN}{BOLD}use std/string;{RESET} at the top of this file.", operator)))
+                            elle_error!(location.error(format!(
+                                "Cannot use the '{}' operator because the string module is not imported.\nPlease import it with {GREEN}{BOLD}use std/string;{RESET} at the top of this file.",
+                                operator,
+                                GREEN = get_GREEN!(),
+                                BOLD = get_BOLD!(),
+                                RESET = get_RESET!()
+                            )))
                         }
 
                         let tmp_function = tmp_function_option.unwrap().clone();
@@ -1036,8 +1031,7 @@ impl Compiler {
                 }
 
                 if operator == TokenKind::Concat && treat_as_string {
-                    panic!(
-                        "{}",
+                    elle_error!(
                         location.error(format!(
                             "Cannot use the '<>' operator on non-string types {} and {}",
                             left_ty.display(),
@@ -1056,8 +1050,7 @@ impl Compiler {
                 .contains(&operator)
                     && (left_ty.is_float() || right_ty.is_float())
                 {
-                    panic!(
-                        "{}",
+                    elle_error!(
                         location.error(format!(
                             "Cannot use the '{:?}' operator on non-integer type '{}'.\nYou can cast it to an integer if you need this functionality.",
                             operator,
@@ -1111,10 +1104,7 @@ impl Compiler {
                     TokenKind::BitwiseXor => Instruction::BitwiseXor(left_val, right_val),
                     TokenKind::ShiftLeft => Instruction::ShiftLeft(left_val, right_val),
                     TokenKind::ShiftRight => Instruction::ArithmeticShiftRight(left_val, right_val),
-                    _ => panic!(
-                        "{}",
-                        location.error(format!("Invalid operator token: {:?}", operator))
-                    ),
+                    _ => elle_error!(location.error(format!("Invalid operator token: {:?}", operator))),
                 };
 
                 let op_temp = self.new_temporary(None, true);
@@ -1150,7 +1140,7 @@ impl Compiler {
                         func.borrow_mut()
                             .add_instruction(Instruction::Jump(format!("{}.end", label)));
                     } else {
-                        panic!("{}", location.error("Break can only be used in a loop"));
+                        elle_error!(location.error("Break can only be used in a loop"));
                     }
 
                     None
@@ -1160,7 +1150,7 @@ impl Compiler {
                         func.borrow_mut()
                             .add_instruction(Instruction::Jump(format!("{}.step", label)));
                     } else {
-                        panic!("{}", location.error("Continue can only be used in a loop"));
+                        elle_error!(location.error("Continue can only be used in a loop"));
                     }
 
                     None
@@ -1416,8 +1406,7 @@ impl Compiler {
                 };
 
                 if !tmp_function.usable && !func.borrow_mut().imported && !ignore_no_def {
-                    panic!(
-                        "{}",
+                    elle_error!(
                         call_location.error(format!(
                             "Function named '{}' was not imported and can't be used",
                             name
@@ -1642,12 +1631,13 @@ impl Compiler {
                             .as_ref()
                             .is_none_or(|ty| !ty.is_string())
                         {
-                            panic!(
-                                "{}",
+                            elle_error!(
                                 call_location.error(format!(
                                     "The method \"{}\" returns {}{RESET} but it should return {GREEN}string{RESET}.\nThis method's implementation must be changed to return {GREEN}string{RESET}.",
                                     func_name,
-                                    tmp_function.return_type.unwrap_or(Type::Unknown("_".into())).display()
+                                    tmp_function.return_type.unwrap_or(Type::Unknown("_".into())).display(),
+                                    GREEN = get_GREEN!(),
+                                    RESET = get_RESET!(),
                                 ))
                             )
                         }
@@ -1744,8 +1734,7 @@ impl Compiler {
                             tmp_function.arguments.len() - add_meta as usize - type_method as usize;
                         let param_len = params.len() - add_meta as usize - type_method as usize;
 
-                        panic!(
-                            "{}",
+                        elle_error!(
                             call_location.error(format!(
                                 "Function named '{}({})' takes {} argument{}, but you {}passed {}\n{}",
                                 name.replace(".", "::"),
@@ -1958,8 +1947,7 @@ impl Compiler {
                     )));
 
                 if !(matches!(left_ty, Type::Pointer(_)) || matches!(right_ty, Type::Pointer(_))) {
-                    panic!(
-                        "{}",
+                    elle_error!(
                         left_location.error(format!(
                             "Cannot {} data {} non-pointer types ({} and {})",
                             if value.is_some() { "store" } else { "load" },
@@ -2662,8 +2650,7 @@ impl Compiler {
                 // value.is_some() because we don't want to do this to
                 // arrays that aren't assigned to a variable
                 if value.is_some() && ty.is_some() && !ty.clone().unwrap().is_pointer() {
-                    panic!(
-                        "{}",
+                    elle_error!(
                         location.error(
                             format!("The type of array '{:?}' must be a pointer to the inner type of the array (it is {})",
                                 values, ty.unwrap().display()
@@ -2696,8 +2683,7 @@ impl Compiler {
 
                     if let Some(first_type) = first_type.clone() {
                         if ty != first_type {
-                            panic!(
-                                "{}",
+                            elle_error!(
                                 location.error(format!(
                                     "Inconsistent array types '{}' and '{}' (possibly more)",
                                     first_type.display(),
@@ -2707,8 +2693,7 @@ impl Compiler {
                         }
 
                         if inner_ty.is_some() && inner_ty.clone().unwrap() != first_type {
-                            panic!(
-                                "{}",
+                            elle_error!(
                                 location.error(format!(
                                     "Invalid type of element in array '{}' when the array type is '{}'",
                                     ty.display(), inner_ty.unwrap().display(),
@@ -2717,8 +2702,7 @@ impl Compiler {
                         }
                     } else {
                         if inner_ty.is_some() && inner_ty.clone().unwrap() != ty {
-                            panic!(
-                                "{}",
+                            elle_error!(
                                 location.error(format!(
                                     "Invalid type of element in array '{}' when the array type is '{}'",
                                     ty.display(), inner_ty.unwrap().display(),
@@ -2975,8 +2959,7 @@ impl Compiler {
                     if is_generic!(name) {
                         self.create_monomorphized_struct(module, name.clone())
                     } else {
-                        panic!(
-                            "{}",
+                        elle_error!(
                             location.error(format!(
                                 "Could not find struct named '{}'. Did you spell it correctly?\nThis struct may be generic but missing generic parameters.",
                                 Type::Struct(name).display()
@@ -2994,8 +2977,7 @@ impl Compiler {
                     .expect(&format!("Unable to find struct named '{}'", name));
 
                 if !td.usable && !func.borrow_mut().imported {
-                    panic!(
-                        "{}",
+                    elle_error!(
                         location.error(format!(
                             "Struct named '{}' was not imported and can't be used",
                             Type::Struct(name.clone()).display()
@@ -3045,8 +3027,7 @@ impl Compiler {
 
                 for (member_name, value) in values.iter().cloned() {
                     if !member_names.contains(&member_name) {
-                        panic!(
-                            "{}",
+                        elle_error!(
                             location.error(format!(
                                 "Struct named '{}' has no field named '{}'. Did you spell it correctly?",
                                 name, member_name
@@ -3144,7 +3125,7 @@ impl Compiler {
                     );
 
                 let (field_ty, offset_tmp) =
-                    self.process_field_access(func, module, ty, left, *right, false);
+                    self.process_field_access(func, module, ty, left, *right, false, &location);
 
                 if let Some(value) = value {
                     let (_, compiled) = self
@@ -3199,9 +3180,14 @@ impl Compiler {
         let mut items = vec![];
 
         if members.is_empty() && !ignore_empty {
-            panic!(
-                "{}",
-                keyword_location.with_extra_info("Replace this with 'namespace'").error(format!("Cannot declare an empty struct (with no members).\nIf you intended to make a namespace, use the '{GREEN}namespace{RESET}' keyword instead."))
+            elle_error!(
+                keyword_location
+                    .with_extra_info("Replace this with 'namespace'")
+                    .error(format!(
+                        "Cannot declare an empty struct (with no members).\nIf you intended to make a namespace, use the '{GREEN}namespace{RESET}' keyword instead.",
+                        GREEN = get_GREEN!(),
+                        RESET = get_RESET!()
+                    ))
             )
         }
 
@@ -3459,6 +3445,7 @@ impl Compiler {
         mut left: Value,
         mut right: AstNode,
         load: bool,
+        location: &Rc<Location>,
     ) -> (Type, Value) {
         loop {
             match right.clone() {
@@ -3474,8 +3461,7 @@ impl Compiler {
                         if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct() {
                             ty = ty.get_pointer_inner().unwrap();
                         } else {
-                            panic!(
-                                "{}",
+                            elle_error!(
                                 &location.error(format!(
                                     "Cannot access fields on a non-struct type '{}' (field '{}')",
                                     ty.display(),
@@ -3524,13 +3510,13 @@ impl Compiler {
                     ..
                 } => {
                     let (nested_ty, nested_left_value) =
-                        self.process_field_access(func, module, ty, left, *nested_left, true);
+                        self.process_field_access(func, module, ty, left, *nested_left, true, location);
 
                     ty = nested_ty;
                     left = nested_left_value;
                     right = *nested_right;
                 }
-                _ => panic!("Unexpected AST node type for field access: {:?}", right),
+                _ => elle_error!(location.error(format!("Unexpected AST node type for field access: {:?}", right))),
             }
         }
     }
@@ -3608,9 +3594,8 @@ impl Compiler {
                     left_matches_label.clone(),
                 ));
             }
-            other => panic!(
-                "{}",
-                &location.error(format!(
+            other => elle_error!(
+                location.error(format!(
                     "Invalid operator token for conditional short circuiting '{}'",
                     other
                 ))
@@ -3703,8 +3688,7 @@ impl Compiler {
                 }
             }
 
-            panic!(
-                "{}",
+            elle_error!(
                 left_location
                     .clone()
                     .with_extra_info(format!("This has the type '{}'", first.display()))
@@ -3720,8 +3704,7 @@ impl Compiler {
             || (second.is_strictly_number() && first.is_string()))
             && !explicit
         {
-            panic!(
-                "{}",
+            elle_error!(
                 right_location.clone().with_extra_info(format!(
                     "This has the type '{}'",
                     first.display()
@@ -4072,11 +4055,13 @@ impl Compiler {
                                 + format!("{}", call_location.row + 1).len()
                                 + 8
                         ),
-                        location.ctx
+                        location.ctx,
+                        GREEN = get_GREEN!(),
+                        BOLD = get_BOLD!(),
+                        RESET = get_RESET!()
                     )));
 
-                    panic!(
-                        "{}",
+                    elle_error!(
                         call_location.error(format!(
                             "Mismatched number of generics in function {}<{}>({}).\nCould not find generic{} {} where the function specifies <{}>.",
                             name.replace(".", "::"),
@@ -4258,18 +4243,20 @@ impl Compiler {
             .tree
             .iter()
             .find(|primitive| match primitive {
-                Primitive::Function { name, .. } if &(name.to_owned()) == "main" => true,
+                Primitive::Function { name, .. } if &(name.to_owned()) == MAIN_ID => true,
                 _ => false,
             })
             .is_none()
             && !object_output
         {
-            panic!(
-                "\n{}\nERROR: Could not compile module \"{output_path}\"\n{}\n\n{}\n{}\n",
-                "-".repeat(40),
-                "Module has no entry-point. To create one, write:",
-                "fn main() {\n\n\n}",
-                "-".repeat(40),
+            elle_error!(
+                Location::base().basic_error(format!(
+                    "Could not compile module \"{MAGENTA}{output_path}{RESET}\":\n{}\n\n{}",
+                    "Module has no entry-point. To create one, write:",
+                    format!("{GREEN}+ fn main() {{\n+\n+ }}", GREEN = get_GREEN!()),
+                    MAGENTA = get_MAGENTA!(),
+                    RESET = get_RESET!()
+                ))
             )
         }
 
@@ -4429,7 +4416,7 @@ impl Compiler {
 
         let mut file = File::create(output_path).expect("Failed to create the file.");
         file.write_all(module_ref.borrow().to_string().as_bytes())
-            .expect(&format!("{RED}Failed to write to file."));
+            .expect(&format!("{RED}Failed to write to file.", RED = get_RED!()));
 
         file.flush().expect("Failed to flush file");
     }
