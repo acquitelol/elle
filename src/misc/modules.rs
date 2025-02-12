@@ -92,8 +92,8 @@ pub fn lex_and_parse(
 
     if content.trim().is_empty() && !object_output {
         elle_error!(
-            _import_location.internal_error(format!(
-                "Could not load module \"{MAGENTA}{input_path}{RESET}\"{}\n\n{}{RESET}",
+            _import_location.basic_error(format!(
+                "Could not load module \"{MAGENTA}{input_path}{RESET}\":\n{}\n\n{}{RESET}",
                 "Module is empty. To create an entry-point, write:",
                 format!("{}+ use std/prelude;\n+ \n+ fn main() {{\n+ \n+ }}{}", get_GREEN!(), get_RESET!()),
                 MAGENTA = get_MAGENTA!(),
