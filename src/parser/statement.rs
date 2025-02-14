@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use super::enums::{Argument, AstNode, Primitive};
 use super::parser::{create_generic_struct, StructPool};
+use crate::lexer::enums::Attribute;
 use crate::{
     compiler::enums::Type,
     ensure_fn_pointer,
@@ -41,6 +42,12 @@ impl<'a> Statement<'a> {
             position,
             body,
             shared,
+        }
+    }
+
+    pub fn reverse(&mut self) {
+        if !self.is_eof() {
+            self.position -= 1;
         }
     }
 
@@ -803,15 +810,19 @@ impl<'a> Statement<'a> {
                         .is_some_and(|token| token.kind == TokenKind::Colon)
                     || self.current_token().kind == TokenKind::LeftParenthesis)
             {
-                inner_ty = Some(self.get_type(Some(self.shared.generics)));
-                self.advance();
-                self.expect_tokens(vec![TokenKind::Semicolon]);
                 self.advance();
 
-                // if the token *is* now right block brace after getting a ty
-                // then break out early because there are no values
-                if self.current_token().kind == TokenKind::RightBlockBrace {
-                    break;
+                if self.current_token().kind == TokenKind::Semicolon {
+                    inner_ty = Some(self.get_type(Some(self.shared.generics)));
+                    self.advance();
+
+                    // if the token *is* now right block brace after getting a ty
+                    // then break out early because there are no values
+                    if self.current_token().kind == TokenKind::RightBlockBrace {
+                        break;
+                    }
+                } else {
+                    self.reverse();
                 }
             }
 
@@ -1615,6 +1626,20 @@ impl<'a> Statement<'a> {
                 elle_error!(self.current_token().location.error("Cannot create a variadic lambda function..."))
             }
 
+            let mut no_fmt = false;
+
+            if self.current_token().kind == TokenKind::Attribute {
+                self.advance();
+
+                match self.current_token().parse_attribute() {
+                    Attribute::NoFormat => {
+                        no_fmt = true;
+                        self.advance();
+                    },
+                    _ => {}
+                };
+            }
+
             let ty = self.get_type(Some(self.shared.generics));
             self.advance();
 
@@ -1629,6 +1654,7 @@ impl<'a> Statement<'a> {
                 r#type: ty,
                 name,
                 manual: false,
+                no_fmt
             });
         }
 
@@ -2253,6 +2279,35 @@ impl<'a> Statement<'a> {
             let inner = Box::new(AstNode::token_to_literal(self.current_token()));
 
             self.advance();
+
+            if self.current_token().kind == TokenKind::LessThan
+                && self.next_token().is_some_and(|token| {
+                    if ![TokenKind::Identifier, TokenKind::LeftParenthesis].contains(&token.kind) {
+                        return false;
+                    }
+
+                    let ty_name = token.value.get_string_inner().unwrap();
+
+                    self.shared.struct_pool.borrow().contains_key(&ty_name)
+                        || self.shared.generics.contains(&ty_name)
+                        || token.value.is_base_type()
+                        || token.kind == TokenKind::LeftParenthesis
+                })
+            {
+                self.advance();
+
+                while self.current_token().kind != TokenKind::GreaterThan {
+                    tmp.push(self.get_type(Some(self.shared.generics)));
+                    self.advance();
+
+                    if self.current_token().kind == TokenKind::Comma {
+                        self.advance();
+                    }
+                }
+
+                self.expect_tokens(vec![TokenKind::GreaterThan]);
+                self.advance();
+            }
 
             if self.current_token().kind == TokenKind::LeftParenthesis {
                 return self.parse_function(

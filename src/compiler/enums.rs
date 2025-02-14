@@ -347,7 +347,7 @@ impl Type {
                         inner
                             .arguments
                             .iter()
-                            .map(|arg| arg.0.clone().display())
+                            .map(|arg| arg.0.0.clone().display())
                             .collect::<Vec<String>>()
                             .join(", ")
                     )
@@ -647,6 +647,7 @@ impl Type {
                                 known_generics.clone(),
                             ),
                             manual: member.manual,
+                            no_fmt: member.no_fmt
                         })
                         .collect::<Vec<Argument>>();
 
@@ -1261,7 +1262,7 @@ pub struct Function {
     pub imported: bool,
     pub generics: Vec<String>,
     pub known_generics: HashMap<String, Type>,
-    pub arguments: Vec<(Type, Value)>,
+    pub arguments: Vec<((Type, Value), bool)>,
     pub return_type: Option<Type>,
     pub blocks: Vec<Block>,
 }
@@ -1328,7 +1329,7 @@ impl fmt::Display for Function {
         let mut arguments_clone = self
             .arguments
             .iter()
-            .map(|(r#type, temp)| format!("{} {}", r#type, temp))
+            .map(|((r#type, temp), _)| format!("{} {}", r#type, temp))
             .collect::<Vec<String>>()
             .clone();
 

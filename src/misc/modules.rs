@@ -54,10 +54,13 @@ pub fn lex_and_parse(
             }
         );
 
+        let relative_path_string = &format!("./{file_path}");
+
         // Try to see if the file is installed as a library first
         let base_path = Path::new(get_STD_LIB_PATH!());
-        let relative_path = Path::new(&file_path);
-        let full_path = base_path.join(relative_path);
+        let relative_base_path = Path::new(&file_path);
+        let relative_path = Path::new(&relative_path_string);
+        let full_path = base_path.join(relative_base_path);
 
         is_std_import = fs::metadata(&full_path).is_ok();
         final_path = if is_std_import {
@@ -90,16 +93,25 @@ pub fn lex_and_parse(
         content
     };
 
+    macro_rules! file_is_empty_error {
+        () => {
+            elle_error!(
+                _import_location.basic_error(format!(
+                    "Could not load module \"{MAGENTA}{input_path}{RESET}\":\n{}\n\n{}{RESET}",
+                    "Module is empty. To create an entry-point, write:",
+                    format!("{GREEN}+ use std/prelude;\n+ \n+ fn main() {{\n+ \n+ }}{RESET}",
+                        GREEN = get_GREEN!(),
+                        RESET = get_RESET!()),
+                    MAGENTA = get_MAGENTA!(),
+                    RESET = get_RESET!()
+                ))
+            )
+        };
+    }
+
+    // Throw an error before it explodes in the lexer
     if content.trim().is_empty() && !object_output {
-        elle_error!(
-            _import_location.basic_error(format!(
-                "Could not load module \"{MAGENTA}{input_path}{RESET}\":\n{}\n\n{}{RESET}",
-                "Module is empty. To create an entry-point, write:",
-                format!("{}+ use std/prelude;\n+ \n+ fn main() {{\n+ \n+ }}{}", get_GREEN!(), get_RESET!()),
-                MAGENTA = get_MAGENTA!(),
-                RESET = get_RESET!()
-            ))
-        )
+        file_is_empty_error!()
     }
 
     let mut lexer = Lexer::new(input_path.clone(), content.as_str());
@@ -114,10 +126,16 @@ pub fn lex_and_parse(
         }
     }
 
-    // Import non-generic modules
-    // Import structs
-    // Import generic modules
-    // Import rest
+    // File consists entirely of comments which is still effectively
+    // an empty file, so we shouldn't bother parsing this
+    if tokens.is_empty() {
+        file_is_empty_error!()
+    }
+
+    // Things are parsed in a specific order:
+    // 1. Imports
+    // 2. Structs
+    // 3. Functions & Constants
     let mut parser = Parser::new(
         tokens.clone(),
         struct_pool.borrow().to_owned(),
@@ -127,11 +145,9 @@ pub fn lex_and_parse(
     let mut fallback = vec![];
     let mut tree = existing_tree.unwrap_or(&mut fallback);
 
-    // Non-generic imports and generic declarations
     let (mut imports, new_struct_pool, ..) = parser.parse(&DoOnly::Imports, None);
     struct_pool.replace_with(|_| new_struct_pool);
     let loc = Rc::new(Location::default(input_path.clone()));
-
 
     if nesting == 0 && !no_fmt {
         imports.insert(
@@ -362,6 +378,7 @@ pub fn lex_and_parse(
                     name: "self".into(),
                     r#type: Type::Pointer(Box::new(Type::Unknown("T".into()))),
                     manual: false,
+                    no_fmt: false
                 }],
                 r#return: Some(Type::Word),
                 body: vec![AstNode::Return {

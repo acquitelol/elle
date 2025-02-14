@@ -1,0 +1,4 @@
+// This file consists entirely of comments. As a result,
+// after tokenization, we're left with an empty token stream
+// because comments are ignored. This is still essentially
+// an empty file, so an error should be thrown here.

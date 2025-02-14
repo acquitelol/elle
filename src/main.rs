@@ -175,6 +175,7 @@ fn main() -> ExitCode {
             // string[]
             r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
             manual: false,
+            no_fmt: false
         },
         // Holds an array of the type of arguments passed into the function as strings
         Argument {
@@ -182,6 +183,7 @@ fn main() -> ExitCode {
             // string[]
             r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
             manual: false,
+            no_fmt: false
         },
         // Holds the number of arguments that were passed into a function
         Argument {
@@ -189,6 +191,7 @@ fn main() -> ExitCode {
             // i32
             r#type: Type::Word,
             manual: false,
+            no_fmt: false
         },
         // Holds the name of the caller method as a string
         Argument {
@@ -196,6 +199,7 @@ fn main() -> ExitCode {
             // string
             r#type: Type::Pointer(Box::new(Type::Char)),
             manual: false,
+            no_fmt: false
         },
         // The name of the file that the struct was generated in
         Argument {
@@ -203,6 +207,7 @@ fn main() -> ExitCode {
             // string
             r#type: Type::Pointer(Box::new(Type::Char)),
             manual: false,
+            no_fmt: false
         },
         // The line number that the struct was generated on
         Argument {
@@ -210,6 +215,7 @@ fn main() -> ExitCode {
             // i32
             r#type: Type::Word,
             manual: false,
+            no_fmt: false
         },
         // The column number that the struct was generated on
         Argument {
@@ -217,6 +223,7 @@ fn main() -> ExitCode {
             // i32
             r#type: Type::Word,
             manual: false,
+            no_fmt: false
         },
     ];
 
@@ -227,12 +234,14 @@ fn main() -> ExitCode {
             // Region *
             r#type: Type::Pointer(Box::new(Type::Struct(PRIMARY_ALOCATOR_NAME.into()))),
             manual: false,
+            no_fmt: false
         },
         // An approximation of the top of the stack
         Argument {
             name: "stack_top".into(),
             r#type: Type::Pointer(Box::new(Type::Void)),
             manual: false,
+            no_fmt: false
         },
     ];
 
@@ -377,11 +386,13 @@ fn main() -> ExitCode {
                     name: "argc".into(),
                     r#type: Type::Word,
                     manual: false,
+                    no_fmt: false
                 },
                 Argument {
                     name: "argv".into(),
                     r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
                     manual: false,
+                    no_fmt: false
                 },
             ],
             r#return: Some(Type::Word),

@@ -139,6 +139,7 @@ impl<'a> Struct<'a> {
                 name,
                 r#type: ty,
                 manual: false,
+                no_fmt: false,
             })
         }
 
@@ -282,11 +283,13 @@ impl<'a> Struct<'a> {
                             name.clone()
                         }),
                         manual: false,
+                        no_fmt: false,
                     },
                     Argument {
                         name: "nesting".into(),
                         r#type: Type::Word,
                         manual: false,
+                        no_fmt: false
                     },
                 ],
                 r#return: Some(Type::Pointer(Box::new(Type::Char))),

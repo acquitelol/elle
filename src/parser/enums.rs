@@ -496,4 +496,5 @@ pub struct Argument {
     pub name: String,
     pub r#type: Type,
     pub manual: bool,
+    pub no_fmt: bool,
 }

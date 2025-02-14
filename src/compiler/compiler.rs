@@ -287,7 +287,7 @@ impl Compiler {
                 self.new_variable(&ty, &argument.name, None, false, false)
             };
 
-            args.push((ty.into_abi(), tmp));
+            args.push(((ty.into_abi(), tmp), argument.no_fmt));
         }
 
         let mut func = Function {
@@ -981,7 +981,7 @@ impl Compiler {
                         }
 
                         let tmp_function = tmp_function_option.unwrap().clone();
-                        let mut params = vec![(left_ty, left_val), (right_ty, right_val)];
+                        let mut params = vec![((left_ty, left_val), false), ((right_ty, right_val), false)];
 
                         if has_meta {
                             let meta = Compiler::generate_meta_struct(
@@ -997,7 +997,7 @@ impl Compiler {
                                     "Unexpected error when trying to compile the Elle metadata struct",
                                 ));
 
-                            params.insert(0, res);
+                            params.insert(0, (res, false));
                         }
 
                         if tmp_function.variadic {
@@ -1018,10 +1018,10 @@ impl Compiler {
                                     "Unexpected error when trying to compile the variadic literal '...'",
                                 ));
 
-                            params.insert(tmp_function.arguments.len(), res);
+                            params.insert(tmp_function.arguments.len(), (res, false));
                         }
 
-                        let instr = Instruction::Call(Value::Global(func_name), params);
+                        let instr = Instruction::Call(Value::Global(func_name), params.into_iter().map(|x| x.0).collect());
                         let op_temp = self.new_temporary(None, true);
 
                         func.borrow_mut().assign_instruction(&op_temp, &ty, instr);
@@ -1357,7 +1357,7 @@ impl Compiler {
                             let mut tmp_func = Function::default();
                             tmp_func.add_block("start");
 
-                            self.generate_statement(
+                            (self.generate_statement(
                                 &RefCell::new(tmp_func),
                                 module,
                                 param.1.clone(),
@@ -1370,7 +1370,7 @@ impl Compiler {
                                     "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
                                     name
                                 ))
-                            )
+                            ), false)
                         }).collect(),
                         return_type: Some(declarative_ty.clone()),
                         blocks: vec![]
@@ -1414,12 +1414,12 @@ impl Compiler {
                     )
                 }
 
-                let mut params = vec![];
+                let mut params: Vec<((Type, Value), bool)> = vec![];
                 let mut add_meta = false;
 
                 if let Some(inner) = tmp_function.arguments.get(0) {
-                    if inner.0.is_struct() {
-                        let name = inner.0.get_struct_inner().unwrap();
+                    if inner.0.0.is_struct() {
+                        let name = inner.0.0.get_struct_inner().unwrap();
 
                         if name == META_STRUCT_NAME {
                             add_meta = true;
@@ -1467,7 +1467,7 @@ impl Compiler {
                         let tmp = tmp_function.arguments.get(i + add_meta as usize);
 
                         if tmp.is_some() {
-                            tmp.map(|item| item.0.clone())
+                            tmp.map(|item| item.0.0.clone())
                         } else {
                             None
                         }
@@ -1481,8 +1481,8 @@ impl Compiler {
                             && type_method
                             && should_get_address
                             && first_param.is_some()
-                            && first_arg.0.is_pointer()
-                            && (first_arg.0.get_pointer_inner().unwrap()
+                            && first_arg.0.0.is_pointer()
+                            && (first_arg.0.0.get_pointer_inner().unwrap()
                                 == first_param.clone().unwrap().0)
                         {
                             got_address = true;
@@ -1513,10 +1513,12 @@ impl Compiler {
                         )
                     };
 
+                    let no_fmt = tmp_function.arguments.get(i + add_meta as usize).map(|x| x.1).unwrap_or(false);
+
                     params.push(if param_ty.is_none() || ty == param_ty.clone().unwrap() {
-                        (ty, val)
+                        ((ty, val), no_fmt)
                     } else {
-                        self.convert_to_type(
+                        (self.convert_to_type(
                             func,
                             ty.into_abi(),
                             param_ty.unwrap(),
@@ -1524,7 +1526,7 @@ impl Compiler {
                             &parameter.0,
                             &parameter.0,
                             false,
-                        )
+                        ), no_fmt)
                     });
                 }
 
@@ -1536,7 +1538,11 @@ impl Compiler {
                 );
 
                 if tmp_function.format {
-                    for (i, (ty, val)) in params.iter_mut().enumerate() {
+                    for (i, ((ty, val), no_fmt)) in params.iter_mut().enumerate() {
+                        if *no_fmt {
+                            continue;
+                        }
+
                         let fmt_tmp;
                         let fmt_ty;
                         let mut func_name;
@@ -1675,7 +1681,7 @@ impl Compiler {
                             "Unexpected error when trying to compile the Elle metadata struct",
                         ));
 
-                    params.insert(0, res);
+                    params.insert(0, (res, false));
                 }
 
                 if tmp_function.variadic {
@@ -1696,7 +1702,7 @@ impl Compiler {
                             "Unexpected error when trying to compile the variadic literal '...'",
                         ));
 
-                    params.insert(tmp_function.arguments.len(), res);
+                    params.insert(tmp_function.arguments.len(), (res, false));
                 }
 
                 if !tmp_function.variadic {
@@ -1746,7 +1752,9 @@ impl Compiler {
                                 tmp_function.arguments
                                     .iter()
                                     .skip(params.len())
-                                    .map(|(ty, val)| format!("Missing argument named \"{}\" (of type \"{}\")", val.get_string_inner().replace("%", "").split(".").nth(0).unwrap(), ty.display()))
+                                    .map(|((ty, val), _)| format!(
+                                        "Missing argument named \"{}\" (of type \"{}\")",
+                                        val.get_string_inner().replace("%", "").split(".").nth(0).unwrap(), ty.display()))
                                     .collect::<Vec<String>>()
                                     .join("\n")
                             ))
@@ -1780,7 +1788,7 @@ impl Compiler {
                 };
 
                 func.borrow_mut()
-                    .assign_instruction(&temp, &ty, Instruction::Call(val, params));
+                    .assign_instruction(&temp, &ty, Instruction::Call(val, params.into_iter().map(|x| x.0).collect()));
 
                 Some((ty, temp))
             }
@@ -3211,7 +3219,7 @@ impl Compiler {
 
     fn generate_meta_struct(
         func: &RefCell<Function>,
-        params: &Vec<(Type, Value)>,
+        params: &Vec<((Type, Value), bool)>,
         parameters: Vec<(Rc<Location>, AstNode)>,
         location: Rc<Location>,
     ) -> AstNode {
@@ -3332,7 +3340,7 @@ impl Compiler {
                         values: params
                             .iter()
                             .map(|param| {
-                                let inner = param.0.id();
+                                let inner = param.0.0.id();
 
                                 (
                                     location.clone(),
@@ -3789,6 +3797,7 @@ impl Compiler {
                     parsed_generics.clone(),
                 ),
                 manual: member.manual,
+                no_fmt: member.no_fmt
             })
             .collect::<Vec<Argument>>();
 
@@ -4118,6 +4127,7 @@ impl Compiler {
                                 known_generics.clone(),
                             ),
                             manual: arg.manual,
+                            no_fmt: arg.no_fmt
                         })
                         .collect::<Vec<Argument>>();
 

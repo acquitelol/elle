@@ -104,6 +104,7 @@ impl<'a> Function<'a> {
                 || self.parser.struct_pool.borrow().contains_key(&ty_name))
             // TODO: Fix this (start of a tuple type, BIGGGG hack)
             || self.parser.current_token().kind == TokenKind::LeftParenthesis
+            || self.parser.current_token().kind == TokenKind::Attribute
             || self.parser.current_token().kind == TokenKind::Ellipsis
             || self.parser.current_token().kind == TokenKind::Function
         {
@@ -118,6 +119,20 @@ impl<'a> Function<'a> {
 
                     variadic = true;
                     break;
+                }
+
+                let mut no_fmt = false;
+
+                if self.parser.current_token().kind == TokenKind::Attribute {
+                    self.parser.advance();
+
+                    match self.parser.current_token().parse_attribute() {
+                        Attribute::NoFormat => {
+                            no_fmt = true;
+                            self.parser.advance();
+                        },
+                        _ => {}
+                    };
                 }
 
                 let r#type = self.parser.get_type(Some(&generics));
@@ -161,6 +176,7 @@ impl<'a> Function<'a> {
                     r#type,
                     name,
                     manual,
+                    no_fmt
                 })
             }
         }

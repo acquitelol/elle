@@ -1,0 +1,5 @@
+// This file should throw an error during compilation because
+// it's being compiled as an executable (-c is not present)
+// and there is no entry-point (`main` function) present
+// Let's presume there was a typo when creating `main`
+fn meow() {}
