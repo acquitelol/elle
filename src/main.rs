@@ -365,7 +365,7 @@ fn main() -> ExitCode {
                 Primitive::Function {
                     name, arguments, location, ..
                 } if name == "main" => {
-                    *name = MAIN_ID.into();
+                    *name = get_MAIN_ID!().into();
                     main_arg_len = arguments.len();
 
                     if main_arg_len > 1 {
@@ -640,7 +640,7 @@ fn main() -> ExitCode {
                         name: "status".into(),
                         r#type: Some(Type::Word),
                         value: Some(Box::new(AstNode::FunctionCall {
-                            name: MAIN_ID.into(),
+                            name: get_MAIN_ID!().into(),
                             generics: vec![],
                             parameters: if main_arg_len == 1 {
                                 vec![(
@@ -701,6 +701,9 @@ fn main() -> ExitCode {
             location: loc.clone(),
             return_location: loc.clone(),
         });
+    } else {
+        let leaked: &'static mut str = Box::leak("main".to_string().into_boxed_str());
+        unsafe { MAIN_ID = Some(leaked) };
     }
 
     if ast {

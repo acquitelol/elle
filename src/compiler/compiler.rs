@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    advance, elle_error, hashmap, is_generic, lexer::enums::{Location, TokenKind, ValueKind}, misc::colors::*, parser::{
+    advance, elle_error, get_MAIN_ID, hashmap, is_generic, lexer::enums::{Location, TokenKind, ValueKind}, misc::colors::*, parser::{
         enums::{modify_type_in_ast, Argument, AstNode, Primitive},
         parser::StructPool,
     }, unknown_field, unknown_function, Warning, Warnings, ARBITRARY_ALLOCATOR_NAME, DUNDER_CONSTANTS, ENV_ID, ENV_STRUCT_NAME, EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID, META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES, VOID_POINTER_ID
@@ -3487,7 +3487,7 @@ impl Compiler {
                         value: ValueKind::String({
                             let name = func.borrow_mut().name.clone();
 
-                            if name == MAIN_ID {
+                            if name == get_MAIN_ID!() {
                                 "main".into()
                             } else {
                                 name
@@ -4373,7 +4373,7 @@ impl Compiler {
             .tree
             .iter()
             .find(|primitive| match primitive {
-                Primitive::Function { name, .. } if &(name.to_owned()) == MAIN_ID => true,
+                Primitive::Function { name, .. } if &(name.to_owned()) == get_MAIN_ID!() => true,
                 _ => false,
             })
             .is_none()

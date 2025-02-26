@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    elle_error, hashmap, is_generic, is_unknown, lexer::enums::Location, parser::{
+    elle_error, get_MAIN_ID, hashmap, is_generic, is_unknown, lexer::enums::Location, parser::{
         enums::{Argument, Primitive},
         parser::StructPool,
     }, DEAD_CODE_ELIMINATION_PASSES, GENERIC_END, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN, MAIN_ID, POINTER_ID, VOID_POINTER_ID
@@ -1451,7 +1451,7 @@ impl Module {
             }
 
             used_functions.insert("main".into());
-            used_functions.insert(MAIN_ID.into());
+            used_functions.insert(get_MAIN_ID!().into());
 
             self.functions.retain(|func| {
                 used_functions.contains(&func.name) || func.volatile || object_output
