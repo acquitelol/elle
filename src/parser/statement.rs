@@ -2892,7 +2892,35 @@ impl<'a> Statement<'a> {
 
         AstNode::SetAllocator {
             value: Box::new(allocator),
-            location
+            location,
+        }
+    }
+
+    fn parse_reset_allocator(&mut self) -> AstNode {
+        let location = self.current_token().location.clone();
+        self.advance();
+
+        self.expect_tokens(vec![TokenKind::LeftParenthesis]);
+        self.advance();
+
+        self.expect_tokens(vec![TokenKind::RightParenthesis]);
+        self.advance();
+
+        AstNode::SetAllocator {
+            value: Box::new(AstNode::FieldAccess {
+                left: Box::new(AstNode::Environment {
+                    value: None,
+                    location: location.clone(),
+                }),
+                right: Box::new(AstNode::Literal {
+                    kind: TokenKind::Identifier,
+                    value: ValueKind::String("default_allocator".into()),
+                    location: location.clone(),
+                }),
+                value: None,
+                location: location.clone(),
+            }),
+            location,
         }
     }
 
@@ -3148,6 +3176,7 @@ impl<'a> Statement<'a> {
             TokenKind::Realloc => self.parse_realloc(),
             TokenKind::Free => self.parse_free(),
             TokenKind::SetAllocator => self.parse_set_allocator(),
+            TokenKind::ResetAllocator => self.parse_reset_allocator(),
             TokenKind::Let => {
                 self.advance();
                 self.parse_declare(Some(Some(Type::Infer)))

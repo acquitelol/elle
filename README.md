@@ -1645,7 +1645,8 @@ The current existing directives are:
 - `#alloc(T, size?)` - Allows you to allocate a specific type using the current allocator
 - `#realloc(ptr_expr, T, size?)` - Allows you to reallocate a pointer with a specific type using the current allocator
 - `#free(ptr_expr)` - Frees a pointer using the current allocator. If the allocator didn't define a `free` method, this does nothing.
-- `#set_allocator(allocator_expr)` - Sets the current allocator to the one specified
+- `#set_allocator(allocator_expr)` - Sets the current allocator to the one specified by `allocator_expr`
+- `#reset_allocator()` - Sets the current allocator back to `#env.default_allocator`. **Does not call `#env.allocator.free_self`.**
 
 <hr />
 

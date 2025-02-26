@@ -404,6 +404,7 @@ impl Lexer {
                                 "realloc" => (TokenKind::Realloc, ValueKind::Nil),
                                 "free" => (TokenKind::Free, ValueKind::Nil),
                                 "set_allocator" => (TokenKind::SetAllocator, ValueKind::Nil),
+                                "reset_allocator" => (TokenKind::ResetAllocator, ValueKind::Nil),
                                 other => elle_error!(self.get_location().error(format!("Unimplemented directive: '{}'", other))),
                             },
                             _ => unreachable!(),

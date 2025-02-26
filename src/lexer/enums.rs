@@ -108,7 +108,8 @@ pub enum TokenKind {
     Alloc,
     Realloc,
     Free,
-    SetAllocator
+    SetAllocator,
+    ResetAllocator
 }
 
 impl TokenKind {
