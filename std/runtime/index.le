@@ -1,3 +1,6 @@
+use std/runtime/allocators/arbitrary;
+use std/runtime/allocators/arena;
+use std/runtime/allocators/heap;
 use std/runtime/allocators/gc;
 use std/runtime/vectors;
 use std/runtime/libc/fd;

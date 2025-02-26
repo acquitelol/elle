@@ -11,7 +11,7 @@ use crate::{
     advance, elle_error, hashmap, is_generic, lexer::enums::{Location, TokenKind, ValueKind}, misc::colors::*, parser::{
         enums::{modify_type_in_ast, Argument, AstNode, Primitive},
         parser::StructPool,
-    }, unknown_field, unknown_function, Warning, Warnings, DUNDER_CONSTANTS, ENV_ID, ENV_STRUCT_NAME, EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID, META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES, VOID_POINTER_ID
+    }, unknown_field, unknown_function, Warning, Warnings, ARBITRARY_ALLOCATOR_NAME, DUNDER_CONSTANTS, ENV_ID, ENV_STRUCT_NAME, EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID, META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES, VOID_POINTER_ID
 };
 
 use super::enums::{
@@ -36,6 +36,7 @@ pub struct Compiler {
     // Map from temporary to its stack allocated address
     address_pool: HashMap<Value, Value>,
     output_path: String,
+    no_gc: bool,
 }
 
 impl Compiler {
@@ -131,12 +132,10 @@ impl Compiler {
                     } => {
                         if name == const_name && func.is_some() {
                             if !usable && !func.unwrap().borrow_mut().imported {
-                                elle_error!(
-                                    location.error(format!(
-                                        "Constant named '{}' was not imported and can't be used",
-                                        name
-                                    ))
-                                )
+                                elle_error!(location.error(format!(
+                                    "Constant named '{}' was not imported and can't be used",
+                                    name
+                                )))
                             }
 
                             let temp = self.new_temporary(Some("constant"), true);
@@ -159,12 +158,10 @@ impl Compiler {
                     } => {
                         if name == op_name {
                             if !usable && !func.unwrap().borrow_mut().imported && !builtin {
-                                elle_error!(
-                                    location.error(format!(
-                                        "Function named '{}' was not imported and can't be used",
-                                        name.replace(".", "::")
-                                    ))
-                                )
+                                elle_error!(location.error(format!(
+                                    "Function named '{}' was not imported and can't be used",
+                                    name.replace(".", "::")
+                                )))
                             }
 
                             return Ok((
@@ -221,12 +218,10 @@ impl Compiler {
             Err(msg) => {
                 macro_rules! undefined_error {
                     () => {
-                        elle_error!(
-                            location.error(format!(
-                                "Unexpected error when trying to get a variable called '{}': {}",
-                                name, msg
-                            ))
-                        )
+                        elle_error!(location.error(format!(
+                            "Unexpected error when trying to get a variable called '{}': {}",
+                            name, msg
+                        )))
                     };
                 }
 
@@ -707,14 +702,12 @@ impl Compiler {
                                 && final_ty.is_pointer()
                                 && final_ty.get_pointer_inner().unwrap().is_void())
                         {
-                            elle_error!(
-                                location.error(format!(
-                                    "Cannot redeclare '{}' which has type {} to type {}",
-                                    name,
-                                    addr_ty.display(),
-                                    final_ty.display()
-                                ))
-                            )
+                            elle_error!(location.error(format!(
+                                "Cannot redeclare '{}' which has type {} to type {}",
+                                name,
+                                addr_ty.display(),
+                                final_ty.display()
+                            )))
                         }
 
                         func.borrow_mut().add_instruction(Instruction::Store(
@@ -763,7 +756,7 @@ impl Compiler {
                         final_val.clone(),
                     ));
 
-                    if final_ty.is_pointer() {
+                    if final_ty.is_pointer() && !self.no_gc {
                         func.borrow_mut().add_instruction(Instruction::Call(
                             Value::Global(GC_NOOP.into()),
                             vec![(final_ty.clone(), addr_val.clone())],
@@ -981,7 +974,8 @@ impl Compiler {
                         }
 
                         let tmp_function = tmp_function_option.unwrap().clone();
-                        let mut params = vec![((left_ty, left_val), false), ((right_ty, right_val), false)];
+                        let mut params =
+                            vec![((left_ty, left_val), false), ((right_ty, right_val), false)];
 
                         if has_meta {
                             let meta = Compiler::generate_meta_struct(
@@ -1021,7 +1015,10 @@ impl Compiler {
                             params.insert(tmp_function.arguments.len(), (res, false));
                         }
 
-                        let instr = Instruction::Call(Value::Global(func_name), params.into_iter().map(|x| x.0).collect());
+                        let instr = Instruction::Call(
+                            Value::Global(func_name),
+                            params.into_iter().map(|x| x.0).collect(),
+                        );
                         let op_temp = self.new_temporary(None, true);
 
                         func.borrow_mut().assign_instruction(&op_temp, &ty, instr);
@@ -1031,13 +1028,11 @@ impl Compiler {
                 }
 
                 if operator == TokenKind::Concat && treat_as_string {
-                    elle_error!(
-                        location.error(format!(
-                            "Cannot use the '<>' operator on non-string types {} and {}",
-                            left_ty.display(),
-                            right_ty.display()
-                        ))
-                    )
+                    elle_error!(location.error(format!(
+                        "Cannot use the '<>' operator on non-string types {} and {}",
+                        left_ty.display(),
+                        right_ty.display()
+                    )))
                 }
 
                 if [
@@ -1104,7 +1099,9 @@ impl Compiler {
                     TokenKind::BitwiseXor => Instruction::BitwiseXor(left_val, right_val),
                     TokenKind::ShiftLeft => Instruction::ShiftLeft(left_val, right_val),
                     TokenKind::ShiftRight => Instruction::ArithmeticShiftRight(left_val, right_val),
-                    _ => elle_error!(location.error(format!("Invalid operator token: {:?}", operator))),
+                    _ => elle_error!(
+                        location.error(format!("Invalid operator token: {:?}", operator))
+                    ),
                 };
 
                 let op_temp = self.new_temporary(None, true);
@@ -1406,20 +1403,18 @@ impl Compiler {
                 };
 
                 if !tmp_function.usable && !func.borrow_mut().imported && !ignore_no_def {
-                    elle_error!(
-                        call_location.error(format!(
-                            "Function named '{}' was not imported and can't be used",
-                            name
-                        ))
-                    )
+                    elle_error!(call_location.error(format!(
+                        "Function named '{}' was not imported and can't be used",
+                        name
+                    )))
                 }
 
                 let mut params: Vec<((Type, Value), bool)> = vec![];
                 let mut add_meta = false;
 
                 if let Some(inner) = tmp_function.arguments.get(0) {
-                    if inner.0.0.is_struct() {
-                        let name = inner.0.0.get_struct_inner().unwrap();
+                    if inner.0 .0.is_struct() {
+                        let name = inner.0 .0.get_struct_inner().unwrap();
 
                         if name == META_STRUCT_NAME {
                             add_meta = true;
@@ -1467,7 +1462,7 @@ impl Compiler {
                         let tmp = tmp_function.arguments.get(i + add_meta as usize);
 
                         if tmp.is_some() {
-                            tmp.map(|item| item.0.0.clone())
+                            tmp.map(|item| item.0 .0.clone())
                         } else {
                             None
                         }
@@ -1481,8 +1476,8 @@ impl Compiler {
                             && type_method
                             && should_get_address
                             && first_param.is_some()
-                            && first_arg.0.0.is_pointer()
-                            && (first_arg.0.0.get_pointer_inner().unwrap()
+                            && first_arg.0 .0.is_pointer()
+                            && (first_arg.0 .0.get_pointer_inner().unwrap()
                                 == first_param.clone().unwrap().0)
                         {
                             got_address = true;
@@ -1513,20 +1508,27 @@ impl Compiler {
                         )
                     };
 
-                    let no_fmt = tmp_function.arguments.get(i + add_meta as usize).map(|x| x.1).unwrap_or(false);
+                    let no_fmt = tmp_function
+                        .arguments
+                        .get(i + add_meta as usize)
+                        .map(|x| x.1)
+                        .unwrap_or(false);
 
                     params.push(if param_ty.is_none() || ty == param_ty.clone().unwrap() {
                         ((ty, val), no_fmt)
                     } else {
-                        (self.convert_to_type(
-                            func,
-                            ty.into_abi(),
-                            param_ty.unwrap(),
-                            val,
-                            &parameter.0,
-                            &parameter.0,
-                            false,
-                        ), no_fmt)
+                        (
+                            self.convert_to_type(
+                                func,
+                                ty.into_abi(),
+                                param_ty.unwrap(),
+                                val,
+                                &parameter.0,
+                                &parameter.0,
+                                false,
+                            ),
+                            no_fmt,
+                        )
                     });
                 }
 
@@ -1740,25 +1742,30 @@ impl Compiler {
                             tmp_function.arguments.len() - add_meta as usize - type_method as usize;
                         let param_len = params.len() - add_meta as usize - type_method as usize;
 
-                        elle_error!(
-                            call_location.error(format!(
-                                "Function named '{}({})' takes {} argument{}, but you {}passed {}\n{}",
-                                name.replace(".", "::"),
-                                if arg_len > 0 { "..." } else { "" },
-                                arg_len,
-                                if arg_len == 1 { "" } else { "s" },
-                                only,
-                                param_len,
-                                tmp_function.arguments
-                                    .iter()
-                                    .skip(params.len())
-                                    .map(|((ty, val), _)| format!(
-                                        "Missing argument named \"{}\" (of type \"{}\")",
-                                        val.get_string_inner().replace("%", "").split(".").nth(0).unwrap(), ty.display()))
-                                    .collect::<Vec<String>>()
-                                    .join("\n")
-                            ))
-                        )
+                        elle_error!(call_location.error(format!(
+                            "Function named '{}({})' takes {} argument{}, but you {}passed {}\n{}",
+                            name.replace(".", "::"),
+                            if arg_len > 0 { "..." } else { "" },
+                            arg_len,
+                            if arg_len == 1 { "" } else { "s" },
+                            only,
+                            param_len,
+                            tmp_function
+                                .arguments
+                                .iter()
+                                .skip(params.len())
+                                .map(|((ty, val), _)| format!(
+                                    "Missing argument named \"{}\" (of type \"{}\")",
+                                    val.get_string_inner()
+                                        .replace("%", "")
+                                        .split(".")
+                                        .nth(0)
+                                        .unwrap(),
+                                    ty.display()
+                                ))
+                                .collect::<Vec<String>>()
+                                .join("\n")
+                        )))
                     }
                 }
 
@@ -1787,8 +1794,11 @@ impl Compiler {
                         .1
                 };
 
-                func.borrow_mut()
-                    .assign_instruction(&temp, &ty, Instruction::Call(val, params.into_iter().map(|x| x.0).collect()));
+                func.borrow_mut().assign_instruction(
+                    &temp,
+                    &ty,
+                    Instruction::Call(val, params.into_iter().map(|x| x.0).collect()),
+                );
 
                 Some((ty, temp))
             }
@@ -1955,15 +1965,13 @@ impl Compiler {
                     )));
 
                 if !(matches!(left_ty, Type::Pointer(_)) || matches!(right_ty, Type::Pointer(_))) {
-                    elle_error!(
-                        left_location.error(format!(
-                            "Cannot {} data {} non-pointer types ({} and {})",
-                            if value.is_some() { "store" } else { "load" },
-                            if value.is_some() { "to" } else { "from" },
-                            left_ty.display(),
-                            right_ty.display()
-                        ))
-                    );
+                    elle_error!(left_location.error(format!(
+                        "Cannot {} data {} non-pointer types ({} and {})",
+                        if value.is_some() { "store" } else { "load" },
+                        if value.is_some() { "to" } else { "from" },
+                        left_ty.display(),
+                        right_ty.display()
+                    )));
                 }
 
                 let inner = if left_ty.is_pointer() {
@@ -2351,6 +2359,118 @@ impl Compiler {
                     Some((ty, val))
                 }
             }
+            AstNode::SetAllocator { value, location } => {
+                let mut tmp_func = Function::default();
+                tmp_func.add_block("start");
+
+                let (ty, _) = self
+                    .generate_statement(
+                        &RefCell::new(tmp_func),
+                        module,
+                        *value.clone(),
+                        None,
+                        None,
+                        is_return,
+                    )
+                    .expect(
+                        &location.error("Unexpected error when compiling allocator expresssion"),
+                    );
+
+                if !ty.is_struct()
+                    && !(ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct())
+                {
+                    elle_error!(location
+                        .with_extra_info(format!("This has the type {}", ty.display()))
+                        .error("Cannot set an allocator to a non-allocator expression"))
+                }
+
+                let allocator_name = if ty.is_struct() {
+                    ty.get_struct_inner().unwrap()
+                } else {
+                    ty.get_pointer_inner().unwrap().get_struct_inner().unwrap()
+                };
+
+                macro_rules! method_or_noop {
+                    ($name:literal) => {{
+                        let method_name = format!("{allocator_name}.{}", $name);
+
+                        AstNode::Literal {
+                            kind: TokenKind::Identifier,
+                            value: ValueKind::String(if module.borrow().functions.iter().find(|f| f.name == method_name).is_some() {
+                                method_name
+                            } else {
+                                if self.warnings.has_warning(Warning::AllocatorMethodsMissing) {
+                                    println!(
+                                        "{}",
+                                        location.warning(format!(
+                                            "The allocator '{GREEN}{}{RESET}' has no method named '{GREEN}{}{RESET}'.\nIt will be set to a function which returns {RED}nil{RESET} instead.",
+                                            allocator_name,
+                                            method_name.replace(".", "::"),
+                                            GREEN = get_GREEN!(),
+                                            RED = get_RED!(),
+                                            RESET = get_RESET!(),
+                                        ))
+                                    );
+                                }
+
+                                format!("{ARBITRARY_ALLOCATOR_NAME}.noop")
+                            }),
+                            location: location.clone(),
+                        }
+                    }};
+                }
+
+                let parts = vec![
+                    ("inner", *value),
+                    ("kind", AstNode::Literal {
+                        kind: TokenKind::StringLiteral,
+                        value: ValueKind::String(allocator_name.clone()),
+                        location: location.clone()
+                    }),
+                    ("alloc", method_or_noop!("alloc")),
+                    ("realloc", method_or_noop!("realloc")),
+                    ("free", method_or_noop!("free")),
+                    ("free_self", method_or_noop!("free_self")),
+                ];
+
+                for (field, expr) in parts {
+                    self.generate_statement(
+                        func,
+                        module,
+                        AstNode::FieldAccess {
+                            left: Box::new(AstNode::Environment {
+                                value: None,
+                                location: location.clone(),
+                            }),
+                            right: Box::new(AstNode::FieldAccess {
+                                left: Box::new(AstNode::Literal {
+                                    kind: TokenKind::Identifier,
+                                    value: ValueKind::String("allocator".into()),
+                                    location: location.clone(),
+                                }),
+                                right: Box::new(AstNode::Literal {
+                                    kind: TokenKind::Identifier,
+                                    value: ValueKind::String(field.into()),
+                                    location: location.clone(),
+                                }),
+                                value: None,
+                                location: location.clone(),
+                            }),
+                            value: Some(Box::new(expr)),
+                            location: location.clone(),
+                        },
+                        None,
+                        None,
+                        is_return,
+                    )
+                    .expect(
+                        &location
+                            .error("Unexpected error when compiling a statement to set the allocator."),
+                    );
+                }
+
+                None
+            }
             AstNode::BlockStatement { body, location: _ } => {
                 self.scopes.push(hashmap!());
                 self.tmp_counter += 1;
@@ -2691,31 +2811,27 @@ impl Compiler {
 
                     if let Some(first_type) = first_type.clone() {
                         if ty != first_type {
-                            elle_error!(
-                                location.error(format!(
-                                    "Inconsistent array types '{}' and '{}' (possibly more)",
-                                    first_type.display(),
-                                    ty.display()
-                                ))
-                            );
+                            elle_error!(location.error(format!(
+                                "Inconsistent array types '{}' and '{}' (possibly more)",
+                                first_type.display(),
+                                ty.display()
+                            )));
                         }
 
                         if inner_ty.is_some() && inner_ty.clone().unwrap() != first_type {
-                            elle_error!(
-                                location.error(format!(
-                                    "Invalid type of element in array '{}' when the array type is '{}'",
-                                    ty.display(), inner_ty.unwrap().display(),
-                                ))
-                            )
+                            elle_error!(location.error(format!(
+                                "Invalid type of element in array '{}' when the array type is '{}'",
+                                ty.display(),
+                                inner_ty.unwrap().display(),
+                            )))
                         }
                     } else {
                         if inner_ty.is_some() && inner_ty.clone().unwrap() != ty {
-                            elle_error!(
-                                location.error(format!(
-                                    "Invalid type of element in array '{}' when the array type is '{}'",
-                                    ty.display(), inner_ty.unwrap().display(),
-                                ))
-                            )
+                            elle_error!(location.error(format!(
+                                "Invalid type of element in array '{}' when the array type is '{}'",
+                                ty.display(),
+                                inner_ty.unwrap().display(),
+                            )))
                         }
 
                         first_type = Some(ty);
@@ -2985,12 +3101,10 @@ impl Compiler {
                     .expect(&format!("Unable to find struct named '{}'", name));
 
                 if !td.usable && !func.borrow_mut().imported {
-                    elle_error!(
-                        location.error(format!(
-                            "Struct named '{}' was not imported and can't be used",
-                            Type::Struct(name.clone()).display()
-                        ))
-                    )
+                    elle_error!(location.error(format!(
+                        "Struct named '{}' was not imported and can't be used",
+                        Type::Struct(name.clone()).display()
+                    )))
                 }
 
                 let struct_pool = self.struct_pool.clone();
@@ -3340,7 +3454,7 @@ impl Compiler {
                         values: params
                             .iter()
                             .map(|param| {
-                                let inner = param.0.0.id();
+                                let inner = param.0 .0.id();
 
                                 (
                                     location.clone(),
@@ -3469,13 +3583,11 @@ impl Compiler {
                         if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct() {
                             ty = ty.get_pointer_inner().unwrap();
                         } else {
-                            elle_error!(
-                                &location.error(format!(
-                                    "Cannot access fields on a non-struct type '{}' (field '{}')",
-                                    ty.display(),
-                                    field
-                                ))
-                            );
+                            elle_error!(&location.error(format!(
+                                "Cannot access fields on a non-struct type '{}' (field '{}')",
+                                ty.display(),
+                                field
+                            )));
                         }
                     }
 
@@ -3517,14 +3629,24 @@ impl Compiler {
                     right: nested_right,
                     ..
                 } => {
-                    let (nested_ty, nested_left_value) =
-                        self.process_field_access(func, module, ty, left, *nested_left, true, location);
+                    let (nested_ty, nested_left_value) = self.process_field_access(
+                        func,
+                        module,
+                        ty,
+                        left,
+                        *nested_left,
+                        true,
+                        location,
+                    );
 
                     ty = nested_ty;
                     left = nested_left_value;
                     right = *nested_right;
                 }
-                _ => elle_error!(location.error(format!("Unexpected AST node type for field access: {:?}", right))),
+                _ => elle_error!(location.error(format!(
+                    "Unexpected AST node type for field access: {:?}",
+                    right
+                ))),
             }
         }
     }
@@ -3602,12 +3724,10 @@ impl Compiler {
                     left_matches_label.clone(),
                 ));
             }
-            other => elle_error!(
-                location.error(format!(
-                    "Invalid operator token for conditional short circuiting '{}'",
-                    other
-                ))
-            ),
+            other => elle_error!(location.error(format!(
+                "Invalid operator token for conditional short circuiting '{}'",
+                other
+            ))),
         }
 
         func.borrow_mut().add_block(right_label);
@@ -3696,16 +3816,14 @@ impl Compiler {
                 }
             }
 
-            elle_error!(
-                left_location
-                    .clone()
-                    .with_extra_info(format!("This has the type '{}'", first.display()))
-                    .error(format!(
-                        "Cannot convert from the type '{}' to the type '{}'.",
-                        first.display(),
-                        second.display()
-                    ))
-            )
+            elle_error!(left_location
+                .clone()
+                .with_extra_info(format!("This has the type '{}'", first.display()))
+                .error(format!(
+                    "Cannot convert from the type '{}' to the type '{}'.",
+                    first.display(),
+                    second.display()
+                )))
         }
 
         if ((first.is_strictly_number() && second.is_string())
@@ -3797,7 +3915,7 @@ impl Compiler {
                     parsed_generics.clone(),
                 ),
                 manual: member.manual,
-                no_fmt: member.no_fmt
+                no_fmt: member.no_fmt,
             })
             .collect::<Vec<Argument>>();
 
@@ -4127,7 +4245,7 @@ impl Compiler {
                                 known_generics.clone(),
                             ),
                             manual: arg.manual,
-                            no_fmt: arg.no_fmt
+                            no_fmt: arg.no_fmt,
                         })
                         .collect::<Vec<Argument>>();
 
@@ -4226,6 +4344,7 @@ impl Compiler {
         output_path: String,
         warnings: Warnings,
         object_output: bool,
+        no_gc: bool,
         string_module_methods: Vec<String>,
     ) {
         let mut generator = Compiler {
@@ -4241,6 +4360,7 @@ impl Compiler {
             deferred_functions: vec![],
             address_pool: hashmap![],
             output_path: output_path.clone(),
+            no_gc
         };
 
         let module = Module::new();
@@ -4259,15 +4379,13 @@ impl Compiler {
             .is_none()
             && !object_output
         {
-            elle_error!(
-                Location::base().basic_error(format!(
-                    "Could not compile module \"{MAGENTA}{output_path}{RESET}\":\n{}\n\n{}",
-                    "Module has no entry-point. To create one, write:",
-                    format!("{GREEN}+ fn main() {{\n+\n+ }}", GREEN = get_GREEN!()),
-                    MAGENTA = get_MAGENTA!(),
-                    RESET = get_RESET!()
-                ))
-            )
+            elle_error!(Location::base().basic_error(format!(
+                "Could not compile module \"{MAGENTA}{output_path}{RESET}\":\n{}\n\n{}",
+                "Module has no entry-point. To create one, write:",
+                format!("{GREEN}+ fn main() {{\n+\n+ }}", GREEN = get_GREEN!()),
+                MAGENTA = get_MAGENTA!(),
+                RESET = get_RESET!()
+            )))
         }
 
         for primitive in generator.tree.clone() {

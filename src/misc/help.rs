@@ -63,6 +63,10 @@ pub fn print_help(program: String) {
                     "-Wc-style-void",
                     "Creating a function with no arguments like 'fn foo(void) {}'",
                 ),
+                (
+                    "-Wallocator-methods-missing",
+                    "Setting an allocator which is missing some of the possible methods"
+                )
             ],
         ),
         (
@@ -73,8 +77,12 @@ pub fn print_help(program: String) {
                     "Doesn't import the string module by default. May break things.",
                 ),
                 (
+                    "--noalloc, --no-allocation",
+                    "Disables Elle allocation. You won't be able to use most std methods.",
+                ),
+                (
                     "--nogc, --no-garbage-collector",
-                    "Doesn't import the GC, so you can implement your own alloc methods.",
+                    "Doesn't use garbage collection, switches default allocator to arenas",
                 ),
                 (
                     "--nofmt, --no-primitive-formatters",

@@ -1,4 +1,3 @@
-use std/libc/mem;
 global pub;
 
 // used to force stack allocated pointers to be pushed to the stack

@@ -1,0 +1,148 @@
+use std/prelude;
+use std/allocators/gc;
+use std/allocators/heap;
+use std/allocators/arena;
+
+fn main() {
+    kind := "ArbitraryAllocator";
+    gc_kind := "GCAllocator";
+    heap_kind := "HeapAllocator";
+    arena_kind := "ArenaAllocator";
+
+    $assert(
+        #env.allocator.kind == gc_kind,
+        "This test should be ran with {} by default. Remove the `--nogc` flag.".format(gc_kind)
+    );
+
+    $assert(
+        #env.allocator.inner == (void *)#env.default_allocator,
+        "The allocator pointer itself should have switched to the {}.".format(gc_kind)
+    );
+
+    $assert(
+        #env.allocator.alloc == GCAllocator::alloc,
+        "The allocating function should have switched to `{}::alloc`.".format(gc_kind)
+    );
+
+    $assert(
+        #env.allocator.realloc == GCAllocator::realloc,
+        "The reallocating function should have switched to `{}::realloc`.".format(gc_kind)
+    );
+
+    $assert(
+        #env.allocator.free == ArbitraryAllocator::noop,
+        "The freeing function should have switched to `{}::noop`.".format(kind)
+    );
+
+    $assert(
+        #env.allocator.free_self == GCAllocator::free_self,
+        "The GCAllocator freeing function should have switched to `{}::free_self`.".format(gc_kind)
+    );
+
+    ptr := #alloc(i32);
+    $assert(
+        ptr != nil && ptr % #size(void *) == 0,
+        "Basic checks for ensuring the pointer provided by the {} is valid failed.".format(gc_kind)
+    );
+
+    *ptr = 39;
+    $assert(*ptr == 39, "Writing to a memory address given by {} failed.".format(gc_kind));
+
+    io::println("The `{}` tests have passed successfully.".format(gc_kind).color("green").reset());
+
+    // -------------------------------- HeapAllocator --------------------------------
+
+    heap := HeapAllocator::new();
+    #set_allocator(heap);
+
+    $assert(
+        #env.allocator.kind == heap_kind,
+        "The allocator kind should have been set to {}.".format(heap_kind)
+    );
+
+    $assert(
+        #env.allocator.inner == (void *)heap,
+        "The allocator pointer itself should have switched to {}.".format(heap_kind)
+    );
+
+    $assert(
+        #env.allocator.alloc == HeapAllocator::alloc,
+        "The allocating function should have switched to `{}::alloc`.".format(heap_kind)
+    );
+
+    $assert(
+        #env.allocator.realloc == HeapAllocator::realloc,
+        "The reallocating function should have switched to `{}::realloc`.".format(heap_kind)
+    );
+
+    $assert(
+        #env.allocator.free == HeapAllocator::free,
+        "The freeing function should have switched to `{}::free`.".format(heap_kind)
+    );
+
+    $assert(
+    #env.allocator.free_self == ArbitraryAllocator::noop,
+        "The HeapAllocator freeing function should have switched to `{}::noop`.".format(kind)
+    );
+
+    ptr := #alloc(i32);
+    $assert(
+        ptr != nil && ptr % #size(void *) == 0,
+        "Basic checks for ensuring the pointer provided by the {} is valid failed.".format(heap_kind)
+    );
+
+    *ptr = 39;
+    $assert(*ptr == 39, "Writing to a memory address given by {} failed.".format(heap_kind));
+
+    io::println("The `{}` tests have passed successfully.".format(heap_kind).color("green").reset());
+
+    // -------------------------------- ArenaAllocator --------------------------------
+
+    arena := ArenaAllocator::new();
+    #set_allocator(arena);
+
+    $assert(
+        #env.allocator.kind == arena_kind,
+        "The allocator kind should have to {}.".format(arena_kind)
+    );
+
+    $assert(
+        #env.allocator.inner == (void *)arena,
+        "The allocator pointer itself should have switched to {}.".format(arena_kind)
+    );
+
+    $assert(
+        #env.allocator.alloc == ArenaAllocator::alloc,
+        "The allocating function should have switched to `{}::alloc`.".format(arena_kind)
+    );
+
+    $assert(
+        #env.allocator.realloc == ArenaAllocator::realloc,
+        "The reallocating function should have switched to `{}::realloc`.".format(arena_kind)
+    );
+
+    $assert(
+        #env.allocator.free == ArbitraryAllocator::noop,
+        "The freeing function should have switched to `{}::noop`.".format(kind)
+    );
+
+    $assert(
+        #env.allocator.free_self == ArenaAllocator::free_self,
+        "The HeapAllocator freeing function should have switched to `{}::free_self`.".format(arena_kind)
+    );
+
+    ptr := #alloc(i32);
+    $assert(
+        ptr != nil && ptr % #size(void *) == 0,
+        "Basic checks for ensuring the pointer provided by the {} is valid failed.".format(arena_kind)
+    );
+
+    *ptr = 39;
+    $assert(*ptr == 39, "Writing to a memory address given by {} failed.".format(arena_kind));
+
+    io::println("The `{}` tests have passed successfully.".format(arena_kind).color("green").reset());
+
+    // -
+
+    io::println("All allocator tests have passed successfully!".color("green").reset());
+}

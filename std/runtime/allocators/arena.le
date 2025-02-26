@@ -1,0 +1,96 @@
+use std/libc/mem;
+global pub;
+
+local fn __internal_alloc_align8(i32 n) {
+    return (n + 7) & ~7;
+}
+
+struct __internal_Arena @nofmt {
+    void *buffer;
+    i32 size;
+    i32 used;
+    __internal_Arena *next;
+};
+
+struct ArenaAllocator @nofmt {
+    __internal_Arena *current; // singly linked list
+    i32 chunk_size;
+    i32 min_chunk_size;
+};
+
+fn __internal_Arena::new(i32 size) {
+    __internal_Arena *arena = mem::malloc(#size(__internal_Arena));
+
+    arena.buffer = mem::malloc(size);
+    arena.size = size;
+    arena.used = 0;
+    arena.next = nil;
+
+    return arena;
+}
+
+fn ArenaAllocator::new() {
+    ArenaAllocator *self = mem::malloc(#size(ArenaAllocator));
+
+    self.chunk_size = 64 * 1024; // 64kb chunks
+    self.min_chunk_size = 1024;  // 1kb minimum
+    self.current = __internal_Arena::new(self.chunk_size);
+    return self;
+}
+
+fn ArenaAllocator::alloc(ArenaAllocator *self, i32 _size) {
+    let size = __internal_alloc_align8(_size);
+
+    // if size is larger than chunk size
+    // create dedicated arena
+    if size > self.chunk_size {
+        let arena = __internal_Arena::new(size);
+        arena.next = self.current;
+        self.current = arena;
+        self.current.used = size;
+        return self.current.buffer;
+    }
+
+    // if arena doesnt have enough space create a new one
+    if self.current.used + size > self.current.size {
+        let arena = __internal_Arena::new(self.chunk_size);
+        arena.next = self.current;
+        self.current = arena;
+    }
+
+    // alloc from current arena
+    let offset = __internal_alloc_align8(self.current.used);
+    let ptr = (void *)self.current.buffer + offset;
+    self.current.used = offset + size;
+    return ptr;
+}
+
+fn ArenaAllocator::realloc(ArenaAllocator *self, void *ptr, i32 _new_size) {
+    // if nil is passed assume its an allocation instead of reallocation
+    if !ptr {
+        return self.alloc(_new_size);
+    }
+
+    // else alloc and copy old data
+    let new_size = __internal_alloc_align8(_new_size);
+    let new_ptr = self.alloc(new_size);
+
+    // copy memory from old buffer to new buffer
+    mem::memcpy(new_ptr, ptr, _new_size);
+
+    // do NOT free, managed by arena allocator
+    return new_ptr;
+}
+
+fn ArenaAllocator::free_self(ArenaAllocator *self) {
+    let current = self.current;
+
+    while current {
+        let next = current.next;
+        mem::free(current.buffer);
+        mem::free(current);
+        current = next;
+    }
+
+    mem::free(self);
+}

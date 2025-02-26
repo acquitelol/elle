@@ -362,6 +362,58 @@ fn main() {
 
 <hr />
 
+### ♡ **Allocators**
+
+Elle has a moderately complicated allocator system. Here's how it works:
+
+* By default:
+  - garbage collection
+* Using the `--nogc` flag at compilation:
+  - arena-based allocation
+
+#### **Changing the allocator:**
+
+```rs
+#set_allocator(MyAllocator::new());
+```
+
+#### **Resetting to the default allocator:**
+
+```rs
+#set_allocator(#env.default_allocator);
+```
+
+> [!IMPORTANT]
+> Make sure you don't forget to free any memory leftover when switching allocator! `#set_allocator` does **not** call the `free_self` method on the previous allocator when switching allocator, to allow for programs designed like this:
+
+```rs
+fn main() {
+    arena := ArenaAllocator::new();
+    #set_allocator(arena);
+    x := [1, 2, 3]; // x is allocated through the ArenaAllocator
+    #set_allocator(#env.default_allocator);
+    $println(x); // allocates via default allocator
+    #set_allocator(arena);
+    #env.allocator.free_self(); // frees the arenas
+    #set_allocator(#env.default_allocator); // go back to default allocator
+}
+```
+
+#### **What should an allocator have defined on it?**
+
+* Allocators should have the following methods defined on them:
+  * `MyAllocator::new()` (preferrably allocating the allocator structure itself via `mem::malloc`)
+  * `MyAllocator::alloc(MyAllocator *self, i32 size) -> void *` (size in bytes to allocate, should return `void *`)
+  * `MyAllocator::realloc(MyAllocator *self, void *ptr, i32 new_size) -> void *` (new_size in bytes. should return `void *`)
+  * `MyAllocator::free(MyAllocator *self, void *ptr)` (frees a specific object passed by pointer, may be omitted if permitted by the allocation model, will become `noop`)
+  * `MyAllocator::free_self(MyAllocator *self)` (destructor for the allocator itself including all of its allocations, **NOT** objects created by it)
+
+#### **Disabling allocation altogether:**
+
+- You can pass the `--noalloc` flag during compilation. Keep in mind that, while this will no longer define allocators, this means you won't be able to use almost any of the Elle standard library, as all of it depends on these allocators. This flag goes well with the `--nostd` flag.
+
+<hr />
+
 ### ♡ **Dynamic memory allocation**
 
 - Elle has a notion of a `#env` directive which gives you an `ElleEnv *`.
@@ -374,9 +426,42 @@ struct ElleEnv {
 };
 ```
 
-The allocator is completely abstracted away from you, but you should be safe assuming that it holds an `alloc` and `realloc` method. Memory deallocation is managed by the compiler via garbage collection.
+The allocator is completely abstracted away from you, which means that depending on the allocator, certain methods may not be set. They will be set to a `noop` function instead which returns `nil`.
 
-Example of using this:
+Typically, you should be safe to assume that you have `#alloc` and `#realloc`. In specific environments you can also assume you have `#free`, but this usually set to a `noop`.
+
+By default, memory deallocation is managed by the compiler via garbage collection. You can disable this by adding the `--nogc` flag, which will switch to using an `ArenaAllocator` model instead. If you prefer to manually manage memory altogether, you can either:
+
+```rs
+// Add this flag to your compilation command
+// which completely stops custom allocators.
+
+// You can now use mem::malloc, mem::free, etc
+//
+// Keep in mind that you will not be able to
+// use most standard library features with
+// allocators disabled.
+--noalloc
+```
+OR
+```rs
+// Import the heap allocator
+use std/allocators/heap;
+
+// And use it in your main function
+#set_allocator(HeapAllocator::new());
+
+// Now #alloc will call malloc, keeps type QOL features
+ptr := #alloc(i32, 5); // same as mem::malloc(#size(i32) * 5)
+#free(ptr); // same as mem::free(ptr);
+```
+
+> [!IMPORTANT]
+> Standard library functions do not free their memory because of the assumption of an auto-freeing allocator. If you use standard library functions with manual memory management, expect memory leaks.
+
+<hr />
+
+Example of using dynamic memory allocation:
 
 ```rs
 struct Foo {
@@ -1553,12 +1638,14 @@ For more information on stdlib alises, directives and attributes, please read be
 
 The current existing directives are:
 
-- `#len(expr)` - Gives you the length of a static array
+- `#len(static_array_expr)` - Gives you the length of a static array
 - `#size(T)` - Gives you the size of type T in bytes
 - `#i(ident)` - Gives you the iterator in a foreach loop given the current element
 - `#env` - Gives you a `ElleEnv *` which is a global environment structure
-- `#alloc` - Allows you to allocate a specific type using the global allocator
-- `#realloc` - Allows you to reallocate a pointer with a specific type using the global allocator
+- `#alloc(T, size?)` - Allows you to allocate a specific type using the current allocator
+- `#realloc(ptr_expr, T, size?)` - Allows you to reallocate a pointer with a specific type using the current allocator
+- `#free(ptr_expr)` - Frees a pointer using the current allocator. If the allocator didn't define a `free` method, this does nothing.
+- `#set_allocator(allocator_expr)` - Sets the current allocator to the one specified
 
 <hr />
 
@@ -1663,6 +1750,34 @@ fn main() {
     // Keep in mind __fmt__ *must* return a string.
     // The compiler will throw an error if it doesn't.
     foo(i32::__fmt__(1, 0), string::__fmt__("hi", 0), bool::__fmt__(true, 0));
+}
+```
+
+You can also define a function which formats everything *except* the arguments you specify. This is especially useful for formatting instance methods defined on structs:
+
+```rs
+use std/prelude;
+
+struct Foo {
+    i32 x;
+};
+
+// ElleMeta is already not formatted
+fn Foo::format(ElleMeta meta, @nofmt Foo *self, ...args) @fmt {
+    res := "{}\n".format(self.x);
+
+    // account for `self`
+    for i in 0..meta.arity - 1 {
+        res <>= args.yield(string);
+        res <>= i < meta.arity - 2 ? "\n" : "";
+    }
+
+    return res;
+}
+
+fn main() {
+    foo := Foo { x = 39 };
+    $dbg(foo.format(1.2, "bar", "baz"));
 }
 ```
 

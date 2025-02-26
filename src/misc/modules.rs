@@ -6,7 +6,7 @@ use std::path::Path;
 use std::process::exit;
 use std::time::Instant;
 
-use crate::{elle_error, get_STD_LIB_PATH};
+use crate::{elle_error, get_STD_LIB_PATH, ARBITRARY_ALLOCATOR_MODULE, BACKUP_ALLOCATOR_MODULE};
 use crate::{
     compiler::enums::Type,
     elapsed_with_color,
@@ -31,6 +31,7 @@ pub fn lex_and_parse(
     parsed_modules: &RefCell<HashSet<String>>,
     warnings: &Warnings,
     no_strings: bool,
+    no_alloc: bool,
     no_gc: bool,
     no_fmt: bool,
     debug_time: bool,
@@ -169,11 +170,23 @@ pub fn lex_and_parse(
         );
     }
 
-    if nesting == 0 && !no_gc {
+    if nesting == 0 && !no_alloc {
         imports.insert(
             0,
             Primitive::Use {
-                module: PRIMARY_ALLOCATOR_MODULE.into(),
+                module: if no_gc {
+                    BACKUP_ALLOCATOR_MODULE
+                } else {
+                    PRIMARY_ALLOCATOR_MODULE
+                }.into(),
+                location: loc.clone(),
+            },
+        );
+
+        imports.insert(
+            0,
+            Primitive::Use {
+                module: ARBITRARY_ALLOCATOR_MODULE.into(),
                 location: loc.clone(),
             },
         );
@@ -227,6 +240,7 @@ pub fn lex_and_parse(
                     parsed_modules,
                     warnings,
                     no_strings,
+                    no_alloc,
                     no_gc,
                     no_fmt,
                     debug_time,

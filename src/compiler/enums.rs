@@ -894,8 +894,7 @@ impl Type {
             | Self::UnsignedHalfword
             | Self::UnsignedWord
             | Self::Boolean
-            | Self::Char
-            | Self::Void => true,
+            | Self::Char => true,
             _ => false,
         }
     }
@@ -914,7 +913,7 @@ impl Type {
         match self {
             Self::Double => 4,
             Self::Single => 3,
-            Self::Long | Self::UnsignedLong | Self::Pointer(..) | Self::Function(..) => 2,
+            Self::Void | Self::Long | Self::UnsignedLong | Self::Pointer(..) | Self::Function(..) => 2,
             Self::Word => 1,
             other if other.is_map_to_int() => 1,
             _ => 0,
@@ -925,11 +924,11 @@ impl Type {
         match self {
             Self::UnsignedByte | Self::Byte | Self::Char => 1,
             Self::UnsignedHalfword | Self::Halfword => 2,
-            Self::Boolean | Self::UnsignedWord | Self::Word | Self::Single | Self::Void => 4,
+            Self::Boolean | Self::UnsignedWord | Self::Word | Self::Single => 4,
             Self::Double => 8,
             // Returns 4 on 32-bit and 8 on 64-bit
             // Functions are just pointers to the start of them
-            Self::UnsignedLong | Self::Long | Self::Pointer(..) | Self::Function(..) => {
+            Self::Void | Self::UnsignedLong | Self::Long | Self::Pointer(..) | Self::Function(..) => {
                 mem::size_of::<usize>() as u64
             }
             _ => 0,
@@ -975,7 +974,7 @@ impl fmt::Display for Type {
             Self::Pointer(..) => write!(formatter, "l"),
             Self::Single => write!(formatter, "s"),
             Self::Double => write!(formatter, "d"),
-            Self::Void => write!(formatter, "w"),
+            Self::Void => write!(formatter, "l"),
             Self::Null => write!(formatter, ""),
             Self::Struct(td) => write!(formatter, ":{}", td),
             Self::Function(_) => write!(formatter, "l"),

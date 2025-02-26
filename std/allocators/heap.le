@@ -1,22 +1,8 @@
-use std/libc/mem;
-
-namespace HeapAllocator;
 global pub;
 
-fn HeapAllocator::new() {
-    return (HeapAllocator *)nil;
-}
+namespace HeapAllocator;
 
-fn HeapAllocator::alloc(HeapAllocator *self, i32 size) {
-    return mem::malloc(size);
-}
-
-fn HeapAllocator::realloc(HeapAllocator *self, void *ptr, i32 new_size) {
-    return mem::realloc(ptr, new_size);
-}
-
-fn HeapAllocator::free(HeapAllocator *self, void *ptr) {
-    return mem::free(ptr);
-}
-
-fn HeapAllocator::free_self(HeapAllocator *self) {}
+external fn HeapAllocator::new() -> HeapAllocator *;
+external fn HeapAllocator::alloc(HeapAllocator *self, i32 size) -> void *;
+external fn HeapAllocator::realloc(HeapAllocator *self, void *ptr, i32 new_size) -> void *;
+external fn HeapAllocator::free(HeapAllocator *self, void *ptr);

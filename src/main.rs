@@ -15,7 +15,7 @@ mod parser;
 use compiler::compiler::Compiler;
 use compiler::enums::Type;
 use lexer::enums::{Location, TokenKind, ValueKind};
-use misc::{build::build, colors::*, help::print_help, modules::lex_and_parse, constants::*};
+use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex_and_parse};
 use parser::enums::{Argument, AstNode, Primitive};
 
 pub enum Warning {
@@ -23,6 +23,7 @@ pub enum Warning {
     InvalidAlias = 1 << 1,
     VariadicNoMeta = 1 << 2,
     CStyleVoid = 1 << 3,
+    AllocatorMethodsMissing = 1 << 4,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
@@ -40,6 +41,7 @@ impl Warning {
             | Self::StructFieldsMissing as u32
             | Self::VariadicNoMeta as u32
             | Self::CStyleVoid as u32
+            | Self::AllocatorMethodsMissing as u32
     }
 }
 
@@ -92,6 +94,7 @@ fn main() -> ExitCode {
     let mut object_output = false;
     let mut no_strings = false; // no string module
     let mut no_std = false; // no stdlib
+    let mut no_alloc = false; // no arbitrary allocator
     let mut no_gc = false; // no gc
     let mut no_fmt = false; // no primitive fmt methods
     let mut object_files: Vec<String> = vec![];
@@ -122,18 +125,23 @@ fn main() -> ExitCode {
             "-z" | "--link-flag" => linker_flags.push(args.next()),
             "-Z" | "--link-path" => linker_path = args.next().unwrap_or("cc".into()),
             "-Q" | "--qbe-path" => qbe_path = args.next().unwrap_or("qbe".into()),
-            "-S" | "--std-path" => if let Some(arg) = args.next() {
-                let leaked: &'static mut str = Box::leak(arg.into_boxed_str());
-                unsafe { STD_LIB_PATH = Some(leaked) };
+            "-S" | "--std-path" => {
+                if let Some(arg) = args.next() {
+                    let leaked: &'static mut str = Box::leak(arg.into_boxed_str());
+                    unsafe { STD_LIB_PATH = Some(leaked) };
+                }
             }
-            "-R" | "--runtime-path" => if let Some(arg) = args.next() {
-                let leaked: &'static mut str = Box::leak(arg.into_boxed_str());
-                unsafe { RUNTIME_PATH = Some(leaked) };
+            "-R" | "--runtime-path" => {
+                if let Some(arg) = args.next() {
+                    let leaked: &'static mut str = Box::leak(arg.into_boxed_str());
+                    unsafe { RUNTIME_PATH = Some(leaked) };
+                }
             }
             "--hush" | "--silent" => {
                 hush = true;
             }
             "--nosm" | "--no-string-module" => no_strings = true,
+            "--noalloc" | "--no-allocation" => no_alloc = true,
             "--nogc" | "--no-garbage-collector" => no_gc = true,
             "--nostd" | "--no-stdlib" => no_std = true,
             "--nofmt" | "--no-primitive-formatters" => no_fmt = true,
@@ -147,18 +155,34 @@ fn main() -> ExitCode {
             other => {
                 elle_error!(Location::base().basic_error(format!(
                     "{title}\n{help}\n{usage}\n{info}\n{extensions}",
-                    title = format!("An invalid argument was provided: {RED}{other}{RESET}\n", RED = get_RED!(), RESET = get_RESET!()),
+                    title = format!(
+                        "An invalid argument was provided: {RED}{other}{RESET}\n",
+                        RED = get_RED!(),
+                        RESET = get_RESET!()
+                    ),
                     help = format!("For help, please use the following command:"),
-                    usage = format!("{}{GREEN}{program} [-h | --help]{RESET}\n", " ".repeat(4), GREEN = get_GREEN!(), RESET = get_RESET!()),
+                    usage = format!(
+                        "{}{GREEN}{program} [-h | --help]{RESET}\n",
+                        " ".repeat(4),
+                        GREEN = get_GREEN!(),
+                        RESET = get_RESET!()
+                    ),
                     info = format!("If this is a file, please include its file extension."),
-                    extensions = format!("Possible extensions include: {GREEN}{FILE_EXTENSIONS:?}{RESET}", GREEN = get_GREEN!(), RESET = get_RESET!()),
+                    extensions = format!(
+                        "Possible extensions include: {GREEN}{FILE_EXTENSIONS:?}{RESET}",
+                        GREEN = get_GREEN!(),
+                        RESET = get_RESET!()
+                    ),
                 )))
             }
         }
     }
 
     if emit_qbe && emit_asm {
-        elle_error!(Location::base().basic_error(format!("{}Cannot generate both assembly and QBE.", get_RED!())))
+        elle_error!(Location::base().basic_error(format!(
+            "{}Cannot generate both assembly and QBE.",
+            get_RED!()
+        )))
     }
 
     let now = if debug_time {
@@ -167,6 +191,11 @@ fn main() -> ExitCode {
         None
     };
     let mut pool = HashMap::new();
+    let default_allocator = if no_gc {
+        BACKUP_ALLOCATOR_NAME
+    } else {
+        PRIMARY_ALOCATOR_NAME
+    };
 
     let meta_members = vec![
         // Holds an array of expressions passed into the function in plain text
@@ -175,7 +204,7 @@ fn main() -> ExitCode {
             // string[]
             r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
             manual: false,
-            no_fmt: false
+            no_fmt: false,
         },
         // Holds an array of the type of arguments passed into the function as strings
         Argument {
@@ -183,7 +212,7 @@ fn main() -> ExitCode {
             // string[]
             r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
             manual: false,
-            no_fmt: false
+            no_fmt: false,
         },
         // Holds the number of arguments that were passed into a function
         Argument {
@@ -191,7 +220,7 @@ fn main() -> ExitCode {
             // i32
             r#type: Type::Word,
             manual: false,
-            no_fmt: false
+            no_fmt: false,
         },
         // Holds the name of the caller method as a string
         Argument {
@@ -199,7 +228,7 @@ fn main() -> ExitCode {
             // string
             r#type: Type::Pointer(Box::new(Type::Char)),
             manual: false,
-            no_fmt: false
+            no_fmt: false,
         },
         // The name of the file that the struct was generated in
         Argument {
@@ -207,7 +236,7 @@ fn main() -> ExitCode {
             // string
             r#type: Type::Pointer(Box::new(Type::Char)),
             manual: false,
-            no_fmt: false
+            no_fmt: false,
         },
         // The line number that the struct was generated on
         Argument {
@@ -215,7 +244,7 @@ fn main() -> ExitCode {
             // i32
             r#type: Type::Word,
             manual: false,
-            no_fmt: false
+            no_fmt: false,
         },
         // The column number that the struct was generated on
         Argument {
@@ -223,25 +252,31 @@ fn main() -> ExitCode {
             // i32
             r#type: Type::Word,
             manual: false,
-            no_fmt: false
+            no_fmt: false,
         },
     ];
 
     let env_members = vec![
-        // The pointer to the region allocator
+        // The pointer to the current allocator
         Argument {
             name: "allocator".into(),
-            // Region *
-            r#type: Type::Pointer(Box::new(Type::Struct(PRIMARY_ALOCATOR_NAME.into()))),
+            r#type: Type::Pointer(Box::new(Type::Struct(ARBITRARY_ALLOCATOR_NAME.into()))),
             manual: false,
-            no_fmt: false
+            no_fmt: false,
+        },
+        // The pointer to the default allocator
+        Argument {
+            name: "default_allocator".into(),
+            r#type: Type::Pointer(Box::new(Type::Struct(default_allocator.into()))),
+            manual: false,
+            no_fmt: false,
         },
         // An approximation of the top of the stack
         Argument {
             name: "stack_top".into(),
             r#type: Type::Pointer(Box::new(Type::Void)),
             manual: false,
-            no_fmt: false
+            no_fmt: false,
         },
     ];
 
@@ -276,6 +311,7 @@ fn main() -> ExitCode {
         &parsed_modules,
         &warnings,
         no_strings,
+        no_alloc,
         no_gc,
         no_fmt,
         debug_time,
@@ -317,7 +353,7 @@ fn main() -> ExitCode {
         },
     );
 
-    if !object_output {
+    if !object_output && !no_alloc {
         // Rename main to an internal main
         let mut main_arg_len = 0;
         tree.iter_mut()
@@ -386,13 +422,13 @@ fn main() -> ExitCode {
                     name: "argc".into(),
                     r#type: Type::Word,
                     manual: false,
-                    no_fmt: false
+                    no_fmt: false,
                 },
                 Argument {
                     name: "argv".into(),
                     r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
                     manual: false,
-                    no_fmt: false
+                    no_fmt: false,
                 },
             ],
             r#return: Some(Type::Word),
@@ -421,7 +457,18 @@ fn main() -> ExitCode {
                                 (
                                     "allocator".into(),
                                     Box::new(AstNode::FunctionCall {
-                                        name: format!("{PRIMARY_ALOCATOR_NAME}.new"),
+                                        name: format!("{ARBITRARY_ALLOCATOR_NAME}.new"),
+                                        generics: vec![],
+                                        parameters: vec![],
+                                        type_method: false,
+                                        ignore_no_def: false,
+                                        location: loc.clone(),
+                                    }),
+                                ),
+                                (
+                                    "default_allocator".into(),
+                                    Box::new(AstNode::FunctionCall {
+                                        name: format!("{default_allocator}.new"),
                                         generics: vec![],
                                         parameters: vec![],
                                         type_method: false,
@@ -453,6 +500,23 @@ fn main() -> ExitCode {
                             location: loc.clone(),
                         })),
                         location: loc.clone(),
+                    },
+                    AstNode::SetAllocator {
+                        value: Box::new(AstNode::FieldAccess {
+                            left: Box::new(AstNode::Literal {
+                                kind: TokenKind::Identifier,
+                                value: ValueKind::String("env".into()),
+                                location: loc.clone(),
+                            }),
+                            right: Box::new(AstNode::Literal {
+                                kind: TokenKind::Identifier,
+                                value: ValueKind::String("default_allocator".into()),
+                                location: loc.clone(),
+                            }),
+                            value: None,
+                            location: loc.clone(),
+                        }),
+                        location: loc.clone()
                     },
                 ],
                 if main_arg_len == 1 {
@@ -682,6 +746,7 @@ fn main() -> ExitCode {
         path_to_qbe_dist.clone(),
         warnings,
         object_output,
+        no_gc,
         string_module_methods,
     );
 

@@ -1,0 +1,34 @@
+use std/runtime/allocators/__internal__;
+use std/libc/mem;
+global pub;
+
+fn ArbitraryAllocator::new() {
+    ArbitraryAllocator *self = mem::malloc(#size(ArbitraryAllocator));
+    return self;
+}
+
+// Fallback if an allocator is missing a method
+fn ArbitraryAllocator::noop() {
+    return nil;
+}
+
+fn ArbitraryAllocator::alloc(ArbitraryAllocator *self, i32 size) -> void * {
+    fn *temp = self.alloc;
+    return (void *)temp(self.inner, size);
+}
+
+fn ArbitraryAllocator::realloc(ArbitraryAllocator *self, void *ptr, i32 new_size) -> void * {
+    fn *temp = self.realloc;
+    return (void *)temp(self.inner, ptr, new_size);
+}
+
+fn ArbitraryAllocator::free(ArbitraryAllocator *self, void *ptr) {
+    fn *temp = self.free;
+    temp(self.inner, ptr);
+}
+
+fn ArbitraryAllocator::free_self(ArbitraryAllocator *self) {
+    fn *temp = self.free_self;
+    temp(self.inner);
+    mem::free(#env.allocator);
+}

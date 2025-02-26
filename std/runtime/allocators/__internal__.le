@@ -1,0 +1,13 @@
+pub struct ArbitraryAllocator @nofmt {
+    string kind;      // The current allocator's name
+    void *inner;      // The allocator structure itself
+
+    // KEEP IN MIND THAT ANY OF THESE METHODS MAY BE
+    // UNSET WHEN USING set_allocator. IF THIS IS THE
+    // CASE, THEY WILL BE SET TO A NOOP FUNCTION WHICH
+    // RETURNS NIL, THEY WILL **NOT** BE SET TO NIL.
+    void *alloc;      // Function pointer to an alloc method
+    void *realloc;    // Function pointer to a realloc method
+    void *free;       // Function pointer to a free method
+    void *free_self;    // Function pointer to a free_self method
+};

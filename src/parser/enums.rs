@@ -172,6 +172,13 @@ pub enum AstNode {
         value: Option<Box<AstNode>>,
         location: Rc<Location>,
     },
+    /// Allows to set the current allocator to something other than the default allocator
+    /// automatically uses the expression's type to get the correct functions as this
+    /// needs to be done through polymorphism at runtime
+    SetAllocator {
+        value: Box<AstNode>,
+        location: Rc<Location>
+    }
 }
 
 impl AstNode {
@@ -420,6 +427,11 @@ fn modify_type_in_node(
                     modify_type_in_node(*val.clone(), generics, known_types, struct_pool, tree);
                 *value = Some(Box::new(new_value));
             }
+        }
+        AstNode::SetAllocator { value, .. } => {
+            let new_value =
+                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
+            *value = Box::new(new_value);
         }
     }
 
