@@ -7,5 +7,5 @@ fn foo<T, U, V>(T a, T b) -> U {
 }
 
 fn main() {
-    foo(1, 2);
+    foo(1, 2); // This test should throw an error.
 }

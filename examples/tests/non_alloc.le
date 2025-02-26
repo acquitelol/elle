@@ -1,5 +1,5 @@
 // This file should throw an error because it is trying to set an expression
 // which isnt a Struct or Struct * as an allocator. This should never be the case.
 fn main() {
-    #set_allocator(1);
+    #set_allocator(1); // This test should throw an error.
 }

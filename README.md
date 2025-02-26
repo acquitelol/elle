@@ -1892,7 +1892,7 @@ Try compiling a simple example!
   ```
 Try compiling an example with libraries!
   ```
-    $ ellec ./examples/ball.le -Dtime -Clink-flags -lraylib && ./ball
+    $ ellec ./examples/ball.le -z -lraylib && ./ball
   ```
 
 <hr />
