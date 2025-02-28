@@ -812,10 +812,10 @@ impl<'a> Statement<'a> {
                         .is_some_and(|token| token.kind == TokenKind::Colon)
                     || self.current_token().kind == TokenKind::LeftParenthesis)
             {
+                inner_ty = Some(self.get_type(Some(self.shared.generics)));
                 self.advance();
 
                 if self.current_token().kind == TokenKind::Semicolon {
-                    inner_ty = Some(self.get_type(Some(self.shared.generics)));
                     self.advance();
 
                     // if the token *is* now right block brace after getting a ty
@@ -823,8 +823,6 @@ impl<'a> Statement<'a> {
                     if self.current_token().kind == TokenKind::RightBlockBrace {
                         break;
                     }
-                } else {
-                    self.reverse();
                 }
             }
 
