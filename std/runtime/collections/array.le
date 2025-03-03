@@ -303,6 +303,16 @@ fn Array::map<T, U>(U[] self, fn *mapping) -> T[] {
     return new_self;
 }
 
+fn Array::find<T>(T[] self, fn *cb, void *arg) -> T {
+    for let i = 0; i < self.len(); i += 1 {
+        if (bool)cb(self[i], arg) {
+            return self[i];
+        }
+    }
+
+    return nil;
+}
+
 fn Array::includes<T>(T[] self, T element) {
     for i32 i = 0; i < self.len(); i += 1 {
         if self[i] == element {
