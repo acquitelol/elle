@@ -5,6 +5,7 @@ global!(STD_LIB_PATH: &'static str = "/usr/local/include/elle", get_STD_LIB_PATH
 global!(RUNTIME_PATH: &'static str = "/usr/local/lib", get_RUNTIME_PATH);
 global!(BUILD_PATH: &'static str = "./.build/", get_BUILD_PATH);
 global!(MAIN_ID: &'static str = "__internal.elle.__main__", get_MAIN_ID);
+global!(POINTER_ID: &'static str = "__ptr__", get_POINTER_ID);
 
 // URLS
 pub static ISSUE_URL: &'static str = "https://github.com/acquitelol/elle/issues/new";
@@ -19,7 +20,6 @@ pub static BACKUP_ALLOCATOR_MODULE: &'static str = "std/allocators/arena";
 pub static ARBITRARY_ALLOCATOR_NAME: &'static str = "ArbitraryAllocator";
 pub static ARBITRARY_ALLOCATOR_MODULE: &'static str = "std/allocators/arbitrary";
 pub static VOID_POINTER_ID: &'static str = "__void_ptr__";
-pub static POINTER_ID: &'static str = "__ptr__";
 pub static ENV_ID: &'static str = "__internal.elle.__env__";
 pub static GC_NOOP: &'static str = "__internal_gc_noop";
 pub static INTERNAL_FORMATTER: &'static str =

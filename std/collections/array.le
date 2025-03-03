@@ -22,7 +22,6 @@ fn Array::from_string(string str) -> char[] {
     return array;
 }
 
-
 // from is inclusive, to is exclusive
 //
 // example:

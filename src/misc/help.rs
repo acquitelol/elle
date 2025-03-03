@@ -95,6 +95,10 @@ pub fn print_help(program: String) {
                 (
                     "--noclr, --no-ansi",
                     "Disables ANSI color output (alternative to NO_COLOR=1)"
+                ),
+                (
+                    "--cpfmt, --clean-ptr-fmt",
+                    "Cleans up formatting for pointer types when printing to the console."
                 )
             ]
         ),

@@ -137,6 +137,7 @@ fn main() -> ExitCode {
                     unsafe { RUNTIME_PATH = Some(leaked) };
                 }
             }
+            "--cpfmt" | "--clean-ptr-fmt" => unsafe { POINTER_ID = Some("__clean_ptr__") },
             "--hush" | "--silent" => {
                 hush = true;
             }
@@ -702,8 +703,7 @@ fn main() -> ExitCode {
             return_location: loc.clone(),
         });
     } else {
-        let leaked: &'static mut str = Box::leak("main".to_string().into_boxed_str());
-        unsafe { MAIN_ID = Some(leaked) };
+        unsafe { MAIN_ID = Some("main") };
     }
 
     if ast {

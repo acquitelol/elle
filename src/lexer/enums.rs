@@ -399,7 +399,14 @@ impl Location {
             ident
         };
 
-        self.ctx.trim_start().split_at(left).1.into()
+        let ctx = self.ctx.trim_start();
+        let mut split_index = 0;
+
+        for (i, _) in ctx.char_indices().take(left) {
+            split_index = i;
+        }
+
+        ctx.split_at(split_index).1.into()
     }
 
     fn trim_indentation(&self, ctx: Rc<str>, above: Rc<str>) -> (String, String) {
@@ -465,15 +472,20 @@ impl Location {
             ident
         };
 
-        let string = ctx.split_at(left);
-        let fallback_char = format!("{}", string.1.chars().nth(0).expect(&self.basic_error("Failed to format this location.")));
-        let mut fallback_rest = string.1.to_string();
-        fallback_rest.remove(0);
+        let split_index = ctx.char_indices()
+            .nth(left)
+            .map(|(i, _)| i)
+            .unwrap_or_else(|| ctx.len());
 
-        let lhs = string.0;
-        let issue = string.1.get(0..self.length).unwrap_or(&fallback_char);
-        let rhs = string.1.get(self.length..).unwrap_or(&fallback_rest);
+        let (lhs, rhs) = ctx.split_at(split_index);
 
+        let split_index = rhs.char_indices()
+            .nth(self.length)
+            .map(|(i, _)| i)
+            .unwrap_or_else(|| rhs.len());
+
+        let issue = &rhs[..split_index];
+        let rhs = &rhs[split_index..];
         let line = format!("{} | ", self.row + 1);
 
         return format!(

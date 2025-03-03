@@ -45,12 +45,6 @@ impl<'a> Statement<'a> {
         }
     }
 
-    pub fn reverse(&mut self) {
-        if !self.is_eof() {
-            self.position -= 1;
-        }
-    }
-
     pub fn advance(&mut self) {
         if !self.is_eof() {
             self.position += 1;

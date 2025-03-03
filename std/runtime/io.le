@@ -163,10 +163,7 @@ fn io::input(string message) -> string {
 fn io::read_to_string(string path) -> string {
     let file = io::fopen(path, "r");
     defer io::fclose(file);
-
-    if !file {
-        return nil;
-    }
+    io::assert(file, "Failed to open file {}".format(path));
 
     io::fseek(file, 0, 2);
     let file_size = io::ftell(file);

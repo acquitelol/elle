@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    advance, elle_error, get_MAIN_ID, hashmap, is_generic, lexer::enums::{Location, TokenKind, ValueKind}, misc::colors::*, parser::{
+    advance, elle_error, get_MAIN_ID, get_POINTER_ID, hashmap, is_generic, lexer::enums::{Location, TokenKind, ValueKind}, misc::colors::*, parser::{
         enums::{modify_type_in_ast, Argument, AstNode, Primitive},
         parser::StructPool,
     }, unknown_field, unknown_function, Warning, Warnings, ARBITRARY_ALLOCATOR_NAME, DUNDER_CONSTANTS, ENV_ID, ENV_STRUCT_NAME, EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID, META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES, VOID_POINTER_ID
@@ -1298,7 +1298,7 @@ impl Compiler {
                         && PTR_PRIORITY_CONSTANTS.contains(&name.as_str())
                         && type_method
                     {
-                        name = format!("{}.{}", POINTER_ID, name)
+                        name = format!("{}.{}", get_POINTER_ID!(), name)
                     // struct* access
                     } else if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct() {
                         name = format!(
@@ -1314,7 +1314,7 @@ impl Compiler {
                         && DUNDER_CONSTANTS.contains(&name.as_str())
                         && type_method
                     {
-                        name = format!("{}.{}", POINTER_ID, name)
+                        name = format!("{}.{}", get_POINTER_ID!(), name)
                     } else {
                         name = format!("{}.{}", ty.id(), name)
                     }

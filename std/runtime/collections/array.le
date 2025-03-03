@@ -21,8 +21,18 @@ local fn __internal_array_bounds_check(string file, i32 line, i32 col, i64 i, i6
 }
 
 fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
-    let temp = self;
-    return temp.to_string();
+    string res = "[";
+
+    for i32 i = 0; i < self.len(); i += 1 {
+        res.extend(self[i].__fmt__(nesting));
+
+        if i < self.len() - 1 {
+            res.extend(", ");
+        }
+    }
+
+    res.push(']');
+    return res;
 }
 
 fn Array::__load__<T>(ElleMeta meta, T[] self, i64 i) {
@@ -201,19 +211,8 @@ fn Array::clone<T>(T[] self) -> T[] {
 }
 
 // Turn an array into a string in format [1, 2, "xyz", 'y']
-fn Array::to_string<T>(ElleMeta meta, T[] self) -> string {
-    string res = "[";
-
-    for i32 i = 0; i < self.len(); i += 1 {
-        res.extend(self[i].__fmt__(0));
-
-        if i < self.len() - 1 {
-            res.extend(", ");
-        }
-    }
-
-    res.push(']');
-    return res;
+fn Array::to_string<T>(T[] self) -> string {
+    return (*self).__fmt__(0);
 }
 
 // Join an array's elements by a separator

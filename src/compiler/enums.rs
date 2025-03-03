@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    elle_error, get_MAIN_ID, hashmap, is_generic, is_unknown, lexer::enums::Location, parser::{
+    elle_error, get_MAIN_ID, get_POINTER_ID, hashmap, is_generic, is_unknown, lexer::enums::Location, parser::{
         enums::{Argument, Primitive},
         parser::StructPool,
     }, DEAD_CODE_ELIMINATION_PASSES, GENERIC_END, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN, MAIN_ID, POINTER_ID, VOID_POINTER_ID
@@ -408,7 +408,7 @@ impl Type {
         match self {
             x if x.is_string() => "string".into(),
             x if x.is_void_pointer() => VOID_POINTER_ID.into(),
-            Type::Pointer(_) => POINTER_ID.into(),
+            Type::Pointer(_) => get_POINTER_ID!().into(),
             _ => self.id(),
         }
     }
@@ -1407,7 +1407,7 @@ impl Module {
         Module {
             functions: vec![],
             types: vec![],
-            data: vec![],
+            data: vec![]
         }
     }
 

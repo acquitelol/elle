@@ -1,3 +1,4 @@
+namespace __clean_ptr__;
 namespace __void_ptr__;
 namespace __ptr__;
 global pub;
@@ -25,4 +26,14 @@ fn __ptr__::__fmt__<T>(T *self, i32 nesting) {
     }
 
     return "<{} at {}>".__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(res, self);
+}
+
+fn __clean_ptr__::__fmt__<T>(T *self, i32 nesting) {
+    let res = "invalid";
+
+    if (bool)self && (void *)self % #size(void *) == 0 {
+        res = (*self).__fmt__(nesting);
+    }
+
+    return "{}".__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(res);
 }

@@ -1,3 +1,4 @@
+namespace __clean_ptr__;
 namespace __void_ptr__;
 namespace __ptr__;
 global pub;

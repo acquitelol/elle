@@ -6,7 +6,7 @@ use std::path::Path;
 use std::process::exit;
 use std::time::Instant;
 
-use crate::{elle_error, get_STD_LIB_PATH, ARBITRARY_ALLOCATOR_MODULE, BACKUP_ALLOCATOR_MODULE};
+use crate::{elle_error, get_POINTER_ID, get_STD_LIB_PATH, ARBITRARY_ALLOCATOR_MODULE, BACKUP_ALLOCATOR_MODULE};
 use crate::{
     compiler::enums::Type,
     elapsed_with_color,
@@ -376,7 +376,7 @@ pub fn lex_and_parse(
         tree.insert(
             0,
             Primitive::Function {
-                name: format!("{}.{LEN_CONSTANT}", POINTER_ID).into(),
+                name: format!("{}.{LEN_CONSTANT}", get_POINTER_ID!()).into(),
                 public: false,
                 usable: true,
                 imported: false,
