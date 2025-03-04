@@ -803,7 +803,7 @@ impl<'a> Statement<'a> {
                         || self.current_token().value.is_base_type())
                     && !self
                         .next_token()
-                        .is_some_and(|token| token.kind == TokenKind::Colon)
+                        .is_some_and(|token| token.kind == TokenKind::DoubleColon)
                     || self.current_token().kind == TokenKind::LeftParenthesis)
             {
                 inner_ty = Some(self.get_type(Some(self.shared.generics)));
