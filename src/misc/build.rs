@@ -54,8 +54,6 @@ pub fn build(
         .map(|x| x.as_ref().unwrap().as_str())
         .collect::<Vec<&str>>();
 
-    let objects = object_files.join(" ");
-
     if object_output {
         output_path = Path::new(&output_path)
             .with_extension("o")
@@ -64,7 +62,13 @@ pub fn build(
             .to_string();
     }
 
-    args.extend(vec!["-o", &output_path, &path_string, &objects]);
+    args.extend(vec!["-o", &output_path, &path_string]);
+
+    if !object_files.is_empty() {
+        for file in &object_files {
+            args.push(file.as_str());
+        }
+    }
 
     if object_output {
         args.push("-c");
@@ -75,6 +79,7 @@ pub fn build(
         // explicitly look for the runtime at this path in case
         // the user doesnt have rpath set or similar
         args.push(&lib_lookup);
+        args.push("-lm");
         args.push("-lelle"); // must be prebuilt
     }
 
