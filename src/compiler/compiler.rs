@@ -8,10 +8,17 @@ use std::{
 };
 
 use crate::{
-    advance, elle_error, get_MAIN_ID, get_POINTER_ID, hashmap, is_generic, lexer::enums::{Location, TokenKind, ValueKind}, misc::colors::*, parser::{
+    advance, elle_error, get_MAIN_ID, get_POINTER_ID, hashmap, is_generic,
+    lexer::enums::{Location, TokenKind, ValueKind},
+    misc::colors::*,
+    parser::{
         enums::{modify_type_in_ast, Argument, AstNode, Primitive},
         parser::StructPool,
-    }, unknown_field, unknown_function, Warning, Warnings, ARBITRARY_ALLOCATOR_NAME, DUNDER_CONSTANTS, ENV_ID, ENV_STRUCT_NAME, EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID, META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES, VOID_POINTER_ID
+    },
+    unknown_field, unknown_function, Warning, Warnings, ARBITRARY_ALLOCATOR_NAME, DUNDER_CONSTANTS,
+    ENV_ID, ENV_STRUCT_NAME, EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END,
+    GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID, META_STRUCT_NAME, POINTER_ID,
+    PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES, VOID_POINTER_ID,
 };
 
 use super::enums::{
@@ -2422,11 +2429,14 @@ impl Compiler {
 
                 let parts = vec![
                     ("inner", *value),
-                    ("kind", AstNode::Literal {
-                        kind: TokenKind::StringLiteral,
-                        value: ValueKind::String(allocator_name.clone()),
-                        location: location.clone()
-                    }),
+                    (
+                        "kind",
+                        AstNode::Literal {
+                            kind: TokenKind::StringLiteral,
+                            value: ValueKind::String(allocator_name.clone()),
+                            location: location.clone(),
+                        },
+                    ),
                     ("alloc", method_or_noop!("alloc")),
                     ("realloc", method_or_noop!("realloc")),
                     ("free", method_or_noop!("free")),
@@ -2464,8 +2474,9 @@ impl Compiler {
                         is_return,
                     )
                     .expect(
-                        &location
-                            .error("Unexpected error when compiling a statement to set the allocator."),
+                        &location.error(
+                            "Unexpected error when compiling a statement to set the allocator.",
+                        ),
                     );
                 }
 
@@ -4360,7 +4371,7 @@ impl Compiler {
             deferred_functions: vec![],
             address_pool: hashmap![],
             output_path: output_path.clone(),
-            no_gc
+            no_gc,
         };
 
         let module = Module::new();

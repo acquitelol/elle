@@ -145,7 +145,7 @@ local fn GCAllocator::__internal_mark_region(GCAllocator *self, void **start, vo
         let ptr = *current;
 
         // not nil && is a multiple of ptrsize && isnt clearly invalid
-        if ptr % #size(void *) == 0 && ptr && ptr > 0x1000  {
+        if (ptr % #size(void *)) == 0 && ptr && ptr > 0x1000  {
             let block = self.map.find(ptr);
 
             // only mark if not already marked because
