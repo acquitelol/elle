@@ -1,9 +1,8 @@
-DIST_PATH = /usr/local
+DIST_PATH = $(HOME)/.local
 BIN_PATH = $(DIST_PATH)/bin/ellec
 STD_PATH = $(DIST_PATH)/include/elle/std
 RUNTIME_PATH = $(DIST_PATH)/lib
 
-# !! Requires root !!
 default: install-release
 
 install-debug: install-compiler-debug install-std install-runtime
@@ -25,6 +24,7 @@ install-std:
 install-runtime:
 	@rm -f $(RUNTIME_PATH)/libelle.o
 	@rm -f $(RUNTIME_PATH)/libelle.a
+	mkdir -p $(RUNTIME_PATH)
 	# must be compiled without anything because this is the module creating it
 	# its fine because those modules are actually just headers anyway
 	# this is just so the headers dont overwrite the implementation in the stdlib

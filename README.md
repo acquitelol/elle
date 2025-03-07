@@ -1871,10 +1871,10 @@ All contributions to this project are welcome and I love talking about this stuf
     ```
 
     ```console
-      $ sudo make
+      $ make
     ```
 
-    to install the compiler and standard library (requires root)
+    to install the compiler and standard library (installs into ~/.local/ by default)
 
     **OR**
 

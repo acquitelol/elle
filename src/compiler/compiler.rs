@@ -1204,7 +1204,7 @@ impl Compiler {
                             name.clone(),
                             None,
                             vec![
-                                (Type::Byte, DataItem::String(val)),
+                                (Type::Byte, DataItem::String(val.replace("\n", "\\n"))),
                                 (Type::Byte, DataItem::Const(0)),
                             ],
                         ));

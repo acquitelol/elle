@@ -1,7 +1,8 @@
 use std::{fs, path::Path, process::Command};
 
 use crate::{
-    misc::{colors::*, constants::*}, EmitKind
+    misc::{colors::*, constants::*},
+    EmitKind,
 };
 
 pub fn build(
@@ -48,12 +49,6 @@ pub fn build(
         return EmitKind::AsmFile(output_path);
     }
 
-    let mut args = linker_flags
-        .iter()
-        .filter(|x| x.is_some())
-        .map(|x| x.as_ref().unwrap().as_str())
-        .collect::<Vec<&str>>();
-
     if object_output {
         output_path = Path::new(&output_path)
             .with_extension("o")
@@ -62,7 +57,14 @@ pub fn build(
             .to_string();
     }
 
-    args.extend(vec!["-o", &output_path, &path_string]);
+    let mut args = vec!["-o", &output_path, &path_string];
+    args.extend(
+        linker_flags
+            .iter()
+            .filter(|x| x.is_some())
+            .map(|x| x.as_ref().unwrap().as_str())
+            .collect::<Vec<&str>>(),
+    );
 
     if !object_files.is_empty() {
         for file in &object_files {

@@ -81,6 +81,23 @@ fn main() -> ExitCode {
         exit(0);
     }
 
+    macro_rules! set_with_home {
+        ($x:ident, $y:expr) => {{
+            let leaked: &'static mut str = Box::leak(
+                format!(
+                    "{}/{}",
+                    env::var("HOME").expect("Failed to get $HOME path"),
+                    $y
+                )
+                .into_boxed_str(),
+            );
+            unsafe { $x = Some(leaked) };
+        }};
+    }
+
+    set_with_home!(STD_LIB_PATH, get_STD_LIB_PATH!());
+    set_with_home!(RUNTIME_PATH, get_RUNTIME_PATH!());
+
     let mut input_path = None;
     let mut output_path = None;
 
@@ -517,7 +534,7 @@ fn main() -> ExitCode {
                             value: None,
                             location: loc.clone(),
                         }),
-                        location: loc.clone()
+                        location: loc.clone(),
                     },
                 ],
                 if main_arg_len == 1 {
