@@ -10,14 +10,6 @@ const Color BACKGROUND = raylib::get_color(0x333333FF);
 const Color BLACK = raylib::get_color(0x000000FF);
 const Color WHITE = raylib::get_color(0xFFFFFFFF);
 
-// raylib's implementation is faulty for the y axis width
-fn check_collision_point_rec(Vector2 point, Rectangle rect) {
-    return point.x >= rect.x &&
-        point.x <= rect.x + rect.width &&
-        point.y >= rect.y &&
-        point.y <= rect.y + rect.height;
-}
-
 fn render_button(string text, f32 y_offset, Vector2 mouse_pos, i32 *counter, fn *action) {
     button := Rectangle {
         x = (SCREEN_WIDTH - raylib::measure_text(text, 20) - 30) / 2,

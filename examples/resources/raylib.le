@@ -86,7 +86,14 @@ external fn GetFPS() @alias("raylib::get_fps");
 external fn CheckCollisionCircleRec(Vector2 center, f32 radius, Rectangle rec) @alias("raylib::check_collision_circle_rec");
 external fn DrawRectangleRec(Rectangle rec, Color color) @alias("raylib::draw_rectangle_rec");
 external fn DrawCircleV(Vector2 center, f32 radius, Color color) @alias("raylib::draw_circle_v");
-external fn CheckCollisionPointRec(Vector2 point, Rectangle rec) @alias("raylib::check_collision_point_rec") -> bool;
 external fn IsMouseButtonPressed(i32 button) @alias("raylib::is_mouse_button_pressed") -> bool;
 external fn DrawRectangleLinesEx(Rectangle rec, f32 lineThick, Color color) @alias("raylib::draw_rectangle_lines_ex");
 external fn GetMousePosition() @alias("raylib::get_mouse_position") -> Vector2;
+
+// raylib's implementation is faulty for the y axis width
+fn check_collision_point_rec(Vector2 point, Rectangle rect) {
+    return point.x >= rect.x &&
+        point.x <= rect.x + rect.width &&
+        point.y >= rect.y &&
+        point.y <= rect.y + rect.height;
+}
