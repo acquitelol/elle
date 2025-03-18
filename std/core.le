@@ -9,3 +9,4 @@ external fn strtol(string str, string *endptr, i32 base) @alias("string::strtol"
 external fn abort() @alias("libc::abort");
 external fn exit(i32 code) @alias("libc::exit");
 external fn system(string cmd) @alias("libc::system");
+external fn sleep(i32 seconds) @alias("libc::sleep");

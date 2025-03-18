@@ -1,4 +1,5 @@
 global pub;
+namespace raylib;
 
 struct AudioStream {
     void *buffer;
@@ -85,5 +86,7 @@ external fn GetFPS() @alias("raylib::get_fps");
 external fn CheckCollisionCircleRec(Vector2 center, f32 radius, Rectangle rec) @alias("raylib::check_collision_circle_rec");
 external fn DrawRectangleRec(Rectangle rec, Color color) @alias("raylib::draw_rectangle_rec");
 external fn DrawCircleV(Vector2 center, f32 radius, Color color) @alias("raylib::draw_circle_v");
-
-namespace raylib;
+external fn CheckCollisionPointRec(Vector2 point, Rectangle rec) @alias("raylib::check_collision_point_rec") -> bool;
+external fn IsMouseButtonPressed(i32 button) @alias("raylib::is_mouse_button_pressed") -> bool;
+external fn DrawRectangleLinesEx(Rectangle rec, f32 lineThick, Color color) @alias("raylib::draw_rectangle_lines_ex");
+external fn GetMousePosition() @alias("raylib::get_mouse_position") -> Vector2;
