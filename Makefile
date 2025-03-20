@@ -1,5 +1,5 @@
 DIST_PATH = $(HOME)/.local
-BIN_PATH = $(DIST_PATH)/bin/ellec
+BIN_PATH = $(DIST_PATH)/bin/
 STD_PATH = $(DIST_PATH)/include/elle/std
 RUNTIME_PATH = $(DIST_PATH)/lib
 
@@ -9,12 +9,12 @@ install-debug: install-compiler-debug install-std install-runtime
 install-release: install-compiler-release install-std install-runtime
 
 install-compiler-debug: compile-debug
-	mkdir -p $(DIST_PATH)
-	mv ./ellec $(BIN_PATH)
+	mkdir -p $(BIN_PATH)
+	mv ./ellec $(BIN_PATH)ellec
 
 install-compiler-release: compile-release
-	mkdir -p $(DIST_PATH)
-	mv ./ellec $(BIN_PATH)
+	mkdir -p $(BIN_PATH)
+	mv ./ellec $(BIN_PATH)ellec
 
 install-std:
 	rm -rf $(STD_PATH)

@@ -383,6 +383,14 @@ Elle has a moderately complicated allocator system. Here's how it works:
 #set_allocator(#env.default_allocator);
 ```
 
+OR
+
+```rs
+#reset_allocator();
+```
+
+(These are equivalent expressions.)
+
 > [!IMPORTANT]
 > Make sure you don't forget to free any memory leftover when switching allocator! `#set_allocator` does **not** call the `free_self` method on the previous allocator when switching allocator, to allow for programs designed like this:
 
@@ -391,11 +399,11 @@ fn main() {
     arena := ArenaAllocator::new();
     #set_allocator(arena);
     x := [1, 2, 3]; // x is allocated through the ArenaAllocator
-    #set_allocator(#env.default_allocator);
+    #reset_allocator();
     $println(x); // allocates via default allocator
     #set_allocator(arena);
     #env.allocator.free_self(); // frees the arenas
-    #set_allocator(#env.default_allocator); // go back to default allocator
+    #reset_allocator(); // go back to default allocator
 }
 ```
 
@@ -423,8 +431,11 @@ This structure is also not defined in Elle code (like `ElleMeta`), but its equiv
 ```rs
 struct ElleEnv {
     ArbitraryAllocator *allocator;
+    TAllocator *allocator;
 };
 ```
+
+(where `TAllocator` is either `GCAllocator` or `ArenaAllocator` depending on your compilation configuration.)
 
 The allocator is completely abstracted away from you, which means that depending on the allocator, certain methods may not be set. They will be set to a `noop` function instead which returns `nil`.
 
@@ -1029,7 +1040,7 @@ fn main() {
 }
 ```
 
-Casting is not necessary here, because the Elle compiler is smart enough to automatically cast the `f32` to an `i32` when compiling the arithmetic operation, based on a [weight](https://github.com/acquitelol/elle/blob/rewrite/src/compiler/enums.rs#L934-L943) that each type is assigned.
+Casting is not necessary here, because the Elle compiler is smart enough to automatically cast the `f32` to an `i32` when compiling the arithmetic operation, based on a [weight](https://github.com/acquitelol/elle/blob/rewrite/src/compiler/enums.rs#L912-L921) that each type is assigned.
 
 <br />
 
@@ -1200,7 +1211,7 @@ fn main() {
 
 And of course, this works for every arithmetic operator, not just `^`.
 
-Elle follows the standard [order of operations](https://github.com/acquitelol/elle/blob/rewrite/src/lexer/enums.rs#L114-L130) described by mathematics (typically defined as BIDMAS or PEMDAS), which means you can also wrap expressions in `()` to evaluate them before other expressions that may have a higher precedence.
+Elle follows the standard [order of operations](https://github.com/acquitelol/elle/blob/rewrite/src/lexer/enums.rs#L121-L137) described by mathematics (typically defined as BIDMAS or PEMDAS), which means you can also wrap expressions in `()` to evaluate them before other expressions that may have a higher precedence.
 
 Example of a program that calculates the xor (`^`) and sum (`+`) of some values:
 
@@ -1291,7 +1302,7 @@ fn main() {
 
 Elle's module system works in the following way:
 
-- Elle will look in the /usr/local/include/elle folder for modules
+- Elle will look in the `~/.local/include/elle/` folder for modules
 - Elle will look in the current working directory for modules
 
 The syntax for importing is as follows:
@@ -1889,11 +1900,11 @@ All contributions to this project are welcome and I love talking about this stuf
 #### ♡ You can now run `ellec` to get a help message of how to use the compiler!
 Try compiling a simple example!
   ```console
-    $ ellec ./examples/donut.le && ./donut
+    $ ellec ./examples/tests/hello.le && ./hello
   ```
 Try compiling an example with libraries!
   ```
-    $ ellec ./examples/ball.le -z -lraylib && ./ball
+    $ ellec ./examples/graphics/ball.le -z -lraylib && ./ball
   ```
 
 <hr />
