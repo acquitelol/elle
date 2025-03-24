@@ -11,7 +11,7 @@ struct LinkedList<T> {
 };
 
 fn LinkedList::__fmt__<T>(LinkedList<T> self, i32 nesting) {
-    let res = "";
+    res := "";
 
     while self.head {
         res <>= self.head.data.__fmt__(0);
@@ -25,17 +25,12 @@ fn LinkedList::__fmt__<T>(LinkedList<T> self, i32 nesting) {
     return res;
 }
 
-fn LinkedList::new<T>() -> LinkedList<T> {
-    return LinkedList { head = nil };
+fn LinkedList::new<T>() -> LinkedList<T> * {
+    return #alloc(LinkedList<T>);
 }
 
 fn LinkedList::add<T>(LinkedList<T> *self, T data) {
-    Node<T> *new = mem::malloc(#size(Node<T>));
-
-    if !new {
-        return;
-    }
-
+    new := #alloc(Node<T>);
     new.data = data;
     new.next = self.head;
     self.head = new;
@@ -43,7 +38,7 @@ fn LinkedList::add<T>(LinkedList<T> *self, T data) {
 
 fn LinkedList::free<T>(LinkedList<T> *self) {
     while self.head {
-        Node<T> *next = self.head.next;
+        next := self.head.next;
         mem::free(self.head);
         self.head = next;
     }

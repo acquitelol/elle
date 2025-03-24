@@ -3,5 +3,8 @@ name = "ellec"
 version = "0.1.0"
 edition = "2021"
 
+[build-dependencies]
+chrono = "0.4"
+
 [dependencies]
 levenshtein = "1.0.5"

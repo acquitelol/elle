@@ -1,11 +1,10 @@
-use crate::misc::colors::*;
-
-const DIVIDER_SIZE: usize = 50;
+use crate::{misc::colors::*, DIVIDER_SIZE};
 
 pub fn print_help(program: String) {
     println!("{}Welcome to the Elle compiler! (˶ᵔ ᵕ ᵔ˶){}", get_GREEN!(), get_RESET!());
     println!("{}", "―".repeat(DIVIDER_SIZE));
     println!("{}Usage: {program} [..options] <entry.le> [<file1.o>, <file2.o>...]{}", get_GREEN!(), get_RESET!());
+    println!("{}Version: {} ({} built on {}){}", get_GREEN!(), env!("CARGO_PKG_VERSION"), env!("GIT_HASH"), env!("BUILD_DATE"), get_RESET!());
 
     let help_message_options = vec![
         (
@@ -20,6 +19,10 @@ pub fn print_help(program: String) {
                     "--hush, --silent",
                     "No longer tells you if a target was compiled successfully",
                 ),
+                (
+                    "-v, --version",
+                    "Prints the current ellec version (along with extra information)"
+                )
             ],
         ),
         (

@@ -164,6 +164,20 @@ fn main() -> ExitCode {
             "--nostd" | "--no-stdlib" => no_std = true,
             "--nofmt" | "--no-primitive-formatters" => no_fmt = true,
             "--noclr" | "--no-ansi" => disable_colors!(),
+            "-v" | "--version" => {
+                println!(
+                    "{} {GREEN}{}{RESET} ({GREEN}{}{RESET})\nbuilt at {GREEN}{}{RESET}\nvia rustc {GREEN}{}{RESET}",
+                    env!("CARGO_BIN_NAME"),
+                    env!("CARGO_PKG_VERSION"),
+                    env!("GIT_HASH"),
+                    env!("BUILD_DATE"),
+                    env!("RUSTC_VERSION"),
+                    GREEN = get_GREEN!(),
+                    RESET = get_RESET!()
+                );
+
+                exit(0);
+            }
             other if other.ends_with(SHORT_EXTENSION) => {
                 if input_path.is_none() {
                     input_path = Some(other.to_string())

@@ -62,6 +62,7 @@ pub static RESERVED_KEYWORDS: &[&'static str] = &[
 // Miscellaneous
 pub static VA_LIST_SIZE_BYTES: usize = 32;
 pub static DEAD_CODE_ELIMINATION_PASSES: usize = 6;
+pub static DIVIDER_SIZE: usize = 50;
 
 #[macro_export]
 macro_rules! INTERNAL_IDX_FORMAT { () => { "__internal_{}_idx" }; }
