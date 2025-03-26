@@ -1,0 +1,47 @@
+use std/prelude;
+
+fn main() {
+    // This test aims to be absolutely sure that the
+    // dispatch for string::contains and string::find
+    // works correctly for both strings and chars.
+    //
+    // This test exists because these methods
+    // recently introduced custom dispatch behavior
+    // allowing for both strings and chars to be passed
+    // to the functions.
+    //
+    // Exists since: 0.3.2
+    x := "foobar";
+    y := "z";
+
+    // Contains tests:
+    $assert(x.contains("bar"), "It should be in the string");
+    $assert(!x.contains("xyz"), "It should *NOT* be in the string");
+
+    $assert(x.contains('a'), "Checking a single character exists");
+    $assert(!x.contains('z'), "Checking a single character doesn't exist");
+
+    $assert(y.contains("z"), "The needle is the whole string and should match");
+    $assert(!y.contains("zz"), "The needle is longer than the string, shouldn't match");
+
+    $assert(y.contains('z'), "The string is 1 character and should match the needle");
+    $assert(!y.contains('x'), "The string is 1 character and should *NOT* match the needle");
+
+    // Find tests:
+    $assert(x.find("bar") == 3, "The needle should be in the string and the position should be correct");
+    $assert(x.find("xyz") == -1, "The needle should not be in the string");
+    $assert(x.find("foo") == 0, "The needle should be at the start of the string");
+
+    $assert(x.find('a') == 4, "Checking a single character's position is correct");
+    $assert(x.find('o') == 1, "The position is correct when there are 2 of the same character");
+    $assert(x.find('z') == -1, "Checking a character which isn't in the string to be invalid");
+    $assert(x.find('f') == 0, "The character should be at the start of the string");
+
+    $assert(y.find("z") == 0, "The needle is the whole string and should match");
+    $assert(y.find("zz") == -1, "The needle is longer than the string, should never be found");
+
+    $assert(y.find('z') == 0, "The string is a single character and should match");
+    $assert(y.find('a') == -1, "The string is a single character and shouldn't match");
+
+    $println("All `contains` and `find` tests have passed!".color("green").reset());
+}

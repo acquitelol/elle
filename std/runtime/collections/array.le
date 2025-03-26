@@ -303,6 +303,26 @@ fn Array::map<T, U>(U[] self, fn *mapping) -> T[] {
     return new_self;
 }
 
+fn Array::every<T>(T[] self, fn *cb) {
+    for x in self {
+        if !(bool)cb(x) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+fn Array::any<T>(T[] self, fn *cb) {
+    for x in self {
+        if (bool)cb(x) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 fn Array::find<T>(T[] self, fn *cb, void *arg) -> T {
     for let i = 0; i < self.len(); i += 1 {
         if (bool)cb(self[i], arg) {

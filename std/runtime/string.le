@@ -14,11 +14,50 @@ fn string::equals(string self, string other) {
 
 external fn string::equals(string self, string other) @alias("string::__equals__") -> bool;
 
-fn string::contains(string self, string needle) -> bool {
+local fn __internal_throw_invalid_needle(ElleMeta meta, ElleMeta caller_meta, ...args) {
+    io::cprintf(
+        "[%s:%d:%d] ERROR: Expected a second argument of type 'string' or 'char'.\n",
+        caller_meta.file, caller_meta.line, caller_meta.column
+    );
+
+    for i := 0; i < meta.arity; i += 1 {
+        if meta.types[i] == "string" {
+            io::cprintf("%s", args.yield(string));
+        }
+    }
+
+    libc::abort();
+}
+
+fn string::contains(ElleMeta meta, string self, ...args) -> bool {
+    if meta.arity != 2 {
+        __internal_throw_invalid_needle(meta, "The needle argument was not provided.\n");
+    }
+
+    if meta.types[1] != "char" && meta.types[1] != "string" {
+        __internal_throw_invalid_needle(meta, "Got a value of type ", meta.types[1], " instead.\n");
+    }
+
+    needle := meta.types[1] == "char"
+        ? #[args.yield(char), '\0']
+        : args.yield(string);
+
     return (void *)strstr(self, needle) != nil;
 }
 
-fn string::find(string self, string needle) -> i64 {
+fn string::find(ElleMeta meta, string self, ...args) -> i64 {
+    if meta.arity != 2 {
+        __internal_throw_invalid_needle(meta, "The needle argument was not provided.\n");
+    }
+
+    if meta.types[1] != "char" && meta.types[1] != "string" {
+        __internal_throw_invalid_needle(meta, "Got a value of type ", meta.types[1], " instead.\n");
+    }
+
+    needle := meta.types[1] == "char"
+        ? #[args.yield(char), '\0']
+        : args.yield(string);
+
     let result = strstr(self, needle);
 
     if (void *)result == nil {
