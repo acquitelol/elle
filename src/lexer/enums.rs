@@ -402,8 +402,8 @@ impl Location {
         let ctx = self.ctx.trim_start();
         let mut split_index = 0;
 
-        for (i, _) in ctx.char_indices().take(left) {
-            split_index = i;
+        for (i, c) in ctx.char_indices().take(left) {
+            split_index = i + c.len_utf8();
         }
 
         ctx.split_at(split_index).1.into()
