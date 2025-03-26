@@ -20,7 +20,7 @@ fn main() {
     // An additional condition exists to not decrement the ternary nesting count if the token
     // following the ternary close `:` is an equals `=` token.
     //
-    // Fix introduced in: 0.2.0
+    // Fixed since: 0.2.0
 
     // First, let's ensure ternaries themselves work:
     let x = true ? 1 : 2;

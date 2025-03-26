@@ -1,0 +1,54 @@
+use std/prelude;
+
+fn main() {
+    // This test targets a regression where arrays with multiple values
+    // were not properly parsed when they were part of a single-statement
+    // lambda expression.
+    //
+    // This is due to the lamdba expression parser only caring about
+    // nesting due to parentheses, aka. `()` and not block braces
+    // aka. `[]` when detecting whether it should stop due to a comma.
+    //
+    // The original usecase for stopping when a comma is present is, say,
+    // an expression like this:
+    //
+    // foo(fn(i32 x) x * 2, 5);
+    //
+    // Here, the comma after 2 signals that the lambda has ended and we
+    // should stop parsing. When a statement is wrapped in parentheses,
+    // that case is also handled (ie function calls inside the lambda)
+    // and the comma does not exit out of the lambda. However, we were
+    // missing arrays:
+    //
+    // fn(i32 x) [1, 2].contains(x);
+    //
+    // Here, the comma between 1 and 2 is important. However, due to the
+    // lambda parser not tracking the block brace nesting depth, the comma
+    // here was just interpreted as the end of the lambda, which lead to
+    // very incorrect behavior.
+    //
+    // Fixed since: 0.3.1
+
+    // Basic lambda:
+    // Note `double` is not a type, its `f64`
+    // so this being called `double` is okay.
+    double := fn(i32 x) x * 2;
+
+    // Called:
+    $assert(double(5) == 10, nil);
+
+    // With nested funcalls:
+    squared := fn(i32 x) math::pow(x, 2);
+
+    // Called:
+    $assert(squared(4) == 16, nil);
+
+    // With arrays:
+    is_binary_digit := fn(char x) ['0', '1'].contains(x);
+
+    // Called:
+    $assert(is_binary_digit('1'), nil);
+    $assert(!is_binary_digit('a'), nil);
+
+    $println("All lambda nesting depth tests have passed!".color("green").reset());
+}

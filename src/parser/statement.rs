@@ -1684,6 +1684,7 @@ impl<'a> Statement<'a> {
             }
         } else {
             let mut nesting = 0;
+            let mut block_nesting  = 0;
             let tokens = self.yield_tokens_with_condition(|_, token, next_token| {
                 if token.kind == TokenKind::LeftParenthesis {
                     nesting += 1;
@@ -1697,8 +1698,20 @@ impl<'a> Statement<'a> {
                     }
                 }
 
+                if token.kind == TokenKind::LeftBlockBrace {
+                    block_nesting += 1;
+                }
+
+                if token.kind == TokenKind::RightBlockBrace {
+                    if block_nesting > 0 {
+                        block_nesting -= 1;
+                    } else {
+                        return true;
+                    }
+                }
+
                 token.kind == TokenKind::Semicolon
-                    || (nesting == 0
+                    || (nesting == 0 && block_nesting == 0
                         && (token.kind == TokenKind::Comma
                             || next_token
                                 .is_some_and(|next| next.kind == TokenKind::RightCurlyBrace)))
