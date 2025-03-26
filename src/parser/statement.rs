@@ -625,13 +625,14 @@ impl<'a> Statement<'a> {
                 TokenKind::LeftParenthesis => {
                     nesting += 1;
                 }
-                TokenKind::RightParenthesis => {
+                TokenKind::RightParenthesis if nesting > 0 => {
                     nesting -= 1;
                 }
                 _ if token.kind.is_ternary_start() => {
                     ternary_nesting += 1;
                 }
-                _ if token.kind.is_ternary_end() => {
+                _ if token.kind.is_ternary_end() && ternary_nesting > 0
+                    && tokens.get(index + 1).is_some_and(|token| token.kind != TokenKind::Equal) => {
                     ternary_nesting -= 1;
                 }
                 TokenKind::Semicolon => {

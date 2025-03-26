@@ -1,0 +1,68 @@
+use std/prelude;
+
+fn main() {
+    // This test aims to assert a fix to a regression in the parser for ternary statements
+    //
+    // In particular, we weren't asserting that the nesting depth was > 0 for ternaries
+    // in the function to find lowest precedence.
+    //
+    // This lead to expressions using the "walrus" operator `x := y` to fail when wrapped
+    // in brackets and mathematical tokens follow because the parser sees the arithmetic
+    // token, enters the arithmetic parsing flow, then follows the "lowest precedence function".
+    //
+    // Now due to the ternary precedence technically being set to -1 (? == +1, : == -1) the
+    // position of the lowest precedence token was never found and so remained 0.
+    //
+    // This was easily resolved by only decrementing the ternary nesting if its already > 0.
+    // This is fine, as if it was 0 already then that would mean an imbalance in ternary
+    // start and close tokens anyway.
+    //
+    // An additional condition exists to not decrement the ternary nesting count if the token
+    // following the ternary close `:` is an equals `=` token.
+    //
+    // Fix introduced in: 0.2.0
+
+    // First, let's ensure ternaries themselves work:
+    let x = true ? 1 : 2;
+
+    // And in an if-statement?
+    if 2 > 1 ? "foo" : nil {
+        $println("2 is more than 1!");
+    }
+
+    // And wrapped in parens?
+    if (2 > 1 ? "foo" : nil) {
+        $println("2 is more than 1! (now wrapped in parens)");
+    }
+
+    // And with extra operations afterwards?
+    if (2 > 1 ? "foo" : nil) == "foo" {
+        $println("2 > 1 resulted in foo!");
+    }
+
+    // If we're here without errors, then the above all should work.
+    // Now let's try with variable declaration:
+    x := 1;
+
+    // And again, standalone in an if-statement?
+    if x := 1 {
+        $dbg(x);
+    }
+
+    // And now, wrapped in parens?
+    if (x := 1) {
+        $println(x, " (but wrapped in parens :3)");
+    }
+
+    // And with extra operations afterwards?
+    if (x := 1) < 2 {
+        $println(x, " is less than 2!");
+    }
+
+    // And finally, an expression assignment with a ternary?
+    if (x := 1 < 2 ? "foo" : nil) == "foo" {
+        $println(x, " is definitely foo.");
+    }
+
+    $println("All wrapped assignment expr tests have passed!".color("green").reset());
+}
