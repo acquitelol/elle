@@ -2541,6 +2541,7 @@ impl Compiler {
                 r#type: second,
                 value,
                 location,
+                explicit
             } => {
                 let (first, val) = self
                     .generate_statement(func, module, *value, ty, None, false)
@@ -2553,7 +2554,7 @@ impl Compiler {
                     val,
                     &location,
                     &location,
-                    true,
+                    explicit,
                 ))
             }
             AstNode::LogicalNot { value, location } => {
@@ -2762,6 +2763,7 @@ impl Compiler {
                                             r#type: Some(ty.clone()),
                                             value: Box::new(node),
                                             location: loc.clone(),
+                                            explicit: false
                                         },
                                     )
                                 })

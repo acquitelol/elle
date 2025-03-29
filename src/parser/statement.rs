@@ -1794,6 +1794,7 @@ impl<'a> Statement<'a> {
             r#type: Some(r#type),
             value,
             location,
+            explicit: true
         }
     }
 
@@ -2690,6 +2691,7 @@ impl<'a> Statement<'a> {
                 location: location.clone(),
             }),
             location: location.clone(),
+            explicit: true
         };
 
         match self.current_token().kind {
@@ -2794,6 +2796,7 @@ impl<'a> Statement<'a> {
                 location: location.clone(),
             }),
             location: location.clone(),
+            explicit: true
         };
 
         match self.current_token().kind {

@@ -140,6 +140,7 @@ pub enum AstNode {
         r#type: Option<Type>,
         value: Box<AstNode>,
         location: Rc<Location>,
+        explicit: bool
     },
     /// Returns the size (in bytes) or length, depending on if `standalone` is set to true
     /// The result is used to allow for getting the size of both expressions and types

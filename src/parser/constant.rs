@@ -87,6 +87,7 @@ impl<'a> Constant<'a> {
                 r#type: Some(ty),
                 value: Box::new(value),
                 location: self.parser.current_token().location,
+                explicit: false
             }),
             usable: true,
             imported: false,

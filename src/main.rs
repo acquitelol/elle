@@ -166,7 +166,7 @@ fn main() -> ExitCode {
             "--noclr" | "--no-ansi" => disable_colors!(),
             "-v" | "--version" => {
                 println!(
-                    "{} {GREEN}{}{RESET} ({GREEN}{}{RESET})\nbuilt at {GREEN}{}{RESET}\nvia rustc {GREEN}{}{RESET}",
+                    "{} {GREEN}{}{RESET} ({GREEN}{}{RESET})\nbuilt on {GREEN}{}{RESET}\nvia rustc {GREEN}{}{RESET}",
                     env!("CARGO_BIN_NAME"),
                     env!("CARGO_PKG_VERSION"),
                     env!("GIT_HASH"),
