@@ -1,6 +1,11 @@
 use std/io;
 
 fn main() {
+    // Even though this is an automatic test, it is outside
+    // of the automatic and manual tests. That is because this
+    // is the single most important test out of them all and
+    // should always run before any other test.
+    //
     // This test is supposed to fail.
     // It's intention is to ensure that assertions actually work.
     //

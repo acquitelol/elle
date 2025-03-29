@@ -35,5 +35,5 @@ fn main() {
     t := [i32[]; [17]];
     $assert(t[0][0] == 17, nil);
 
-    io::println("All array shorthand tests have passed!".color("green").reset());
+    io::println("All `array shorthand` tests have passed!".color("green").reset());
 }

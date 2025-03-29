@@ -13,5 +13,5 @@ fn main() {
     };
 
     $assert(multiline(81) == 6, nil);
-    io::println("All lambda tests have passed!".color("green").reset());
+    io::println("All `lambda` tests have passed!".color("green").reset());
 }

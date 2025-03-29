@@ -24,5 +24,5 @@ fn main() {
 
     $assert(c.to<i32>() == 123456, nil);
     $assert(c.to<i32>() == c.to<i64>(), nil);
-    io::println("All BigInt tests have passed!".color("green").reset());
+    io::println("All `BigInt` tests have passed!".color("green").reset());
 }

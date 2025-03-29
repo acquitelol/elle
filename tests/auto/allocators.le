@@ -48,7 +48,7 @@ fn main() {
     *ptr = 39;
     $assert(*ptr == 39, "Writing to a memory address given by {} failed.".format(gc_kind));
 
-    io::println("The `{}` tests have passed successfully.".format(gc_kind).color("green").reset());
+    io::println("The `{}` tests have passed.".format(gc_kind).color("green").reset());
 
     // -------------------------------- HeapAllocator --------------------------------
 
@@ -94,7 +94,7 @@ fn main() {
     *ptr = 39;
     $assert(*ptr == 39, "Writing to a memory address given by {} failed.".format(heap_kind));
 
-    io::println("The `{}` tests have passed successfully.".format(heap_kind).color("green").reset());
+    io::println("The `{}` tests have passed.".format(heap_kind).color("green").reset());
 
     // -------------------------------- ArenaAllocator --------------------------------
 
@@ -140,9 +140,9 @@ fn main() {
     *ptr = 39;
     $assert(*ptr == 39, "Writing to a memory address given by {} failed.".format(arena_kind));
 
-    io::println("The `{}` tests have passed successfully.".format(arena_kind).color("green").reset());
+    io::println("The `{}` tests have passed.".format(arena_kind).color("green").reset());
 
     // -
 
-    io::println("All allocator tests have passed successfully!".color("green").reset());
+    io::println("All `allocator` tests have passed!".color("green").reset());
 }

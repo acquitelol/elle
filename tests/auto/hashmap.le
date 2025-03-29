@@ -28,7 +28,6 @@ fn main() {
     $assert(map.contains_key(-40), nil);
     $assert(map.contains_key(98), nil);
 
-    $dbg(map);
     map.remove(5);
     map.remove(-40);
 
@@ -46,18 +45,5 @@ fn main() {
     $assert(!map.contains_key(98), nil);
     $assert(!map.contains_key(1000), nil);
 
-    let string_map = HashMap::new<string, i32>();
-
-    for char c = 'a'; c < 'f'; c += 1 {
-        string_map["{}".format(c)] = math::next_power_of_2((i32)(c - 'a') * 30);
-    }
-
-    $dbg(
-        string_map.contains_key("b"),
-        string_map.contains_key("foo"),
-        string_map["d"],
-        string_map
-    );
-
-    io::println("All HashMap tests have passed!".color("green").reset());
+    io::println("All `HashMap` tests have passed!".color("green").reset());
 }

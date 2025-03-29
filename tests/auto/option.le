@@ -21,20 +21,14 @@ fn main() {
     let a = get_meow(1);
     let b = get_meow(3);
 
-    $dbg(a.unwrap_or("Fallback :3"));
-    $dbg(b.unwrap_or("Fallback :3"));
-
     $assert(a.unwrap_or("Fallback :3") == "meow", nil);
     $assert(b.unwrap_or("Fallback :3") == "Fallback :3", nil);
 
     let c = get_miku_number("aaa :3");
     let d = get_miku_number("mikudayo");
 
-    $dbg(c.unwrap_or(-1));
-    $dbg(d.unwrap_or(-1));
-
     $assert(c.unwrap_or(-1) == -1, nil);
     $assert(d.unwrap_or(-1) == 39, nil);
 
-    io::println("All option tests have passed!".color("green").reset());
+    io::println("All `option` tests have passed!".color("green").reset());
 }

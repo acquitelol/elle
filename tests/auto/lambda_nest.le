@@ -50,5 +50,5 @@ fn main() {
     $assert(is_binary_digit('1'), nil);
     $assert(!is_binary_digit('a'), nil);
 
-    $println("All lambda nesting depth tests have passed!".color("green").reset());
+    $println("All `lambda nesting` tests have passed!".color("green").reset());
 }

@@ -34,5 +34,5 @@ fn main() {
     z <>= "baz";
 
     $assert(z == "foobarbaz", nil);
-    io::println("All variable shadowing tests have passed!".color("green").reset());
+    io::println("All `variable shadowing` tests have passed!".color("green").reset());
 }

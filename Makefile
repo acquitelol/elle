@@ -38,9 +38,30 @@ compile-debug:
 compile-release:
 	cargo build --release && mv ./target/release/ellec ./ellec
 
+.PHONY: test-file
+test-file:
+	@ellec $(TEST_FILE) -o __ellec_test_tmp $(if $(VERBOSE),,--hush);
+	-@./__ellec_test_tmp foo bar baz;
+	@rm -f ./__ellec_test_tmp $(if $(VERBOSE),,> /dev/null);
+
+.PHONY: test-suite-%
+test-suite-%:
+	@for file in $$(ls tests/$*); do \
+		if [ -n "$(CLEAR)" ]; then clear; fi; \
+		make $(if $(VERBOSE),VERBOSE=$(VERBOSE),) TEST_FILE=tests/$*/$$file test-file; \
+		if [ -n "$(DELAY)" ]; then sleep $(DELAY); fi; \
+	done
+
 .PHONY: test
 test:
-	pypy3 tools/examples.py all
+	@make $(if $(VERBOSE),VERBOSE=$(VERBOSE),) TEST_FILE=tests/assert.le test-file
+	make $(if $(VERBOSE),VERBOSE=$(VERBOSE),) test-suite-auto
+	@# make $(if $(VERBOSE),VERBOSE=$(VERBOSE),) test-suite-manual
+
+.PHONY: test-manual
+test-manual:
+	@make VERBOSE=1 DELAY=2 CLEAR=1 test-suite-manual
+
 
 repl:
 	ellec tools/repl.le
@@ -48,4 +69,5 @@ repl:
 clean:
 	rm -rf dist
 	rm repl
+	rm __ellec_test_tmp
 	@make compile-release

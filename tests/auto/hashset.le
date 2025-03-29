@@ -27,5 +27,5 @@ fn main() {
     set.clear();
     $assert(set.is_empty(), nil);
 
-    io::println("All HashSet tests have passed!".color("green").reset());
+    io::println("All `HashSet` tests have passed!".color("green").reset());
 }

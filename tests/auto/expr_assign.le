@@ -26,43 +26,29 @@ fn main() {
     let x = true ? 1 : 2;
 
     // And in an if-statement?
-    if 2 > 1 ? "foo" : nil {
-        $println("2 is more than 1!");
-    }
+    if 2 > 1 ? "foo" : nil {}
 
     // And wrapped in parens?
-    if (2 > 1 ? "foo" : nil) {
-        $println("2 is more than 1! (now wrapped in parens)");
-    }
+    if (2 > 1 ? "foo" : nil) {}
 
     // And with extra operations afterwards?
-    if (2 > 1 ? "foo" : nil) == "foo" {
-        $println("2 > 1 resulted in foo!");
-    }
+    if (2 > 1 ? "foo" : nil) == "foo" {}
 
     // If we're here without errors, then the above all should work.
     // Now let's try with variable declaration:
     x := 1;
 
     // And again, standalone in an if-statement?
-    if x := 1 {
-        $dbg(x);
-    }
+    if x := 1 {}
 
     // And now, wrapped in parens?
-    if (x := 1) {
-        $println(x, " (but wrapped in parens :3)");
-    }
+    if (x := 1) {}
 
     // And with extra operations afterwards?
-    if (x := 1) < 2 {
-        $println(x, " is less than 2!");
-    }
+    if (x := 1) < 2 {}
 
     // And finally, an expression assignment with a ternary?
-    if (x := 1 < 2 ? "foo" : nil) == "foo" {
-        $println(x, " is definitely foo.");
-    }
+    if (x := 1 < 2 ? "foo" : nil) == "foo" {}
 
-    $println("All wrapped assignment expr tests have passed!".color("green").reset());
+    $println("All `wrapped assignment` tests have passed!".color("green").reset());
 }

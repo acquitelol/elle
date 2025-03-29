@@ -92,5 +92,5 @@ fn main() {
         string::format("result = \"{}\"", j)
     );
 
-    io::println("All string tests have passed!".color("green").reset());
+    io::println("All `string` tests have passed!".color("green").reset());
 }
