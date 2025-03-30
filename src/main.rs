@@ -18,6 +18,8 @@ use lexer::enums::{Location, TokenKind, ValueKind};
 use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex_and_parse};
 use parser::enums::{Argument, AstNode, Primitive};
 
+use crate::parser::enums::Declare;
+
 pub enum Warning {
     StructFieldsMissing = 1 << 0,
     InvalidAlias = 1 << 1,
@@ -468,7 +470,7 @@ fn main() -> ExitCode {
             r#return: Some(Type::Word),
             body: [
                 vec![
-                    AstNode::Declare {
+                    AstNode::Declare(Declare {
                         name: "stack_top".into(),
                         r#type: Some(Type::Pointer(Box::new(Type::Void))),
                         value: Some(Box::new(AstNode::Address {
@@ -481,8 +483,8 @@ fn main() -> ExitCode {
                         })),
                         location: loc.clone(),
                         value_location: loc.clone(),
-                    },
-                    AstNode::Declare {
+                    }),
+                    AstNode::Declare(Declare {
                         name: "env".into(),
                         r#type: Some(Type::Infer),
                         value: Some(Box::new(AstNode::StructLiteral {
@@ -523,7 +525,7 @@ fn main() -> ExitCode {
                         })),
                         location: loc.clone(),
                         value_location: loc.clone(),
-                    },
+                    }),
                     AstNode::Environment {
                         value: Some(Box::new(AstNode::Address {
                             value: Box::new(AstNode::Literal {
@@ -555,7 +557,7 @@ fn main() -> ExitCode {
                 ],
                 if main_arg_len == 1 {
                     vec![
-                        AstNode::Declare {
+                        AstNode::Declare(Declare {
                             name: "args".into(),
                             r#type: Some(Type::Infer),
                             value: Some(Box::new(AstNode::FunctionCall {
@@ -575,8 +577,8 @@ fn main() -> ExitCode {
                             })),
                             location: loc.clone(),
                             value_location: loc.clone(),
-                        },
-                        AstNode::Declare {
+                        }),
+                        AstNode::Declare(Declare {
                             name: "i".into(),
                             r#type: Some(Type::Word),
                             value: Some(Box::new(AstNode::Literal {
@@ -586,7 +588,7 @@ fn main() -> ExitCode {
                             })),
                             location: loc.clone(),
                             value_location: loc.clone(),
-                        },
+                        }),
                         AstNode::WhileLoopStatement {
                             condition: Box::new(AstNode::BinaryOperation {
                                 left: Box::new(AstNode::Literal {
@@ -604,7 +606,7 @@ fn main() -> ExitCode {
                                 dunder_methods: false,
                                 location: loc.clone(),
                             }),
-                            step: Some(Box::new(AstNode::Declare {
+                            step: Some(Box::new(AstNode::Declare(Declare {
                                 name: "i".into(),
                                 r#type: None,
                                 value: Some(Box::new(AstNode::BinaryOperation {
@@ -625,7 +627,7 @@ fn main() -> ExitCode {
                                 })),
                                 location: loc.clone(),
                                 value_location: loc.clone(),
-                            })),
+                            }))),
                             body: vec![AstNode::FunctionCall {
                                 name: "push".into(),
                                 generics: vec![],
@@ -670,7 +672,7 @@ fn main() -> ExitCode {
                     vec![]
                 },
                 vec![
-                    AstNode::Declare {
+                    AstNode::Declare(Declare {
                         name: "status".into(),
                         r#type: Some(Type::Word),
                         value: Some(Box::new(AstNode::FunctionCall {
@@ -694,7 +696,7 @@ fn main() -> ExitCode {
                         })),
                         location: loc.clone(),
                         value_location: loc.clone(),
-                    },
+                    }),
                     AstNode::FunctionCall {
                         name: "free_self".into(),
                         generics: vec![],

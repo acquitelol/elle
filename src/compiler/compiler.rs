@@ -8,10 +8,17 @@ use std::{
 };
 
 use crate::{
-    advance, elle_error, get_MAIN_ID, get_POINTER_ID, hashmap, is_generic, lexer::enums::{Location, TokenKind, ValueKind}, misc::colors::*, parser::{
+    advance, elle_error, get_MAIN_ID, get_POINTER_ID, hashmap, is_generic,
+    lexer::enums::{Location, TokenKind, ValueKind},
+    misc::colors::*,
+    parser::{
         enums::{modify_type_in_ast, Argument, AstNode, Primitive},
         parser::StructPool,
-    }, unknown_field, unknown_function, Warning, Warnings, ARBITRARY_ALLOCATOR_NAME, DUNDER_CONSTANTS, ENV_ID, ENV_STRUCT_NAME, EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID, META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES, VOID_POINTER_ID
+    },
+    unknown_field, unknown_function, Warning, Warnings, ARBITRARY_ALLOCATOR_NAME, DUNDER_CONSTANTS,
+    ENV_ID, ENV_STRUCT_NAME, EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END,
+    GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID, META_STRUCT_NAME, POINTER_ID,
+    PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES, VOID_POINTER_ID,
 };
 
 use super::enums::{
@@ -19,9 +26,22 @@ use super::enums::{
     Value,
 };
 
+pub struct CodegenContext<'a> {
+    pub func: &'a RefCell<Function>,
+    pub module: &'a RefCell<Module>,
+    pub stmt: AstNode,
+    pub ty: Option<Type>,
+    pub value: Option<Value>,
+    pub is_return: bool,
+}
+
+pub trait Codegen<'a> {
+    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'a>) -> Option<(Type, Value)>;
+}
+
 pub struct Compiler {
     tmp_counter: u32,
-    scopes: Vec<HashMap<String, (Type, Value)>>,
+    pub scopes: Vec<HashMap<String, (Type, Value)>>,
     data_sections: Vec<Data>,
     generic_functions: HashMap<String, Primitive>,
     // Struct Name => ((Field Name, Field Type)[], (Known Generic)[])
@@ -34,10 +54,10 @@ pub struct Compiler {
     // lambda functions that should be added as soon as possible
     deferred_functions: Vec<Function>,
     // Map from temporary to its stack allocated address
-    address_pool: HashMap<Value, Value>,
+    pub address_pool: HashMap<Value, Value>,
     output_path: String,
     pedantic: bool,
-    no_gc: bool,
+    pub no_gc: bool,
 }
 
 impl Compiler {
@@ -54,7 +74,7 @@ impl Compiler {
         Value::Temporary(self.tmp_name_with_debug_assertions(name.unwrap_or("tmp"), false))
     }
 
-    fn new_variable(
+    pub fn new_variable(
         &mut self,
         ty: &Type,
         name: &str,
@@ -97,7 +117,7 @@ impl Compiler {
         tmp
     }
 
-    fn get_variable(
+    pub fn get_variable(
         &mut self,
         name: &str,
         func: Option<&RefCell<Function>>,
@@ -585,7 +605,7 @@ impl Compiler {
         owned_func
     }
 
-    fn generate_statement(
+    pub fn generate_statement(
         &mut self,
         func: &RefCell<Function>,
         module: &RefCell<Module>,
@@ -594,183 +614,18 @@ impl Compiler {
         value: Option<Value>,
         is_return: bool,
     ) -> Option<(Type, Value)> {
+        // TODO: Unclone these when the whole codegen is moved to the Codegen trait
+        let ctx = CodegenContext {
+            func,
+            module,
+            stmt: stmt.clone(),
+            ty: ty.clone(),
+            value: value.clone(),
+            is_return,
+        };
+
         let res = match stmt {
-            AstNode::Declare {
-                name,
-                r#type,
-                value,
-                location,
-                value_location,
-            } => {
-                let existing = match self.get_variable(name.as_str(), Some(func), Some(module)) {
-                    Ok((ty, _)) => ty,
-                    Err(_) => Type::Word,
-                };
-
-                if r#type.is_none()
-                    && self
-                        .get_variable(name.as_str(), Some(func), Some(module))
-                        .is_err()
-                {
-                    elle_error!(location.error(format!("Variable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.", name)));
-                }
-
-                if r#type.clone().is_some_and(|ty| ty == Type::Infer) && value.is_none() {
-                    elle_error!(location.error(format!("Failed to determine a type for '{}'.\nPlease give this variable a type or a value.", name)));
-                }
-
-                let res = self.get_variable(&format!("{}.addr", name), Some(func), Some(module));
-                let mut local_ty = r#type.clone().unwrap_or(existing);
-                let mut temp = if local_ty == Type::Infer {
-                    None
-                } else {
-                    Some(self.new_variable(&local_ty, &name, Some(func), true, false))
-                };
-
-                let parsed = self.generate_statement(
-                    func,
-                    module,
-                    *value.unwrap_or(Box::new(
-                        if r#type.clone().is_some_and(|ty| ty.is_struct()) {
-                            AstNode::StructLiteral {
-                                name: r#type.clone().unwrap().get_struct_inner().unwrap(),
-                                values: vec![],
-                                location: location.clone(),
-                            }
-                        } else {
-                            AstNode::Literal {
-                                kind: TokenKind::IntegerLiteral,
-                                value: ValueKind::Number(0),
-                                location: location.clone(),
-                            }
-                        },
-                    )),
-                    if local_ty == Type::Infer {
-                        None
-                    } else {
-                        Some(local_ty.clone())
-                    },
-                    temp.clone(),
-                    false,
-                );
-
-                if let Some((ret_ty, value)) = parsed {
-                    if local_ty == Type::Infer {
-                        local_ty = ret_ty.clone();
-
-                        temp = Some(self.new_variable(&local_ty, &name, Some(func), true, false));
-
-                        let scope = self
-                            .scopes
-                            .last_mut()
-                            .expect("Expected last scope to exist");
-                        scope.insert(name.to_owned(), (local_ty.clone(), temp.clone().unwrap()));
-                    }
-                    // in `fn *a = fn() -> 5;`
-                    // - fn *a has type Pointer(Fn)
-                    // - fn() -> 5 has type Function(...)
-                    // essentially the below sets the former
-                    // to the latter if necessary
-                    if ret_ty.is_function()
-                        && local_ty.get_pointer_inner().is_some_and(|ptr| {
-                            ptr.get_unknown_inner()
-                                .is_some_and(|inner| inner == "fn".to_string())
-                        })
-                    {
-                        local_ty = ret_ty.clone();
-                        temp = Some(self.new_variable(&local_ty, &name, Some(func), false, false))
-                    }
-
-                    let (final_ty, final_val) = if ret_ty != local_ty {
-                        self.convert_to_type(
-                            func,
-                            ret_ty,
-                            local_ty.clone(),
-                            value.clone(),
-                            &location,
-                            &value_location,
-                            false,
-                        )
-                    } else {
-                        (local_ty.clone(), value.clone())
-                    };
-
-                    if res.is_ok() && r#type.is_none() {
-                        let (addr_ty, addr_val) = res.unwrap();
-
-                        if addr_ty != final_ty
-                            && !(addr_ty.is_pointer()
-                                && final_ty.is_pointer()
-                                && final_ty.get_pointer_inner().unwrap().is_void())
-                        {
-                            elle_error!(location.error(format!(
-                                "Cannot redeclare '{}' which has type {} to type {}",
-                                name,
-                                addr_ty.display(),
-                                final_ty.display()
-                            )))
-                        }
-
-                        func.borrow_mut().add_instruction(Instruction::Store(
-                            addr_ty.clone(),
-                            addr_val.clone(),
-                            final_val.clone(),
-                        ));
-
-                        if addr_ty.is_pointer() {
-                            func.borrow_mut().add_instruction(Instruction::Call(
-                                Value::Global(GC_NOOP.into()),
-                                vec![(addr_ty.clone(), addr_val.clone())],
-                            ));
-                        }
-
-                        self.address_pool
-                            .insert(temp.unwrap().clone(), addr_val.clone());
-                        return Some((addr_ty, final_val));
-                    }
-
-                    let addr_val = self.new_variable(
-                        &local_ty,
-                        &format!("{}.addr", name),
-                        Some(func),
-                        true,
-                        false,
-                    );
-
-                    func.borrow_mut().assign_instruction_front(
-                        &addr_val,
-                        &Type::Pointer(Box::new(final_ty.clone())),
-                        Instruction::Alloc8(Value::Const(
-                            "".into(),
-                            if final_ty.is_struct() {
-                                Type::Pointer(Box::new(Type::Void))
-                            } else {
-                                final_ty.clone()
-                            }
-                            .size(module) as i128,
-                        )),
-                    );
-
-                    func.borrow_mut().add_instruction(Instruction::Store(
-                        final_ty.clone(),
-                        addr_val.clone(),
-                        final_val.clone(),
-                    ));
-
-                    if final_ty.is_pointer() && !self.no_gc {
-                        func.borrow_mut().add_instruction(Instruction::Call(
-                            Value::Global(GC_NOOP.into()),
-                            vec![(final_ty.clone(), addr_val.clone())],
-                        ));
-                    }
-
-                    self.address_pool
-                        .insert(temp.clone().unwrap(), addr_val.clone());
-                    return Some((final_ty, final_val));
-                }
-
-                None
-            }
+            AstNode::Declare(this) => this.compile(self, &ctx),
             AstNode::Return {
                 value, location, ..
             } => {
@@ -1739,19 +1594,24 @@ impl Compiler {
                             tmp_function.name
                         };
 
-                        let arg_len =
-                            tmp_function.arguments.len().saturating_sub(add_meta as usize).saturating_sub(type_method as usize);
+                        let arg_len = tmp_function
+                            .arguments
+                            .len()
+                            .saturating_sub(add_meta as usize)
+                            .saturating_sub(type_method as usize);
                         let param_len = params.len().saturating_sub(add_meta as usize);
 
-                        elle_error!(call_location.with_extra_info(if tmp_function.arguments.is_empty() && type_method {
-                            format!(
-                                "Use `{}({})` instead here",
-                                name.replace(".", "::"),
-                                if arg_len > 0 { "..." } else { "" }
-                            )
-                        } else {
-                            "".into()
-                        }).error(format!(
+                        elle_error!(call_location
+                            .with_extra_info(if tmp_function.arguments.is_empty() && type_method {
+                                format!(
+                                    "Use `{}({})` instead here",
+                                    name.replace(".", "::"),
+                                    if arg_len > 0 { "..." } else { "" }
+                                )
+                            } else {
+                                "".into()
+                            })
+                            .error(format!(
                             "Function named `{}({})` takes {} argument{}, but you {}passed {}\n{}",
                             name.replace(".", "::"),
                             if arg_len > 0 { "..." } else { "" },
@@ -2550,7 +2410,7 @@ impl Compiler {
                 r#type: second,
                 value,
                 location,
-                explicit
+                explicit,
             } => {
                 let (first, val) = self
                     .generate_statement(func, module, *value, ty, None, false)
@@ -2772,7 +2632,7 @@ impl Compiler {
                                             r#type: Some(ty.clone()),
                                             value: Box::new(node),
                                             location: loc.clone(),
-                                            explicit: false
+                                            explicit: false,
                                         },
                                     )
                                 })
@@ -3800,7 +3660,7 @@ impl Compiler {
         return (left_ty, result_tmp);
     }
 
-    fn convert_to_type(
+    pub fn convert_to_type(
         &mut self,
         func: &RefCell<Function>,
         first: Type,
@@ -3881,7 +3741,9 @@ impl Compiler {
 
         if ((first.is_pointer() && second.is_pointer())
             && first.get_pointer_inner().unwrap() != second.get_pointer_inner().unwrap())
-            && !explicit && self.pedantic {
+            && !explicit
+            && self.pedantic
+        {
             implicit_conversion_error!()
         }
 
@@ -3921,43 +3783,43 @@ impl Compiler {
         }
     }
 
-    fn can_convert_to_type(
-        &mut self,
-        first: Type,
-        second: Type,
-        explicit: bool,
-    ) -> bool {
+    fn can_convert_to_type(&mut self, first: Type, second: Type, explicit: bool) -> bool {
         if first.is_struct() || second.is_struct() {
             let structs_are_the_same = first == second;
             let explicit_struct_to_ptr = explicit
                 && ((first.is_struct() && second.is_pointer_like())
                     || (second.is_struct() && first.is_pointer_like()));
-            let first_is_ptr_of_second = first.is_pointer() && first.get_pointer_inner().unwrap() == second;
+            let first_is_ptr_of_second =
+                first.is_pointer() && first.get_pointer_inner().unwrap() == second;
 
             return structs_are_the_same || explicit_struct_to_ptr || first_is_ptr_of_second;
         }
 
         if ((first.is_strictly_number() && second.is_string())
             || (second.is_strictly_number() && first.is_string()))
-            && !explicit {
+            && !explicit
+        {
             return false;
         }
 
-        if (first.is_pointer()
-            && second.is_pointer())
+        if (first.is_pointer() && second.is_pointer())
             && (first.get_pointer_inner().unwrap().is_void()
-                || second.get_pointer_inner().unwrap().is_void()) {
+                || second.get_pointer_inner().unwrap().is_void())
+        {
             return true;
         }
 
         if ((first.is_pointer() && second.is_pointer())
             && first.get_pointer_inner().unwrap() != second.get_pointer_inner().unwrap())
-            && !explicit && self.pedantic {
+            && !explicit
+            && self.pedantic
+        {
             return false;
         }
 
         let weights_match = first.weight() == second.weight();
-        let both_int_or_float = (first.is_int() && second.is_int()) || (first.is_float() && second.is_float());
+        let both_int_or_float =
+            (first.is_int() && second.is_int()) || (first.is_float() && second.is_float());
 
         return weights_match || both_int_or_float;
     }
@@ -4178,14 +4040,21 @@ impl Compiler {
                         if let Some(inner) = ty.clone().deduce_generic_type(other.clone()) {
                             for (key, ty) in inner.iter().map(|(x, y)| (x.clone(), y.clone())) {
                                 match known_generics.get(&key) {
-                                    Some(existing_ty) if !self.can_convert_to_type(existing_ty.clone(), ty.clone(), false) => {
-                                        call_location.column -=
-                                            call_location.ctx.len() - call_location.ctx.trim().len();
+                                    Some(existing_ty)
+                                        if !self.can_convert_to_type(
+                                            existing_ty.clone(),
+                                            ty.clone(),
+                                            false,
+                                        ) =>
+                                    {
+                                        call_location.column -= call_location.ctx.len()
+                                            - call_location.ctx.trim().len();
                                         call_location.ctx = Rc::from(call_location.ctx.trim());
                                         call_location.above = Some(Rc::from(format!(
                                             "In function:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
                                             " ".repeat(
-                                                call_location.ctx.len() - call_location.ctx.trim().len()
+                                                call_location.ctx.len()
+                                                    - call_location.ctx.trim().len()
                                                     + format!("{}", call_location.row + 1).len()
                                                     + 8
                                             ),
@@ -4217,7 +4086,6 @@ impl Compiler {
                                     }
                                 }
                             }
-
                         } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
                             println!(
                                 "{}",

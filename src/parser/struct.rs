@@ -1,11 +1,15 @@
 use std::rc::Rc;
 
 use crate::{
-    compiler::enums::Type, elle_error, hashmap, lexer::enums::{Attribute, Location, TokenKind, ValueKind}, misc::{colors::*, interleave_with}, FORMAT_CONSTANT, GENERIC_END, GENERIC_IDENTIFIER, INTERNAL_FORMATTER
+    compiler::enums::Type,
+    elle_error, hashmap,
+    lexer::enums::{Attribute, Location, TokenKind, ValueKind},
+    misc::{colors::*, interleave_with},
+    FORMAT_CONSTANT, GENERIC_END, GENERIC_IDENTIFIER, INTERNAL_FORMATTER,
 };
 
 use super::{
-    enums::{Argument, AstNode, Primitive},
+    enums::{Argument, AstNode, Declare, Primitive},
     parser::Parser,
 };
 
@@ -97,16 +101,14 @@ impl<'a> Struct<'a> {
                         should_add_fmt_builtin = false;
                         self.parser.advance();
                     }
-                    _ => elle_error!(
-                        self.parser.current_token().location.error(format!(
-                            "Unknown attribute for struct '{}'",
-                            self.parser
-                                .current_token()
-                                .value
-                                .get_string_inner()
-                                .unwrap()
-                        ))
-                    ),
+                    _ => elle_error!(self.parser.current_token().location.error(format!(
+                        "Unknown attribute for struct '{}'",
+                        self.parser
+                            .current_token()
+                            .value
+                            .get_string_inner()
+                            .unwrap()
+                    ))),
                 }
             }
         }
@@ -289,12 +291,12 @@ impl<'a> Struct<'a> {
                         name: "nesting".into(),
                         r#type: Type::Word,
                         manual: false,
-                        no_fmt: false
+                        no_fmt: false,
                     },
                 ],
                 r#return: Some(Type::Pointer(Box::new(Type::Char))),
                 body: vec![
-                    AstNode::Declare {
+                    AstNode::Declare(Declare {
                         name: "spacing".into(),
                         r#type: Some(Type::Pointer(Box::new(Type::Char))),
                         value: Some(Box::new(AstNode::FunctionCall {
@@ -335,7 +337,7 @@ impl<'a> Struct<'a> {
                         })),
                         location: location.clone(),
                         value_location: location.clone(),
-                    },
+                    }),
                     AstNode::Return {
                         value: Box::new(AstNode::FunctionCall {
                             name: format!("string.{}", INTERNAL_FORMATTER).into(),

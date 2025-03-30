@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::iter::FromIterator;
 use std::rc::Rc;
 
-use super::enums::{Argument, AstNode, Primitive};
+use super::enums::{Argument, AstNode, Declare, Primitive};
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
 use crate::{
@@ -168,14 +168,14 @@ impl<'a> Statement<'a> {
         }
 
         if self.is_eof() || self.current_token().kind == TokenKind::Semicolon {
-            return AstNode::Declare {
+            return AstNode::Declare(Declare {
                 name,
                 r#type: r#type.clone(),
                 // If the type is a struct create 'Struct {}' otherwise 0
                 value: None,
                 location: location.clone(),
                 value_location: location,
-            };
+            });
         }
 
         if self.current_token().kind == TokenKind::Colon {
@@ -226,7 +226,7 @@ impl<'a> Statement<'a> {
         let res = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
         let parsed_res = match res.clone() {
-            AstNode::Declare { name, .. } => {
+            AstNode::Declare(Declare { name, .. }) => {
                 self.body.borrow_mut().push(res);
 
                 AstNode::Literal {
@@ -238,13 +238,13 @@ impl<'a> Statement<'a> {
             _ => res,
         };
 
-        AstNode::Declare {
+        AstNode::Declare(Declare {
             name,
             r#type,
             value: Some(Box::new(parsed_res)),
             location,
             value_location,
-        }
+        })
     }
 
     fn parse_declarative_like(&mut self) -> AstNode {
@@ -258,7 +258,7 @@ impl<'a> Statement<'a> {
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
         let mapping = operation.kind.to_non_declarative();
 
-        AstNode::Declare {
+        AstNode::Declare(Declare {
             name: name.clone(),
             r#type: None,
             value: Some(Box::new(AstNode::BinaryOperation {
@@ -275,7 +275,7 @@ impl<'a> Statement<'a> {
             })),
             location: location.clone(),
             value_location: location,
-        }
+        })
     }
 
     fn parse_float(&self, token: Token) -> AstNode {
@@ -386,7 +386,7 @@ impl<'a> Statement<'a> {
         };
 
         let parsed_res = match res.clone() {
-            AstNode::Declare { name, .. } => {
+            AstNode::Declare(Declare { name, .. }) => {
                 self.body.borrow_mut().push(res);
 
                 AstNode::Literal {
@@ -631,8 +631,12 @@ impl<'a> Statement<'a> {
                 _ if token.kind.is_ternary_start() => {
                     ternary_nesting += 1;
                 }
-                _ if token.kind.is_ternary_end() && ternary_nesting > 0
-                    && tokens.get(index + 1).is_some_and(|token| token.kind != TokenKind::Equal) => {
+                _ if token.kind.is_ternary_end()
+                    && ternary_nesting > 0
+                    && tokens
+                        .get(index + 1)
+                        .is_some_and(|token| token.kind != TokenKind::Equal) =>
+                {
                     ternary_nesting -= 1;
                 }
                 TokenKind::Semicolon => {
@@ -1255,13 +1259,13 @@ impl<'a> Statement<'a> {
             is_deref: false,
         };
 
-        let element_node = AstNode::Declare {
+        let element_node = AstNode::Declare(Declare {
             name,
             r#type: Some(ty),
             value: Some(Box::new(element_access)),
             location: location.clone(),
             value_location: location.clone(),
-        };
+        });
 
         let condition_node = AstNode::BinaryOperation {
             left: Box::new(index_node.clone()),
@@ -1279,7 +1283,7 @@ impl<'a> Statement<'a> {
             location: location.clone(),
         };
 
-        let step_node = AstNode::Declare {
+        let step_node = AstNode::Declare(Declare {
             name: index.clone(),
             r#type: None,
             value: Some(Box::new(AstNode::BinaryOperation {
@@ -1296,11 +1300,11 @@ impl<'a> Statement<'a> {
             })),
             location: location.clone(),
             value_location: location.clone(),
-        };
+        });
 
         let mut statements = vec![];
 
-        statements.push(AstNode::Declare {
+        statements.push(AstNode::Declare(Declare {
             name: index,
             r#type: Some(Type::Word),
             value: Some(Box::new(AstNode::Literal {
@@ -1310,15 +1314,15 @@ impl<'a> Statement<'a> {
             })),
             location: location.clone(),
             value_location: location.clone(),
-        });
+        }));
 
-        statements.push(AstNode::Declare {
+        statements.push(AstNode::Declare(Declare {
             name: iter,
             r#type: Some(Type::Infer),
             value: Some(Box::new(iterator)),
             location: location.clone(),
             value_location: location.clone(),
-        });
+        }));
 
         body.insert(0, element_node);
 
@@ -1684,7 +1688,7 @@ impl<'a> Statement<'a> {
             }
         } else {
             let mut nesting = 0;
-            let mut block_nesting  = 0;
+            let mut block_nesting = 0;
             let tokens = self.yield_tokens_with_condition(|_, token, next_token| {
                 if token.kind == TokenKind::LeftParenthesis {
                     nesting += 1;
@@ -1711,7 +1715,8 @@ impl<'a> Statement<'a> {
                 }
 
                 token.kind == TokenKind::Semicolon
-                    || (nesting == 0 && block_nesting == 0
+                    || (nesting == 0
+                        && block_nesting == 0
                         && (token.kind == TokenKind::Comma
                             || next_token
                                 .is_some_and(|next| next.kind == TokenKind::RightCurlyBrace)))
@@ -1794,7 +1799,7 @@ impl<'a> Statement<'a> {
             r#type: Some(r#type),
             value,
             location,
-            explicit: true
+            explicit: true,
         }
     }
 
@@ -2527,7 +2532,7 @@ impl<'a> Statement<'a> {
                 self.advance();
                 let value_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
-                expression = AstNode::Declare {
+                expression = AstNode::Declare(Declare {
                     name: format!(INTERNAL_IDX_FORMAT!(), name),
                     r#type: None,
                     value: Some(Box::new(
@@ -2537,16 +2542,16 @@ impl<'a> Statement<'a> {
                     )),
                     location: location.clone(),
                     value_location: location.clone(),
-                }
+                })
             }
             other if other.is_declarative() => {
-                expression = AstNode::Declare {
+                expression = AstNode::Declare(Declare {
                     name: format!(INTERNAL_IDX_FORMAT!(), name),
                     r#type: None,
                     value: Some(Box::new(self.parse_declarative_node(expression))),
                     location: location.clone(),
                     value_location: location.clone(),
-                }
+                })
             }
             other if other.is_ternary_start() => {
                 expression = self.parse_ternary_node(expression);
@@ -2691,7 +2696,7 @@ impl<'a> Statement<'a> {
                 location: location.clone(),
             }),
             location: location.clone(),
-            explicit: true
+            explicit: true,
         };
 
         match self.current_token().kind {
@@ -2796,7 +2801,7 @@ impl<'a> Statement<'a> {
                 location: location.clone(),
             }),
             location: location.clone(),
-            explicit: true
+            explicit: true,
         };
 
         match self.current_token().kind {
@@ -2862,7 +2867,7 @@ impl<'a> Statement<'a> {
                         location: location.clone(),
                     },
                 ),
-                (location.clone(), ptr)
+                (location.clone(), ptr),
             ],
             type_method: true,
             ignore_no_def: false,

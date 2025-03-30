@@ -1,7 +1,12 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
-    compiler::enums::Type, elle_error, ensure_fn_pointer, lexer::enums::{Location, Token, TokenKind, ValueKind}, misc::colors::*, parser::{constant::Constant, function::Function, r#struct::Struct}, Warnings, GENERIC_END, GENERIC_IDENTIFIER
+    compiler::enums::Type,
+    elle_error, ensure_fn_pointer,
+    lexer::enums::{Location, Token, TokenKind, ValueKind},
+    misc::colors::*,
+    parser::{constant::Constant, function::Function, r#struct::Struct},
+    Warnings, GENERIC_END, GENERIC_IDENTIFIER,
 };
 
 use super::{
@@ -86,7 +91,7 @@ pub fn create_generic_struct(
                 parsed_generics.clone(),
             ),
             manual: false,
-            no_fmt: member.no_fmt
+            no_fmt: member.no_fmt,
         })
         .collect::<Vec<Argument>>();
 
@@ -103,9 +108,10 @@ pub fn create_generic_struct(
         ignore_empty: false,
     });
 
-    struct_pool
-        .borrow_mut()
-        .insert(generic_name.clone(), (vec![], parsed_members, Rc::new(location)));
+    struct_pool.borrow_mut().insert(
+        generic_name.clone(),
+        (vec![], parsed_members, Rc::new(location)),
+    );
 }
 
 #[macro_export]
@@ -381,17 +387,15 @@ impl Parser {
 
     pub fn expect_tokens(&self, expected: Vec<TokenKind>) {
         if !expected.contains(&self.current_token().kind) {
-            elle_error!(
-                self.current_token().location.error(format!(
-                    "Expected one of [{}], got {:?}.",
-                    expected
-                        .iter()
-                        .map(|kind| format!("{:?}", kind))
-                        .collect::<Vec<String>>()
-                        .join(", "),
-                    self.current_token().kind
-                ))
-            )
+            elle_error!(self.current_token().location.error(format!(
+                "Expected one of [{}], got {:?}.",
+                expected
+                    .iter()
+                    .map(|kind| format!("{:?}", kind))
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                self.current_token().kind
+            )))
         }
     }
 
@@ -408,12 +412,10 @@ impl Parser {
         let token = self.current_token();
 
         if !found {
-            elle_error!(
-                token.location.error(format!(
-                    "Expected one of {:?} but got {:?}",
-                    expected, token.kind
-                ))
-            )
+            elle_error!(token.location.error(format!(
+                "Expected one of {:?} but got {:?}",
+                expected, token.kind
+            )))
         }
 
         let identifier = if let Token {
@@ -423,13 +425,11 @@ impl Parser {
         {
             identifier.clone()
         } else {
-            elle_error!(
-                token.location.error(format!(
-                    "Expected one of {:?} for function name, got {:?}",
-                    expected.clone(),
-                    self.current_token()
-                ))
-            );
+            elle_error!(token.location.error(format!(
+                "Expected one of {:?} for function name, got {:?}",
+                expected.clone(),
+                self.current_token()
+            )));
         };
 
         identifier
@@ -472,15 +472,13 @@ impl Parser {
                         TokenKind::Public => {
                             global_public = true;
                         }
-                        _ => elle_error!(
-                            self.current_token().location.error(format!(
-                                "Invalid global identifier named '{}'",
-                                self.current_token()
-                                    .value
-                                    .get_string_inner()
-                                    .unwrap_or(self.current_token().kind.to_string())
-                            ))
-                        ),
+                        _ => elle_error!(self.current_token().location.error(format!(
+                            "Invalid global identifier named '{}'",
+                            self.current_token()
+                                .value
+                                .get_string_inner()
+                                .unwrap_or(self.current_token().kind.to_string())
+                        ))),
                     }
 
                     self.advance();
@@ -510,11 +508,10 @@ impl Parser {
                 }
                 TokenKind::Function if do_only == &DoOnly::FunctionsAndConstants => {
                     if local && public {
-                        elle_error!(
-                            self.current_token()
-                                .location
-                                .error("Cannot specify a function as both private and public")
-                        );
+                        elle_error!(self
+                            .current_token()
+                            .location
+                            .error("Cannot specify a function as both private and public"));
                     }
 
                     if let Some(next) = self.next_token() {
@@ -552,7 +549,9 @@ impl Parser {
 
                             location.ctx = Rc::from(format!("{} ", location.ctx));
                             location.column += 1;
-                            elle_error!(location.error("Expected semicolon here, but definition has ended"))
+                            elle_error!(
+                                location.error("Expected semicolon here, but definition has ended")
+                            )
                         }
                     }
 
@@ -579,11 +578,10 @@ impl Parser {
                     }
 
                     if local && public {
-                        elle_error!(
-                            self.current_token()
-                                .location
-                                .error("Cannot specify a constant as both private and public")
-                        );
+                        elle_error!(self
+                            .current_token()
+                            .location
+                            .error("Cannot specify a constant as both private and public"));
                     }
 
                     let mut constant = Constant::new(self);
@@ -602,15 +600,16 @@ impl Parser {
                 }
                 TokenKind::Struct if do_only == &DoOnly::Structs => {
                     if external {
-                        elle_error!(self.current_token().location.error("Cannot have an external struct. Please remove the `external` keyword."))
+                        elle_error!(self.current_token().location.error(
+                            "Cannot have an external struct. Please remove the `external` keyword."
+                        ))
                     }
 
                     if local && public {
-                        elle_error!(
-                            self.current_token()
-                                .location
-                                .error("Cannot specify a struct as both private and public")
-                        );
+                        elle_error!(self
+                            .current_token()
+                            .location
+                            .error("Cannot specify a struct as both private and public"));
                     }
 
                     let mut r#struct = Struct::new(self);

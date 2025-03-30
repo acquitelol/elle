@@ -8,6 +8,15 @@ use crate::{
 use super::parser::StructPool;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Declare {
+    pub name: String,
+    pub r#type: Option<Type>,
+    pub value: Option<Box<AstNode>>,
+    pub location: Rc<Location>,
+    pub value_location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal {
@@ -16,15 +25,12 @@ pub enum AstNode {
         location: Rc<Location>,
     },
     /// A declaration of name `name` with type `r#type` to value `value
-    Declare {
-        name: String,
-        r#type: Option<Type>,
-        value: Option<Box<AstNode>>,
-        location: Rc<Location>,
-        value_location: Rc<Location>,
-    },
+    Declare(Declare),
     /// Allocates stack memory of size `valist`, assigns it to `name`, and calls `vastart` on it
-    VariadicStart { name: String, location: Rc<Location> },
+    VariadicStart {
+        name: String,
+        location: Rc<Location>,
+    },
     /// Yields a new argument of type `r#type` from `name`
     VariadicArgument {
         name: String,
@@ -140,7 +146,7 @@ pub enum AstNode {
         r#type: Option<Type>,
         value: Box<AstNode>,
         location: Rc<Location>,
-        explicit: bool
+        explicit: bool,
     },
     /// Returns the size (in bytes) or length, depending on if `standalone` is set to true
     /// The result is used to allow for getting the size of both expressions and types
@@ -178,8 +184,8 @@ pub enum AstNode {
     /// needs to be done through polymorphism at runtime
     SetAllocator {
         value: Box<AstNode>,
-        location: Rc<Location>
-    }
+        location: Rc<Location>,
+    },
 }
 
 impl AstNode {
@@ -214,7 +220,7 @@ fn modify_type_in_node(
 ) -> AstNode {
     match &mut node {
         AstNode::Literal { .. } => {}
-        AstNode::Declare { r#type, value, .. } => {
+        AstNode::Declare(Declare { r#type, value, .. }) => {
             if let Some(ty) = r#type {
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }

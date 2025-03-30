@@ -1,4 +1,7 @@
-use crate::{elle_error, lexer::enums::{TokenKind, ValueKind}};
+use crate::{
+    elle_error,
+    lexer::enums::{TokenKind, ValueKind},
+};
 
 use super::{enums::Primitive, parser::Parser};
 
@@ -14,12 +17,11 @@ impl<'a> Use<'a> {
     fn get_string(&self) -> String {
         match self.parser.current_token().value {
             ValueKind::String(val) => val,
-            _ => elle_error!(
-                self.parser
-                    .current_token()
-                    .location
-                    .error("Token is not a string")
-            ),
+            _ => elle_error!(self
+                .parser
+                .current_token()
+                .location
+                .error("Token is not a string")),
         }
     }
 
@@ -27,7 +29,12 @@ impl<'a> Use<'a> {
         self.parser.advance();
         let mut module = String::new();
         let location = self.parser.current_token().location;
-        let valid = [TokenKind::Identifier, TokenKind::Divide, TokenKind::Range, TokenKind::Dot];
+        let valid = [
+            TokenKind::Identifier,
+            TokenKind::Divide,
+            TokenKind::Range,
+            TokenKind::Dot,
+        ];
 
         while valid.contains(&self.parser.current_token().kind) {
             match self.parser.current_token().kind {
@@ -57,7 +64,7 @@ impl<'a> Use<'a> {
 
                         // Allow for foo/./bar
                         TokenKind::Dot => module.push_str("/."),
-                        _ => module.push_str(&format!("/{}", self.get_string()))
+                        _ => module.push_str(&format!("/{}", self.get_string())),
                     }
 
                     self.parser.advance();
