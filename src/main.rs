@@ -114,6 +114,7 @@ fn main() -> ExitCode {
     let mut no_alloc = false; // no arbitrary allocator
     let mut no_gc = false; // no gc
     let mut no_fmt = false; // no primitive fmt methods
+    let mut pedantic = false; // extra checks in type conversions
     let mut object_files: Vec<String> = vec![];
 
     let mut linker_flags = vec![];
@@ -131,6 +132,7 @@ fn main() -> ExitCode {
             "--ssa" | "--emit-ssa" | "--emit-qbe" => emit_qbe = true,
             "--asm" | "--emit-s" | "--emit-asm" => emit_asm = true,
             "--ast" | "--emit-ast" | "--emit-tree" => ast = true,
+            "-p" | "--pedantic" => pedantic = true,
             "-o" => output_path = args.next(),
             "-h" | "--help" => {
                 print_help(program);
@@ -780,6 +782,7 @@ fn main() -> ExitCode {
         path_to_qbe_dist.clone(),
         warnings,
         object_output,
+        pedantic,
         no_gc,
         string_module_methods,
     );

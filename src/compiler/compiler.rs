@@ -8,17 +8,10 @@ use std::{
 };
 
 use crate::{
-    advance, elle_error, get_MAIN_ID, get_POINTER_ID, hashmap, is_generic,
-    lexer::enums::{Location, TokenKind, ValueKind},
-    misc::colors::*,
-    parser::{
+    advance, elle_error, get_MAIN_ID, get_POINTER_ID, hashmap, is_generic, lexer::enums::{Location, TokenKind, ValueKind}, misc::colors::*, parser::{
         enums::{modify_type_in_ast, Argument, AstNode, Primitive},
         parser::StructPool,
-    },
-    unknown_field, unknown_function, Warning, Warnings, ARBITRARY_ALLOCATOR_NAME, DUNDER_CONSTANTS,
-    ENV_ID, ENV_STRUCT_NAME, EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END,
-    GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID, META_STRUCT_NAME, POINTER_ID,
-    PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES, VOID_POINTER_ID,
+    }, unknown_field, unknown_function, Warning, Warnings, ARBITRARY_ALLOCATOR_NAME, DUNDER_CONSTANTS, ENV_ID, ENV_STRUCT_NAME, EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END, GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID, META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES, VOID_POINTER_ID
 };
 
 use super::enums::{
@@ -43,6 +36,7 @@ pub struct Compiler {
     // Map from temporary to its stack allocated address
     address_pool: HashMap<Value, Value>,
     output_path: String,
+    pedantic: bool,
     no_gc: bool,
 }
 
@@ -1169,7 +1163,7 @@ impl Compiler {
                             _ => Type::Word,
                         };
 
-                        let mut final_ty = if ty.clone().is_some_and(|ty| !ty.is_string()) {
+                        let mut final_ty = if ty.clone().is_some_and(|ty| !ty.is_pointer()) {
                             ty.unwrap_or(num_ty)
                         } else {
                             num_ty
@@ -1746,32 +1740,47 @@ impl Compiler {
                         };
 
                         let arg_len =
-                            tmp_function.arguments.len() - add_meta as usize - type_method as usize;
-                        let param_len = params.len() - add_meta as usize - type_method as usize;
+                            tmp_function.arguments.len().saturating_sub(add_meta as usize).saturating_sub(type_method as usize);
+                        let param_len = params.len().saturating_sub(add_meta as usize);
 
-                        elle_error!(call_location.error(format!(
-                            "Function named '{}({})' takes {} argument{}, but you {}passed {}\n{}",
+                        elle_error!(call_location.with_extra_info(if tmp_function.arguments.is_empty() && type_method {
+                            format!(
+                                "Use `{}({})` instead here",
+                                name.replace(".", "::"),
+                                if arg_len > 0 { "..." } else { "" }
+                            )
+                        } else {
+                            "".into()
+                        }).error(format!(
+                            "Function named `{}({})` takes {} argument{}, but you {}passed {}\n{}",
                             name.replace(".", "::"),
                             if arg_len > 0 { "..." } else { "" },
                             arg_len,
                             if arg_len == 1 { "" } else { "s" },
                             only,
                             param_len,
-                            tmp_function
-                                .arguments
-                                .iter()
-                                .skip(params.len())
-                                .map(|((ty, val), _)| format!(
-                                    "Missing argument named \"{}\" (of type \"{}\")",
-                                    val.get_string_inner()
-                                        .replace("%", "")
-                                        .split(".")
-                                        .nth(0)
-                                        .unwrap(),
-                                    ty.display()
-                                ))
-                                .collect::<Vec<String>>()
-                                .join("\n")
+                            if tmp_function.arguments.is_empty() && type_method {
+                                format!(
+                                    "This function does't accept a `{} self` parameter.",
+                                    first_param.expect("This function is a type method").0.display()
+                                )
+                            } else {
+                                tmp_function
+                                    .arguments
+                                    .iter()
+                                    .skip(params.len())
+                                    .map(|((ty, val), _)| format!(
+                                        "Missing argument named \"{}\" (of type \"{}\")",
+                                        val.get_string_inner()
+                                            .replace("%", "")
+                                            .split(".")
+                                            .nth(0)
+                                            .unwrap(),
+                                        ty.display()
+                                    ))
+                                    .collect::<Vec<String>>()
+                                    .join("\n")
+                            }
                         )))
                     }
                 }
@@ -3801,6 +3810,7 @@ impl Compiler {
         right_location: &Location,
         explicit: bool,
     ) -> (Type, Value) {
+        // TODO: ADD A VARIANT TO `can_convert_to_type` WHEN ADDING A VARIANT HERE
         if first.is_struct() || second.is_struct() {
             if first == second {
                 return (second, val);
@@ -3839,20 +3849,26 @@ impl Compiler {
                 )))
         }
 
+        macro_rules! implicit_conversion_error {
+            () => {
+                elle_error!(
+                    right_location.clone().with_extra_info(format!(
+                        "This has the type '{}'",
+                        first.display()
+                    )).error(format!(
+                        "Cannot implicitly convert '{}' to '{}' or vice versa.\nTo explicitly convert, use the C-like '(type)variable' syntax.",
+                        first.display(),
+                        second.display()
+                    ))
+                )
+            };
+        }
+
         if ((first.is_strictly_number() && second.is_string())
             || (second.is_strictly_number() && first.is_string()))
             && !explicit
         {
-            elle_error!(
-                right_location.clone().with_extra_info(format!(
-                    "This has the type '{}'",
-                    first.display()
-                )).error(format!(
-                    "Cannot implicitly convert '{}' to '{}' or vice versa.\nTo explicitly convert, use the C-like '(type)variable' syntax.",
-                    first.display(),
-                    second.display()
-                ))
-            )
+            implicit_conversion_error!()
         }
 
         if first.is_pointer()
@@ -3861,6 +3877,12 @@ impl Compiler {
                 || second.get_pointer_inner().unwrap().is_void())
         {
             return (second, val);
+        }
+
+        if ((first.is_pointer() && second.is_pointer())
+            && first.get_pointer_inner().unwrap() != second.get_pointer_inner().unwrap())
+            && !explicit && self.pedantic {
+            implicit_conversion_error!()
         }
 
         if first.weight() == second.weight() {
@@ -3897,6 +3919,47 @@ impl Compiler {
 
             return (second, conv);
         }
+    }
+
+    fn can_convert_to_type(
+        &mut self,
+        first: Type,
+        second: Type,
+        explicit: bool,
+    ) -> bool {
+        if first.is_struct() || second.is_struct() {
+            let structs_are_the_same = first == second;
+            let explicit_struct_to_ptr = explicit
+                && ((first.is_struct() && second.is_pointer_like())
+                    || (second.is_struct() && first.is_pointer_like()));
+            let first_is_ptr_of_second = first.is_pointer() && first.get_pointer_inner().unwrap() == second;
+
+            return structs_are_the_same || explicit_struct_to_ptr || first_is_ptr_of_second;
+        }
+
+        if ((first.is_strictly_number() && second.is_string())
+            || (second.is_strictly_number() && first.is_string()))
+            && !explicit {
+            return false;
+        }
+
+        if (first.is_pointer()
+            && second.is_pointer())
+            && (first.get_pointer_inner().unwrap().is_void()
+                || second.get_pointer_inner().unwrap().is_void()) {
+            return true;
+        }
+
+        if ((first.is_pointer() && second.is_pointer())
+            && first.get_pointer_inner().unwrap() != second.get_pointer_inner().unwrap())
+            && !explicit && self.pedantic {
+            return false;
+        }
+
+        let weights_match = first.weight() == second.weight();
+        let both_int_or_float = (first.is_int() && second.is_int()) || (first.is_float() && second.is_float());
+
+        return weights_match || both_int_or_float;
     }
 
     fn create_monomorphized_struct(&mut self, module: &RefCell<Module>, generic_name: String) {
@@ -4110,12 +4173,51 @@ impl Compiler {
                     }
                     .unwrap_or(Type::Void);
 
-                    if ty.clone().has_generic_type(other.clone())
-                        && known_generics.len() < generics.len()
-                    {
+                    if ty.clone().has_generic_type(other.clone()) {
                         // Possibly Option.generic.8 and Option
                         if let Some(inner) = ty.clone().deduce_generic_type(other.clone()) {
-                            known_generics.extend(inner)
+                            for (key, ty) in inner.iter().map(|(x, y)| (x.clone(), y.clone())) {
+                                match known_generics.get(&key) {
+                                    Some(existing_ty) if !self.can_convert_to_type(existing_ty.clone(), ty.clone(), false) => {
+                                        call_location.column -=
+                                            call_location.ctx.len() - call_location.ctx.trim().len();
+                                        call_location.ctx = Rc::from(call_location.ctx.trim());
+                                        call_location.above = Some(Rc::from(format!(
+                                            "In function:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
+                                            " ".repeat(
+                                                call_location.ctx.len() - call_location.ctx.trim().len()
+                                                    + format!("{}", call_location.row + 1).len()
+                                                    + 8
+                                            ),
+                                            location.ctx,
+                                            GREEN = get_GREEN!(),
+                                            BOLD = get_BOLD!(),
+                                            RESET = get_RESET!()
+                                        )));
+
+                                        elle_error!(
+                                            call_location.with_extra_info(format!("{key} = `{}`, but got `{}`", existing_ty.display(), ty.display())).error(
+                                                format!(
+                                                    "Mismatched type for generic {key} in {}<{}>({}):\n{key} is defined with both type \"{GREEN}{}{RESET}\" and \"{RED}{}{RESET}\"",
+                                                    name.replace(".", "::"),
+                                                    generics.join(", "),
+                                                    if arguments.len() > 0 { "..." } else { "" },
+                                                    existing_ty.display(),
+                                                    ty.display(),
+                                                    GREEN = get_GREEN!(),
+                                                    RED = get_RED!(),
+                                                    RESET = get_RESET!()
+                                                )
+                                            )
+                                        )
+                                    }
+                                    Some(_) => {} // Found but can convert implicitly
+                                    None => {
+                                        known_generics.insert(key, ty);
+                                    }
+                                }
+                            }
+
                         } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
                             println!(
                                 "{}",
@@ -4357,6 +4459,7 @@ impl Compiler {
         output_path: String,
         warnings: Warnings,
         object_output: bool,
+        pedantic: bool,
         no_gc: bool,
         string_module_methods: Vec<String>,
     ) {
@@ -4373,6 +4476,7 @@ impl Compiler {
             deferred_functions: vec![],
             address_pool: hashmap![],
             output_path: output_path.clone(),
+            pedantic,
             no_gc,
         };
 

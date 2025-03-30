@@ -28,7 +28,7 @@ install-runtime:
 	# must be compiled without anything because this is the module creating it
 	# its fine because those modules are actually just headers anyway
 	# this is just so the headers dont overwrite the implementation in the stdlib
-	ellec $(STD_PATH)/runtime/index.le -o libelle.o -c --noalloc --nogc --nosm --nofmt --nostd
+	ellec $(STD_PATH)/runtime/index.le -o libelle.o -c -p --noalloc --nogc --nosm --nofmt --nostd
 	@ar -rcs $(RUNTIME_PATH)/libelle.a libelle.o
 	@rm -f libelle.o
 
@@ -61,7 +61,6 @@ test:
 .PHONY: test-manual
 test-manual:
 	@make VERBOSE=1 DELAY=2 CLEAR=1 test-suite-manual
-
 
 repl:
 	ellec tools/repl.le

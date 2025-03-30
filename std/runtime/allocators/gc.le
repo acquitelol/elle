@@ -176,7 +176,7 @@ fn GCAllocator::mark(GCAllocator *self) {
     }
 
     // scan the stack for roots
-    self.__internal_mark_region(&0, #env.stack_top);
+    self.__internal_mark_region((void **)(&0), #env.stack_top);
 }
 
 fn GCAllocator::sweep(GCAllocator *self) {

@@ -22,6 +22,10 @@ pub fn print_help(program: String) {
                 (
                     "-v, --version",
                     "Prints the current ellec version (along with extra information)"
+                ),
+                (
+                    "-p, --pedantic",
+                    "Enables extra validations/checks when performing type conversions"
                 )
             ],
         ),
@@ -43,7 +47,7 @@ pub fn print_help(program: String) {
                 (
                     "--ast, --emit-ast, --emit-tree",
                     "Prints the AST representation of the program to standard output",
-                ),
+                )
             ],
         ),
         (

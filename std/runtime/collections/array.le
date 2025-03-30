@@ -294,10 +294,10 @@ fn Array::insert<T>(T[] self, i32 index, T element) {
 }
 
 fn Array::map<T, U>(U[] self, fn *mapping) -> T[] {
-    let new_self = Array::with_capacity(self.len());
+    let new_self = Array::with_capacity<T>(self.len());
 
     for let i = 0; i < self.len(); i += 1 {
-        new_self.push(mapping(self[i], i, new_self));
+        new_self.push((T)mapping(self[i], i, new_self));
     }
 
     return new_self;

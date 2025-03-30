@@ -75,7 +75,7 @@ pub fn lex_and_parse(
             Err(err) => {
                 eprintln!(
                     "{}",
-                    _import_location.error(format!(
+                    _import_location.basic_error(format!(
                         "Could not load module \"{RED}{}{RESET}\":\n{}",
                         input_path, err,
                         RED = get_RED!(),
