@@ -60,7 +60,7 @@ test:
 
 .PHONY: test-manual
 test-manual:
-	@make VERBOSE=1 DELAY=2 CLEAR=1 test-suite-manual
+	@make VERBOSE=1 DELAY=1 CLEAR=1 test-suite-manual
 
 repl:
 	ellec tools/repl.le
