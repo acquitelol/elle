@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::iter::FromIterator;
 use std::rc::Rc;
 
-use super::enums::{Argument, AstNode, Declare, Primitive, Return};
+use super::enums::{Argument, AstNode, BinaryOperation, Declare, Primitive, Return};
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
 use crate::{
@@ -261,7 +261,7 @@ impl<'a> Statement<'a> {
         AstNode::Declare(Declare {
             name: name.clone(),
             r#type: None,
-            value: Some(Box::new(AstNode::BinaryOperation {
+            value: Some(Box::new(AstNode::BinaryOperation(BinaryOperation {
                 left: Box::new(AstNode::Literal {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
@@ -272,7 +272,7 @@ impl<'a> Statement<'a> {
                 treat_as_string: true,
                 dunder_methods: true,
                 location: location.clone(),
-            })),
+            }))),
             location: location.clone(),
             value_location: location,
         })
@@ -295,7 +295,7 @@ impl<'a> Statement<'a> {
         let exponent = right.len();
         let original = String::from_iter([left, right]).parse::<i128>().unwrap();
 
-        AstNode::BinaryOperation {
+        AstNode::BinaryOperation(BinaryOperation {
             left: Box::new(AstNode::Literal {
                 kind: TokenKind::FloatLiteral,
                 value: ValueKind::Number(original),
@@ -310,7 +310,7 @@ impl<'a> Statement<'a> {
             treat_as_string: false,
             dunder_methods: true,
             location: self.current_token().location,
-        }
+        })
     }
 
     fn parse_literal(&mut self) -> AstNode {
@@ -699,14 +699,14 @@ impl<'a> Statement<'a> {
         // Shift the position across the size of the expression
         self.position += left.len() + right_end_index;
 
-        let node = AstNode::BinaryOperation {
+        let node = AstNode::BinaryOperation(BinaryOperation {
             left: Box::new(Statement::new(left, 0, &self.body, self.shared).parse().0),
             right: Box::new(Statement::new(right, 0, &self.body, self.shared).parse().0),
             operator,
             treat_as_string: true,
             dunder_methods: true,
             location: self.current_token().location,
-        };
+        });
 
         if self
             .next_token()
@@ -729,14 +729,14 @@ impl<'a> Statement<'a> {
 
             let right = self.parse_primary();
 
-            node = AstNode::BinaryOperation {
+            node = AstNode::BinaryOperation(BinaryOperation {
                 left: Box::new(node),
                 right: Box::new(right),
                 operator,
                 treat_as_string: true,
                 dunder_methods: true,
                 location: self.current_token().location,
-            };
+            });
         }
 
         node
@@ -1267,7 +1267,7 @@ impl<'a> Statement<'a> {
             value_location: location.clone(),
         });
 
-        let condition_node = AstNode::BinaryOperation {
+        let condition_node = AstNode::BinaryOperation(BinaryOperation {
             left: Box::new(index_node.clone()),
             right: Box::new(AstNode::FunctionCall {
                 name: LEN_CONSTANT.into(),
@@ -1281,12 +1281,12 @@ impl<'a> Statement<'a> {
             treat_as_string: false,
             dunder_methods: true,
             location: location.clone(),
-        };
+        });
 
         let step_node = AstNode::Declare(Declare {
             name: index.clone(),
             r#type: None,
-            value: Some(Box::new(AstNode::BinaryOperation {
+            value: Some(Box::new(AstNode::BinaryOperation(BinaryOperation {
                 left: Box::new(index_node),
                 right: Box::new(AstNode::Literal {
                     kind: TokenKind::IntegerLiteral,
@@ -1297,7 +1297,7 @@ impl<'a> Statement<'a> {
                 treat_as_string: false,
                 dunder_methods: true,
                 location: location.clone(),
-            })),
+            }))),
             location: location.clone(),
             value_location: location.clone(),
         });
@@ -2004,14 +2004,14 @@ impl<'a> Statement<'a> {
 
         let tokens = self.yield_tokens_for_unary();
         let parsed = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
-        let node = AstNode::BinaryOperation {
+        let node = AstNode::BinaryOperation(BinaryOperation {
             left: parsed,
             right: Box::new(AstNode::token_to_literal(token)),
             operator: TokenKind::Multiply,
             treat_as_string: false,
             dunder_methods: true,
             location,
-        };
+        });
 
         if self.current_token().kind.is_ternary_start() {
             self.parse_ternary_node(node)
@@ -2678,7 +2678,7 @@ impl<'a> Statement<'a> {
                     ),
                     (
                         location.clone(),
-                        AstNode::BinaryOperation {
+                        AstNode::BinaryOperation(BinaryOperation {
                             left: Box::new(AstNode::Size {
                                 value: Ok(ty),
                                 location: location.clone(),
@@ -2688,7 +2688,7 @@ impl<'a> Statement<'a> {
                             treat_as_string: false,
                             dunder_methods: true,
                             location: location.clone(),
-                        },
+                        }),
                     ),
                 ],
                 type_method: true,
@@ -2783,7 +2783,7 @@ impl<'a> Statement<'a> {
                     (location.clone(), ptr),
                     (
                         location.clone(),
-                        AstNode::BinaryOperation {
+                        AstNode::BinaryOperation(BinaryOperation {
                             left: Box::new(AstNode::Size {
                                 value: Ok(ty),
                                 location: location.clone(),
@@ -2793,7 +2793,7 @@ impl<'a> Statement<'a> {
                             treat_as_string: false,
                             dunder_methods: true,
                             location: location.clone(),
-                        },
+                        }),
                     ),
                 ],
                 type_method: true,
@@ -2946,14 +2946,14 @@ impl<'a> Statement<'a> {
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
         let mapping = operation.kind.to_non_declarative();
 
-        AstNode::BinaryOperation {
+        AstNode::BinaryOperation(BinaryOperation {
             left: Box::new(node.clone()),
             right: Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0),
             operator: mapping,
             treat_as_string: true,
             dunder_methods: true,
             location,
-        }
+        })
     }
 
     fn yield_tokens_for_unary(&mut self) -> Vec<Token> {

@@ -12,7 +12,7 @@ use crate::{
     lexer::enums::{Location, TokenKind, ValueKind},
     misc::colors::*,
     parser::{
-        enums::{modify_type_in_ast, Argument, AstNode, Primitive, Return},
+        enums::{modify_type_in_ast, Argument, AstNode, BinaryOperation, Primitive, Return},
         parser::StructPool,
     },
     unknown_field, unknown_function, Warning, Warnings, ARBITRARY_ALLOCATOR_NAME, DUNDER_CONSTANTS,
@@ -69,7 +69,7 @@ impl Compiler {
         }
     }
 
-    fn new_temporary(&mut self, name: Option<&str>, _minify: bool) -> Value {
+    pub fn new_temporary(&mut self, name: Option<&str>, _minify: bool) -> Value {
         self.tmp_counter += 1;
         Value::Temporary(self.tmp_name_with_debug_assertions(name.unwrap_or("tmp"), false))
     }
@@ -627,333 +627,7 @@ impl Compiler {
         let res = match stmt {
             AstNode::Declare(this) => this.compile(self, &ctx),
             AstNode::Return(this) => this.compile(self, &ctx),
-            AstNode::BinaryOperation {
-                left,
-                right,
-                operator,
-                treat_as_string,
-                dunder_methods,
-                location,
-            } => {
-                // Implement conditional short circuiting for logical AND and OR
-                if matches!(operator, TokenKind::And | TokenKind::Or) {
-                    return Some(self.handle_short_circuiting_operation(
-                        left, right, func, module, ty, is_return, location, operator,
-                    ));
-                }
-
-                if matches!(operator, TokenKind::Range | TokenKind::RangeEqual) {
-                    let node = AstNode::FunctionCall {
-                        name: "Array.range".into(),
-                        generics: vec![],
-                        parameters: vec![
-                            (location.clone(), *left),
-                            (location.clone(), *right),
-                            (
-                                location.clone(),
-                                AstNode::Literal {
-                                    kind: TokenKind::IntegerLiteral,
-                                    value: ValueKind::Number(
-                                        if operator == TokenKind::RangeEqual {
-                                            1
-                                        } else {
-                                            0
-                                        },
-                                    ),
-                                    location: location.clone(),
-                                },
-                            ),
-                        ],
-                        type_method: false,
-                        ignore_no_def: false,
-                        location: location.clone(),
-                    };
-
-                    let (ty, val) = self
-                        .generate_statement(func, module, node, ty.clone(), None, is_return)
-                        .expect(&location.error(
-                            "Unexpected error when trying to parse left side of an arithmetic operation"
-                        ));
-
-                    return Some((ty, val));
-                }
-
-                let (mut left_ty, left_val_unparsed) = self
-                    .generate_statement(func, module, *left.clone(), ty.clone(), None, is_return)
-                    .expect(&location.error(
-                        "Unexpected error when trying to parse left side of an arithmetic operation"
-                    ));
-
-                let (mut right_ty, right_val_unparsed) = self
-                    .generate_statement(func, module, *right.clone(), ty.clone(), None, is_return)
-                    .expect(&location.error(
-                        "Unexpected error when trying to parse right side of an arithmetic operation"
-                    ));
-
-                let mut left_val = left_val_unparsed.clone();
-                let mut right_val = right_val_unparsed.clone();
-
-                if operator != TokenKind::Concat {
-                    if left_ty.is_string() && right_ty == Type::Char {
-                        let char_tmp = self.new_temporary(None, true);
-
-                        func.borrow_mut().assign_instruction(
-                            &char_tmp,
-                            &Type::Char,
-                            Instruction::Load(Type::Char, left_val),
-                        );
-
-                        left_ty = Type::Char;
-                        left_val = char_tmp;
-                    }
-
-                    if right_ty.is_string() && left_ty == Type::Char {
-                        let char_tmp = self.new_temporary(None, true);
-
-                        func.borrow_mut().assign_instruction(
-                            &char_tmp,
-                            &Type::Char,
-                            Instruction::Load(Type::Char, right_val),
-                        );
-
-                        right_ty = Type::Char;
-                        right_val = char_tmp;
-                    }
-                }
-
-                if left_ty.weight() > right_ty.weight() {
-                    let (_, val) = self.convert_to_type(
-                        func,
-                        right_ty.clone(),
-                        left_ty.clone(),
-                        right_val_unparsed,
-                        &location,
-                        &location,
-                        false,
-                    );
-
-                    right_val = val;
-                } else if left_ty.weight() < right_ty.weight() {
-                    let (ty, val) = self.convert_to_type(
-                        func,
-                        left_ty,
-                        right_ty.clone(),
-                        left_val_unparsed,
-                        &location,
-                        &location,
-                        false,
-                    );
-
-                    left_ty = ty;
-                    left_val = val;
-                }
-
-                if (!left_ty.is_primitive() || !right_ty.is_primitive())
-                    && [TokenKind::EqualTo, TokenKind::NotEqualTo].contains(&operator)
-                    && dunder_methods
-                {
-                    let mut node = AstNode::FunctionCall {
-                        name: EQUALS_CONSTANT.into(),
-                        generics: vec![],
-                        parameters: vec![(location.clone(), *left), (location.clone(), *right)],
-                        type_method: true,
-                        ignore_no_def: false,
-                        location: location.clone(),
-                    };
-
-                    if operator == TokenKind::NotEqualTo {
-                        node = AstNode::LogicalNot {
-                            value: Box::new(node),
-                            location: location.clone(),
-                        }
-                    }
-
-                    let (ty, val) = self
-                        .generate_statement(func, module, node, ty.clone(), None, is_return)
-                        .expect(&location.error(
-                            "Unexpected error when trying to parse an equals arithmetic operation",
-                        ));
-
-                    return Some((ty, val));
-                }
-
-                if left_ty.is_string() && right_ty.is_string() && treat_as_string {
-                    let mut kind = None;
-
-                    match operator {
-                        // Token => (Name, HasMeta, Type),
-                        TokenKind::Concat => {
-                            kind = Some(("concat", true, Type::Pointer(Box::new(Type::Char))))
-                        }
-                        _ => {}
-                    }
-
-                    if let Some((kind, has_meta, ty)) = kind {
-                        // TODO: extend this idea to more than just strings?
-                        // ideally add a .equals method on any primitive to make it equatable, and implement it for each
-                        // same for any struct, define a .equals method to allow it to be ran with == directly
-                        let func_name = format!("string.{kind}");
-                        let module_ref = module.borrow();
-
-                        let tmp_function_option = module_ref
-                            .functions
-                            .iter()
-                            .find(|func| func.name == func_name);
-
-                        if tmp_function_option.is_none() {
-                            elle_error!(location.error(format!(
-                                "Cannot use the '{}' operator because the string module is not imported.\nPlease import it with {GREEN}{BOLD}use std/string;{RESET} at the top of this file.",
-                                operator,
-                                GREEN = get_GREEN!(),
-                                BOLD = get_BOLD!(),
-                                RESET = get_RESET!()
-                            )))
-                        }
-
-                        let tmp_function = tmp_function_option.unwrap().clone();
-                        let mut params =
-                            vec![((left_ty, left_val), false), ((right_ty, right_val), false)];
-
-                        if has_meta {
-                            let meta = Compiler::generate_meta_struct(
-                                func,
-                                &params,
-                                vec![(location.clone(), *left), (location.clone(), *right)],
-                                location.clone(),
-                            );
-
-                            let res = self
-                                .generate_statement(func, module, meta, None, None, false)
-                                .expect(&location.error(
-                                    "Unexpected error when trying to compile the Elle metadata struct",
-                                ));
-
-                            params.insert(0, (res, false));
-                        }
-
-                        if tmp_function.variadic {
-                            let res = self
-                                .generate_statement(
-                                    func,
-                                    module,
-                                    AstNode::Literal {
-                                        kind: TokenKind::ExactLiteral,
-                                        value: ValueKind::String("...".into()),
-                                        location: location.clone(),
-                                    },
-                                    Some(ty.clone()),
-                                    None,
-                                    false,
-                                )
-                                .expect(&location.error(
-                                    "Unexpected error when trying to compile the variadic literal '...'",
-                                ));
-
-                            params.insert(tmp_function.arguments.len(), (res, false));
-                        }
-
-                        let instr = Instruction::Call(
-                            Value::Global(func_name),
-                            params.into_iter().map(|x| x.0).collect(),
-                        );
-                        let op_temp = self.new_temporary(None, true);
-
-                        func.borrow_mut().assign_instruction(&op_temp, &ty, instr);
-
-                        return Some((ty, op_temp));
-                    }
-                }
-
-                if operator == TokenKind::Concat && treat_as_string {
-                    elle_error!(location.error(format!(
-                        "Cannot use the '<>' operator on non-string types {} and {}",
-                        left_ty.display(),
-                        right_ty.display()
-                    )))
-                }
-
-                if [
-                    TokenKind::BitwiseXor,
-                    TokenKind::BitwiseOr,
-                    TokenKind::BitwiseAnd,
-                    TokenKind::ShiftLeft,
-                    TokenKind::ShiftRight,
-                ]
-                .contains(&operator)
-                    && (left_ty.is_float() || right_ty.is_float())
-                {
-                    elle_error!(
-                        location.error(format!(
-                            "Cannot use the '{:?}' operator on non-integer type '{}'.\nYou can cast it to an integer if you need this functionality.",
-                            operator,
-                            if left_ty.is_float() {
-                                left_ty.display()
-                            } else {
-                                right_ty.display()
-                            }
-                        ))
-                    )
-                }
-
-                let instruction_ty = left_ty;
-                let cloned_ty = instruction_ty.clone();
-
-                let res = match operator.clone() {
-                    TokenKind::Add => Instruction::Add(left_val, right_val),
-                    TokenKind::Subtract => Instruction::Subtract(left_val, right_val),
-                    TokenKind::Multiply => Instruction::Multiply(left_val, right_val),
-                    TokenKind::Divide => Instruction::Divide(left_val, right_val),
-                    TokenKind::Modulus => Instruction::Modulus(left_val, right_val),
-                    TokenKind::GreaterThan => Instruction::Compare(
-                        cloned_ty,
-                        Comparison::GreaterThan,
-                        left_val,
-                        right_val,
-                    ),
-                    TokenKind::GreaterThanEqual => Instruction::Compare(
-                        cloned_ty,
-                        Comparison::GreaterThanEqual,
-                        left_val,
-                        right_val,
-                    ),
-                    TokenKind::LessThan => {
-                        Instruction::Compare(cloned_ty, Comparison::LessThan, left_val, right_val)
-                    }
-                    TokenKind::LessThanEqual => Instruction::Compare(
-                        cloned_ty,
-                        Comparison::LessThanEqual,
-                        left_val,
-                        right_val,
-                    ),
-                    TokenKind::EqualTo => {
-                        Instruction::Compare(cloned_ty, Comparison::Equal, left_val, right_val)
-                    }
-                    TokenKind::NotEqualTo => {
-                        Instruction::Compare(cloned_ty, Comparison::NotEqual, left_val, right_val)
-                    }
-                    TokenKind::BitwiseAnd => Instruction::BitwiseAnd(left_val, right_val),
-                    TokenKind::BitwiseOr => Instruction::BitwiseOr(left_val, right_val),
-                    TokenKind::BitwiseXor => Instruction::BitwiseXor(left_val, right_val),
-                    TokenKind::ShiftLeft => Instruction::ShiftLeft(left_val, right_val),
-                    TokenKind::ShiftRight => Instruction::ArithmeticShiftRight(left_val, right_val),
-                    _ => elle_error!(
-                        location.error(format!("Invalid operator token: {:?}", operator))
-                    ),
-                };
-
-                let op_temp = self.new_temporary(None, true);
-
-                let final_ty = if operator.is_comparative() {
-                    Type::Boolean
-                } else {
-                    instruction_ty
-                };
-
-                func.borrow_mut()
-                    .assign_instruction(&op_temp, &final_ty, res);
-
-                Some((final_ty, op_temp))
-            }
+            AstNode::BinaryOperation(this) => this.compile(self, &ctx),
             AstNode::Literal {
                 kind,
                 value,
@@ -1672,7 +1346,7 @@ impl Compiler {
                         func,
                         module,
                         if let Some(ref ty) = r#type {
-                            AstNode::BinaryOperation {
+                            AstNode::BinaryOperation(BinaryOperation {
                                 left: size,
                                 right: Box::new(AstNode::Literal {
                                     kind: TokenKind::LongLiteral,
@@ -1683,7 +1357,7 @@ impl Compiler {
                                 treat_as_string: false,
                                 dunder_methods: true,
                                 location: location.clone(),
-                            }
+                            })
                         } else {
                             AstNode::Literal {
                                 kind: TokenKind::LongLiteral,
@@ -1837,13 +1511,13 @@ impl Compiler {
                     right_ty.get_pointer_inner().unwrap()
                 };
 
-                let node = AstNode::BinaryOperation {
+                let node = AstNode::BinaryOperation(BinaryOperation {
                     left: if left_ty.is_pointer() {
                         left.clone()
                     } else {
                         right.clone()
                     },
-                    right: Box::new(AstNode::BinaryOperation {
+                    right: Box::new(AstNode::BinaryOperation(BinaryOperation {
                         left: Box::new(AstNode::Literal {
                             kind: TokenKind::LongLiteral,
                             value: ValueKind::Number(inner.size(module) as i128),
@@ -1854,12 +1528,12 @@ impl Compiler {
                         treat_as_string: false,
                         dunder_methods: true,
                         location: right_location.clone(),
-                    }),
+                    })),
                     operator: TokenKind::Add,
                     treat_as_string: false,
                     dunder_methods: true,
                     location: right_location.clone(),
-                };
+                });
 
                 let (_, compiled_location) = self
                     .generate_statement(func, module, node, None, None, false)
@@ -2465,7 +2139,7 @@ impl Compiler {
                     .generate_statement(
                         func,
                         module,
-                        AstNode::BinaryOperation {
+                        AstNode::BinaryOperation(BinaryOperation {
                             left: value,
                             right: Box::new(AstNode::Literal {
                                 kind: TokenKind::IntegerLiteral,
@@ -2476,7 +2150,7 @@ impl Compiler {
                             treat_as_string: false,
                             dunder_methods: true,
                             location: location.clone(),
-                        },
+                        }),
                         ty,
                         None,
                         false,
@@ -3194,7 +2868,7 @@ impl Compiler {
         }
     }
 
-    fn generate_meta_struct(
+    pub fn generate_meta_struct(
         func: &RefCell<Function>,
         params: &Vec<((Type, Value), bool)>,
         parameters: Vec<(Rc<Location>, AstNode)>,
@@ -3514,7 +3188,7 @@ impl Compiler {
         }
     }
 
-    fn handle_short_circuiting_operation(
+    pub fn handle_short_circuiting_operation(
         &mut self,
         left: Box<AstNode>,
         right: Box<AstNode>,

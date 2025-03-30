@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    enums::{Argument, AstNode, Declare, Primitive, Return},
+    enums::{Argument, AstNode, BinaryOperation, Declare, Primitive, Return},
     parser::Parser,
 };
 
@@ -187,7 +187,7 @@ impl<'a> Struct<'a> {
                                 (location.clone(), field),
                                 (
                                     location.clone(),
-                                    AstNode::BinaryOperation {
+                                    AstNode::BinaryOperation(BinaryOperation {
                                         left: Box::new(AstNode::Literal {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("nesting".into()),
@@ -202,7 +202,7 @@ impl<'a> Struct<'a> {
                                         treat_as_string: false,
                                         dunder_methods: true,
                                         location: location.clone(),
-                                    },
+                                    }),
                                 ),
                             ],
                             type_method: true,
@@ -313,7 +313,7 @@ impl<'a> Struct<'a> {
                                 ),
                                 (
                                     location.clone(),
-                                    AstNode::BinaryOperation {
+                                    AstNode::BinaryOperation(BinaryOperation {
                                         left: Box::new(AstNode::Literal {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("nesting".into()),
@@ -328,7 +328,7 @@ impl<'a> Struct<'a> {
                                         treat_as_string: false,
                                         dunder_methods: true,
                                         location: location.clone(),
-                                    },
+                                    }),
                                 ),
                             ],
                             type_method: false,

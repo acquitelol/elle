@@ -18,7 +18,7 @@ use lexer::enums::{Location, TokenKind, ValueKind};
 use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex_and_parse};
 use parser::enums::{Argument, AstNode, Primitive};
 
-use crate::parser::enums::{Declare, Return};
+use crate::parser::enums::{BinaryOperation, Declare, Return};
 
 pub enum Warning {
     StructFieldsMissing = 1 << 0,
@@ -590,7 +590,7 @@ fn main() -> ExitCode {
                             value_location: loc.clone(),
                         }),
                         AstNode::WhileLoopStatement {
-                            condition: Box::new(AstNode::BinaryOperation {
+                            condition: Box::new(AstNode::BinaryOperation(BinaryOperation {
                                 left: Box::new(AstNode::Literal {
                                     kind: TokenKind::Identifier,
                                     value: ValueKind::String("i".into()),
@@ -605,11 +605,11 @@ fn main() -> ExitCode {
                                 treat_as_string: false,
                                 dunder_methods: false,
                                 location: loc.clone(),
-                            }),
+                            })),
                             step: Some(Box::new(AstNode::Declare(Declare {
                                 name: "i".into(),
                                 r#type: None,
-                                value: Some(Box::new(AstNode::BinaryOperation {
+                                value: Some(Box::new(AstNode::BinaryOperation(BinaryOperation {
                                     left: Box::new(AstNode::Literal {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("i".into()),
@@ -624,7 +624,7 @@ fn main() -> ExitCode {
                                     treat_as_string: false,
                                     dunder_methods: false,
                                     location: loc.clone(),
-                                })),
+                                }))),
                                 location: loc.clone(),
                                 value_location: loc.clone(),
                             }))),

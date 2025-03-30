@@ -23,6 +23,16 @@ pub struct Return {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct BinaryOperation {
+    pub left: Box<AstNode>,
+    pub right: Box<AstNode>,
+    pub operator: TokenKind,
+    pub treat_as_string: bool,
+    pub dunder_methods: bool,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal {
@@ -55,14 +65,7 @@ pub enum AstNode {
         location: Rc<Location>,
     },
     /// Performs an arithmetic operation with `operator` using `left` and `right
-    BinaryOperation {
-        left: Box<AstNode>,
-        right: Box<AstNode>,
-        operator: TokenKind,
-        treat_as_string: bool,
-        dunder_methods: bool,
-        location: Rc<Location>,
-    },
+    BinaryOperation(BinaryOperation),
     /// Runs `body` if condition `condition` is true, otherwise runs `else_body`
     IfStatement {
         condition: Box<AstNode>,
@@ -283,7 +286,7 @@ fn modify_type_in_node(
                 *generic = modify_type(generic.clone(), generics, known_types, struct_pool, tree);
             }
         }
-        AstNode::BinaryOperation { left, right, .. } => {
+        AstNode::BinaryOperation(BinaryOperation { left, right, .. }) => {
             let new_left =
                 modify_type_in_node(*left.clone(), generics, known_types, struct_pool, tree);
             *left = Box::new(new_left);
