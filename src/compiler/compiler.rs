@@ -12,7 +12,9 @@ use crate::{
     lexer::enums::{Location, TokenKind, ValueKind},
     misc::colors::*,
     parser::{
-        enums::{modify_type_in_ast, Argument, AstNode, BinaryOperation, Primitive, Return},
+        enums::{
+            modify_type_in_ast, Argument, AstNode, BinaryOperation, Literal, Primitive, Return,
+        },
         parser::StructPool,
     },
     unknown_field, unknown_function, Warning, Warnings, ARBITRARY_ALLOCATOR_NAME, DUNDER_CONSTANTS,
@@ -40,13 +42,13 @@ pub trait Codegen<'a> {
 }
 
 pub struct Compiler {
-    tmp_counter: u32,
+    pub tmp_counter: u32,
     pub scopes: Vec<HashMap<String, (Type, Value)>>,
-    data_sections: Vec<Data>,
+    pub data_sections: Vec<Data>,
     generic_functions: HashMap<String, Primitive>,
     // Struct Name => ((Field Name, Field Type)[], (Known Generic)[])
     struct_pool: StructPool,
-    loop_labels: Vec<String>,
+    pub loop_labels: Vec<String>,
     // ret_types: HashMap<String, Type>,
     buf_metadata: HashMap<Value, (Type, Value)>,
     tree: Vec<Primitive>,
@@ -61,7 +63,7 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    fn tmp_name_with_debug_assertions(&self, name: &str, minify: bool) -> String {
+    pub fn tmp_name_with_debug_assertions(&self, name: &str, minify: bool) -> String {
         if cfg!(debug_assertions) || !minify {
             format!("{}.{}", name, self.tmp_counter)
         } else {
@@ -208,7 +210,7 @@ impl Compiler {
         var.cloned()
     }
 
-    fn get_variable_lazy(
+    pub fn get_variable_lazy(
         &mut self,
         name: &String,
         func: Option<&RefCell<Function>>,
@@ -353,7 +355,7 @@ impl Compiler {
             // Ignore plain literals that aren't assigned to anything
             // exact literals should not be ignored
             match statement {
-                AstNode::Literal { kind, .. } => match kind {
+                AstNode::Literal(Literal { kind, .. }) => match kind {
                     TokenKind::ExactLiteral => match self.generate_statement(
                         &func_ref,
                         module,
@@ -628,112 +630,7 @@ impl Compiler {
             AstNode::Declare(this) => this.compile(self, &ctx),
             AstNode::Return(this) => this.compile(self, &ctx),
             AstNode::BinaryOperation(this) => this.compile(self, &ctx),
-            AstNode::Literal {
-                kind,
-                value,
-                location,
-            } => match kind {
-                TokenKind::Identifier => match value {
-                    ValueKind::String(name) => {
-                        self.get_variable_lazy(&name, Some(func), Some(module), location.clone())
-                    }
-                    _ => None,
-                },
-                TokenKind::ExactLiteral => match value {
-                    ValueKind::String(val) => Some((Type::Null, Value::Literal(val))),
-                    _ => None,
-                },
-                TokenKind::Break => {
-                    if let Some(label) = &self.loop_labels.last() {
-                        func.borrow_mut()
-                            .add_instruction(Instruction::Jump(format!("{}.end", label)));
-                    } else {
-                        elle_error!(location.error("Break can only be used in a loop"));
-                    }
-
-                    None
-                }
-                TokenKind::Continue => {
-                    if let Some(label) = &self.loop_labels.last() {
-                        func.borrow_mut()
-                            .add_instruction(Instruction::Jump(format!("{}.step", label)));
-                    } else {
-                        elle_error!(location.error("Continue can only be used in a loop"));
-                    }
-
-                    None
-                }
-                _ => match value {
-                    ValueKind::Number(val) => {
-                        let num_ty = match kind {
-                            TokenKind::BoolLiteral => Type::Boolean,
-                            TokenKind::IntegerLiteral => Type::Word,
-                            TokenKind::FloatLiteral => Type::Single,
-                            TokenKind::LongLiteral => Type::Long,
-                            _ => Type::Word,
-                        };
-
-                        let mut final_ty = if ty.clone().is_some_and(|ty| !ty.is_pointer()) {
-                            ty.unwrap_or(num_ty)
-                        } else {
-                            num_ty
-                        };
-
-                        if is_return {
-                            final_ty = func.borrow_mut().return_type.clone().unwrap_or(final_ty);
-                        }
-
-                        Some((
-                            final_ty.clone(),
-                            Value::Const(
-                                if final_ty.clone() == Type::Double {
-                                    "d_"
-                                } else if final_ty.clone() == Type::Single {
-                                    "s_"
-                                } else {
-                                    ""
-                                }
-                                .into(),
-                                val,
-                            ),
-                        ))
-                    }
-                    ValueKind::String(val) => {
-                        self.tmp_counter += 1;
-                        let name = self
-                            .tmp_name_with_debug_assertions(&func.borrow_mut().name.clone(), true);
-
-                        self.data_sections.push(Data::new(
-                            Linkage::private(),
-                            name.clone(),
-                            None,
-                            vec![
-                                (Type::Byte, DataItem::String(val.replace("\n", "\\n"))),
-                                (Type::Byte, DataItem::Const(0)),
-                            ],
-                        ));
-
-                        Some((Type::Pointer(Box::new(Type::Char)), Value::Global(name)))
-                    }
-                    ValueKind::Character(val) => {
-                        Some((Type::Char, Value::Const("".into(), val as i128)))
-                    }
-                    ValueKind::Nil => {
-                        self.tmp_counter += 1;
-                        let name = self
-                            .tmp_name_with_debug_assertions(&func.borrow_mut().name.clone(), true);
-
-                        self.data_sections.push(Data::new(
-                            Linkage::private(),
-                            name.clone(),
-                            None,
-                            vec![(Type::Byte, DataItem::Const(0))],
-                        ));
-
-                        Some((Type::Long, Value::Global(name)))
-                    }
-                },
-            },
+            AstNode::Literal(this) => this.compile(self, &ctx),
             AstNode::FunctionCall {
                 mut name,
                 // Generics passed by the caller
@@ -1090,11 +987,11 @@ impl Compiler {
                                             parameters[i].clone(),
                                             (
                                                 Rc::new(call_location.clone()),
-                                                AstNode::Literal {
+                                                AstNode::Literal(Literal {
                                                     kind: TokenKind::IntegerLiteral,
                                                     value: ValueKind::Number(0),
                                                     location: Rc::new(call_location.clone()),
-                                                },
+                                                }),
                                             ),
                                         ],
                                         module,
@@ -1129,11 +1026,11 @@ impl Compiler {
                                         parameters[i].clone(),
                                         (
                                             Rc::new(call_location.clone()),
-                                            AstNode::Literal {
+                                            AstNode::Literal(Literal {
                                                 kind: TokenKind::IntegerLiteral,
                                                 value: ValueKind::Number(0),
                                                 location: Rc::new(call_location.clone()),
-                                            },
+                                            }),
                                         ),
                                     ],
                                     module,
@@ -1202,11 +1099,11 @@ impl Compiler {
                         .generate_statement(
                             func,
                             module,
-                            AstNode::Literal {
+                            AstNode::Literal(Literal {
                                 kind: TokenKind::ExactLiteral,
                                 value: ValueKind::String("...".into()),
                                 location: Rc::new(call_location.clone()),
-                            },
+                            }),
                             Some(ty.clone()),
                             None,
                             false,
@@ -1348,22 +1245,22 @@ impl Compiler {
                         if let Some(ref ty) = r#type {
                             AstNode::BinaryOperation(BinaryOperation {
                                 left: size,
-                                right: Box::new(AstNode::Literal {
+                                right: Box::new(AstNode::Literal(Literal {
                                     kind: TokenKind::LongLiteral,
                                     value: ValueKind::Number(ty.size(module) as i128),
                                     location: location.clone(),
-                                }),
+                                })),
                                 operator: TokenKind::Multiply,
                                 treat_as_string: false,
                                 dunder_methods: true,
                                 location: location.clone(),
                             })
                         } else {
-                            AstNode::Literal {
+                            AstNode::Literal(Literal {
                                 kind: TokenKind::LongLiteral,
                                 value: ValueKind::Number(0),
                                 location: location.clone(),
-                            }
+                            })
                         },
                         ty,
                         None,
@@ -1518,11 +1415,11 @@ impl Compiler {
                         right.clone()
                     },
                     right: Box::new(AstNode::BinaryOperation(BinaryOperation {
-                        left: Box::new(AstNode::Literal {
+                        left: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::LongLiteral,
                             value: ValueKind::Number(inner.size(module) as i128),
                             location: right_location.clone(),
-                        }),
+                        })),
                         right: if left_ty.is_pointer() { right } else { left },
                         operator: TokenKind::Multiply,
                         treat_as_string: false,
@@ -1616,7 +1513,7 @@ impl Compiler {
 
                 for statement in body.iter() {
                     match statement {
-                        AstNode::Literal { kind, .. } => match kind {
+                        AstNode::Literal(Literal { kind, .. }) => match kind {
                             TokenKind::ExactLiteral => {
                                 match self.generate_statement(
                                     func,
@@ -1667,7 +1564,7 @@ impl Compiler {
 
                     for statement in else_body.iter() {
                         match statement {
-                            AstNode::Literal { kind, .. } => match kind {
+                            AstNode::Literal(Literal { kind, .. }) => match kind {
                                 TokenKind::ExactLiteral => match self.generate_statement(
                                     func,
                                     module,
@@ -1758,7 +1655,7 @@ impl Compiler {
 
                 for statement in body.iter() {
                     match statement {
-                        AstNode::Literal { kind, .. } => match kind {
+                        AstNode::Literal(Literal { kind, .. }) => match kind {
                             TokenKind::ExactLiteral => {
                                 match self.generate_statement(
                                     func,
@@ -1925,7 +1822,7 @@ impl Compiler {
                     ($name:literal) => {{
                         let method_name = format!("{allocator_name}.{}", $name);
 
-                        AstNode::Literal {
+                        AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String(if module.borrow().functions.iter().find(|f| f.name == method_name).is_some() {
                                 method_name
@@ -1947,7 +1844,7 @@ impl Compiler {
                                 format!("{ARBITRARY_ALLOCATOR_NAME}.noop")
                             }),
                             location: location.clone(),
-                        }
+                        })
                     }};
                 }
 
@@ -1955,11 +1852,11 @@ impl Compiler {
                     ("inner", *value),
                     (
                         "kind",
-                        AstNode::Literal {
+                        AstNode::Literal(Literal {
                             kind: TokenKind::StringLiteral,
                             value: ValueKind::String(allocator_name.clone()),
                             location: location.clone(),
-                        },
+                        }),
                     ),
                     ("alloc", method_or_noop!("alloc")),
                     ("realloc", method_or_noop!("realloc")),
@@ -1977,16 +1874,16 @@ impl Compiler {
                                 location: location.clone(),
                             }),
                             right: Box::new(AstNode::FieldAccess {
-                                left: Box::new(AstNode::Literal {
+                                left: Box::new(AstNode::Literal(Literal {
                                     kind: TokenKind::Identifier,
                                     value: ValueKind::String("allocator".into()),
                                     location: location.clone(),
-                                }),
-                                right: Box::new(AstNode::Literal {
+                                })),
+                                right: Box::new(AstNode::Literal(Literal {
                                     kind: TokenKind::Identifier,
                                     value: ValueKind::String(field.into()),
                                     location: location.clone(),
-                                }),
+                                })),
                                 value: None,
                                 location: location.clone(),
                             }),
@@ -2016,7 +1913,7 @@ impl Compiler {
 
                 for statement in body.iter() {
                     match statement {
-                        AstNode::Literal { kind, .. } => match kind {
+                        AstNode::Literal(Literal { kind, .. }) => match kind {
                             TokenKind::ExactLiteral => {
                                 match self.generate_statement(
                                     func,
@@ -2141,11 +2038,11 @@ impl Compiler {
                         module,
                         AstNode::BinaryOperation(BinaryOperation {
                             left: value,
-                            right: Box::new(AstNode::Literal {
+                            right: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::IntegerLiteral,
                                 value: ValueKind::Number(Type::Word.size(module) as i128),
                                 location: location.clone(),
-                            }),
+                            })),
                             operator: TokenKind::Subtract,
                             treat_as_string: false,
                             dunder_methods: true,
@@ -2969,13 +2866,13 @@ impl Compiler {
 
                                 (
                                     location.clone(),
-                                    AstNode::Literal {
+                                    AstNode::Literal(Literal {
                                         kind: TokenKind::StringLiteral,
                                         value: ValueKind::String(
                                             res.replace("\\", "\\\\").replace("\"", "\\\""),
                                         ),
                                         location: location.clone(),
-                                    },
+                                    }),
                                 )
                             })
                             .collect(),
@@ -2995,11 +2892,11 @@ impl Compiler {
 
                                 (
                                     location.clone(),
-                                    AstNode::Literal {
+                                    AstNode::Literal(Literal {
                                         kind: TokenKind::StringLiteral,
                                         value: ValueKind::String(inner),
                                         location: location.clone(),
-                                    },
+                                    }),
                                 )
                             })
                             .collect(),
@@ -3011,15 +2908,15 @@ impl Compiler {
                 ),
                 (
                     "arity".into(),
-                    Box::new(AstNode::Literal {
+                    Box::new(AstNode::Literal(Literal {
                         kind: TokenKind::IntegerLiteral,
                         value: ValueKind::Number(params.len() as i128),
                         location: location.clone(),
-                    }),
+                    })),
                 ),
                 (
                     "caller".into(),
-                    Box::new(AstNode::Literal {
+                    Box::new(AstNode::Literal(Literal {
                         kind: TokenKind::StringLiteral,
                         value: ValueKind::String({
                             let name = func.borrow_mut().name.clone();
@@ -3031,33 +2928,33 @@ impl Compiler {
                             }
                         }),
                         location: location.clone(),
-                    }),
+                    })),
                 ),
                 (
                     "file".into(),
-                    Box::new(AstNode::Literal {
+                    Box::new(AstNode::Literal(Literal {
                         kind: TokenKind::StringLiteral,
                         value: ValueKind::String(
                             location.file.clone().split("/").last().unwrap().to_string(),
                         ),
                         location: location.clone(),
-                    }),
+                    })),
                 ),
                 (
                     "line".into(),
-                    Box::new(AstNode::Literal {
+                    Box::new(AstNode::Literal(Literal {
                         kind: TokenKind::IntegerLiteral,
                         value: ValueKind::Number((location.row + 1) as i128),
                         location: location.clone(),
-                    }),
+                    })),
                 ),
                 (
                     "column".into(),
-                    Box::new(AstNode::Literal {
+                    Box::new(AstNode::Literal(Literal {
                         kind: TokenKind::IntegerLiteral,
                         value: ValueKind::Number((location.column + 1) as i128),
                         location: location.clone(),
-                    }),
+                    })),
                 ),
             ],
             location,
@@ -3108,11 +3005,11 @@ impl Compiler {
     ) -> (Type, Value) {
         loop {
             match right.clone() {
-                AstNode::Literal {
+                AstNode::Literal(Literal {
                     kind,
                     value,
                     location,
-                } if kind == TokenKind::Identifier => {
+                }) if kind == TokenKind::Identifier => {
                     let field = value.get_string_inner().unwrap();
 
                     if !ty.is_struct() {

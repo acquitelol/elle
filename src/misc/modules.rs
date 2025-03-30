@@ -6,7 +6,7 @@ use std::process::exit;
 use std::time::Instant;
 use std::{cell::RefCell, rc::Rc};
 
-use crate::parser::enums::Return;
+use crate::parser::enums::{Literal, Return};
 use crate::{
     compiler::enums::Type,
     elapsed_with_color,
@@ -363,11 +363,11 @@ pub fn lex_and_parse(
                 imported: false,
                 // void *
                 r#type: Some(Type::Pointer(Box::new(Type::Void))),
-                value: Box::new(AstNode::Literal {
+                value: Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::LongLiteral,
                     value: ValueKind::Number(0),
                     location: loc.clone(),
-                }),
+                })),
                 location: loc.clone(),
             },
         );
@@ -396,11 +396,11 @@ pub fn lex_and_parse(
                 r#return: Some(Type::Word),
                 body: vec![AstNode::Return(Return {
                     value: Box::new(AstNode::ArrayLength {
-                        value: Box::new(AstNode::Literal {
+                        value: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("self".into()),
                             location: loc.clone(),
-                        }),
+                        })),
                         location: loc.clone(),
                     }),
                     location: loc.clone(),

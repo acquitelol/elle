@@ -56,7 +56,9 @@ macro_rules! global {
         pub static mut $name: Option<$type> = Some($value);
 
         macro_rules! $getter {
-            () => { unsafe { $name.unwrap() } }
+            () => {
+                unsafe { $name.unwrap() }
+            };
         }
 
         #[allow(unused)]
@@ -153,20 +155,18 @@ macro_rules! not_valid_struct_or_type {
     ($self:expr $(,)?) => {{
         let name = $self.current_token().value.get_string_inner().unwrap();
 
-        elle_error!(
-            $self.current_token().location.error(format!(
-                "Identifier '{}' isn't a struct or primitive type.\n{}",
-                name.clone(),
-                if let Some(map) = ValueKind::similar_mapping(name.clone()) {
-                    format!(
-                        "A similar type exists which might be what you need: '{}'",
-                        map
-                    )
-                } else {
-                    format!("Are you sure you spelt '{}' correctly?", name)
-                }
-            ))
-        )
+        elle_error!($self.current_token().location.error(format!(
+            "Identifier '{}' isn't a struct or primitive type.\n{}",
+            name.clone(),
+            if let Some(map) = ValueKind::similar_mapping(name.clone()) {
+                format!(
+                    "A similar type exists which might be what you need: '{}'",
+                    map
+                )
+            } else {
+                format!("Are you sure you spelt '{}' correctly?", name)
+            }
+        )))
     }};
 }
 
@@ -219,20 +219,18 @@ macro_rules! unknown_function {
             }
         }
 
-        elle_error!(
-            $location.error(format!(
-                "Function named '{}' has an unknown interface.{}",
-                $name.clone().replace(".", "::"),
-                if let Some(similar) = similar_name {
-                    format!(
-                        "\nA function with a similar name exists: '{}'",
-                        similar.replace(".", "::")
-                    )
-                } else {
-                    "".into()
-                }
-            ))
-        )
+        elle_error!($location.error(format!(
+            "Function named '{}' has an unknown interface.{}",
+            $name.clone().replace(".", "::"),
+            if let Some(similar) = similar_name {
+                format!(
+                    "\nA function with a similar name exists: '{}'",
+                    similar.replace(".", "::")
+                )
+            } else {
+                "".into()
+            }
+        )))
     }};
 }
 
@@ -245,22 +243,22 @@ macro_rules! unknown_function {
 macro_rules! token_to_node {
     ($token:expr, $self:expr) => {
         match $token.kind {
-            TokenKind::TrueLiteral => AstNode::Literal {
+            TokenKind::TrueLiteral => AstNode::Literal(Literal {
                 kind: TokenKind::BoolLiteral,
                 value: ValueKind::Number(1),
                 location: $token.location,
-            },
-            TokenKind::FalseLiteral => AstNode::Literal {
+            }),
+            TokenKind::FalseLiteral => AstNode::Literal(Literal {
                 kind: TokenKind::BoolLiteral,
                 value: ValueKind::Number(0),
                 location: $token.location,
-            },
+            }),
             TokenKind::FloatingPoint => $self.parse_float($token),
-            _ => AstNode::Literal {
+            _ => AstNode::Literal(Literal {
                 kind: $token.kind,
                 value: $token.value,
                 location: $token.location,
-            },
+            }),
         }
     };
 }

@@ -5,7 +5,7 @@ use crate::{
     },
     elle_error,
     lexer::enums::{TokenKind, ValueKind},
-    parser::enums::{AstNode, Declare},
+    parser::enums::{AstNode, Declare, Literal},
     GC_NOOP,
 };
 
@@ -58,11 +58,11 @@ impl Codegen<'_> for Declare {
                         location: self.location.clone(),
                     }
                 } else {
-                    AstNode::Literal {
+                    AstNode::Literal(Literal {
                         kind: TokenKind::IntegerLiteral,
                         value: ValueKind::Number(0),
                         location: self.location.clone(),
-                    }
+                    })
                 },
             )),
             if local_ty == Type::Infer {

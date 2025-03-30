@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    enums::{Argument, AstNode, BinaryOperation, Declare, Primitive, Return},
+    enums::{Argument, AstNode, BinaryOperation, Declare, Literal, Primitive, Return},
     parser::Parser,
 };
 
@@ -164,16 +164,16 @@ impl<'a> Struct<'a> {
                 .cloned()
                 .map(|member| {
                     let field = AstNode::FieldAccess {
-                        left: Box::new(AstNode::Literal {
+                        left: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("self".into()),
                             location: location.clone(),
-                        }),
-                        right: Box::new(AstNode::Literal {
+                        })),
+                        right: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String(member.name),
                             location: location.clone(),
-                        }),
+                        })),
                         value: None,
                         location: location.clone(),
                     };
@@ -188,16 +188,16 @@ impl<'a> Struct<'a> {
                                 (
                                     location.clone(),
                                     AstNode::BinaryOperation(BinaryOperation {
-                                        left: Box::new(AstNode::Literal {
+                                        left: Box::new(AstNode::Literal(Literal {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("nesting".into()),
                                             location: location.clone(),
-                                        }),
-                                        right: Box::new(AstNode::Literal {
+                                        })),
+                                        right: Box::new(AstNode::Literal(Literal {
                                             kind: TokenKind::IntegerLiteral,
                                             value: ValueKind::Number(1),
                                             location: location.clone(),
-                                        }),
+                                        })),
                                         operator: TokenKind::Add,
                                         treat_as_string: false,
                                         dunder_methods: true,
@@ -217,11 +217,11 @@ impl<'a> Struct<'a> {
                 parameters,
                 (
                     location.clone(),
-                    AstNode::Literal {
+                    AstNode::Literal(Literal {
                         kind: TokenKind::Identifier,
                         value: ValueKind::String("spacing".into()),
                         location: location.clone(),
-                    },
+                    }),
                 ),
             );
 
@@ -229,7 +229,7 @@ impl<'a> Struct<'a> {
                 0,
                 (
                     location.clone(),
-                    AstNode::Literal {
+                    AstNode::Literal(Literal {
                         kind: TokenKind::StringLiteral,
                         value: ValueKind::String(format!(
                             "{name} {{{{\n{}\n{{}}}}",
@@ -241,18 +241,18 @@ impl<'a> Struct<'a> {
                                 .join("\n")
                         )),
                         location: location.clone(),
-                    },
+                    }),
                 ),
             );
 
             // Spacing for the last curly brace
             interleaved.push((
                 location.clone(),
-                AstNode::Literal {
+                AstNode::Literal(Literal {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String("spacing".into()),
                     location: location.clone(),
-                },
+                }),
             ));
 
             builtins.push(Primitive::Function {
@@ -305,25 +305,25 @@ impl<'a> Struct<'a> {
                             parameters: vec![
                                 (
                                     location.clone(),
-                                    AstNode::Literal {
+                                    AstNode::Literal(Literal {
                                         kind: TokenKind::StringLiteral,
                                         value: ValueKind::String(" ".into()),
                                         location: location.clone(),
-                                    },
+                                    }),
                                 ),
                                 (
                                     location.clone(),
                                     AstNode::BinaryOperation(BinaryOperation {
-                                        left: Box::new(AstNode::Literal {
+                                        left: Box::new(AstNode::Literal(Literal {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("nesting".into()),
                                             location: location.clone(),
-                                        }),
-                                        right: Box::new(AstNode::Literal {
+                                        })),
+                                        right: Box::new(AstNode::Literal(Literal {
                                             kind: TokenKind::IntegerLiteral,
                                             value: ValueKind::Number(4),
                                             location: location.clone(),
-                                        }),
+                                        })),
                                         operator: TokenKind::Multiply,
                                         treat_as_string: false,
                                         dunder_methods: true,

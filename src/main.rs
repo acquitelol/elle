@@ -18,7 +18,7 @@ use lexer::enums::{Location, TokenKind, ValueKind};
 use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex_and_parse};
 use parser::enums::{Argument, AstNode, Primitive};
 
-use crate::parser::enums::{BinaryOperation, Declare, Return};
+use crate::parser::enums::{BinaryOperation, Declare, Literal, Return};
 
 pub enum Warning {
     StructFieldsMissing = 1 << 0,
@@ -474,11 +474,11 @@ fn main() -> ExitCode {
                         name: "stack_top".into(),
                         r#type: Some(Type::Pointer(Box::new(Type::Void))),
                         value: Some(Box::new(AstNode::Address {
-                            value: Box::new(AstNode::Literal {
+                            value: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::IntegerLiteral,
                                 value: ValueKind::Number(0),
                                 location: loc.clone(),
-                            }),
+                            })),
                             location: loc.clone(),
                         })),
                         location: loc.clone(),
@@ -514,11 +514,11 @@ fn main() -> ExitCode {
                                 ),
                                 (
                                     "stack_top".into(),
-                                    Box::new(AstNode::Literal {
+                                    Box::new(AstNode::Literal(Literal {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("stack_top".into()),
                                         location: loc.clone(),
-                                    }),
+                                    })),
                                 ),
                             ],
                             location: loc.clone(),
@@ -528,27 +528,27 @@ fn main() -> ExitCode {
                     }),
                     AstNode::Environment {
                         value: Some(Box::new(AstNode::Address {
-                            value: Box::new(AstNode::Literal {
+                            value: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("env".into()),
                                 location: loc.clone(),
-                            }),
+                            })),
                             location: loc.clone(),
                         })),
                         location: loc.clone(),
                     },
                     AstNode::SetAllocator {
                         value: Box::new(AstNode::FieldAccess {
-                            left: Box::new(AstNode::Literal {
+                            left: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("env".into()),
                                 location: loc.clone(),
-                            }),
-                            right: Box::new(AstNode::Literal {
+                            })),
+                            right: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("default_allocator".into()),
                                 location: loc.clone(),
-                            }),
+                            })),
                             value: None,
                             location: loc.clone(),
                         }),
@@ -565,11 +565,11 @@ fn main() -> ExitCode {
                                 generics: vec![Type::Pointer(Box::new(Type::Char))],
                                 parameters: vec![(
                                     loc.clone(),
-                                    AstNode::Literal {
+                                    AstNode::Literal(Literal {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("argc".into()),
                                         location: loc.clone(),
-                                    },
+                                    }),
                                 )],
                                 type_method: false,
                                 ignore_no_def: false,
@@ -581,26 +581,26 @@ fn main() -> ExitCode {
                         AstNode::Declare(Declare {
                             name: "i".into(),
                             r#type: Some(Type::Word),
-                            value: Some(Box::new(AstNode::Literal {
+                            value: Some(Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::IntegerLiteral,
                                 value: ValueKind::Number(0),
                                 location: loc.clone(),
-                            })),
+                            }))),
                             location: loc.clone(),
                             value_location: loc.clone(),
                         }),
                         AstNode::WhileLoopStatement {
                             condition: Box::new(AstNode::BinaryOperation(BinaryOperation {
-                                left: Box::new(AstNode::Literal {
+                                left: Box::new(AstNode::Literal(Literal {
                                     kind: TokenKind::Identifier,
                                     value: ValueKind::String("i".into()),
                                     location: loc.clone(),
-                                }),
-                                right: Box::new(AstNode::Literal {
+                                })),
+                                right: Box::new(AstNode::Literal(Literal {
                                     kind: TokenKind::Identifier,
                                     value: ValueKind::String("argc".into()),
                                     location: loc.clone(),
-                                }),
+                                })),
                                 operator: TokenKind::LessThan,
                                 treat_as_string: false,
                                 dunder_methods: false,
@@ -610,16 +610,16 @@ fn main() -> ExitCode {
                                 name: "i".into(),
                                 r#type: None,
                                 value: Some(Box::new(AstNode::BinaryOperation(BinaryOperation {
-                                    left: Box::new(AstNode::Literal {
+                                    left: Box::new(AstNode::Literal(Literal {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("i".into()),
                                         location: loc.clone(),
-                                    }),
-                                    right: Box::new(AstNode::Literal {
+                                    })),
+                                    right: Box::new(AstNode::Literal(Literal {
                                         kind: TokenKind::IntegerLiteral,
                                         value: ValueKind::Number(1),
                                         location: loc.clone(),
-                                    }),
+                                    })),
                                     operator: TokenKind::Add,
                                     treat_as_string: false,
                                     dunder_methods: false,
@@ -634,25 +634,25 @@ fn main() -> ExitCode {
                                 parameters: vec![
                                     (
                                         loc.clone(),
-                                        AstNode::Literal {
+                                        AstNode::Literal(Literal {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("args".into()),
                                             location: loc.clone(),
-                                        },
+                                        }),
                                     ),
                                     (
                                         loc.clone(),
                                         AstNode::MemoryOperation {
-                                            left: Box::new(AstNode::Literal {
+                                            left: Box::new(AstNode::Literal(Literal {
                                                 kind: TokenKind::Identifier,
                                                 value: ValueKind::String("argv".into()),
                                                 location: loc.clone(),
-                                            }),
-                                            right: Box::new(AstNode::Literal {
+                                            })),
+                                            right: Box::new(AstNode::Literal(Literal {
                                                 kind: TokenKind::Identifier,
                                                 value: ValueKind::String("i".into()),
                                                 location: loc.clone(),
-                                            }),
+                                            })),
                                             value: None,
                                             left_location: loc.clone(),
                                             right_location: loc.clone(),
@@ -681,11 +681,11 @@ fn main() -> ExitCode {
                             parameters: if main_arg_len == 1 {
                                 vec![(
                                     loc.clone(),
-                                    AstNode::Literal {
+                                    AstNode::Literal(Literal {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("args".into()),
                                         location: loc.clone(),
-                                    },
+                                    }),
                                 )]
                             } else {
                                 vec![]
@@ -703,16 +703,16 @@ fn main() -> ExitCode {
                         parameters: vec![(
                             loc.clone(),
                             AstNode::FieldAccess {
-                                left: Box::new(AstNode::Literal {
+                                left: Box::new(AstNode::Literal(Literal {
                                     kind: TokenKind::Identifier,
                                     value: ValueKind::String("env".into()),
                                     location: loc.clone(),
-                                }),
-                                right: Box::new(AstNode::Literal {
+                                })),
+                                right: Box::new(AstNode::Literal(Literal {
                                     kind: TokenKind::Identifier,
                                     value: ValueKind::String("allocator".into()),
                                     location: loc.clone(),
-                                }),
+                                })),
                                 value: None,
                                 location: loc.clone(),
                             },
@@ -722,11 +722,11 @@ fn main() -> ExitCode {
                         location: loc.clone(),
                     },
                     AstNode::Return(Return {
-                        value: Box::new(AstNode::Literal {
+                        value: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("status".into()),
                             location: loc.clone(),
-                        }),
+                        })),
                         location: loc.clone(),
                     }),
                 ],

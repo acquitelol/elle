@@ -5,7 +5,7 @@ use crate::{
     },
     elle_error, get_BOLD, get_GREEN, get_RESET,
     lexer::enums::{TokenKind, ValueKind},
-    parser::enums::{AstNode, BinaryOperation},
+    parser::enums::{AstNode, BinaryOperation, Literal},
     BOLD, EQUALS_CONSTANT, GREEN, RESET,
 };
 
@@ -34,7 +34,7 @@ impl Codegen<'_> for BinaryOperation {
                     (self.location.clone(), *self.right),
                     (
                         self.location.clone(),
-                        AstNode::Literal {
+                        AstNode::Literal(Literal {
                             kind: TokenKind::IntegerLiteral,
                             value: ValueKind::Number(if self.operator == TokenKind::RangeEqual {
                                 1
@@ -42,7 +42,7 @@ impl Codegen<'_> for BinaryOperation {
                                 0
                             }),
                             location: self.location.clone(),
-                        },
+                        }),
                     ),
                 ],
                 type_method: false,
@@ -252,11 +252,11 @@ impl Codegen<'_> for BinaryOperation {
                         .generate_statement(
                             ctx.func,
                             ctx.module,
-                            AstNode::Literal {
+                            AstNode::Literal(Literal {
                                 kind: TokenKind::ExactLiteral,
                                 value: ValueKind::String("...".into()),
                                 location: self.location.clone(),
-                            },
+                            }),
                             Some(ty.clone()),
                             None,
                             false,

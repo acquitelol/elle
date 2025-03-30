@@ -33,13 +33,16 @@ pub struct BinaryOperation {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Literal {
+    pub kind: TokenKind,
+    pub value: ValueKind,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
-    Literal {
-        kind: TokenKind,
-        value: ValueKind,
-        location: Rc<Location>,
-    },
+    Literal(Literal),
     /// A declaration of name `name` with type `r#type` to value `value
     Declare(Declare),
     /// Allocates stack memory of size `valist`, assigns it to `name`, and calls `vastart` on it
@@ -196,11 +199,11 @@ pub enum AstNode {
 
 impl AstNode {
     pub fn token_to_literal(token: Token) -> AstNode {
-        Self::Literal {
+        Self::Literal(Literal {
             kind: token.kind,
             value: token.value,
             location: token.location,
-        }
+        })
     }
 }
 

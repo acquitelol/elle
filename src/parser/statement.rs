@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::iter::FromIterator;
 use std::rc::Rc;
 
-use super::enums::{Argument, AstNode, BinaryOperation, Declare, Primitive, Return};
+use super::enums::{Argument, AstNode, BinaryOperation, Declare, Literal, Primitive, Return};
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
 use crate::{
@@ -229,11 +229,11 @@ impl<'a> Statement<'a> {
             AstNode::Declare(Declare { name, .. }) => {
                 self.body.borrow_mut().push(res);
 
-                AstNode::Literal {
+                AstNode::Literal(Literal {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
                     location: location.clone(),
-                }
+                })
             }
             _ => res,
         };
@@ -262,11 +262,11 @@ impl<'a> Statement<'a> {
             name: name.clone(),
             r#type: None,
             value: Some(Box::new(AstNode::BinaryOperation(BinaryOperation {
-                left: Box::new(AstNode::Literal {
+                left: Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
                     location: location.clone(),
-                }),
+                })),
                 right: Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0),
                 operator: mapping,
                 treat_as_string: true,
@@ -296,16 +296,16 @@ impl<'a> Statement<'a> {
         let original = String::from_iter([left, right]).parse::<i128>().unwrap();
 
         AstNode::BinaryOperation(BinaryOperation {
-            left: Box::new(AstNode::Literal {
+            left: Box::new(AstNode::Literal(Literal {
                 kind: TokenKind::FloatLiteral,
                 value: ValueKind::Number(original),
                 location: self.current_token().location,
-            }),
-            right: Box::new(AstNode::Literal {
+            })),
+            right: Box::new(AstNode::Literal(Literal {
                 kind: TokenKind::FloatLiteral,
                 value: ValueKind::Number(10_i128.pow(exponent as u32)),
                 location: self.current_token().location,
-            }),
+            })),
             operator: TokenKind::Divide,
             treat_as_string: false,
             dunder_methods: true,
@@ -363,11 +363,11 @@ impl<'a> Statement<'a> {
 
         if self.current_token().kind == TokenKind::Semicolon {
             return AstNode::Return(Return {
-                value: Box::new(AstNode::Literal {
+                value: Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::IntegerLiteral,
                     value: ValueKind::Number(0),
                     location: self.current_token().location.clone(),
-                }),
+                })),
                 location: self.current_token().location,
             });
         }
@@ -378,22 +378,22 @@ impl<'a> Statement<'a> {
         let res = if tokens.len() > 0 {
             Statement::new(tokens, 0, &self.body, self.shared).parse().0
         } else {
-            AstNode::Literal {
+            AstNode::Literal(Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(0),
                 location: self.current_token().location,
-            }
+            })
         };
 
         let parsed_res = match res.clone() {
             AstNode::Declare(Declare { name, .. }) => {
                 self.body.borrow_mut().push(res);
 
-                AstNode::Literal {
+                AstNode::Literal(Literal {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
                     location: self.current_token().location,
-                }
+                })
             }
             _ => res,
         };
@@ -450,11 +450,11 @@ impl<'a> Statement<'a> {
         };
 
         if self.current_token().kind == TokenKind::Semicolon || self.is_eof() {
-            return AstNode::Literal {
+            return AstNode::Literal(Literal {
                 kind: TokenKind::Identifier,
                 value: ValueKind::String(name),
                 location,
-            };
+            });
         } else {
             self.expect_tokens(vec![TokenKind::LeftParenthesis]);
         }
@@ -1079,11 +1079,11 @@ impl<'a> Statement<'a> {
                 .parse()
                 .0
         } else {
-            AstNode::Literal {
+            AstNode::Literal(Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(0),
                 location: self.current_token().location,
-            }
+            })
         };
 
         self.expect_tokens(vec![TokenKind::Semicolon]);
@@ -1100,11 +1100,11 @@ impl<'a> Statement<'a> {
                 .parse()
                 .0
         } else {
-            AstNode::Literal {
+            AstNode::Literal(Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(1),
                 location: self.current_token().location,
-            }
+            })
         };
 
         self.expect_tokens(vec![TokenKind::Semicolon]);
@@ -1163,11 +1163,11 @@ impl<'a> Statement<'a> {
                 .parse()
                 .0
         } else {
-            AstNode::Literal {
+            AstNode::Literal(Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(1),
                 location: self.current_token().location,
-            }
+            })
         };
 
         let body = self.yield_block(false); // For loops are statements
@@ -1237,17 +1237,17 @@ impl<'a> Statement<'a> {
 
         self.position -= 1;
 
-        let index_node = AstNode::Literal {
+        let index_node = AstNode::Literal(Literal {
             kind: TokenKind::Identifier,
             value: ValueKind::String(index.clone()),
             location: location.clone(),
-        };
+        });
 
-        let iterator_node = AstNode::Literal {
+        let iterator_node = AstNode::Literal(Literal {
             kind: TokenKind::Identifier,
             value: ValueKind::String(iter.clone()),
             location: location.clone(),
-        };
+        });
 
         let element_access = AstNode::MemoryOperation {
             left: Box::new(iterator_node.clone()),
@@ -1288,11 +1288,11 @@ impl<'a> Statement<'a> {
             r#type: None,
             value: Some(Box::new(AstNode::BinaryOperation(BinaryOperation {
                 left: Box::new(index_node),
-                right: Box::new(AstNode::Literal {
+                right: Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::IntegerLiteral,
                     value: ValueKind::Number(1),
                     location: location.clone(),
-                }),
+                })),
                 operator: TokenKind::Add,
                 treat_as_string: false,
                 dunder_methods: true,
@@ -1307,11 +1307,11 @@ impl<'a> Statement<'a> {
         statements.push(AstNode::Declare(Declare {
             name: index,
             r#type: Some(Type::Word),
-            value: Some(Box::new(AstNode::Literal {
+            value: Some(Box::new(AstNode::Literal(Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(0),
                 location: location.clone(),
-            })),
+            }))),
             location: location.clone(),
             value_location: location.clone(),
         }));
@@ -2075,11 +2075,11 @@ impl<'a> Statement<'a> {
         let left = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
         let right_location = self.current_token().location.clone();
-        let right = Box::new(AstNode::Literal {
+        let right = Box::new(AstNode::Literal(Literal {
             kind: TokenKind::LongLiteral,
             value: ValueKind::Number(0),
             location: self.current_token().location,
-        });
+        }));
 
         let mut value_location = self.current_token().location.clone();
 
@@ -2521,11 +2521,11 @@ impl<'a> Statement<'a> {
 
         let location = self.current_token().location.clone();
 
-        let mut expression = AstNode::Literal {
+        let mut expression = AstNode::Literal(Literal {
             kind: TokenKind::Identifier,
             value: ValueKind::String(format!(INTERNAL_IDX_FORMAT!(), name)),
             location: location.clone(),
-        };
+        });
 
         match self.current_token().kind {
             TokenKind::Equal => {
@@ -2647,11 +2647,11 @@ impl<'a> Statement<'a> {
             self.advance();
             Statement::new(tokens, 0, &self.body, self.shared).parse().0
         } else {
-            AstNode::Literal {
+            AstNode::Literal(Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(1),
                 location: location.clone(),
-            }
+            })
         };
 
         let mut expression = AstNode::Conversion {
@@ -2667,11 +2667,11 @@ impl<'a> Statement<'a> {
                                 value: None,
                                 location: location.clone(),
                             }),
-                            right: Box::new(AstNode::Literal {
+                            right: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("allocator".into()),
                                 location: location.clone(),
-                            }),
+                            })),
                             value: None,
                             location: location.clone(),
                         },
@@ -2751,11 +2751,11 @@ impl<'a> Statement<'a> {
             self.advance();
             Statement::new(tokens, 0, &self.body, self.shared).parse().0
         } else {
-            AstNode::Literal {
+            AstNode::Literal(Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(1),
                 location: location.clone(),
-            }
+            })
         };
 
         let mut expression = AstNode::Conversion {
@@ -2771,11 +2771,11 @@ impl<'a> Statement<'a> {
                                 value: None,
                                 location: location.clone(),
                             }),
-                            right: Box::new(AstNode::Literal {
+                            right: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("allocator".into()),
                                 location: location.clone(),
-                            }),
+                            })),
                             value: None,
                             location: location.clone(),
                         },
@@ -2858,11 +2858,11 @@ impl<'a> Statement<'a> {
                             value: None,
                             location: location.clone(),
                         }),
-                        right: Box::new(AstNode::Literal {
+                        right: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("allocator".into()),
                             location: location.clone(),
-                        }),
+                        })),
                         value: None,
                         location: location.clone(),
                     },
@@ -2926,11 +2926,11 @@ impl<'a> Statement<'a> {
                     value: None,
                     location: location.clone(),
                 }),
-                right: Box::new(AstNode::Literal {
+                right: Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String("default_allocator".into()),
                     location: location.clone(),
-                }),
+                })),
                 value: None,
                 location: location.clone(),
             }),
