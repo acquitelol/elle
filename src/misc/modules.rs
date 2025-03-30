@@ -1,12 +1,12 @@
-use std::env::{current_dir, set_current_dir};
-use std::{cell::RefCell, rc::Rc};
 use std::collections::HashSet;
+use std::env::{current_dir, set_current_dir};
 use std::fs;
 use std::path::Path;
 use std::process::exit;
 use std::time::Instant;
+use std::{cell::RefCell, rc::Rc};
 
-use crate::{elle_error, get_POINTER_ID, get_STD_LIB_PATH, ARBITRARY_ALLOCATOR_MODULE, BACKUP_ALLOCATOR_MODULE};
+use crate::parser::enums::Return;
 use crate::{
     compiler::enums::Type,
     elapsed_with_color,
@@ -20,8 +20,11 @@ use crate::{
         enums::{Argument, AstNode, Primitive},
         parser::{DoOnly, Parser, StructPool},
     },
-    Warnings, LEN_CONSTANT, POINTER_ID, PRIMARY_ALLOCATOR_MODULE, SHORT_EXTENSION,
-    STD_LIB_PATH,
+    Warnings, LEN_CONSTANT, POINTER_ID, PRIMARY_ALLOCATOR_MODULE, SHORT_EXTENSION, STD_LIB_PATH,
+};
+use crate::{
+    elle_error, get_POINTER_ID, get_STD_LIB_PATH, ARBITRARY_ALLOCATOR_MODULE,
+    BACKUP_ALLOCATOR_MODULE,
 };
 
 pub fn lex_and_parse(
@@ -45,15 +48,7 @@ pub fn lex_and_parse(
 
     let content = {
         let base = fs::metadata(input_path).is_ok();
-        let file_path = &format!(
-            "{}{}",
-            input_path,
-            if base {
-                ""
-            } else {
-                SHORT_EXTENSION
-            }
-        );
+        let file_path = &format!("{}{}", input_path, if base { "" } else { SHORT_EXTENSION });
 
         let relative_path_string = &format!("./{file_path}");
 
@@ -77,7 +72,8 @@ pub fn lex_and_parse(
                     "{}",
                     _import_location.basic_error(format!(
                         "Could not load module \"{RED}{}{RESET}\":\n{}",
-                        input_path, err,
+                        input_path,
+                        err,
                         RED = get_RED!(),
                         RESET = get_RESET!()
                     ))
@@ -96,17 +92,17 @@ pub fn lex_and_parse(
 
     macro_rules! file_is_empty_error {
         () => {
-            elle_error!(
-                _import_location.basic_error(format!(
-                    "Could not load module \"{MAGENTA}{input_path}{RESET}\":\n{}\n\n{}{RESET}",
-                    "Module is empty. To create an entry-point, write:",
-                    format!("{GREEN}+ use std/prelude;\n+ \n+ fn main() {{\n+ \n+ }}{RESET}",
-                        GREEN = get_GREEN!(),
-                        RESET = get_RESET!()),
-                    MAGENTA = get_MAGENTA!(),
+            elle_error!(_import_location.basic_error(format!(
+                "Could not load module \"{MAGENTA}{input_path}{RESET}\":\n{}\n\n{}{RESET}",
+                "Module is empty. To create an entry-point, write:",
+                format!(
+                    "{GREEN}+ use std/prelude;\n+ \n+ fn main() {{\n+ \n+ }}{RESET}",
+                    GREEN = get_GREEN!(),
                     RESET = get_RESET!()
-                ))
-            )
+                ),
+                MAGENTA = get_MAGENTA!(),
+                RESET = get_RESET!()
+            )))
         };
     }
 
@@ -178,7 +174,8 @@ pub fn lex_and_parse(
                     BACKUP_ALLOCATOR_MODULE
                 } else {
                     PRIMARY_ALLOCATOR_MODULE
-                }.into(),
+                }
+                .into(),
                 location: loc.clone(),
             },
         );
@@ -195,9 +192,7 @@ pub fn lex_and_parse(
     for import in imports.iter().cloned() {
         match import {
             Primitive::Use {
-                module,
-                location,
-                ..
+                module, location, ..
             } if !parsed_modules.borrow().contains(&module) => {
                 let now = if debug_time {
                     Some(Instant::now())
@@ -226,11 +221,14 @@ pub fn lex_and_parse(
 
                 if !is_std_import {
                     // Set the path to where the current file is so that imports are relative in that regard
-                    set_current_dir(Path::new(final_path.parent()
-                        .expect(&location
-                            .basic_error(format!("Failed to get the parent directory of {final_path:#?}")))))
-                        .expect(&location
-                            .basic_error(format!("Failed to set the current directory of {final_path:#?}")));
+                    set_current_dir(Path::new(final_path.parent().expect(
+                        &location.basic_error(format!(
+                            "Failed to get the parent directory of {final_path:#?}"
+                        )),
+                    )))
+                    .expect(&location.basic_error(format!(
+                        "Failed to set the current directory of {final_path:#?}"
+                    )));
                 }
 
                 let nodes = lex_and_parse(
@@ -252,8 +250,9 @@ pub fn lex_and_parse(
 
                 if !is_std_import {
                     // Set the path back
-                    set_current_dir(current.clone()).expect(&location
-                        .basic_error(format!("Failed to set the current directory to {current:#?}")));
+                    set_current_dir(current.clone()).expect(&location.basic_error(format!(
+                        "Failed to set the current directory to {current:#?}"
+                    )));
                 }
 
                 for symbol in nodes.iter().rev() {
@@ -392,10 +391,10 @@ pub fn lex_and_parse(
                     name: "self".into(),
                     r#type: Type::Pointer(Box::new(Type::Unknown("T".into()))),
                     manual: false,
-                    no_fmt: false
+                    no_fmt: false,
                 }],
                 r#return: Some(Type::Word),
-                body: vec![AstNode::Return {
+                body: vec![AstNode::Return(Return {
                     value: Box::new(AstNode::ArrayLength {
                         value: Box::new(AstNode::Literal {
                             kind: TokenKind::Identifier,
@@ -405,7 +404,7 @@ pub fn lex_and_parse(
                         location: loc.clone(),
                     }),
                     location: loc.clone(),
-                }],
+                })],
                 location: loc.clone(),
                 return_location: loc.clone(),
             },

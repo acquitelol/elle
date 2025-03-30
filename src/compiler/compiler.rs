@@ -12,7 +12,7 @@ use crate::{
     lexer::enums::{Location, TokenKind, ValueKind},
     misc::colors::*,
     parser::{
-        enums::{modify_type_in_ast, Argument, AstNode, Primitive},
+        enums::{modify_type_in_ast, Argument, AstNode, Primitive, Return},
         parser::StructPool,
     },
     unknown_field, unknown_function, Warning, Warnings, ARBITRARY_ALLOCATOR_NAME, DUNDER_CONSTANTS,
@@ -626,26 +626,7 @@ impl Compiler {
 
         let res = match stmt {
             AstNode::Declare(this) => this.compile(self, &ctx),
-            AstNode::Return {
-                value, location, ..
-            } => {
-                match self.generate_statement(func, module, *value, ty, None, true) {
-                    Some((ret_ty, value)) => {
-                        if !func.borrow_mut().manual {
-                            func.borrow_mut().add_instruction(Instruction::Return(Some((
-                                ret_ty, value, location,
-                            ))))
-                        }
-                    }
-                    None => {
-                        if !func.borrow_mut().manual {
-                            func.borrow_mut().add_instruction(Instruction::Return(None))
-                        }
-                    }
-                }
-
-                None
-            }
+            AstNode::Return(this) => this.compile(self, &ctx),
             AstNode::BinaryOperation {
                 left,
                 right,
@@ -4401,10 +4382,10 @@ impl Compiler {
                         hashmap![],
                         &vec![],
                         ty,
-                        vec![AstNode::Return {
+                        vec![AstNode::Return(Return {
                             value,
                             location: location.clone(),
-                        }],
+                        })],
                         &module_ref,
                         location.clone(),
                         location,

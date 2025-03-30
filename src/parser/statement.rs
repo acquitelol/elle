@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::iter::FromIterator;
 use std::rc::Rc;
 
-use super::enums::{Argument, AstNode, Declare, Primitive};
+use super::enums::{Argument, AstNode, Declare, Primitive, Return};
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
 use crate::{
@@ -362,14 +362,14 @@ impl<'a> Statement<'a> {
         self.advance();
 
         if self.current_token().kind == TokenKind::Semicolon {
-            return AstNode::Return {
+            return AstNode::Return(Return {
                 value: Box::new(AstNode::Literal {
                     kind: TokenKind::IntegerLiteral,
                     value: ValueKind::Number(0),
                     location: self.current_token().location.clone(),
                 }),
                 location: self.current_token().location,
-            };
+            });
         }
 
         let location = self.current_token().location.clone();
@@ -398,10 +398,10 @@ impl<'a> Statement<'a> {
             _ => res,
         };
 
-        AstNode::Return {
+        AstNode::Return(Return {
             value: Box::new(parsed_res),
             location,
-        }
+        })
     }
 
     fn parse_function(
@@ -1726,10 +1726,10 @@ impl<'a> Statement<'a> {
 
             AstNode::Lambda {
                 arguments,
-                value: vec![AstNode::Return {
+                value: vec![AstNode::Return(Return {
                     value: Box::new(value),
                     location: location.clone(),
-                }],
+                })],
                 location,
             }
         }

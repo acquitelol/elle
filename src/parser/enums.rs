@@ -17,6 +17,12 @@ pub struct Declare {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Return {
+    pub value: Box<AstNode>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal {
@@ -38,10 +44,7 @@ pub enum AstNode {
         location: Rc<Location>,
     },
     /// Returns value `value`
-    Return {
-        value: Box<AstNode>,
-        location: Rc<Location>,
-    },
+    Return(Return),
     /// Calls function `name` with parameters `parameters`
     FunctionCall {
         name: String,
@@ -241,7 +244,7 @@ fn modify_type_in_node(
 
             *value = modify_type_in_ast(value.clone(), generics, known_types, struct_pool, tree);
         }
-        AstNode::Return { value, .. } => {
+        AstNode::Return(Return { value, .. }) => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);

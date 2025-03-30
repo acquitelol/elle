@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    enums::{Argument, AstNode, Declare, Primitive},
+    enums::{Argument, AstNode, Declare, Primitive, Return},
     parser::Parser,
 };
 
@@ -338,7 +338,7 @@ impl<'a> Struct<'a> {
                         location: location.clone(),
                         value_location: location.clone(),
                     }),
-                    AstNode::Return {
+                    AstNode::Return(Return {
                         value: Box::new(AstNode::FunctionCall {
                             name: format!("string.{}", INTERNAL_FORMATTER).into(),
                             generics: vec![],
@@ -348,7 +348,7 @@ impl<'a> Struct<'a> {
                             location: location.clone(),
                         }),
                         location: location.clone(),
-                    },
+                    }),
                 ],
                 location: location.clone(),
                 return_location: location.clone(),
