@@ -12,8 +12,8 @@ use crate::{
     misc::colors::*,
     parser::{
         enums::{
-            modify_type_in_ast, Argument, AstNode, BinaryOperation, BitwiseNot, Conversion,
-            Environment, FunctionCall, Literal, Primitive, Return,
+            modify_type_in_ast, Argument, ArrayLiteral, AstNode, BinaryOperation, BitwiseNot,
+            Conversion, Environment, FunctionCall, Literal, Primitive, Return,
         },
         parser::StructPool,
     },
@@ -646,219 +646,7 @@ impl Compiler {
             AstNode::BitwiseNot(this) => this.compile(self, &ctx),
             AstNode::ArrayLength(this) => this.compile(self, &ctx),
             AstNode::Lambda(this) => this.compile(self, &ctx),
-            AstNode::ArrayLiteral {
-                explicit_inner,
-                known_generics,
-                values,
-                location,
-                dynamic,
-            } => {
-                let inner_ty = if let Some(ty) = ty.clone() {
-                    ty.get_pointer_inner()
-                } else {
-                    None
-                };
-
-                if dynamic {
-                    let new_func = func.borrow_mut().to_owned();
-                    let inner_ty = if let Some(ref ty) = explicit_inner {
-                        Some(ty.clone())
-                    } else if values.len() > 0 {
-                        let (ty, _) = self
-                            .generate_statement(
-                                &RefCell::new(new_func),
-                                module,
-                                values[0].clone().1,
-                                None,
-                                None,
-                                false,
-                            )
-                            .expect(&location.error(format!(
-                                "Unexpected error when trying to compile the first item in an array"
-                            )));
-
-                        Some(ty.clone())
-                    } else if !known_generics.is_empty() {
-                        Some(known_generics.get(0).unwrap().clone())
-                    } else if let Some(ref ty) = ty {
-                        Some(ty.clone())
-                    // } else if is_return {
-                    //     None
-                    } else {
-                        // panic!(
-                        //     "{}",
-                        //     location.with_extra_info("Try specifying a type here").error(format!("Could not determine any type for this array.\nPlease specify a type explicitly with the {GREEN}[T;]{RESET} syntax."))
-                        // )
-                        None
-                    };
-
-                    let node = AstNode::FunctionCall(FunctionCall {
-                        name: "Array.new".into(),
-                        generics: if let Some(ref ty) = inner_ty {
-                            vec![ty.clone()]
-                        } else {
-                            vec![]
-                        },
-                        parameters: if let Some(ty) = inner_ty {
-                            values
-                                .into_iter()
-                                .map(|(loc, node)| {
-                                    (
-                                        loc.clone(),
-                                        AstNode::Conversion(Conversion {
-                                            r#type: Some(ty.clone()),
-                                            value: Box::new(node),
-                                            location: loc.clone(),
-                                            explicit: false,
-                                        }),
-                                    )
-                                })
-                                .collect()
-                        } else {
-                            values
-                        },
-                        type_method: false,
-                        ignore_no_def: false,
-                        location: location.clone(),
-                    });
-
-                    let (ty, val) = self
-                        .generate_statement(func, module, node, ty, value, is_return)
-                        .expect(&location.error(format!(
-                            "Unexpected error when trying to compile a dynamic array"
-                        )));
-
-                    return Some((ty, val));
-                }
-
-                let mut first_type: Option<Type> = None;
-                let mut results: Vec<Value> = vec![];
-
-                // value.is_some() because we don't want to do this to
-                // arrays that aren't assigned to a variable
-                if value.is_some() && ty.is_some() && !ty.clone().unwrap().is_pointer() {
-                    elle_error!(
-                        location.error(
-                            format!("The type of array '{:?}' must be a pointer to the inner type of the array (it is {})",
-                                values, ty.unwrap().display()
-                            )
-                        )
-                    );
-                }
-
-                for (i, (location, value)) in values.iter().enumerate() {
-                    let (ty, val) = self
-                        .generate_statement(
-                            func,
-                            module,
-                            value.clone(),
-                            if inner_ty.is_some() {
-                                inner_ty.clone()
-                            } else {
-                                first_type.clone()
-                            },
-                            None,
-                            false,
-                        )
-                        .expect(
-                            &location.error(
-                                format!("Unexpected error when trying to compile an item in an array with index {}", i),
-                            ),
-                        );
-
-                    results.push(val);
-
-                    if let Some(first_type) = first_type.clone() {
-                        if ty != first_type {
-                            elle_error!(location.error(format!(
-                                "Inconsistent array types '{}' and '{}' (possibly more)",
-                                first_type.display(),
-                                ty.display()
-                            )));
-                        }
-
-                        if inner_ty.is_some() && inner_ty.clone().unwrap() != first_type {
-                            elle_error!(location.error(format!(
-                                "Invalid type of element in array '{}' when the array type is '{}'",
-                                ty.display(),
-                                inner_ty.unwrap().display(),
-                            )))
-                        }
-                    } else {
-                        if inner_ty.is_some() && inner_ty.clone().unwrap() != ty {
-                            elle_error!(location.error(format!(
-                                "Invalid type of element in array '{}' when the array type is '{}'",
-                                ty.display(),
-                                inner_ty.unwrap().display(),
-                            )))
-                        }
-
-                        first_type = Some(ty);
-                    }
-                }
-
-                let buf_ty = Type::Pointer(Box::new(first_type.clone().unwrap_or(Type::Void)));
-                let array_size = if let Some(ref ty) = first_type {
-                    values.len() as u64 * ty.size(module)
-                } else {
-                    0
-                };
-                let array_size_val =
-                    Value::Const("".into(), (array_size + Type::Word.size_base()) as i128);
-                let tmp_full = self.new_temporary(Some("array.full"), true);
-
-                func.borrow_mut().assign_instruction_front(
-                    &tmp_full,
-                    &buf_ty,
-                    Instruction::Alloc8(array_size_val.clone()),
-                );
-
-                func.borrow_mut().add_instruction(Instruction::Store(
-                    Type::Word,
-                    tmp_full.clone(),
-                    Value::Const("".into(), results.len() as i128),
-                ));
-
-                let tmp = self.new_temporary(Some("array"), true);
-
-                func.borrow_mut().assign_instruction(
-                    &tmp,
-                    &buf_ty,
-                    Instruction::Add(
-                        tmp_full,
-                        Value::Const("".into(), Type::Word.size(module) as i128),
-                    ),
-                );
-
-                self.buf_metadata.insert(
-                    value.unwrap_or(tmp.clone()),
-                    (buf_ty.get_pointer_inner().unwrap(), array_size_val),
-                );
-
-                for (i, value) in results.iter().enumerate() {
-                    let value_ptr = self.new_temporary(Some("array.offset"), true);
-
-                    func.borrow_mut().assign_instruction(
-                        &value_ptr,
-                        &Type::Long,
-                        Instruction::Add(
-                            tmp.clone(),
-                            Value::Const(
-                                "".into(),
-                                i as i128 * first_type.as_ref().unwrap().size(module) as i128,
-                            ),
-                        ),
-                    );
-
-                    func.borrow_mut().add_instruction(Instruction::Store(
-                        first_type.as_ref().unwrap().clone(),
-                        value_ptr,
-                        value.clone(),
-                    ));
-                }
-
-                Some((buf_ty, tmp))
-            }
+            AstNode::ArrayLiteral(this) => this.compile(self, &ctx),
             AstNode::Address { value, location } => {
                 let (ty, val) = self
                     .generate_statement(func, module, *value, ty, None, false)
@@ -1301,7 +1089,7 @@ impl Compiler {
             values: vec![
                 (
                     "exprs".into(),
-                    Box::new(AstNode::ArrayLiteral {
+                    Box::new(AstNode::ArrayLiteral(ArrayLiteral {
                         values: params
                             .iter()
                             .enumerate()
@@ -1405,11 +1193,11 @@ impl Compiler {
                         explicit_inner: None,
                         known_generics: vec![],
                         dynamic: false,
-                    }),
+                    })),
                 ),
                 (
                     "types".into(),
-                    Box::new(AstNode::ArrayLiteral {
+                    Box::new(AstNode::ArrayLiteral(ArrayLiteral {
                         values: params
                             .iter()
                             .map(|param| {
@@ -1429,7 +1217,7 @@ impl Compiler {
                         explicit_inner: None,
                         known_generics: vec![],
                         dynamic: false,
-                    }),
+                    })),
                 ),
                 (
                     "arity".into(),

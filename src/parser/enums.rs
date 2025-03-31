@@ -149,6 +149,15 @@ pub struct Lambda {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ArrayLiteral {
+    pub explicit_inner: Option<Type>,
+    pub known_generics: Vec<Type>,
+    pub values: Vec<(Rc<Location>, AstNode)>,
+    pub location: Rc<Location>,
+    pub dynamic: bool,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -172,13 +181,7 @@ pub enum AstNode {
     /// Declares a buffer named `name` with an inner type `r#type` and size `size`
     Buffer(Buffer),
     /// Declares an array literal of size `values.len()` and values `values` and returns a pointer to the start of it
-    ArrayLiteral {
-        explicit_inner: Option<Type>,
-        known_generics: Vec<Type>,
-        values: Vec<(Rc<Location>, AstNode)>,
-        location: Rc<Location>,
-        dynamic: bool,
-    },
+    ArrayLiteral(ArrayLiteral),
     /// Declares a struct named `name` with values `values`
     StructLiteral {
         name: String,
@@ -392,7 +395,7 @@ fn modify_type_in_node(
             }
             *body = modify_type_in_ast(body.clone(), generics, known_types, struct_pool, tree);
         }
-        AstNode::ArrayLiteral { values, .. } => {
+        AstNode::ArrayLiteral(ArrayLiteral { values, .. }) => {
             for (_, value) in values {
                 let new_value =
                     modify_type_in_node(value.clone(), generics, known_types, struct_pool, tree);

@@ -3,8 +3,8 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 
 use super::enums::{
-    Argument, ArrayLength, AstNode, BinaryOperation, BitwiseNot, Buffer, Conversion, Declare,
-    Environment, FunctionCall, IfStatement, Lambda, Literal, LogicalNot, MemoryOperation,
+    Argument, ArrayLength, ArrayLiteral, AstNode, BinaryOperation, BitwiseNot, Buffer, Conversion,
+    Declare, Environment, FunctionCall, IfStatement, Lambda, Literal, LogicalNot, MemoryOperation,
     Primitive, Return, SetAllocator, VariadicArgument, VariadicStart,
 };
 use super::parser::{create_generic_struct, StructPool};
@@ -948,13 +948,13 @@ impl<'a> Statement<'a> {
             location.column += end_loc.column - location.column;
         }
 
-        let array = AstNode::ArrayLiteral {
+        let array = AstNode::ArrayLiteral(ArrayLiteral {
             values,
             explicit_inner: inner_ty.or(self.shared.known_generics.get(0).cloned()),
             known_generics: self.shared.known_generics.clone(),
             location: Rc::new(location.clone()),
             dynamic,
-        };
+        });
 
         match self.current_token().kind {
             TokenKind::Dot => {
