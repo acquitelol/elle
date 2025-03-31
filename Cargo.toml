@@ -1,6 +1,6 @@
 [package]
 name = "ellec"
-version = "0.5.12"
+version = "0.5.13"
 edition = "2021"
 
 [build-dependencies]

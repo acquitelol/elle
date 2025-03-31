@@ -77,6 +77,14 @@ pub struct IfStatement {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct WhileLoopStatement {
+    pub condition: Box<AstNode>,
+    pub step: Option<Box<AstNode>>,
+    pub body: Vec<AstNode>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -103,12 +111,7 @@ pub enum AstNode {
     IfStatement(IfStatement),
     /// Runs `body` while condition `condition` is true, using step `step`
     /// (`step` is used for easy merging between while loops and for loops)
-    WhileLoopStatement {
-        condition: Box<AstNode>,
-        step: Option<Box<AstNode>>,
-        body: Vec<AstNode>,
-        location: Rc<Location>,
-    },
+    WhileLoopStatement(WhileLoopStatement),
     /// Declares a buffer named `name` with an inner type `r#type` and size `size`
     Buffer(Buffer),
     /// Declares an array literal of size `values.len()` and values `values` and returns a pointer to the start of it
@@ -338,12 +341,12 @@ fn modify_type_in_node(
             *else_body =
                 modify_type_in_ast(else_body.clone(), generics, known_types, struct_pool, tree);
         }
-        AstNode::WhileLoopStatement {
+        AstNode::WhileLoopStatement(WhileLoopStatement {
             condition,
             step,
             body,
             ..
-        } => {
+        }) => {
             let new_condition =
                 modify_type_in_node(*condition.clone(), generics, known_types, struct_pool, tree);
             *condition = Box::new(new_condition);

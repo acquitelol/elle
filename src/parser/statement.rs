@@ -8,6 +8,7 @@ use super::enums::{
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
+use crate::parser::enums::WhileLoopStatement;
 use crate::{
     compiler::enums::Type,
     ensure_fn_pointer,
@@ -1015,12 +1016,12 @@ impl<'a> Statement<'a> {
 
         self.position -= 1;
 
-        AstNode::WhileLoopStatement {
+        AstNode::WhileLoopStatement(WhileLoopStatement {
             condition: Box::new(expression),
             step: None,
             body,
             location: self.current_token().location,
-        }
+        })
     }
 
     fn parse_for_statement(&mut self) -> AstNode {
@@ -1182,12 +1183,12 @@ impl<'a> Statement<'a> {
             statements.push(declare);
         }
 
-        statements.push(AstNode::WhileLoopStatement {
+        statements.push(AstNode::WhileLoopStatement(WhileLoopStatement {
             condition: Box::new(condition),
             step: Some(Box::new(step)),
             body,
             location: self.current_token().location,
-        });
+        }));
 
         AstNode::BlockStatement {
             body: statements,
@@ -1329,12 +1330,12 @@ impl<'a> Statement<'a> {
 
         body.insert(0, element_node);
 
-        statements.push(AstNode::WhileLoopStatement {
+        statements.push(AstNode::WhileLoopStatement(WhileLoopStatement {
             condition: Box::new(condition_node),
             step: Some(Box::new(step_node)),
             body,
             location: self.current_token().location,
-        });
+        }));
 
         AstNode::BlockStatement {
             body: statements,
@@ -3108,21 +3109,21 @@ impl<'a> Statement<'a> {
                         new_nodes.push(node);
                         found_return = true;
                     }
-                    AstNode::WhileLoopStatement {
+                    AstNode::WhileLoopStatement(WhileLoopStatement {
                         condition,
                         step,
                         body,
                         location,
-                    } => {
+                    }) => {
                         let mut new_body = body;
                         insert_deferred_statements(&mut new_body, deferred, false);
 
-                        new_nodes.push(AstNode::WhileLoopStatement {
+                        new_nodes.push(AstNode::WhileLoopStatement(WhileLoopStatement {
                             condition,
                             step,
                             body: new_body,
                             location,
-                        });
+                        }));
                     }
                     AstNode::BlockStatement { body, location } => {
                         let mut new_body = body;

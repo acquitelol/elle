@@ -4,7 +4,10 @@ use crate::{
     compiler::enums::Type,
     elle_error,
     lexer::enums::{Attribute, TokenKind, ValueKind},
-    parser::{enums::IfStatement, statement::Shared},
+    parser::{
+        enums::{IfStatement, WhileLoopStatement},
+        statement::Shared,
+    },
     Warning, META_STRUCT_NAME,
 };
 
@@ -369,21 +372,21 @@ impl<'a> Function<'a> {
                         new_nodes.push(node);
                         found_return = true;
                     }
-                    AstNode::WhileLoopStatement {
+                    AstNode::WhileLoopStatement(WhileLoopStatement {
                         condition,
                         step,
                         body,
                         location,
-                    } => {
+                    }) => {
                         let mut new_body = body;
                         insert_deferred_statements(&mut new_body, deferred, false);
 
-                        new_nodes.push(AstNode::WhileLoopStatement {
+                        new_nodes.push(AstNode::WhileLoopStatement(WhileLoopStatement {
                             condition,
                             step,
                             body: new_body,
                             location,
-                        });
+                        }));
                     }
                     AstNode::BlockStatement { body, location } => {
                         let mut new_body = body;

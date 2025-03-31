@@ -19,7 +19,7 @@ use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex
 use parser::enums::{Argument, AstNode, Primitive};
 
 use crate::parser::enums::{
-    BinaryOperation, Declare, FunctionCall, Literal, MemoryOperation, Return,
+    BinaryOperation, Declare, FunctionCall, Literal, MemoryOperation, Return, WhileLoopStatement,
 };
 
 pub enum Warning {
@@ -591,7 +591,7 @@ fn main() -> ExitCode {
                             location: loc.clone(),
                             value_location: loc.clone(),
                         }),
-                        AstNode::WhileLoopStatement {
+                        AstNode::WhileLoopStatement(WhileLoopStatement {
                             condition: Box::new(AstNode::BinaryOperation(BinaryOperation {
                                 left: Box::new(AstNode::Literal(Literal {
                                     kind: TokenKind::Identifier,
@@ -668,7 +668,7 @@ fn main() -> ExitCode {
                                 location: loc.clone(),
                             })],
                             location: loc.clone(),
-                        },
+                        }),
                     ]
                 } else {
                     vec![]
