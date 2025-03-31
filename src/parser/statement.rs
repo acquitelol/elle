@@ -3,8 +3,8 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 
 use super::enums::{
-    Argument, AstNode, BinaryOperation, Buffer, Declare, FunctionCall, Literal, MemoryOperation,
-    Primitive, Return,
+    Argument, AstNode, BinaryOperation, Buffer, Declare, FunctionCall, IfStatement, Literal,
+    MemoryOperation, Primitive, Return,
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
@@ -994,12 +994,12 @@ impl<'a> Statement<'a> {
 
         self.position -= 1;
 
-        AstNode::IfStatement {
+        AstNode::IfStatement(IfStatement {
             condition: Box::new(expression),
             body,
             else_body,
             location: self.current_token().location,
-        }
+        })
     }
 
     fn parse_while_statement(&mut self) -> AstNode {
@@ -3133,24 +3133,24 @@ impl<'a> Statement<'a> {
                             location,
                         });
                     }
-                    AstNode::IfStatement {
+                    AstNode::IfStatement(IfStatement {
                         condition,
                         body,
                         else_body,
                         location,
-                    } => {
+                    }) => {
                         let mut new_body = body;
                         let mut new_else_body = else_body;
 
                         insert_deferred_statements(&mut new_body, deferred, false);
                         insert_deferred_statements(&mut new_else_body, deferred, false);
 
-                        new_nodes.push(AstNode::IfStatement {
+                        new_nodes.push(AstNode::IfStatement(IfStatement {
                             condition,
                             body: new_body,
                             else_body: new_else_body,
                             location,
-                        });
+                        }));
                     }
                     _ => new_nodes.push(node),
                 }

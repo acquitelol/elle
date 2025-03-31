@@ -69,6 +69,14 @@ pub struct MemoryOperation {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct IfStatement {
+    pub condition: Box<AstNode>,
+    pub body: Vec<AstNode>,
+    pub else_body: Vec<AstNode>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -92,12 +100,7 @@ pub enum AstNode {
     /// Performs an arithmetic operation with `operator` using `left` and `right
     BinaryOperation(BinaryOperation),
     /// Runs `body` if condition `condition` is true, otherwise runs `else_body`
-    IfStatement {
-        condition: Box<AstNode>,
-        body: Vec<AstNode>,
-        else_body: Vec<AstNode>,
-        location: Rc<Location>,
-    },
+    IfStatement(IfStatement),
     /// Runs `body` while condition `condition` is true, using step `step`
     /// (`step` is used for easy merging between while loops and for loops)
     WhileLoopStatement {
@@ -322,12 +325,12 @@ fn modify_type_in_node(
                 modify_type_in_node(*if_false.clone(), generics, known_types, struct_pool, tree);
             *if_false = Box::new(new_if_false);
         }
-        AstNode::IfStatement {
+        AstNode::IfStatement(IfStatement {
             condition,
             body,
             else_body,
             ..
-        } => {
+        }) => {
             let new_condition =
                 modify_type_in_node(*condition.clone(), generics, known_types, struct_pool, tree);
             *condition = Box::new(new_condition);

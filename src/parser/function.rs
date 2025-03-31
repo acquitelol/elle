@@ -1,7 +1,11 @@
 use std::cell::RefCell;
 
 use crate::{
-    compiler::enums::Type, elle_error, lexer::enums::{Attribute, TokenKind, ValueKind}, parser::statement::Shared, Warning, META_STRUCT_NAME
+    compiler::enums::Type,
+    elle_error,
+    lexer::enums::{Attribute, TokenKind, ValueKind},
+    parser::{enums::IfStatement, statement::Shared},
+    Warning, META_STRUCT_NAME,
 };
 
 use super::{
@@ -28,12 +32,10 @@ impl<'a> Function<'a> {
         self.parser.advance();
 
         if self.parser.current_token().kind == TokenKind::Dot {
-            elle_error!(
-                self.parser.current_token().location.error(format!(
-                    "Cannot create a method for '{}' using '.'\nPlease use '::' instead.",
-                    name
-                ))
-            )
+            elle_error!(self.parser.current_token().location.error(format!(
+                "Cannot create a method for '{}' using '.'\nPlease use '::' instead.",
+                name
+            )))
         }
 
         if self.parser.current_token().kind == TokenKind::DoubleColon {
@@ -130,7 +132,7 @@ impl<'a> Function<'a> {
                         Attribute::NoFormat => {
                             no_fmt = true;
                             self.parser.advance();
-                        },
+                        }
                         _ => {}
                     };
                 }
@@ -161,12 +163,11 @@ impl<'a> Function<'a> {
                         manual = true;
                         self.parser.get_identifier()
                     }
-                    other => elle_error!(
-                        self.parser
-                            .current_token()
-                            .location
-                            .error(format!("Invalid token type: {:?}", other))
-                    ),
+                    other => elle_error!(self
+                        .parser
+                        .current_token()
+                        .location
+                        .error(format!("Invalid token type: {:?}", other))),
                 };
 
                 self.parser.advance();
@@ -176,7 +177,7 @@ impl<'a> Function<'a> {
                     r#type,
                     name,
                     manual,
-                    no_fmt
+                    no_fmt,
                 })
             }
         }
@@ -255,16 +256,14 @@ impl<'a> Function<'a> {
                         manual = true;
                         self.parser.advance();
                     }
-                    _ => elle_error!(
-                        self.parser.current_token().location.error(format!(
-                            "Unknown attribute for function '{}'",
-                            self.parser
-                                .current_token()
-                                .value
-                                .get_string_inner()
-                                .unwrap()
-                        ))
-                    ),
+                    _ => elle_error!(self.parser.current_token().location.error(format!(
+                        "Unknown attribute for function '{}'",
+                        self.parser
+                            .current_token()
+                            .value
+                            .get_string_inner()
+                            .unwrap()
+                    ))),
                 }
             }
         }
@@ -395,24 +394,24 @@ impl<'a> Function<'a> {
                             location,
                         });
                     }
-                    AstNode::IfStatement {
+                    AstNode::IfStatement(IfStatement {
                         condition,
                         body,
                         else_body,
                         location,
-                    } => {
+                    }) => {
                         let mut new_body = body;
                         let mut new_else_body = else_body;
 
                         insert_deferred_statements(&mut new_body, deferred, false);
                         insert_deferred_statements(&mut new_else_body, deferred, false);
 
-                        new_nodes.push(AstNode::IfStatement {
+                        new_nodes.push(AstNode::IfStatement(IfStatement {
                             condition,
                             body: new_body,
                             else_body: new_else_body,
                             location,
-                        });
+                        }));
                     }
                     _ => new_nodes.push(node),
                 }
