@@ -1,7 +1,9 @@
+use codegen_enum::Codegen;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
-    compiler::enums::Type,
+    compiler::compiler::{Codegen, CodegenContext, Compiler},
+    compiler::enums::{Type, Value},
     lexer::enums::{Location, Token, TokenKind, ValueKind},
 };
 
@@ -192,6 +194,7 @@ pub struct FieldAccess {
     pub location: Rc<Location>,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Codegen)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),

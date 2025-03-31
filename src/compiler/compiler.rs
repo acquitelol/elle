@@ -13,7 +13,8 @@ use crate::{
     parser::{
         enums::{
             modify_type_in_ast, Argument, ArrayLiteral, AstNode, BinaryOperation, BitwiseNot,
-            Conversion, Environment, FunctionCall, Literal, Primitive, Return, StructLiteral,
+            Conversion, Environment, FieldAccess, FunctionCall, Literal, Primitive, Return,
+            StructLiteral,
         },
         parser::StructPool,
     },
@@ -626,90 +627,7 @@ impl Compiler {
             is_return,
         };
 
-        let res = match stmt {
-            AstNode::Declare(this) => this.compile(self, &ctx),
-            AstNode::Return(this) => this.compile(self, &ctx),
-            AstNode::BinaryOperation(this) => this.compile(self, &ctx),
-            AstNode::Literal(this) => this.compile(self, &ctx),
-            AstNode::FunctionCall(this) => this.compile(self, &ctx),
-            AstNode::Buffer(this) => this.compile(self, &ctx),
-            AstNode::MemoryOperation(this) => this.compile(self, &ctx),
-            AstNode::IfStatement(this) => this.compile(self, &ctx),
-            AstNode::WhileLoopStatement(this) => this.compile(self, &ctx),
-            AstNode::VariadicStart(this) => this.compile(self, &ctx),
-            AstNode::VariadicArgument(this) => this.compile(self, &ctx),
-            AstNode::Environment(this) => this.compile(self, &ctx),
-            AstNode::SetAllocator(this) => this.compile(self, &ctx),
-            AstNode::BlockStatement(this) => this.compile(self, &ctx),
-            AstNode::Conversion(this) => this.compile(self, &ctx),
-            AstNode::LogicalNot(this) => this.compile(self, &ctx),
-            AstNode::BitwiseNot(this) => this.compile(self, &ctx),
-            AstNode::ArrayLength(this) => this.compile(self, &ctx),
-            AstNode::Lambda(this) => this.compile(self, &ctx),
-            AstNode::ArrayLiteral(this) => this.compile(self, &ctx),
-            AstNode::Address(this) => this.compile(self, &ctx),
-            AstNode::Ternary(this) => this.compile(self, &ctx),
-            AstNode::Size(this) => this.compile(self, &ctx),
-            AstNode::StructLiteral(this) => this.compile(self, &ctx),
-            AstNode::FieldAccess {
-                left,
-                right,
-                value,
-                location,
-            } => {
-                let (ty, left) = self
-                    .generate_statement(
-                        func,
-                        module,
-                        *left,
-                        ty,
-                        None,
-                        false,
-                    )
-                    .expect(
-                        &location.error(
-                            "Unexpected error when trying to compile the left side of a struct field access"
-                        ),
-                    );
-
-                let (field_ty, offset_tmp) =
-                    self.process_field_access(func, module, ty, left, *right, false, &location);
-
-                if let Some(value) = value {
-                    let (_, compiled) = self
-                        .generate_statement(func, module, *value, Some(field_ty.clone()), None, false)
-                        .expect(&location.error("Unexpected error when trying to compile the value of a store statement"));
-
-                    func.borrow_mut().add_instruction(Instruction::Store(
-                        field_ty.clone(),
-                        offset_tmp.clone(),
-                        compiled,
-                    ));
-
-                    return Some((field_ty, offset_tmp));
-                }
-
-                let temp = self.new_temporary(Some("field"), true);
-
-                // Structs are stored in contiguous memory.
-                // Any field that is a struct should not be dereferenced
-                // because that will break everything.
-                if field_ty.is_struct() {
-                    Some((field_ty, offset_tmp))
-                } else {
-                    func.borrow_mut().assign_instruction(
-                        &temp,
-                        &field_ty,
-                        Instruction::Load(field_ty.clone(), offset_tmp),
-                    );
-
-                    Some((field_ty, temp))
-                }
-            }
-            _ => todo!("statement: {:?}", stmt),
-        };
-
-        res
+        stmt.compile(self, &ctx)
     }
 
     fn generate_struct(
@@ -985,7 +903,7 @@ impl Compiler {
         }
     }
 
-    fn process_field_access(
+    pub fn process_field_access(
         &mut self,
         func: &RefCell<Function>,
         module: &RefCell<Module>,
@@ -1050,11 +968,11 @@ impl Compiler {
                         return (member_ty.unwrap(), offset_tmp);
                     }
                 }
-                AstNode::FieldAccess {
+                AstNode::FieldAccess(FieldAccess {
                     left: nested_left,
                     right: nested_right,
                     ..
-                } => {
+                }) => {
                     let (nested_ty, nested_left_value) = self.process_field_access(
                         func,
                         module,
