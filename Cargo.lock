@@ -59,7 +59,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "codegen_enum"
+name = "codegen"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
@@ -78,7 +78,7 @@ name = "ellec"
 version = "0.6.29"
 dependencies = [
  "chrono",
- "codegen_enum",
+ "codegen",
  "levenshtein",
 ]
 

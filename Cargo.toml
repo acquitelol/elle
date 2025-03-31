@@ -8,4 +8,4 @@ chrono = "0.4"
 
 [dependencies]
 levenshtein = "1.0.5"
-codegen_enum = { path = "codegen_enum" }
+codegen = { path = "codegen" }

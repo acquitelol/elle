@@ -3,7 +3,7 @@ use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Fields};
 
 #[proc_macro_derive(Codegen)]
-pub fn codegen_enum(input: TokenStream) -> TokenStream {
+pub fn codegen(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = input.ident;
 
