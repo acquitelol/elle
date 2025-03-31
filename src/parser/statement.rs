@@ -3,7 +3,8 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 
 use super::enums::{
-    Argument, AstNode, BinaryOperation, Buffer, Declare, FunctionCall, Literal, Primitive, Return,
+    Argument, AstNode, BinaryOperation, Buffer, Declare, FunctionCall, Literal, MemoryOperation,
+    Primitive, Return,
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
@@ -1251,7 +1252,7 @@ impl<'a> Statement<'a> {
             location: location.clone(),
         });
 
-        let element_access = AstNode::MemoryOperation {
+        let element_access = AstNode::MemoryOperation(MemoryOperation {
             left: Box::new(iterator_node.clone()),
             right: Box::new(index_node.clone()),
             value: None,
@@ -1259,7 +1260,7 @@ impl<'a> Statement<'a> {
             right_location: location.clone(),
             value_location: location.clone(),
             is_deref: false,
-        };
+        });
 
         let element_node = AstNode::Declare(Declare {
             name,
@@ -1499,7 +1500,7 @@ impl<'a> Statement<'a> {
 
         let mut value_location = self.current_token().location.clone();
 
-        let mut expression = AstNode::MemoryOperation {
+        let mut expression = AstNode::MemoryOperation(MemoryOperation {
             left: left.clone(),
             right: right.clone(),
             value: None,
@@ -1507,7 +1508,7 @@ impl<'a> Statement<'a> {
             right_location: Rc::new(right_location.clone()),
             value_location: value_location.clone(),
             is_deref: false,
-        };
+        });
 
         match self.current_token().kind {
             TokenKind::Equal => {
@@ -1521,7 +1522,7 @@ impl<'a> Statement<'a> {
                         .0,
                 ));
 
-                expression = AstNode::MemoryOperation {
+                expression = AstNode::MemoryOperation(MemoryOperation {
                     left: left.clone(),
                     right: right.clone(),
                     value,
@@ -1529,12 +1530,12 @@ impl<'a> Statement<'a> {
                     right_location: Rc::new(right_location.clone()),
                     value_location,
                     is_deref: false,
-                };
+                });
             }
             other if other.is_declarative() => {
                 value = Some(Box::new(self.parse_declarative_node(expression.clone())));
 
-                expression = AstNode::MemoryOperation {
+                expression = AstNode::MemoryOperation(MemoryOperation {
                     left: left.clone(),
                     right: right.clone(),
                     value,
@@ -1542,7 +1543,7 @@ impl<'a> Statement<'a> {
                     right_location: Rc::new(right_location.clone()),
                     value_location,
                     is_deref: false,
-                };
+                });
             }
             TokenKind::Dot => {
                 expression = self.parse_field_access(Some((position, expression, location)));
@@ -2100,7 +2101,7 @@ impl<'a> Statement<'a> {
 
             other if other.is_declarative() => {
                 value = Some(Box::new(self.parse_declarative_node(
-                    AstNode::MemoryOperation {
+                    AstNode::MemoryOperation(MemoryOperation {
                         left: left.clone(),
                         right: right.clone(),
                         value,
@@ -2108,13 +2109,13 @@ impl<'a> Statement<'a> {
                         right_location: right_location.clone(),
                         value_location: value_location.clone(),
                         is_deref: true,
-                    },
+                    }),
                 )));
             }
             _ => {}
         }
 
-        AstNode::MemoryOperation {
+        AstNode::MemoryOperation(MemoryOperation {
             left,
             right,
             value,
@@ -2122,7 +2123,7 @@ impl<'a> Statement<'a> {
             right_location,
             value_location,
             is_deref: true,
-        }
+        })
     }
 
     fn parse_struct_init(&mut self) -> AstNode {

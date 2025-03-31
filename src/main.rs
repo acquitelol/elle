@@ -18,7 +18,9 @@ use lexer::enums::{Location, TokenKind, ValueKind};
 use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex_and_parse};
 use parser::enums::{Argument, AstNode, Primitive};
 
-use crate::parser::enums::{BinaryOperation, Declare, FunctionCall, Literal, Return};
+use crate::parser::enums::{
+    BinaryOperation, Declare, FunctionCall, Literal, MemoryOperation, Return,
+};
 
 pub enum Warning {
     StructFieldsMissing = 1 << 0,
@@ -642,7 +644,7 @@ fn main() -> ExitCode {
                                     ),
                                     (
                                         loc.clone(),
-                                        AstNode::MemoryOperation {
+                                        AstNode::MemoryOperation(MemoryOperation {
                                             left: Box::new(AstNode::Literal(Literal {
                                                 kind: TokenKind::Identifier,
                                                 value: ValueKind::String("argv".into()),
@@ -658,7 +660,7 @@ fn main() -> ExitCode {
                                             right_location: loc.clone(),
                                             value_location: loc.clone(),
                                             is_deref: false,
-                                        },
+                                        }),
                                     ),
                                 ],
                                 type_method: true,

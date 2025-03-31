@@ -3,4 +3,5 @@ pub mod buffer;
 pub mod declare;
 pub mod funcall;
 pub mod literal;
+pub mod memop;
 pub mod r#return;

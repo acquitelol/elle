@@ -58,6 +58,17 @@ pub struct Buffer {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct MemoryOperation {
+    pub left: Box<AstNode>,
+    pub right: Box<AstNode>,
+    pub value: Option<Box<AstNode>>,
+    pub left_location: Rc<Location>,
+    pub right_location: Rc<Location>,
+    pub value_location: Rc<Location>,
+    pub is_deref: bool,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -120,15 +131,7 @@ pub enum AstNode {
     },
     /// Loads or stores information from a pointer through pointer arithmetic
     /// In an expression like a[10], left is `a` and right is `10`
-    MemoryOperation {
-        left: Box<AstNode>,
-        right: Box<AstNode>,
-        value: Option<Box<AstNode>>,
-        left_location: Rc<Location>,
-        right_location: Rc<Location>,
-        value_location: Rc<Location>,
-        is_deref: bool,
-    },
+    MemoryOperation(MemoryOperation),
     /// Only executes code from value `value` when the current scope is about to exit
     /// This can be function return or an implicit scope exit through `break` or `continue`
     DeferStatement {
@@ -382,9 +385,9 @@ fn modify_type_in_node(
                 *value = Some(Box::new(new_value));
             }
         }
-        AstNode::MemoryOperation {
+        AstNode::MemoryOperation(MemoryOperation {
             left, right, value, ..
-        } => {
+        }) => {
             let new_left =
                 modify_type_in_node(*left.clone(), generics, known_types, struct_pool, tree);
             *left = Box::new(new_left);
