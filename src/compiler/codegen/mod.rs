@@ -1,4 +1,5 @@
 pub mod binop;
+pub mod block;
 pub mod buffer;
 pub mod declare;
 pub mod env;

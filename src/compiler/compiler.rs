@@ -640,61 +640,7 @@ impl Compiler {
             AstNode::VariadicArgument(this) => this.compile(self, &ctx),
             AstNode::Environment(this) => this.compile(self, &ctx),
             AstNode::SetAllocator(this) => this.compile(self, &ctx),
-            AstNode::BlockStatement { body, location: _ } => {
-                self.scopes.push(hashmap!());
-                self.tmp_counter += 1;
-
-                let body_label = format!("block.start.{}", self.tmp_counter);
-                let end_label = format!("block.end.{}", self.tmp_counter);
-                func.borrow_mut().add_block(body_label.clone());
-
-                for statement in body.iter() {
-                    match statement {
-                        AstNode::Literal(Literal { kind, .. }) => match kind {
-                            TokenKind::ExactLiteral => {
-                                match self.generate_statement(
-                                    func,
-                                    module,
-                                    statement.clone(),
-                                    None,
-                                    None,
-                                    false,
-                                ) {
-                                    Some((_, value)) => func
-                                        .borrow_mut()
-                                        .add_instruction(Instruction::Literal(value)),
-                                    _ => {}
-                                }
-                            }
-                            TokenKind::Break | TokenKind::Continue => {
-                                self.generate_statement(
-                                    func,
-                                    module,
-                                    statement.clone(),
-                                    None,
-                                    None,
-                                    false,
-                                );
-                            }
-                            _ => {}
-                        },
-                        _ => match self.generate_statement(
-                            func,
-                            module,
-                            statement.clone(),
-                            None,
-                            None,
-                            false,
-                        ) {
-                            _ => {}
-                        },
-                    }
-                }
-
-                func.borrow_mut().add_block(end_label);
-                self.scopes.pop();
-                None
-            }
+            AstNode::BlockStatement(this) => this.compile(self, &ctx),
             AstNode::Conversion {
                 r#type: second,
                 value,

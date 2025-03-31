@@ -5,7 +5,7 @@ use crate::{
     elle_error,
     lexer::enums::{Attribute, TokenKind, ValueKind},
     parser::{
-        enums::{IfStatement, VariadicStart, WhileLoopStatement},
+        enums::{BlockStatement, IfStatement, VariadicStart, WhileLoopStatement},
         statement::Shared,
     },
     Warning, META_STRUCT_NAME,
@@ -389,14 +389,14 @@ impl<'a> Function<'a> {
                             location,
                         }));
                     }
-                    AstNode::BlockStatement { body, location } => {
+                    AstNode::BlockStatement(BlockStatement { body, location }) => {
                         let mut new_body = body;
                         insert_deferred_statements(&mut new_body, deferred, false);
 
-                        new_nodes.push(AstNode::BlockStatement {
+                        new_nodes.push(AstNode::BlockStatement(BlockStatement {
                             body: new_body,
                             location,
-                        });
+                        }));
                     }
                     AstNode::IfStatement(IfStatement {
                         condition,

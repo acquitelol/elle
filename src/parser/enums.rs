@@ -110,6 +110,12 @@ pub struct SetAllocator {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct BlockStatement {
+    pub body: Vec<AstNode>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -164,10 +170,7 @@ pub enum AstNode {
     },
     /// A standalone block that executes code in its scope
     /// This can be useful for micro-managing memory allocation with defer
-    BlockStatement {
-        body: Vec<AstNode>,
-        location: Rc<Location>,
-    },
+    BlockStatement(BlockStatement),
     /// Takes value `value` and negates it (compares it to 0)
     LogicalNot {
         value: Box<AstNode>,
@@ -423,7 +426,7 @@ fn modify_type_in_node(
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
-        AstNode::BlockStatement { body, .. } => {
+        AstNode::BlockStatement(BlockStatement { body, .. }) => {
             *body = modify_type_in_ast(body.clone(), generics, known_types, struct_pool, tree);
         }
         AstNode::LogicalNot { value, .. } => {

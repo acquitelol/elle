@@ -8,7 +8,7 @@ use super::enums::{
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
-use crate::parser::enums::WhileLoopStatement;
+use crate::parser::enums::{BlockStatement, WhileLoopStatement};
 use crate::{
     compiler::enums::Type,
     ensure_fn_pointer,
@@ -1190,10 +1190,10 @@ impl<'a> Statement<'a> {
             location: self.current_token().location,
         }));
 
-        AstNode::BlockStatement {
+        AstNode::BlockStatement(BlockStatement {
             body: statements,
             location: self.current_token().location,
-        }
+        })
     }
 
     /// for i32 x in Array::new<i32>(1, 2, 3) {}
@@ -1337,10 +1337,10 @@ impl<'a> Statement<'a> {
             location: self.current_token().location,
         }));
 
-        AstNode::BlockStatement {
+        AstNode::BlockStatement(BlockStatement {
             body: statements,
             location: self.current_token().location,
-        }
+        })
     }
 
     fn parse_wrapped_statement(&mut self) -> AstNode {
@@ -1813,10 +1813,10 @@ impl<'a> Statement<'a> {
 
         let body = self.yield_block(false); // Blocks are statements
         self.position -= 1;
-        AstNode::BlockStatement {
+        AstNode::BlockStatement(BlockStatement {
             body,
             location: self.current_token().location,
-        }
+        })
     }
 
     fn parse_size(&mut self) -> AstNode {
@@ -3125,14 +3125,14 @@ impl<'a> Statement<'a> {
                             location,
                         }));
                     }
-                    AstNode::BlockStatement { body, location } => {
+                    AstNode::BlockStatement(BlockStatement { body, location }) => {
                         let mut new_body = body;
                         insert_deferred_statements(&mut new_body, deferred, false);
 
-                        new_nodes.push(AstNode::BlockStatement {
+                        new_nodes.push(AstNode::BlockStatement(BlockStatement {
                             body: new_body,
                             location,
-                        });
+                        }));
                     }
                     AstNode::IfStatement(IfStatement {
                         condition,
