@@ -40,6 +40,16 @@ pub struct Literal {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FunctionCall {
+    pub name: String,
+    pub generics: Vec<Type>,
+    pub parameters: Vec<(Rc<Location>, AstNode)>,
+    pub type_method: bool,
+    pub ignore_no_def: bool,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -59,14 +69,7 @@ pub enum AstNode {
     /// Returns value `value`
     Return(Return),
     /// Calls function `name` with parameters `parameters`
-    FunctionCall {
-        name: String,
-        generics: Vec<Type>,
-        parameters: Vec<(Rc<Location>, AstNode)>,
-        type_method: bool,
-        ignore_no_def: bool,
-        location: Rc<Location>,
-    },
+    FunctionCall(FunctionCall),
     /// Performs an arithmetic operation with `operator` using `left` and `right
     BinaryOperation(BinaryOperation),
     /// Runs `body` if condition `condition` is true, otherwise runs `else_body`
@@ -274,11 +277,11 @@ fn modify_type_in_node(
                 modify_type_in_node(*size.clone(), generics, known_types, struct_pool, tree);
             *size = Box::new(new_size);
         }
-        AstNode::FunctionCall {
+        AstNode::FunctionCall(FunctionCall {
             parameters,
             generics: base_generics,
             ..
-        } => {
+        }) => {
             for (_, param) in parameters {
                 let new_param =
                     modify_type_in_node(param.clone(), generics, known_types, struct_pool, tree);

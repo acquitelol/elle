@@ -18,7 +18,7 @@ use lexer::enums::{Location, TokenKind, ValueKind};
 use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex_and_parse};
 use parser::enums::{Argument, AstNode, Primitive};
 
-use crate::parser::enums::{BinaryOperation, Declare, Literal, Return};
+use crate::parser::enums::{BinaryOperation, Declare, FunctionCall, Literal, Return};
 
 pub enum Warning {
     StructFieldsMissing = 1 << 0,
@@ -492,25 +492,25 @@ fn main() -> ExitCode {
                             values: vec![
                                 (
                                     "allocator".into(),
-                                    Box::new(AstNode::FunctionCall {
+                                    Box::new(AstNode::FunctionCall(FunctionCall {
                                         name: format!("{ARBITRARY_ALLOCATOR_NAME}.new"),
                                         generics: vec![],
                                         parameters: vec![],
                                         type_method: false,
                                         ignore_no_def: false,
                                         location: loc.clone(),
-                                    }),
+                                    })),
                                 ),
                                 (
                                     "default_allocator".into(),
-                                    Box::new(AstNode::FunctionCall {
+                                    Box::new(AstNode::FunctionCall(FunctionCall {
                                         name: format!("{default_allocator}.new"),
                                         generics: vec![],
                                         parameters: vec![],
                                         type_method: false,
                                         ignore_no_def: false,
                                         location: loc.clone(),
-                                    }),
+                                    })),
                                 ),
                                 (
                                     "stack_top".into(),
@@ -560,7 +560,7 @@ fn main() -> ExitCode {
                         AstNode::Declare(Declare {
                             name: "args".into(),
                             r#type: Some(Type::Infer),
-                            value: Some(Box::new(AstNode::FunctionCall {
+                            value: Some(Box::new(AstNode::FunctionCall(FunctionCall {
                                 name: "Array.with_capacity".into(),
                                 generics: vec![Type::Pointer(Box::new(Type::Char))],
                                 parameters: vec![(
@@ -574,7 +574,7 @@ fn main() -> ExitCode {
                                 type_method: false,
                                 ignore_no_def: false,
                                 location: loc.clone(),
-                            })),
+                            }))),
                             location: loc.clone(),
                             value_location: loc.clone(),
                         }),
@@ -628,7 +628,7 @@ fn main() -> ExitCode {
                                 location: loc.clone(),
                                 value_location: loc.clone(),
                             }))),
-                            body: vec![AstNode::FunctionCall {
+                            body: vec![AstNode::FunctionCall(FunctionCall {
                                 name: "push".into(),
                                 generics: vec![],
                                 parameters: vec![
@@ -664,7 +664,7 @@ fn main() -> ExitCode {
                                 type_method: true,
                                 ignore_no_def: false,
                                 location: loc.clone(),
-                            }],
+                            })],
                             location: loc.clone(),
                         },
                     ]
@@ -675,7 +675,7 @@ fn main() -> ExitCode {
                     AstNode::Declare(Declare {
                         name: "status".into(),
                         r#type: Some(Type::Word),
-                        value: Some(Box::new(AstNode::FunctionCall {
+                        value: Some(Box::new(AstNode::FunctionCall(FunctionCall {
                             name: get_MAIN_ID!().into(),
                             generics: vec![],
                             parameters: if main_arg_len == 1 {
@@ -693,11 +693,11 @@ fn main() -> ExitCode {
                             type_method: false,
                             ignore_no_def: false,
                             location: loc.clone(),
-                        })),
+                        }))),
                         location: loc.clone(),
                         value_location: loc.clone(),
                     }),
-                    AstNode::FunctionCall {
+                    AstNode::FunctionCall(FunctionCall {
                         name: "free_self".into(),
                         generics: vec![],
                         parameters: vec![(
@@ -720,7 +720,7 @@ fn main() -> ExitCode {
                         type_method: true,
                         ignore_no_def: false,
                         location: loc.clone(),
-                    },
+                    }),
                     AstNode::Return(Return {
                         value: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,

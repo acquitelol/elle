@@ -2,7 +2,9 @@ use std::cell::RefCell;
 use std::iter::FromIterator;
 use std::rc::Rc;
 
-use super::enums::{Argument, AstNode, BinaryOperation, Declare, Literal, Primitive, Return};
+use super::enums::{
+    Argument, AstNode, BinaryOperation, Declare, FunctionCall, Literal, Primitive, Return,
+};
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
 use crate::{
@@ -579,14 +581,14 @@ impl<'a> Statement<'a> {
 
         self.advance();
 
-        let mut expression = AstNode::FunctionCall {
+        let mut expression = AstNode::FunctionCall(FunctionCall {
             name: name.clone(),
             generics,
             parameters,
             type_method,
             ignore_no_def: false,
             location: location.clone(),
-        };
+        });
 
         match self.current_token().kind {
             TokenKind::Dot => {
@@ -1269,14 +1271,14 @@ impl<'a> Statement<'a> {
 
         let condition_node = AstNode::BinaryOperation(BinaryOperation {
             left: Box::new(index_node.clone()),
-            right: Box::new(AstNode::FunctionCall {
+            right: Box::new(AstNode::FunctionCall(FunctionCall {
                 name: LEN_CONSTANT.into(),
                 generics: vec![],
                 parameters: vec![(location.clone(), iterator_node)],
                 type_method: true,
                 ignore_no_def: false,
                 location: location.clone(),
-            }),
+            })),
             operator: TokenKind::LessThan,
             treat_as_string: false,
             dunder_methods: true,
@@ -2656,7 +2658,7 @@ impl<'a> Statement<'a> {
 
         let mut expression = AstNode::Conversion {
             r#type: Some(Type::Pointer(Box::new(ty.clone()))),
-            value: Box::new(AstNode::FunctionCall {
+            value: Box::new(AstNode::FunctionCall(FunctionCall {
                 name: "alloc".into(),
                 generics: vec![],
                 parameters: vec![
@@ -2694,7 +2696,7 @@ impl<'a> Statement<'a> {
                 type_method: true,
                 ignore_no_def: false,
                 location: location.clone(),
-            }),
+            })),
             location: location.clone(),
             explicit: true,
         };
@@ -2760,7 +2762,7 @@ impl<'a> Statement<'a> {
 
         let mut expression = AstNode::Conversion {
             r#type: Some(Type::Pointer(Box::new(ty.clone()))),
-            value: Box::new(AstNode::FunctionCall {
+            value: Box::new(AstNode::FunctionCall(FunctionCall {
                 name: "realloc".into(),
                 generics: vec![],
                 parameters: vec![
@@ -2799,7 +2801,7 @@ impl<'a> Statement<'a> {
                 type_method: true,
                 ignore_no_def: false,
                 location: location.clone(),
-            }),
+            })),
             location: location.clone(),
             explicit: true,
         };
@@ -2847,7 +2849,7 @@ impl<'a> Statement<'a> {
         self.advance();
         let ptr = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
-        AstNode::FunctionCall {
+        AstNode::FunctionCall(FunctionCall {
             name: "free".into(),
             generics: vec![],
             parameters: vec![
@@ -2872,7 +2874,7 @@ impl<'a> Statement<'a> {
             type_method: true,
             ignore_no_def: false,
             location: location.clone(),
-        }
+        })
     }
 
     fn parse_set_allocator(&mut self) -> AstNode {

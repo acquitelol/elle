@@ -5,7 +5,7 @@ use crate::{
     },
     elle_error, get_BOLD, get_GREEN, get_RESET,
     lexer::enums::{TokenKind, ValueKind},
-    parser::enums::{AstNode, BinaryOperation, Literal},
+    parser::enums::{AstNode, BinaryOperation, FunctionCall, Literal},
     BOLD, EQUALS_CONSTANT, GREEN, RESET,
 };
 
@@ -26,7 +26,7 @@ impl Codegen<'_> for BinaryOperation {
         }
 
         if matches!(self.operator, TokenKind::Range | TokenKind::RangeEqual) {
-            let node = AstNode::FunctionCall {
+            let node = AstNode::FunctionCall(FunctionCall {
                 name: "Array.range".into(),
                 generics: vec![],
                 parameters: vec![
@@ -48,7 +48,7 @@ impl Codegen<'_> for BinaryOperation {
                 type_method: false,
                 ignore_no_def: false,
                 location: self.location.clone(),
-            };
+            });
 
             let (ty, val) = gen
                 .generate_statement(
@@ -154,7 +154,7 @@ impl Codegen<'_> for BinaryOperation {
             && [TokenKind::EqualTo, TokenKind::NotEqualTo].contains(&self.operator)
             && self.dunder_methods
         {
-            let mut node = AstNode::FunctionCall {
+            let mut node = AstNode::FunctionCall(FunctionCall {
                 name: EQUALS_CONSTANT.into(),
                 generics: vec![],
                 parameters: vec![
@@ -164,7 +164,7 @@ impl Codegen<'_> for BinaryOperation {
                 type_method: true,
                 ignore_no_def: false,
                 location: self.location.clone(),
-            };
+            });
 
             if self.operator == TokenKind::NotEqualTo {
                 node = AstNode::LogicalNot {

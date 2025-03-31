@@ -9,7 +9,9 @@ use crate::{
 };
 
 use super::{
-    enums::{Argument, AstNode, BinaryOperation, Declare, Literal, Primitive, Return},
+    enums::{
+        Argument, AstNode, BinaryOperation, Declare, FunctionCall, Literal, Primitive, Return,
+    },
     parser::Parser,
 };
 
@@ -180,7 +182,7 @@ impl<'a> Struct<'a> {
 
                     (
                         location.clone(),
-                        AstNode::FunctionCall {
+                        AstNode::FunctionCall(FunctionCall {
                             name: FORMAT_CONSTANT.into(),
                             generics: vec![],
                             parameters: vec![
@@ -208,7 +210,7 @@ impl<'a> Struct<'a> {
                             type_method: true,
                             ignore_no_def: false,
                             location: location.clone(),
-                        },
+                        }),
                     )
                 })
                 .collect::<Vec<(Rc<Location>, AstNode)>>();
@@ -299,7 +301,7 @@ impl<'a> Struct<'a> {
                     AstNode::Declare(Declare {
                         name: "spacing".into(),
                         r#type: Some(Type::Pointer(Box::new(Type::Char))),
-                        value: Some(Box::new(AstNode::FunctionCall {
+                        value: Some(Box::new(AstNode::FunctionCall(FunctionCall {
                             name: "string.repeat".into(),
                             generics: vec![],
                             parameters: vec![
@@ -334,19 +336,19 @@ impl<'a> Struct<'a> {
                             type_method: false,
                             ignore_no_def: false,
                             location: location.clone(),
-                        })),
+                        }))),
                         location: location.clone(),
                         value_location: location.clone(),
                     }),
                     AstNode::Return(Return {
-                        value: Box::new(AstNode::FunctionCall {
+                        value: Box::new(AstNode::FunctionCall(FunctionCall {
                             name: format!("string.{}", INTERNAL_FORMATTER).into(),
                             generics: vec![],
                             parameters: interleaved,
                             type_method: false,
                             ignore_no_def: false,
                             location: location.clone(),
-                        }),
+                        })),
                         location: location.clone(),
                     }),
                 ],
