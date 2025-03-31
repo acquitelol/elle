@@ -72,7 +72,6 @@ impl Codegen<'_> for Declare {
                     Some(local_ty.clone())
                 },
                 value: temp.clone(),
-                is_return: false,
                 ..ctx.clone()
             },
         );

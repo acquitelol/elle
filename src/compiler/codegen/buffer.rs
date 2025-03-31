@@ -32,14 +32,7 @@ impl Codegen<'_> for Buffer {
         };
 
         let (ty, val) = node
-            .compile(
-                gen,
-                &CodegenContext {
-                    value: None,
-                    is_return: false,
-                    ..ctx.clone()
-                },
-            )
+            .compile(gen, &ctx.to_nnf())
             .expect(&self.location.error(format!(
                 "Unexpected error when trying to compile size for a buffer named '{}'",
                 self.name

@@ -8,19 +8,9 @@ use crate::{
 
 impl Codegen<'_> for FieldAccess {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let (ty, left) = self
-            .left
-            .compile(
-                gen,
-                &CodegenContext {
-                    value: None,
-                    is_return: false,
-                    ..ctx.clone()
-                },
-            )
-            .expect(&self.location.error(
-                "Unexpected error when trying to compile the left side of a struct field access",
-            ));
+        let (ty, left) = self.left.compile(gen, ctx).expect(&self.location.error(
+            "Unexpected error when trying to compile the left side of a struct field access",
+        ));
 
         let (field_ty, offset_tmp) = gen.process_field_access(
             ctx.func,
@@ -38,8 +28,6 @@ impl Codegen<'_> for FieldAccess {
                     gen,
                     &CodegenContext {
                         ty: Some(field_ty.clone()),
-                        value: None,
-                        is_return: false,
                         ..ctx.clone()
                     },
                 )

@@ -12,19 +12,11 @@ impl Codegen<'_> for IfStatement {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         gen.scopes.push(hashmap![]);
 
-        let (_, value) =
-            self.condition
-                .compile(
-                    gen,
-                    &CodegenContext {
-                        value: None,
-                        is_return: false,
-                        ..ctx.clone()
-                    },
-                )
-                .expect(&self.location.error(
-                    "Unexpected error when trying to compile the condition of an if statement",
-                ));
+        let (_, value) = self.condition.compile(gen, ctx).expect(
+            &self
+                .location
+                .error("Unexpected error when trying to compile the condition of an if statement"),
+        );
 
         gen.tmp_counter += 1;
 
@@ -50,43 +42,19 @@ impl Codegen<'_> for IfStatement {
             match statement {
                 AstNode::Literal(Literal { kind, .. }) => match kind {
                     TokenKind::ExactLiteral => {
-                        if let Some((_, value)) = statement.clone().compile(
-                            gen,
-                            &CodegenContext {
-                                ty: None,
-                                value: None,
-                                is_return: false,
-                                ..ctx.clone()
-                            },
-                        ) {
+                        if let Some((_, value)) = statement.clone().compile(gen, ctx) {
                             ctx.func
                                 .borrow_mut()
                                 .add_instruction(Instruction::Literal(value))
                         }
                     }
                     TokenKind::Break | TokenKind::Continue => {
-                        statement.clone().compile(
-                            gen,
-                            &CodegenContext {
-                                ty: None,
-                                value: None,
-                                is_return: false,
-                                ..ctx.clone()
-                            },
-                        );
+                        statement.clone().compile(gen, ctx);
                     }
                     _ => {}
                 },
                 _ => {
-                    statement.clone().compile(
-                        gen,
-                        &CodegenContext {
-                            ty: None,
-                            value: None,
-                            is_return: false,
-                            ..ctx.clone()
-                        },
-                    );
+                    statement.clone().compile(gen, ctx);
                 }
             }
         }
@@ -110,43 +78,19 @@ impl Codegen<'_> for IfStatement {
                 match statement {
                     AstNode::Literal(Literal { kind, .. }) => match kind {
                         TokenKind::ExactLiteral => {
-                            if let Some((_, value)) = statement.clone().compile(
-                                gen,
-                                &CodegenContext {
-                                    ty: None,
-                                    value: None,
-                                    is_return: false,
-                                    ..ctx.clone()
-                                },
-                            ) {
+                            if let Some((_, value)) = statement.clone().compile(gen, ctx) {
                                 ctx.func
                                     .borrow_mut()
                                     .add_instruction(Instruction::Literal(value))
                             }
                         }
                         TokenKind::Break | TokenKind::Continue => {
-                            statement.clone().compile(
-                                gen,
-                                &CodegenContext {
-                                    ty: None,
-                                    value: None,
-                                    is_return: false,
-                                    ..ctx.clone()
-                                },
-                            );
+                            statement.clone().compile(gen, ctx);
                         }
                         _ => {}
                     },
                     _ => {
-                        statement.clone().compile(
-                            gen,
-                            &CodegenContext {
-                                ty: None,
-                                value: None,
-                                is_return: false,
-                                ..ctx.clone()
-                            },
-                        );
+                        statement.clone().compile(gen, ctx);
                     }
                 }
             }

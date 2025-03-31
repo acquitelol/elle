@@ -33,18 +33,9 @@ impl Codegen<'_> for ArrayLength {
             location: self.location.clone(),
         });
 
-        let (_, val) = node
-            .compile(
-                gen,
-                &CodegenContext {
-                    value: None,
-                    is_return: false,
-                    ..ctx.clone()
-                },
-            )
-            .expect(&self.location.error(
-                "Unexpected error when trying to compile the formula for getting the array length",
-            ));
+        let (_, val) = node.compile(gen, ctx).expect(&self.location.error(
+            "Unexpected error when trying to compile the formula for getting the array length",
+        ));
 
         let temp = gen.new_temporary(Some("array.length"), true);
 

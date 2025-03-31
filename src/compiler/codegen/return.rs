@@ -11,7 +11,6 @@ impl Codegen<'_> for Return {
         let res = self.value.compile(
             gen,
             &CodegenContext {
-                value: None,
                 is_return: true,
                 ..ctx.clone()
             },

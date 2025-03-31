@@ -38,14 +38,7 @@ impl Codegen<'_> for FunctionCall {
                     .error("Tried to get the 0th parameter to parse struct call but failed"),
             );
 
-            let (mut ty, val) = parameter.1.clone().compile(
-                gen,
-                &CodegenContext {
-                    ty: None,
-                    value: None,
-                    is_return: false,
-                    ..ctx.clone()
-                })
+            let (mut ty, val) = parameter.1.clone().compile(gen, ctx)
                 .expect(&parameter.0.error(
                     format!(
                         "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
@@ -151,9 +144,6 @@ impl Codegen<'_> for FunctionCall {
                                 gen,
                                 &CodegenContext {
                                     func: &RefCell::new(tmp_func),
-                                    ty: None,
-                                    value: None,
-                                    is_return: false,
                                     ..ctx.clone()
                                 },
                             ).expect(&param.0.error(
@@ -289,9 +279,7 @@ impl Codegen<'_> for FunctionCall {
             } else {
                 parameter.1.compile(gen, &CodegenContext {
                     ty: param_ty.clone(),
-                    value: None,
-                    is_return: false,
-                    ..ctx.clone()
+                    ..ctx.to_nnf()
                 })
                 .expect(&parameter.0.error(
                     format!(

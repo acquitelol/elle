@@ -21,19 +21,11 @@ impl Codegen<'_> for WhileLoopStatement {
         gen.loop_labels.push(format!("loop.{}", gen.tmp_counter));
         ctx.func.borrow_mut().add_block(cond_label.clone());
 
-        let (_, value) =
-            self.condition
-                .compile(
-                    gen,
-                    &CodegenContext {
-                        value: None,
-                        is_return: false,
-                        ..ctx.clone()
-                    },
-                )
-                .expect(&self.location.error(
-                    "Unexpected error when trying to compile the condition of a while loop",
-                ));
+        let (_, value) = self.condition.compile(gen, ctx).expect(
+            &self
+                .location
+                .error("Unexpected error when trying to compile the condition of a while loop"),
+        );
 
         ctx.func
             .borrow_mut()
@@ -46,14 +38,7 @@ impl Codegen<'_> for WhileLoopStatement {
         ctx.func.borrow_mut().add_block(step_label.clone());
 
         if let Some(step) = self.step {
-            step.compile(
-                gen,
-                &CodegenContext {
-                    value: None,
-                    is_return: false,
-                    ..ctx.clone()
-                },
-            );
+            step.compile(gen, ctx);
         }
 
         ctx.func
@@ -66,43 +51,19 @@ impl Codegen<'_> for WhileLoopStatement {
             match statement {
                 AstNode::Literal(Literal { kind, .. }) => match kind {
                     TokenKind::ExactLiteral => {
-                        if let Some((_, value)) = statement.clone().compile(
-                            gen,
-                            &CodegenContext {
-                                ty: None,
-                                value: None,
-                                is_return: false,
-                                ..ctx.clone()
-                            },
-                        ) {
+                        if let Some((_, value)) = statement.clone().compile(gen, ctx) {
                             ctx.func
                                 .borrow_mut()
                                 .add_instruction(Instruction::Literal(value));
                         }
                     }
                     TokenKind::Break | TokenKind::Continue => {
-                        statement.clone().compile(
-                            gen,
-                            &CodegenContext {
-                                ty: None,
-                                value: None,
-                                is_return: false,
-                                ..ctx.clone()
-                            },
-                        );
+                        statement.clone().compile(gen, ctx);
                     }
                     _ => {}
                 },
                 _ => {
-                    statement.clone().compile(
-                        gen,
-                        &CodegenContext {
-                            ty: None,
-                            value: None,
-                            is_return: false,
-                            ..ctx.clone()
-                        },
-                    );
+                    statement.clone().compile(gen, ctx);
                 }
             }
         }

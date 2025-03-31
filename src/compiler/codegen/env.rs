@@ -24,19 +24,11 @@ impl Codegen<'_> for Environment {
                 })
             }
 
-            let (ty, val) = value
-                .compile(
-                    gen,
-                    &CodegenContext {
-                        value: None,
-                        ..ctx.clone()
-                    },
-                )
-                .expect(
-                    &self
-                        .location
-                        .error("Unexpected error when compiling value to set to environment"),
-                );
+            let (ty, val) = value.compile(gen, ctx).expect(
+                &self
+                    .location
+                    .error("Unexpected error when compiling value to set to environment"),
+            );
 
             ctx.func.borrow_mut().add_instruction(Instruction::Store(
                 ty.clone(),

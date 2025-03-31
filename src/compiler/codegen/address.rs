@@ -8,17 +8,8 @@ use crate::{
 
 impl Codegen<'_> for Address {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let (ty, val) = self
-            .value
-            .compile(
-                gen,
-                &CodegenContext {
-                    value: None,
-                    is_return: false,
-                    ..ctx.clone()
-                },
-            )
-            .expect(&self.location.error(
+        let (ty, val) =
+            self.value.compile(gen, ctx).expect(&self.location.error(
                 "Unexpected error when trying to compile the value of an address statement",
             ));
 

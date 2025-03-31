@@ -23,9 +23,6 @@ impl Codegen<'_> for SetAllocator {
                 gen,
                 &CodegenContext {
                     func: &RefCell::new(tmp_func),
-                    ty: None,
-                    value: None,
-                    is_return: false,
                     ..ctx.clone()
                 },
             )
@@ -118,16 +115,7 @@ impl Codegen<'_> for SetAllocator {
                 location: self.location.clone(),
             });
 
-            node.compile(
-                gen,
-                &CodegenContext {
-                    ty: None,
-                    value: None,
-                    is_return: false,
-                    ..ctx.clone()
-                },
-            )
-            .expect(
+            node.compile(gen, ctx).expect(
                 &self
                     .location
                     .error("Unexpected error when compiling a statement to set the allocator."),

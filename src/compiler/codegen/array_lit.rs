@@ -29,9 +29,6 @@ impl Codegen<'_> for ArrayLiteral {
                         gen,
                         &CodegenContext {
                             func: &RefCell::new(new_func),
-                            ty: None,
-                            value: None,
-                            is_return: false,
                             ..ctx.clone()
                         },
                     )
@@ -117,8 +114,6 @@ impl Codegen<'_> for ArrayLiteral {
                         } else {
                             first_type.clone()
                         },
-                        value: None,
-                        is_return: false,
                         ..ctx.clone()
                     },
                 )

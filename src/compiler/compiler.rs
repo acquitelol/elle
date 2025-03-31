@@ -33,15 +33,23 @@ pub struct CodegenContext<'a> {
     pub is_return: bool,
 }
 
-// impl CodegenContext {
-//     /// nnf = None, None, false
-//     /// sets:
-//     /// ty -> None
-//     /// value -> None
-//     /// is_return -> false
-//     /// returns a new struct
-//     pub fn to_nnf()
-// }
+impl CodegenContext<'_> {
+    /// nnf = None, None, false
+    ///
+    /// ty -> None
+    /// value -> None
+    /// is_return -> false
+    /// 
+    /// returns a new struct
+    pub fn to_nnf(&self) -> Self {
+        return CodegenContext {
+            ty: None,
+            value: None,
+            is_return: false,
+            ..self.clone()
+        };
+    }
+}
 
 pub trait Codegen<'a> {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'a>) -> Option<(Type, Value)>;

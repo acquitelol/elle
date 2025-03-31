@@ -21,43 +21,19 @@ impl Codegen<'_> for BlockStatement {
             match statement {
                 AstNode::Literal(Literal { kind, .. }) => match kind {
                     TokenKind::ExactLiteral => {
-                        if let Some((_, value)) = statement.clone().compile(
-                            gen,
-                            &CodegenContext {
-                                ty: None,
-                                value: None,
-                                is_return: false,
-                                ..ctx.clone()
-                            },
-                        ) {
+                        if let Some((_, value)) = statement.clone().compile(gen, ctx) {
                             ctx.func
                                 .borrow_mut()
                                 .add_instruction(Instruction::Literal(value));
                         }
                     }
                     TokenKind::Break | TokenKind::Continue => {
-                        statement.clone().compile(
-                            gen,
-                            &CodegenContext {
-                                ty: None,
-                                value: None,
-                                is_return: false,
-                                ..ctx.clone()
-                            },
-                        );
+                        statement.clone().compile(gen, ctx);
                     }
                     _ => {}
                 },
                 _ => {
-                    statement.clone().compile(
-                        gen,
-                        &CodegenContext {
-                            ty: None,
-                            value: None,
-                            is_return: false,
-                            ..ctx.clone()
-                        },
-                    );
+                    statement.clone().compile(gen, ctx);
                 }
             }
         }
