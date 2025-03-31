@@ -1,0 +1,132 @@
+use std::cell::RefCell;
+
+use crate::{
+    compiler::{
+        compiler::{Codegen, CodegenContext, Compiler},
+        enums::{Function, Type, Value},
+    },
+    elle_error, get_GREEN, get_RED, get_RESET,
+    lexer::enums::{TokenKind, ValueKind},
+    parser::enums::{AstNode, Environment, Literal, SetAllocator},
+    Warning, ARBITRARY_ALLOCATOR_NAME, GREEN, RED, RESET,
+};
+
+impl Codegen<'_> for SetAllocator {
+    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+        let mut tmp_func = Function::default();
+        tmp_func.add_block("start");
+
+        let (ty, _) = gen
+            .generate_statement(
+                &RefCell::new(tmp_func),
+                ctx.module,
+                *self.value.clone(),
+                None,
+                None,
+                ctx.is_return,
+            )
+            .expect(
+                &self
+                    .location
+                    .error("Unexpected error when compiling allocator expresssion"),
+            );
+
+        if !ty.is_struct() && !(ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct()) {
+            elle_error!(self
+                .location
+                .with_extra_info(format!("This has the type {}", ty.display()))
+                .error("Cannot set an allocator to a non-allocator expression"))
+        }
+
+        let allocator_name = if ty.is_struct() {
+            ty.get_struct_inner().unwrap()
+        } else {
+            ty.get_pointer_inner().unwrap().get_struct_inner().unwrap()
+        };
+
+        macro_rules! method_or_noop {
+            ($name:literal) => {{
+                let method_name = format!("{allocator_name}.{}", $name);
+
+                AstNode::Literal(Literal {
+                    kind: TokenKind::Identifier,
+                    value: ValueKind::String(if ctx.module.borrow().functions.iter().find(|f| f.name == method_name).is_some() {
+                        method_name
+                    } else {
+                        if gen.warnings.has_warning(Warning::AllocatorMethodsMissing) {
+                            println!(
+                                "{}",
+                                self.location.warning(format!(
+                                    "The allocator '{GREEN}{}{RESET}' has no method named '{GREEN}{}{RESET}'.\nIt will be set to a function which returns {RED}nil{RESET} instead.",
+                                    allocator_name,
+                                    method_name.replace(".", "::"),
+                                    GREEN = get_GREEN!(),
+                                    RED = get_RED!(),
+                                    RESET = get_RESET!(),
+                                ))
+                            );
+                        }
+
+                        format!("{ARBITRARY_ALLOCATOR_NAME}.noop")
+                    }),
+                    location: self.location.clone(),
+                })
+            }};
+        }
+
+        let parts = vec![
+            ("inner", *self.value),
+            (
+                "kind",
+                AstNode::Literal(Literal {
+                    kind: TokenKind::StringLiteral,
+                    value: ValueKind::String(allocator_name.clone()),
+                    location: self.location.clone(),
+                }),
+            ),
+            ("alloc", method_or_noop!("alloc")),
+            ("realloc", method_or_noop!("realloc")),
+            ("free", method_or_noop!("free")),
+            ("free_self", method_or_noop!("free_self")),
+        ];
+
+        for (field, expr) in parts {
+            gen.generate_statement(
+                ctx.func,
+                ctx.module,
+                AstNode::FieldAccess {
+                    left: Box::new(AstNode::Environment(Environment {
+                        value: None,
+                        location: self.location.clone(),
+                    })),
+                    right: Box::new(AstNode::FieldAccess {
+                        left: Box::new(AstNode::Literal(Literal {
+                            kind: TokenKind::Identifier,
+                            value: ValueKind::String("allocator".into()),
+                            location: self.location.clone(),
+                        })),
+                        right: Box::new(AstNode::Literal(Literal {
+                            kind: TokenKind::Identifier,
+                            value: ValueKind::String(field.into()),
+                            location: self.location.clone(),
+                        })),
+                        value: None,
+                        location: self.location.clone(),
+                    }),
+                    value: Some(Box::new(expr)),
+                    location: self.location.clone(),
+                },
+                None,
+                None,
+                ctx.is_return,
+            )
+            .expect(
+                &self
+                    .location
+                    .error("Unexpected error when compiling a statement to set the allocator."),
+            );
+        }
+
+        None
+    }
+}

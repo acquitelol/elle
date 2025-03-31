@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use super::enums::{
     Argument, AstNode, BinaryOperation, Buffer, Declare, Environment, FunctionCall, IfStatement,
-    Literal, MemoryOperation, Primitive, Return, VariadicArgument, VariadicStart,
+    Literal, MemoryOperation, Primitive, Return, SetAllocator, VariadicArgument, VariadicStart,
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
@@ -2908,10 +2908,10 @@ impl<'a> Statement<'a> {
         self.advance();
         let allocator = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
-        AstNode::SetAllocator {
+        AstNode::SetAllocator(SetAllocator {
             value: Box::new(allocator),
             location,
-        }
+        })
     }
 
     fn parse_reset_allocator(&mut self) -> AstNode {
@@ -2924,7 +2924,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
-        AstNode::SetAllocator {
+        AstNode::SetAllocator(SetAllocator {
             value: Box::new(AstNode::FieldAccess {
                 left: Box::new(AstNode::Environment(Environment {
                     value: None,
@@ -2939,7 +2939,7 @@ impl<'a> Statement<'a> {
                 location: location.clone(),
             }),
             location,
-        }
+        })
     }
 
     fn parse_declarative_node(&mut self, node: AstNode) -> AstNode {

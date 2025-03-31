@@ -7,6 +7,7 @@ pub mod r#if;
 pub mod literal;
 pub mod memop;
 pub mod r#return;
+pub mod setalloc;
 pub mod vaarg;
 pub mod vastart;
 pub mod r#while;

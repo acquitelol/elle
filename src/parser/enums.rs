@@ -104,6 +104,12 @@ pub struct Environment {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SetAllocator {
+    pub value: Box<AstNode>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -215,10 +221,7 @@ pub enum AstNode {
     /// Allows to set the current allocator to something other than the default allocator
     /// automatically uses the expression's type to get the correct functions as this
     /// needs to be done through polymorphism at runtime
-    SetAllocator {
-        value: Box<AstNode>,
-        location: Rc<Location>,
-    },
+    SetAllocator(SetAllocator),
 }
 
 impl AstNode {
@@ -468,7 +471,7 @@ fn modify_type_in_node(
                 *value = Some(Box::new(new_value));
             }
         }
-        AstNode::SetAllocator { value, .. } => {
+        AstNode::SetAllocator(SetAllocator { value, .. }) => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);

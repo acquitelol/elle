@@ -52,7 +52,7 @@ pub struct Compiler {
     // ret_types: HashMap<String, Type>,
     pub buf_metadata: HashMap<Value, (Type, Value)>,
     tree: Vec<Primitive>,
-    warnings: Warnings,
+    pub warnings: Warnings,
     // lambda functions that should be added as soon as possible
     deferred_functions: Vec<Function>,
     // Map from temporary to its stack allocated address
@@ -639,122 +639,7 @@ impl Compiler {
             AstNode::VariadicStart(this) => this.compile(self, &ctx),
             AstNode::VariadicArgument(this) => this.compile(self, &ctx),
             AstNode::Environment(this) => this.compile(self, &ctx),
-            AstNode::SetAllocator { value, location } => {
-                let mut tmp_func = Function::default();
-                tmp_func.add_block("start");
-
-                let (ty, _) = self
-                    .generate_statement(
-                        &RefCell::new(tmp_func),
-                        module,
-                        *value.clone(),
-                        None,
-                        None,
-                        is_return,
-                    )
-                    .expect(
-                        &location.error("Unexpected error when compiling allocator expresssion"),
-                    );
-
-                if !ty.is_struct()
-                    && !(ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct())
-                {
-                    elle_error!(location
-                        .with_extra_info(format!("This has the type {}", ty.display()))
-                        .error("Cannot set an allocator to a non-allocator expression"))
-                }
-
-                let allocator_name = if ty.is_struct() {
-                    ty.get_struct_inner().unwrap()
-                } else {
-                    ty.get_pointer_inner().unwrap().get_struct_inner().unwrap()
-                };
-
-                macro_rules! method_or_noop {
-                    ($name:literal) => {{
-                        let method_name = format!("{allocator_name}.{}", $name);
-
-                        AstNode::Literal(Literal {
-                            kind: TokenKind::Identifier,
-                            value: ValueKind::String(if module.borrow().functions.iter().find(|f| f.name == method_name).is_some() {
-                                method_name
-                            } else {
-                                if self.warnings.has_warning(Warning::AllocatorMethodsMissing) {
-                                    println!(
-                                        "{}",
-                                        location.warning(format!(
-                                            "The allocator '{GREEN}{}{RESET}' has no method named '{GREEN}{}{RESET}'.\nIt will be set to a function which returns {RED}nil{RESET} instead.",
-                                            allocator_name,
-                                            method_name.replace(".", "::"),
-                                            GREEN = get_GREEN!(),
-                                            RED = get_RED!(),
-                                            RESET = get_RESET!(),
-                                        ))
-                                    );
-                                }
-
-                                format!("{ARBITRARY_ALLOCATOR_NAME}.noop")
-                            }),
-                            location: location.clone(),
-                        })
-                    }};
-                }
-
-                let parts = vec![
-                    ("inner", *value),
-                    (
-                        "kind",
-                        AstNode::Literal(Literal {
-                            kind: TokenKind::StringLiteral,
-                            value: ValueKind::String(allocator_name.clone()),
-                            location: location.clone(),
-                        }),
-                    ),
-                    ("alloc", method_or_noop!("alloc")),
-                    ("realloc", method_or_noop!("realloc")),
-                    ("free", method_or_noop!("free")),
-                    ("free_self", method_or_noop!("free_self")),
-                ];
-
-                for (field, expr) in parts {
-                    self.generate_statement(
-                        func,
-                        module,
-                        AstNode::FieldAccess {
-                            left: Box::new(AstNode::Environment(Environment {
-                                value: None,
-                                location: location.clone(),
-                            })),
-                            right: Box::new(AstNode::FieldAccess {
-                                left: Box::new(AstNode::Literal(Literal {
-                                    kind: TokenKind::Identifier,
-                                    value: ValueKind::String("allocator".into()),
-                                    location: location.clone(),
-                                })),
-                                right: Box::new(AstNode::Literal(Literal {
-                                    kind: TokenKind::Identifier,
-                                    value: ValueKind::String(field.into()),
-                                    location: location.clone(),
-                                })),
-                                value: None,
-                                location: location.clone(),
-                            }),
-                            value: Some(Box::new(expr)),
-                            location: location.clone(),
-                        },
-                        None,
-                        None,
-                        is_return,
-                    )
-                    .expect(
-                        &location.error(
-                            "Unexpected error when compiling a statement to set the allocator.",
-                        ),
-                    );
-                }
-
-                None
-            }
+            AstNode::SetAllocator(this) => this.compile(self, &ctx),
             AstNode::BlockStatement { body, location: _ } => {
                 self.scopes.push(hashmap!());
                 self.tmp_counter += 1;

@@ -20,7 +20,7 @@ use parser::enums::{Argument, AstNode, Primitive};
 
 use crate::parser::enums::{
     BinaryOperation, Declare, Environment, FunctionCall, Literal, MemoryOperation, Return,
-    WhileLoopStatement,
+    SetAllocator, WhileLoopStatement,
 };
 
 pub enum Warning {
@@ -540,7 +540,7 @@ fn main() -> ExitCode {
                         })),
                         location: loc.clone(),
                     }),
-                    AstNode::SetAllocator {
+                    AstNode::SetAllocator(SetAllocator {
                         value: Box::new(AstNode::FieldAccess {
                             left: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
@@ -556,7 +556,7 @@ fn main() -> ExitCode {
                             location: loc.clone(),
                         }),
                         location: loc.clone(),
-                    },
+                    }),
                 ],
                 if main_arg_len == 1 {
                     vec![
