@@ -1,4 +1,5 @@
 pub mod binop;
+pub mod bitwise_not;
 pub mod block;
 pub mod buffer;
 pub mod convert;

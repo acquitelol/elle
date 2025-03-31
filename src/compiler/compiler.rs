@@ -12,8 +12,8 @@ use crate::{
     misc::colors::*,
     parser::{
         enums::{
-            modify_type_in_ast, Argument, AstNode, BinaryOperation, Conversion, Environment,
-            FunctionCall, Literal, Primitive, Return,
+            modify_type_in_ast, Argument, AstNode, BinaryOperation, BitwiseNot, Conversion,
+            Environment, FunctionCall, Literal, Primitive, Return,
         },
         parser::StructPool,
     },
@@ -674,27 +674,7 @@ impl Compiler {
 
                 Some((ty, temp))
             }
-            AstNode::BitWiseNot { value, location } => {
-                let (ty, val) = self
-                    .generate_statement(func, module, *value, ty, None, false)
-                    .expect(&location.error(
-                        "Unexpected error when trying to compile the value of a not statement",
-                    ));
-
-                let temp = self.new_temporary(Some("negate"), true);
-
-                func.borrow_mut().assign_instruction(
-                    &temp,
-                    &ty,
-                    if ty.is_float() {
-                        Instruction::Negate(val)
-                    } else {
-                        Instruction::BitwiseNot(val)
-                    },
-                );
-
-                Some((ty, temp))
-            }
+            AstNode::BitwiseNot(this) => this.compile(self, &ctx),
             AstNode::ArrayLength { value, location } => {
                 let (_, val) = self
                     .generate_statement(

@@ -124,6 +124,12 @@ pub struct Conversion {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct BitwiseNot {
+    pub value: Box<AstNode>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -185,10 +191,7 @@ pub enum AstNode {
         location: Rc<Location>,
     },
     /// Takes value `value` and flips all its bits
-    BitWiseNot {
-        value: Box<AstNode>,
-        location: Rc<Location>,
-    },
+    BitwiseNot(BitwiseNot),
     /// Returns the address of some value `value`
     Address {
         value: Box<AstNode>,
@@ -437,7 +440,7 @@ fn modify_type_in_node(
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
-        AstNode::BitWiseNot { value, .. } => {
+        AstNode::BitwiseNot(BitwiseNot { value, .. }) => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);

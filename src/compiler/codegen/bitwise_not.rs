@@ -1,0 +1,40 @@
+use crate::{
+    compiler::{
+        compiler::{Codegen, CodegenContext, Compiler},
+        enums::{Instruction, Type, Value},
+    },
+    parser::enums::BitwiseNot,
+};
+
+impl Codegen<'_> for BitwiseNot {
+    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+        let (ty, val) = gen
+            .generate_statement(
+                ctx.func,
+                ctx.module,
+                *self.value,
+                ctx.ty.clone(),
+                None,
+                false,
+            )
+            .expect(
+                &self
+                    .location
+                    .error("Unexpected error when trying to compile the value of a not statement"),
+            );
+
+        let temp = gen.new_temporary(Some("negate"), true);
+
+        ctx.func.borrow_mut().assign_instruction(
+            &temp,
+            &ty,
+            if ty.is_float() {
+                Instruction::Negate(val)
+            } else {
+                Instruction::BitwiseNot(val)
+            },
+        );
+
+        Some((ty, temp))
+    }
+}
