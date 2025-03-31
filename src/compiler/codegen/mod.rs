@@ -8,6 +8,7 @@ pub mod declare;
 pub mod env;
 pub mod funcall;
 pub mod if_stmt;
+pub mod lambda;
 pub mod literal;
 pub mod logical_not;
 pub mod memory_op;

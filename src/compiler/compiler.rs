@@ -54,7 +54,7 @@ pub struct Compiler {
     tree: Vec<Primitive>,
     pub warnings: Warnings,
     // lambda functions that should be added as soon as possible
-    deferred_functions: Vec<Function>,
+    pub deferred_functions: Vec<Function>,
     // Map from temporary to its stack allocated address
     pub address_pool: HashMap<Value, Value>,
     output_path: String,
@@ -107,7 +107,7 @@ impl Compiler {
         tmp
     }
 
-    fn new_manual_argument(&mut self, ty: &Type, name: &str) -> Value {
+    pub fn new_manual_argument(&mut self, ty: &Type, name: &str) -> Value {
         let tmp = Value::Temporary(name.into());
 
         let scope = self
@@ -269,7 +269,7 @@ impl Compiler {
         }
     }
 
-    fn generate_function(
+    pub fn generate_function(
         &mut self,
         name: String,
         public: bool,
@@ -645,61 +645,7 @@ impl Compiler {
             AstNode::LogicalNot(this) => this.compile(self, &ctx),
             AstNode::BitwiseNot(this) => this.compile(self, &ctx),
             AstNode::ArrayLength(this) => this.compile(self, &ctx),
-            AstNode::Lambda {
-                arguments,
-                value,
-                location,
-            } => {
-                self.tmp_counter += 1;
-                let lambda_name = format!("lambda.{}", self.tmp_counter);
-
-                let scopes = self.scopes.clone();
-                self.scopes = vec![hashmap![]];
-
-                let mut args = vec![];
-
-                for argument in arguments.clone() {
-                    let ty = argument.r#type.clone();
-                    let tmp = if argument.manual {
-                        self.new_manual_argument(&ty, &argument.name)
-                    } else {
-                        self.new_variable(&ty, &argument.name, None, false, false)
-                    };
-
-                    args.push((ty.into_abi(), tmp));
-                }
-
-                let lambda_func = self.generate_function(
-                    lambda_name.clone(),
-                    false,
-                    false,
-                    false,
-                    false,
-                    false,
-                    false,
-                    false,
-                    true,
-                    None,
-                    true,
-                    false,
-                    vec![],
-                    hashmap![],
-                    &arguments,
-                    None,
-                    value,
-                    module,
-                    location.clone(),
-                    location,
-                );
-
-                self.deferred_functions.push(lambda_func.clone());
-                self.scopes = scopes;
-
-                Some((
-                    Type::Function(Box::new(Some(lambda_func))),
-                    Value::Global(lambda_name),
-                ))
-            }
+            AstNode::Lambda(this) => this.compile(self, &ctx),
             AstNode::ArrayLiteral {
                 explicit_inner,
                 known_generics,

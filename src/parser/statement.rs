@@ -4,8 +4,8 @@ use std::rc::Rc;
 
 use super::enums::{
     Argument, ArrayLength, AstNode, BinaryOperation, BitwiseNot, Buffer, Conversion, Declare,
-    Environment, FunctionCall, IfStatement, Literal, LogicalNot, MemoryOperation, Primitive,
-    Return, SetAllocator, VariadicArgument, VariadicStart,
+    Environment, FunctionCall, IfStatement, Lambda, Literal, LogicalNot, MemoryOperation,
+    Primitive, Return, SetAllocator, VariadicArgument, VariadicStart,
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
@@ -1686,11 +1686,11 @@ impl<'a> Statement<'a> {
             let body = self.yield_block(true); // Lambdas are expressions
             self.position -= 1;
 
-            AstNode::Lambda {
+            AstNode::Lambda(Lambda {
                 arguments,
                 value: body,
                 location,
-            }
+            })
         } else {
             let mut nesting = 0;
             let mut block_nesting = 0;
@@ -1729,14 +1729,14 @@ impl<'a> Statement<'a> {
 
             let value = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
-            AstNode::Lambda {
+            AstNode::Lambda(Lambda {
                 arguments,
                 value: vec![AstNode::Return(Return {
                     value: Box::new(value),
                     location: location.clone(),
                 })],
                 location,
-            }
+            })
         }
     }
 

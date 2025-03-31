@@ -142,6 +142,13 @@ pub struct ArrayLength {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Lambda {
+    pub arguments: Vec<Argument>,
+    pub value: Vec<AstNode>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -216,11 +223,7 @@ pub enum AstNode {
     },
     /// Creates a capturing closure that takes in some number of arguments
     /// and returns a single line statement result
-    Lambda {
-        arguments: Vec<Argument>,
-        value: Vec<AstNode>,
-        location: Rc<Location>,
-    },
+    Lambda(Lambda),
     /// Calculates the array length of an Elle-generated array
     /// Uses the formula *(array_ptr - #size(i32))
     ArrayLength(ArrayLength),
@@ -282,9 +285,9 @@ fn modify_type_in_node(
                 *value = Box::new(new_value);
             }
         }
-        AstNode::Lambda {
+        AstNode::Lambda(Lambda {
             arguments, value, ..
-        } => {
+        }) => {
             for arg in arguments.iter_mut() {
                 arg.r#type =
                     modify_type(arg.r#type.clone(), generics, known_types, struct_pool, tree);
