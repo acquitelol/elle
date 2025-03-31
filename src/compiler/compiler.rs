@@ -647,38 +647,7 @@ impl Compiler {
             AstNode::ArrayLength(this) => this.compile(self, &ctx),
             AstNode::Lambda(this) => this.compile(self, &ctx),
             AstNode::ArrayLiteral(this) => this.compile(self, &ctx),
-            AstNode::Address { value, location } => {
-                let (ty, val) = self
-                    .generate_statement(func, module, *value, ty, None, false)
-                    .expect(&location.error(
-                        "Unexpected error when trying to compile the value of an address statement",
-                    ));
-
-                if ty.is_struct() {
-                    return Some((Type::Pointer(Box::new(ty)), val));
-                }
-
-                if let Some(addr_val) = self.address_pool.get(&val) {
-                    Some((Type::Pointer(Box::new(ty)), addr_val.clone()))
-                } else {
-                    let addr_val = self.new_temporary(Some("tmp.addr"), true);
-                    let addr_ty = Type::Pointer(Box::new(ty.clone()));
-
-                    func.borrow_mut().assign_instruction_front(
-                        &addr_val,
-                        &addr_ty,
-                        Instruction::Alloc8(Value::Const("".into(), ty.size(module) as i128)),
-                    );
-
-                    func.borrow_mut().add_instruction(Instruction::Store(
-                        ty.clone(),
-                        addr_val.clone(),
-                        val.clone(),
-                    ));
-
-                    Some((addr_ty, addr_val))
-                }
-            }
+            AstNode::Address(this) => this.compile(self, &ctx),
             AstNode::Ternary {
                 condition,
                 if_true,

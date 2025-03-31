@@ -158,6 +158,12 @@ pub struct ArrayLiteral {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Address {
+    pub value: Box<AstNode>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -212,10 +218,7 @@ pub enum AstNode {
     /// Takes value `value` and flips all its bits
     BitwiseNot(BitwiseNot),
     /// Returns the address of some value `value`
-    Address {
-        value: Box<AstNode>,
-        location: Rc<Location>,
-    },
+    Address(Address),
     /// Performs an explicit conversion of value `value` to type `r#type`
     Conversion(Conversion),
     /// Returns the size (in bytes) or length, depending on if `standalone` is set to true
@@ -457,7 +460,7 @@ fn modify_type_in_node(
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
-        AstNode::Address { value, .. } => {
+        AstNode::Address(Address { value, .. }) => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);

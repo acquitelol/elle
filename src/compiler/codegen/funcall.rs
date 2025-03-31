@@ -7,7 +7,7 @@ use crate::{
     },
     elle_error, get_GREEN, get_POINTER_ID, get_RESET, hashmap, is_generic,
     lexer::enums::{TokenKind, ValueKind},
-    parser::enums::{AstNode, FunctionCall, Literal},
+    parser::enums::{Address, AstNode, FunctionCall, Literal},
     unknown_function, DUNDER_CONSTANTS, FORMAT_CONSTANT, GREEN, META_STRUCT_NAME, POINTER_ID,
     PTR_PRIORITY_CONSTANTS, RESET, VOID_POINTER_ID,
 };
@@ -270,10 +270,10 @@ impl Codegen<'_> for FunctionCall {
                 {
                     got_address = true;
 
-                    parameter.1 = AstNode::Address {
+                    parameter.1 = AstNode::Address(Address {
                         value: Box::new(parameter.1),
                         location: Rc::new(call_location.clone()),
-                    }
+                    })
                 }
             }
 

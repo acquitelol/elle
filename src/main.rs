@@ -19,7 +19,7 @@ use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex
 use parser::enums::{Argument, AstNode, Primitive};
 
 use crate::parser::enums::{
-    BinaryOperation, Declare, Environment, FunctionCall, Literal, MemoryOperation, Return,
+    Address, BinaryOperation, Declare, Environment, FunctionCall, Literal, MemoryOperation, Return,
     SetAllocator, WhileLoopStatement,
 };
 
@@ -476,14 +476,14 @@ fn main() -> ExitCode {
                     AstNode::Declare(Declare {
                         name: "stack_top".into(),
                         r#type: Some(Type::Pointer(Box::new(Type::Void))),
-                        value: Some(Box::new(AstNode::Address {
+                        value: Some(Box::new(AstNode::Address(Address {
                             value: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::IntegerLiteral,
                                 value: ValueKind::Number(0),
                                 location: loc.clone(),
                             })),
                             location: loc.clone(),
-                        })),
+                        }))),
                         location: loc.clone(),
                         value_location: loc.clone(),
                     }),
@@ -530,14 +530,14 @@ fn main() -> ExitCode {
                         value_location: loc.clone(),
                     }),
                     AstNode::Environment(Environment {
-                        value: Some(Box::new(AstNode::Address {
+                        value: Some(Box::new(AstNode::Address(Address {
                             value: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("env".into()),
                                 location: loc.clone(),
                             })),
                             location: loc.clone(),
-                        })),
+                        }))),
                         location: loc.clone(),
                     }),
                     AstNode::SetAllocator(SetAllocator {
