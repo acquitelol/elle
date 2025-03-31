@@ -47,31 +47,34 @@ impl Codegen<'_> for Declare {
             Some(gen.new_variable(&local_ty, &self.name, Some(ctx.func), true, false))
         };
 
-        let parsed = gen.generate_statement(
-            ctx.func,
-            ctx.module,
-            *self.value.unwrap_or(Box::new(
-                if self.r#type.clone().is_some_and(|ty| ty.is_struct()) {
-                    AstNode::StructLiteral(StructLiteral {
-                        name: self.r#type.clone().unwrap().get_struct_inner().unwrap(),
-                        values: vec![],
-                        location: self.location.clone(),
-                    })
-                } else {
-                    AstNode::Literal(Literal {
-                        kind: TokenKind::IntegerLiteral,
-                        value: ValueKind::Number(0),
-                        location: self.location.clone(),
-                    })
-                },
-            )),
-            if local_ty == Type::Infer {
-                None
+        let node = *self.value.unwrap_or(Box::new(
+            if self.r#type.clone().is_some_and(|ty| ty.is_struct()) {
+                AstNode::StructLiteral(StructLiteral {
+                    name: self.r#type.clone().unwrap().get_struct_inner().unwrap(),
+                    values: vec![],
+                    location: self.location.clone(),
+                })
             } else {
-                Some(local_ty.clone())
+                AstNode::Literal(Literal {
+                    kind: TokenKind::IntegerLiteral,
+                    value: ValueKind::Number(0),
+                    location: self.location.clone(),
+                })
             },
-            temp.clone(),
-            false,
+        ));
+
+        let parsed = node.compile(
+            gen,
+            &CodegenContext {
+                ty: if local_ty == Type::Infer {
+                    None
+                } else {
+                    Some(local_ty.clone())
+                },
+                value: temp.clone(),
+                is_return: false,
+                ..ctx.clone()
+            },
         );
 
         if let Some((ret_ty, value)) = parsed {

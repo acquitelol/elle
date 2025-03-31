@@ -10,34 +10,35 @@ use crate::{
 impl Codegen<'_> for Buffer {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let buf_ty = Type::Pointer(Box::new(self.r#type.clone().unwrap()));
+        let node = if let Some(ref ty) = self.r#type {
+            AstNode::BinaryOperation(BinaryOperation {
+                left: self.size,
+                right: Box::new(AstNode::Literal(Literal {
+                    kind: TokenKind::LongLiteral,
+                    value: ValueKind::Number(ty.size(ctx.module) as i128),
+                    location: self.location.clone(),
+                })),
+                operator: TokenKind::Multiply,
+                treat_as_string: false,
+                dunder_methods: true,
+                location: self.location.clone(),
+            })
+        } else {
+            AstNode::Literal(Literal {
+                kind: TokenKind::LongLiteral,
+                value: ValueKind::Number(0),
+                location: self.location.clone(),
+            })
+        };
 
-        let (ty, val) = gen
-            .generate_statement(
-                ctx.func,
-                ctx.module,
-                if let Some(ref ty) = self.r#type {
-                    AstNode::BinaryOperation(BinaryOperation {
-                        left: self.size,
-                        right: Box::new(AstNode::Literal(Literal {
-                            kind: TokenKind::LongLiteral,
-                            value: ValueKind::Number(ty.size(ctx.module) as i128),
-                            location: self.location.clone(),
-                        })),
-                        operator: TokenKind::Multiply,
-                        treat_as_string: false,
-                        dunder_methods: true,
-                        location: self.location.clone(),
-                    })
-                } else {
-                    AstNode::Literal(Literal {
-                        kind: TokenKind::LongLiteral,
-                        value: ValueKind::Number(0),
-                        location: self.location.clone(),
-                    })
+        let (ty, val) = node
+            .compile(
+                gen,
+                &CodegenContext {
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
                 },
-                ctx.ty.clone(),
-                None,
-                false,
             )
             .expect(&self.location.error(format!(
                 "Unexpected error when trying to compile size for a buffer named '{}'",

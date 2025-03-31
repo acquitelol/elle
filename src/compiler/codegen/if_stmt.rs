@@ -12,20 +12,19 @@ impl Codegen<'_> for IfStatement {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         gen.scopes.push(hashmap![]);
 
-        let (_, value) = gen
-            .generate_statement(
-                ctx.func,
-                ctx.module,
-                *self.condition,
-                ctx.ty.clone(),
-                None,
-                false,
-            )
-            .expect(
-                &self.location.error(
+        let (_, value) =
+            self.condition
+                .compile(
+                    gen,
+                    &CodegenContext {
+                        value: None,
+                        is_return: false,
+                        ..ctx.clone()
+                    },
+                )
+                .expect(&self.location.error(
                     "Unexpected error when trying to compile the condition of an if statement",
-                ),
-            );
+                ));
 
         gen.tmp_counter += 1;
 
@@ -51,13 +50,14 @@ impl Codegen<'_> for IfStatement {
             match statement {
                 AstNode::Literal(Literal { kind, .. }) => match kind {
                     TokenKind::ExactLiteral => {
-                        if let Some((_, value)) = gen.generate_statement(
-                            ctx.func,
-                            ctx.module,
-                            statement.clone(),
-                            None,
-                            None,
-                            false,
+                        if let Some((_, value)) = statement.clone().compile(
+                            gen,
+                            &CodegenContext {
+                                ty: None,
+                                value: None,
+                                is_return: false,
+                                ..ctx.clone()
+                            },
                         ) {
                             ctx.func
                                 .borrow_mut()
@@ -65,25 +65,27 @@ impl Codegen<'_> for IfStatement {
                         }
                     }
                     TokenKind::Break | TokenKind::Continue => {
-                        gen.generate_statement(
-                            ctx.func,
-                            ctx.module,
-                            statement.clone(),
-                            None,
-                            None,
-                            false,
+                        statement.clone().compile(
+                            gen,
+                            &CodegenContext {
+                                ty: None,
+                                value: None,
+                                is_return: false,
+                                ..ctx.clone()
+                            },
                         );
                     }
                     _ => {}
                 },
                 _ => {
-                    gen.generate_statement(
-                        ctx.func,
-                        ctx.module,
-                        statement.clone(),
-                        None,
-                        None,
-                        false,
+                    statement.clone().compile(
+                        gen,
+                        &CodegenContext {
+                            ty: None,
+                            value: None,
+                            is_return: false,
+                            ..ctx.clone()
+                        },
                     );
                 }
             }
@@ -108,13 +110,14 @@ impl Codegen<'_> for IfStatement {
                 match statement {
                     AstNode::Literal(Literal { kind, .. }) => match kind {
                         TokenKind::ExactLiteral => {
-                            if let Some((_, value)) = gen.generate_statement(
-                                ctx.func,
-                                ctx.module,
-                                statement.clone(),
-                                None,
-                                None,
-                                false,
+                            if let Some((_, value)) = statement.clone().compile(
+                                gen,
+                                &CodegenContext {
+                                    ty: None,
+                                    value: None,
+                                    is_return: false,
+                                    ..ctx.clone()
+                                },
                             ) {
                                 ctx.func
                                     .borrow_mut()
@@ -122,25 +125,27 @@ impl Codegen<'_> for IfStatement {
                             }
                         }
                         TokenKind::Break | TokenKind::Continue => {
-                            gen.generate_statement(
-                                ctx.func,
-                                ctx.module,
-                                statement.clone(),
-                                None,
-                                None,
-                                false,
+                            statement.clone().compile(
+                                gen,
+                                &CodegenContext {
+                                    ty: None,
+                                    value: None,
+                                    is_return: false,
+                                    ..ctx.clone()
+                                },
                             );
                         }
                         _ => {}
                     },
                     _ => {
-                        gen.generate_statement(
-                            ctx.func,
-                            ctx.module,
-                            statement.clone(),
-                            None,
-                            None,
-                            false,
+                        statement.clone().compile(
+                            gen,
+                            &CodegenContext {
+                                ty: None,
+                                value: None,
+                                is_return: false,
+                                ..ctx.clone()
+                            },
                         );
                     }
                 }

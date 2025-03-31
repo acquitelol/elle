@@ -16,14 +16,18 @@ impl Codegen<'_> for MemoryOperation {
         let mut tmp_func = ctx.func.borrow().clone().to_owned();
         tmp_func.add_block("start");
 
-        let (left_ty, _) = gen
-            .generate_statement(
-                &RefCell::new(tmp_func.clone()),
-                ctx.module,
-                *self.left.clone(),
-                None,
-                None,
-                false,
+        let (left_ty, _) = self
+            .left
+            .clone()
+            .compile(
+                gen,
+                &CodegenContext {
+                    func: &RefCell::new(tmp_func.clone()),
+                    ty: None,
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                },
             )
             .expect(&self.left_location.error(format!(
                 "Unexpected error when trying to compile the left side of a {} statement",
@@ -95,12 +99,30 @@ impl Codegen<'_> for MemoryOperation {
                     location: self.left_location,
                 });
 
-                return gen.generate_statement(ctx.func, ctx.module, node, None, None, false);
+                return node.compile(
+                    gen,
+                    &CodegenContext {
+                        ty: None,
+                        value: None,
+                        is_return: false,
+                        ..ctx.clone()
+                    },
+                );
             }
         }
 
-        let (left_ty, _) = gen
-            .generate_statement(ctx.func, ctx.module, *self.left.clone(), None, None, false)
+        let (left_ty, _) = self
+            .left
+            .clone()
+            .compile(
+                gen,
+                &CodegenContext {
+                    ty: None,
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                },
+            )
             .expect(&self.left_location.error(format!(
                 "Unexpected error when trying to compile the left side of a {} statement",
                 if self.value.is_some() {
@@ -110,8 +132,18 @@ impl Codegen<'_> for MemoryOperation {
                 }
             )));
 
-        let (right_ty, _) = gen
-            .generate_statement(ctx.func, ctx.module, *self.right.clone(), None, None, false)
+        let (right_ty, _) = self
+            .right
+            .clone()
+            .compile(
+                gen,
+                &CodegenContext {
+                    ty: None,
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                },
+            )
             .expect(&self.right_location.error(format!(
                 "Unexpected error when trying to compile the right side of a {} statement",
                 if self.value.is_some() {
@@ -169,8 +201,16 @@ impl Codegen<'_> for MemoryOperation {
             location: self.right_location.clone(),
         });
 
-        let (_, compiled_location) = gen
-            .generate_statement(ctx.func, ctx.module, node, None, None, false)
+        let (_, compiled_location) = node
+            .compile(
+                gen,
+                &CodegenContext {
+                    ty: None,
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                },
+            )
             .expect(&self.right_location.error(format!(
                 "Unexpected error when trying to compile the offset of a {} statement",
                 if self.value.is_some() {
@@ -181,14 +221,16 @@ impl Codegen<'_> for MemoryOperation {
             )));
 
         if let Some(ref val) = self.value {
-            let (_, compiled) = gen
-                .generate_statement(
-                    ctx.func,
-                    ctx.module,
-                    *val.clone(),
-                    Some(inner.clone()),
-                    None,
-                    false,
+            let (_, compiled) = val
+                .clone()
+                .compile(
+                    gen,
+                    &CodegenContext {
+                        ty: Some(inner.clone()),
+                        value: None,
+                        is_return: false,
+                        ..ctx.clone()
+                    },
                 )
                 .expect(&self.value_location.error(format!(
                     "Unexpected error when trying to compile the value of a {} statement",

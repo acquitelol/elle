@@ -113,18 +113,16 @@ impl Codegen<'_> for StructLiteral {
                 .member_to_offset(ctx.module, &self.name, &member_name)
                 .unwrap();
 
-            let (mut ty, mut val) = gen
-                .generate_statement(
-                    ctx.func,
-                    ctx.module,
-                    *value,
-                    members
+            let (mut ty, mut val) =
+                value.compile(gen, &CodegenContext {
+                    ty: members
                         .iter()
                         .find(|member| member.name == member_name)
                         .map(|arg| arg.r#type.clone()),
-                    None,
-                    false,
-                )
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                })
                 .expect(
                     &self.location.error(
                         format!("Unexpected error when trying to compile the value of a field '{}' in struct '{}'", member_name, self.name)

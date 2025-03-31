@@ -8,13 +8,13 @@ use crate::{
 
 impl Codegen<'_> for Return {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let res = gen.generate_statement(
-            ctx.func,
-            ctx.module,
-            *self.value,
-            ctx.ty.clone(),
-            None,
-            true,
+        let res = self.value.compile(
+            gen,
+            &CodegenContext {
+                value: None,
+                is_return: true,
+                ..ctx.clone()
+            },
         );
 
         if !ctx.func.borrow_mut().manual {

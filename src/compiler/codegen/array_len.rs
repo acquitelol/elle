@@ -20,25 +20,27 @@ use crate::{
 
 impl Codegen<'_> for ArrayLength {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let (_, val) = gen
-            .generate_statement(
-                ctx.func,
-                ctx.module,
-                AstNode::BinaryOperation(BinaryOperation {
-                    left: self.value,
-                    right: Box::new(AstNode::Literal(Literal {
-                        kind: TokenKind::IntegerLiteral,
-                        value: ValueKind::Number(Type::Word.size(ctx.module) as i128),
-                        location: self.location.clone(),
-                    })),
-                    operator: TokenKind::Subtract,
-                    treat_as_string: false,
-                    dunder_methods: true,
-                    location: self.location.clone(),
-                }),
-                ctx.ty.clone(),
-                None,
-                false,
+        let node = AstNode::BinaryOperation(BinaryOperation {
+            left: self.value,
+            right: Box::new(AstNode::Literal(Literal {
+                kind: TokenKind::IntegerLiteral,
+                value: ValueKind::Number(Type::Word.size(ctx.module) as i128),
+                location: self.location.clone(),
+            })),
+            operator: TokenKind::Subtract,
+            treat_as_string: false,
+            dunder_methods: true,
+            location: self.location.clone(),
+        });
+
+        let (_, val) = node
+            .compile(
+                gen,
+                &CodegenContext {
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                },
             )
             .expect(&self.location.error(
                 "Unexpected error when trying to compile the formula for getting the array length",

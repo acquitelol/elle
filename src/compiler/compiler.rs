@@ -7,36 +7,41 @@ use std::{
 };
 
 use crate::{
-    advance, elle_error, get_MAIN_ID, get_POINTER_ID, hashmap, is_generic,
+    advance, elle_error, get_MAIN_ID, hashmap, is_generic,
     lexer::enums::{Location, TokenKind, ValueKind},
     misc::colors::*,
     parser::{
         enums::{
-            modify_type_in_ast, Argument, ArrayLiteral, AstNode, BinaryOperation, BitwiseNot,
-            Conversion, Environment, FieldAccess, FunctionCall, Literal, Primitive, Return,
-            StructLiteral,
+            modify_type_in_ast, Argument, ArrayLiteral, AstNode, FieldAccess, Literal, Primitive,
+            Return, StructLiteral,
         },
         parser::StructPool,
     },
-    unknown_field, unknown_function, Warning, Warnings, ARBITRARY_ALLOCATOR_NAME, DUNDER_CONSTANTS,
-    ENV_ID, ENV_STRUCT_NAME, EQUALS_CONSTANT, FORMAT_CONSTANT, GC_NOOP, GENERIC_END,
-    GENERIC_IDENTIFIER, LOAD_CONSTANT, MAIN_ID, META_STRUCT_NAME, POINTER_ID,
-    PTR_PRIORITY_CONSTANTS, STORE_CONSTANT, VA_LIST_SIZE_BYTES, VOID_POINTER_ID,
+    unknown_field, Warnings, GENERIC_END, GENERIC_IDENTIFIER, MAIN_ID, META_STRUCT_NAME,
 };
 
 use super::enums::{
-    Comparison, Data, DataItem, Function, Instruction, Linkage, Module, Statement, Type, TypeDef,
-    Value,
+    Comparison, Data, Function, Instruction, Linkage, Module, Statement, Type, TypeDef, Value,
 };
 
+#[derive(Clone)]
 pub struct CodegenContext<'a> {
     pub func: &'a RefCell<Function>,
     pub module: &'a RefCell<Module>,
-    pub stmt: AstNode,
     pub ty: Option<Type>,
     pub value: Option<Value>,
     pub is_return: bool,
 }
+
+// impl CodegenContext {
+//     /// nnf = None, None, false
+//     /// sets:
+//     /// ty -> None
+//     /// value -> None
+//     /// is_return -> false
+//     /// returns a new struct
+//     pub fn to_nnf()
+// }
 
 pub trait Codegen<'a> {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'a>) -> Option<(Type, Value)>;
@@ -355,43 +360,30 @@ impl Compiler {
         for statement in body.iter() {
             // Ignore plain literals that aren't assigned to anything
             // exact literals should not be ignored
+            let ctx = CodegenContext {
+                func: &func_ref,
+                module,
+                ty: None,
+                value: None,
+                is_return: false,
+            };
             match statement {
                 AstNode::Literal(Literal { kind, .. }) => match kind {
-                    TokenKind::ExactLiteral => match self.generate_statement(
-                        &func_ref,
-                        module,
-                        statement.clone(),
-                        None,
-                        None,
-                        false,
-                    ) {
-                        Some((_, value)) => func_ref
-                            .borrow_mut()
-                            .add_instruction(Instruction::Literal(value)),
-                        _ => {}
-                    },
+                    TokenKind::ExactLiteral => {
+                        if let Some((_, value)) = statement.clone().compile(self, &ctx) {
+                            func_ref
+                                .borrow_mut()
+                                .add_instruction(Instruction::Literal(value));
+                        }
+                    }
                     TokenKind::Break | TokenKind::Continue => {
-                        self.generate_statement(
-                            &func_ref,
-                            module,
-                            statement.clone(),
-                            None,
-                            None,
-                            false,
-                        );
+                        statement.clone().compile(self, &ctx);
                     }
                     _ => {}
                 },
-                _ => match self.generate_statement(
-                    &func_ref,
-                    module,
-                    statement.clone(),
-                    None,
-                    None,
-                    false,
-                ) {
-                    _ => {}
-                },
+                _ => {
+                    statement.clone().compile(self, &ctx);
+                }
             }
         }
 
@@ -606,28 +598,6 @@ impl Compiler {
         }
 
         owned_func
-    }
-
-    pub fn generate_statement(
-        &mut self,
-        func: &RefCell<Function>,
-        module: &RefCell<Module>,
-        stmt: AstNode,
-        ty: Option<Type>,
-        value: Option<Value>,
-        is_return: bool,
-    ) -> Option<(Type, Value)> {
-        // TODO: Unclone these when the whole codegen is moved to the Codegen trait
-        let ctx = CodegenContext {
-            func,
-            module,
-            stmt: stmt.clone(),
-            ty: ty.clone(),
-            value: value.clone(),
-            is_return,
-        };
-
-        stmt.compile(self, &ctx)
     }
 
     fn generate_struct(
@@ -1016,8 +986,17 @@ impl Compiler {
 
         let result_tmp = self.new_temporary(Some(&kind.to_string()), true);
 
-        let (left_ty, left_val) = self
-            .generate_statement(func, module, *left, ty.clone(), None, is_return)
+        let (left_ty, left_val) = (*left)
+            .compile(
+                self,
+                &CodegenContext {
+                    func,
+                    module,
+                    ty: ty.clone(),
+                    value: None,
+                    is_return,
+                },
+            )
             .expect(&location.error(
                 "Unexpected error when trying to parse left side of an arithmetic operation",
             ));
@@ -1076,8 +1055,17 @@ impl Compiler {
 
         func.borrow_mut().add_block(right_label);
 
-        let (_, right_val) = self
-            .generate_statement(func, module, *right, ty, None, is_return)
+        let (_, right_val) = (*right)
+            .compile(
+                self,
+                &CodegenContext {
+                    func,
+                    module,
+                    ty,
+                    value: None,
+                    is_return,
+                },
+            )
             .expect(&location.error(
                 "Unexpected error when trying to parse right side of an arithmetic operation",
             ));
@@ -1471,20 +1459,22 @@ impl Compiler {
                     let mut tmp_func = func.borrow().to_owned();
                     tmp_func.add_block("start");
 
-                    let (ty, _) = self.generate_statement(
-                        &RefCell::new(tmp_func),
-                        module,
-                        parameter.1,
-                        param_ty.clone(),
-                        None,
-                        false,
-                    )
-                    .expect(&parameter.0.error(
-                        format!(
-                            "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
-                            name
-                        ))
-                    );
+                    let (ty, _) = parameter.1.compile(
+                            self,
+                            &CodegenContext {
+                                func: &RefCell::new(tmp_func),
+                                module,
+                                ty: param_ty.clone(),
+                                value: None,
+                                is_return: false
+                            }
+                        )
+                        .expect(&parameter.0.error(
+                            format!(
+                                "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
+                                name
+                            ))
+                        );
 
                     let other = {
                         let tmp = arguments.get(i + *add_meta as usize);

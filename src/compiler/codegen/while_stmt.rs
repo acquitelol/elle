@@ -21,20 +21,19 @@ impl Codegen<'_> for WhileLoopStatement {
         gen.loop_labels.push(format!("loop.{}", gen.tmp_counter));
         ctx.func.borrow_mut().add_block(cond_label.clone());
 
-        let (_, value) = gen
-            .generate_statement(
-                ctx.func,
-                ctx.module,
-                *self.condition,
-                ctx.ty.clone(),
-                None,
-                false,
-            )
-            .expect(
-                &self
-                    .location
-                    .error("Unexpected error when trying to compile the condition of a while loop"),
-            );
+        let (_, value) =
+            self.condition
+                .compile(
+                    gen,
+                    &CodegenContext {
+                        value: None,
+                        is_return: false,
+                        ..ctx.clone()
+                    },
+                )
+                .expect(&self.location.error(
+                    "Unexpected error when trying to compile the condition of a while loop",
+                ));
 
         ctx.func
             .borrow_mut()
@@ -47,7 +46,14 @@ impl Codegen<'_> for WhileLoopStatement {
         ctx.func.borrow_mut().add_block(step_label.clone());
 
         if let Some(step) = self.step {
-            gen.generate_statement(ctx.func, ctx.module, *step, ctx.ty.clone(), None, false);
+            step.compile(
+                gen,
+                &CodegenContext {
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                },
+            );
         }
 
         ctx.func
@@ -60,13 +66,14 @@ impl Codegen<'_> for WhileLoopStatement {
             match statement {
                 AstNode::Literal(Literal { kind, .. }) => match kind {
                     TokenKind::ExactLiteral => {
-                        if let Some((_, value)) = gen.generate_statement(
-                            ctx.func,
-                            ctx.module,
-                            statement.clone(),
-                            None,
-                            None,
-                            false,
+                        if let Some((_, value)) = statement.clone().compile(
+                            gen,
+                            &CodegenContext {
+                                ty: None,
+                                value: None,
+                                is_return: false,
+                                ..ctx.clone()
+                            },
                         ) {
                             ctx.func
                                 .borrow_mut()
@@ -74,25 +81,27 @@ impl Codegen<'_> for WhileLoopStatement {
                         }
                     }
                     TokenKind::Break | TokenKind::Continue => {
-                        gen.generate_statement(
-                            ctx.func,
-                            ctx.module,
-                            statement.clone(),
-                            None,
-                            None,
-                            false,
+                        statement.clone().compile(
+                            gen,
+                            &CodegenContext {
+                                ty: None,
+                                value: None,
+                                is_return: false,
+                                ..ctx.clone()
+                            },
                         );
                     }
                     _ => {}
                 },
                 _ => {
-                    gen.generate_statement(
-                        ctx.func,
-                        ctx.module,
-                        statement.clone(),
-                        None,
-                        None,
-                        false,
+                    statement.clone().compile(
+                        gen,
+                        &CodegenContext {
+                            ty: None,
+                            value: None,
+                            is_return: false,
+                            ..ctx.clone()
+                        },
                     );
                 }
             }

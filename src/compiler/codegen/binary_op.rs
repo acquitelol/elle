@@ -50,14 +50,13 @@ impl Codegen<'_> for BinaryOperation {
                 location: self.location.clone(),
             });
 
-            let (ty, val) = gen
-                .generate_statement(
-                    ctx.func,
-                    ctx.module,
-                    node,
-                    ctx.ty.clone(),
-                    None,
-                    ctx.is_return,
+            let (ty, val) = node
+                .compile(
+                    gen,
+                    &CodegenContext {
+                        value: None,
+                        ..ctx.clone()
+                    },
                 )
                 .expect(&self.location.error(
                     "Unexpected error when trying to parse left side of an arithmetic operation",
@@ -66,27 +65,29 @@ impl Codegen<'_> for BinaryOperation {
             return Some((ty, val));
         }
 
-        let (mut left_ty, left_val_unparsed) = gen
-            .generate_statement(
-                ctx.func,
-                ctx.module,
-                *self.left.clone(),
-                ctx.ty.clone(),
-                None,
-                ctx.is_return,
+        let (mut left_ty, left_val_unparsed) = self
+            .left
+            .clone()
+            .compile(
+                gen,
+                &CodegenContext {
+                    value: None,
+                    ..ctx.clone()
+                },
             )
             .expect(&self.location.error(
                 "Unexpected error when trying to parse left side of an arithmetic operation",
             ));
 
-        let (mut right_ty, right_val_unparsed) = gen
-            .generate_statement(
-                ctx.func,
-                ctx.module,
-                *self.right.clone(),
-                ctx.ty.clone(),
-                None,
-                ctx.is_return,
+        let (mut right_ty, right_val_unparsed) = self
+            .right
+            .clone()
+            .compile(
+                gen,
+                &CodegenContext {
+                    value: None,
+                    ..ctx.clone()
+                },
             )
             .expect(&self.location.error(
                 "Unexpected error when trying to parse right side of an arithmetic operation",
@@ -173,14 +174,13 @@ impl Codegen<'_> for BinaryOperation {
                 })
             }
 
-            let (ty, val) = gen
-                .generate_statement(
-                    ctx.func,
-                    ctx.module,
-                    node,
-                    ctx.ty.clone(),
-                    None,
-                    ctx.is_return,
+            let (ty, val) = node
+                .compile(
+                    gen,
+                    &CodegenContext {
+                        value: None,
+                        ..ctx.clone()
+                    },
                 )
                 .expect(
                     &self.location.error(
@@ -238,8 +238,16 @@ impl Codegen<'_> for BinaryOperation {
                         self.location.clone(),
                     );
 
-                    let res = gen
-                        .generate_statement(ctx.func, ctx.module, meta, None, None, false)
+                    let res = meta
+                        .compile(
+                            gen,
+                            &CodegenContext {
+                                ty: None,
+                                value: None,
+                                is_return: false,
+                                ..ctx.clone()
+                            },
+                        )
                         .expect(&self.location.error(
                             "Unexpected error when trying to compile the Elle metadata struct",
                         ));
@@ -248,18 +256,21 @@ impl Codegen<'_> for BinaryOperation {
                 }
 
                 if tmp_function.variadic {
-                    let res = gen
-                        .generate_statement(
-                            ctx.func,
-                            ctx.module,
-                            AstNode::Literal(Literal {
-                                kind: TokenKind::ExactLiteral,
-                                value: ValueKind::String("...".into()),
-                                location: self.location.clone(),
-                            }),
-                            Some(ty.clone()),
-                            None,
-                            false,
+                    let node = AstNode::Literal(Literal {
+                        kind: TokenKind::ExactLiteral,
+                        value: ValueKind::String("...".into()),
+                        location: self.location.clone(),
+                    });
+
+                    let res = node
+                        .compile(
+                            gen,
+                            &CodegenContext {
+                                ty: Some(ty.clone()),
+                                value: None,
+                                is_return: false,
+                                ..ctx.clone()
+                            },
                         )
                         .expect(&self.location.error(
                             "Unexpected error when trying to compile the variadic literal '...'",

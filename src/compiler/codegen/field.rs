@@ -8,14 +8,15 @@ use crate::{
 
 impl Codegen<'_> for FieldAccess {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let (ty, left) = gen
-            .generate_statement(
-                ctx.func,
-                ctx.module,
-                *self.left,
-                ctx.ty.clone(),
-                None,
-                false,
+        let (ty, left) = self
+            .left
+            .compile(
+                gen,
+                &CodegenContext {
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                },
             )
             .expect(&self.location.error(
                 "Unexpected error when trying to compile the left side of a struct field access",
@@ -32,14 +33,15 @@ impl Codegen<'_> for FieldAccess {
         );
 
         if let Some(value) = self.value {
-            let (_, compiled) = gen
-                .generate_statement(
-                    ctx.func,
-                    ctx.module,
-                    *value,
-                    Some(field_ty.clone()),
-                    None,
-                    false,
+            let (_, compiled) = value
+                .compile(
+                    gen,
+                    &CodegenContext {
+                        ty: Some(field_ty.clone()),
+                        value: None,
+                        is_return: false,
+                        ..ctx.clone()
+                    },
                 )
                 .expect(&self.location.error(
                     "Unexpected error when trying to compile the value of a store statement",

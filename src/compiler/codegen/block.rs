@@ -21,13 +21,14 @@ impl Codegen<'_> for BlockStatement {
             match statement {
                 AstNode::Literal(Literal { kind, .. }) => match kind {
                     TokenKind::ExactLiteral => {
-                        if let Some((_, value)) = gen.generate_statement(
-                            ctx.func,
-                            ctx.module,
-                            statement.clone(),
-                            None,
-                            None,
-                            false,
+                        if let Some((_, value)) = statement.clone().compile(
+                            gen,
+                            &CodegenContext {
+                                ty: None,
+                                value: None,
+                                is_return: false,
+                                ..ctx.clone()
+                            },
                         ) {
                             ctx.func
                                 .borrow_mut()
@@ -35,25 +36,27 @@ impl Codegen<'_> for BlockStatement {
                         }
                     }
                     TokenKind::Break | TokenKind::Continue => {
-                        gen.generate_statement(
-                            ctx.func,
-                            ctx.module,
-                            statement.clone(),
-                            None,
-                            None,
-                            false,
+                        statement.clone().compile(
+                            gen,
+                            &CodegenContext {
+                                ty: None,
+                                value: None,
+                                is_return: false,
+                                ..ctx.clone()
+                            },
                         );
                     }
                     _ => {}
                 },
                 _ => {
-                    gen.generate_statement(
-                        ctx.func,
-                        ctx.module,
-                        statement.clone(),
-                        None,
-                        None,
-                        false,
+                    statement.clone().compile(
+                        gen,
+                        &CodegenContext {
+                            ty: None,
+                            value: None,
+                            is_return: false,
+                            ..ctx.clone()
+                        },
                     );
                 }
             }

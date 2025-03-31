@@ -16,14 +16,18 @@ impl Codegen<'_> for SetAllocator {
         let mut tmp_func = Function::default();
         tmp_func.add_block("start");
 
-        let (ty, _) = gen
-            .generate_statement(
-                &RefCell::new(tmp_func),
-                ctx.module,
-                *self.value.clone(),
-                None,
-                None,
-                ctx.is_return,
+        let (ty, _) = self
+            .value
+            .clone()
+            .compile(
+                gen,
+                &CodegenContext {
+                    func: &RefCell::new(tmp_func),
+                    ty: None,
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                },
             )
             .expect(
                 &self
@@ -91,34 +95,37 @@ impl Codegen<'_> for SetAllocator {
         ];
 
         for (field, expr) in parts {
-            gen.generate_statement(
-                ctx.func,
-                ctx.module,
-                AstNode::FieldAccess(FieldAccess {
-                    left: Box::new(AstNode::Environment(Environment {
-                        value: None,
-                        location: self.location.clone(),
-                    })),
-                    right: Box::new(AstNode::FieldAccess(FieldAccess {
-                        left: Box::new(AstNode::Literal(Literal {
-                            kind: TokenKind::Identifier,
-                            value: ValueKind::String("allocator".into()),
-                            location: self.location.clone(),
-                        })),
-                        right: Box::new(AstNode::Literal(Literal {
-                            kind: TokenKind::Identifier,
-                            value: ValueKind::String(field.into()),
-                            location: self.location.clone(),
-                        })),
-                        value: None,
-                        location: self.location.clone(),
-                    })),
-                    value: Some(Box::new(expr)),
+            let node = AstNode::FieldAccess(FieldAccess {
+                left: Box::new(AstNode::Environment(Environment {
+                    value: None,
                     location: self.location.clone(),
-                }),
-                None,
-                None,
-                ctx.is_return,
+                })),
+                right: Box::new(AstNode::FieldAccess(FieldAccess {
+                    left: Box::new(AstNode::Literal(Literal {
+                        kind: TokenKind::Identifier,
+                        value: ValueKind::String("allocator".into()),
+                        location: self.location.clone(),
+                    })),
+                    right: Box::new(AstNode::Literal(Literal {
+                        kind: TokenKind::Identifier,
+                        value: ValueKind::String(field.into()),
+                        location: self.location.clone(),
+                    })),
+                    value: None,
+                    location: self.location.clone(),
+                })),
+                value: Some(Box::new(expr)),
+                location: self.location.clone(),
+            });
+
+            node.compile(
+                gen,
+                &CodegenContext {
+                    ty: None,
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                },
             )
             .expect(
                 &self

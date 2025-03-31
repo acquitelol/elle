@@ -8,14 +8,15 @@ use crate::{
 
 impl Codegen<'_> for LogicalNot {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let (ty, val) = gen
-            .generate_statement(
-                ctx.func,
-                ctx.module,
-                *self.value,
-                ctx.ty.clone(),
-                None,
-                false,
+        let (ty, val) = self
+            .value
+            .compile(
+                gen,
+                &CodegenContext {
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                },
             )
             .expect(
                 &self

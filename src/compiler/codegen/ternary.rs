@@ -14,8 +14,17 @@ impl Codegen<'_> for Ternary {
         let false_label = format!("iff.{}", gen.tmp_counter);
         let end_label = format!("end.{}", gen.tmp_counter);
 
-        let (_, condition_val) = gen
-            .generate_statement(ctx.func, ctx.module, *self.condition, None, None, false)
+        let (_, condition_val) = self
+            .condition
+            .compile(
+                gen,
+                &CodegenContext {
+                    ty: None,
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                },
+            )
             .expect(
                 &self
                     .location
@@ -32,14 +41,15 @@ impl Codegen<'_> for Ternary {
 
         ctx.func.borrow_mut().add_block(true_label);
 
-        let (if_true_ty, if_true_val) = gen
-            .generate_statement(
-                ctx.func,
-                ctx.module,
-                *self.if_true,
-                None,
-                None,
-                ctx.is_return,
+        let (if_true_ty, if_true_val) = self
+            .if_true
+            .compile(
+                gen,
+                &CodegenContext {
+                    ty: None,
+                    value: None,
+                    ..ctx.clone()
+                },
             )
             .expect(
                 &self
@@ -59,20 +69,19 @@ impl Codegen<'_> for Ternary {
 
         ctx.func.borrow_mut().add_block(false_label);
 
-        let (if_false_ty, if_false_val) = gen
-            .generate_statement(
-                ctx.func,
-                ctx.module,
-                *self.if_false,
-                None,
-                None,
-                ctx.is_return,
-            )
-            .expect(
-                &self
-                    .location
-                    .error("Unexpected error when trying to compile the `false` path of a ternary"),
-            );
+        let (if_false_ty, if_false_val) =
+            self.if_false
+                .compile(
+                    gen,
+                    &CodegenContext {
+                        ty: None,
+                        value: None,
+                        ..ctx.clone()
+                    },
+                )
+                .expect(&self.location.error(
+                    "Unexpected error when trying to compile the `false` path of a ternary",
+                ));
 
         ctx.func.borrow_mut().assign_instruction(
             &temp,

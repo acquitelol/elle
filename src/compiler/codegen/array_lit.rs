@@ -22,14 +22,18 @@ impl Codegen<'_> for ArrayLiteral {
             let inner_ty = if let Some(ref ty) = self.explicit_inner {
                 Some(ty.clone())
             } else if self.values.len() > 0 {
-                let (ty, _) = gen
-                    .generate_statement(
-                        &RefCell::new(new_func),
-                        ctx.module,
-                        self.values[0].clone().1,
-                        None,
-                        None,
-                        false,
+                let (ty, _) = self.values[0]
+                    .clone()
+                    .1
+                    .compile(
+                        gen,
+                        &CodegenContext {
+                            func: &RefCell::new(new_func),
+                            ty: None,
+                            value: None,
+                            is_return: false,
+                            ..ctx.clone()
+                        },
                     )
                     .expect(&self.location.error(format!(
                         "Unexpected error when trying to compile the first item in an array"
@@ -80,18 +84,9 @@ impl Codegen<'_> for ArrayLiteral {
                 location: self.location.clone(),
             });
 
-            let (ty, val) = gen
-                .generate_statement(
-                    ctx.func,
-                    ctx.module,
-                    node,
-                    ctx.ty.clone(),
-                    ctx.value.clone(),
-                    ctx.is_return,
-                )
-                .expect(&self.location.error(format!(
-                    "Unexpected error when trying to compile a dynamic array"
-                )));
+            let (ty, val) = node.compile(gen, ctx).expect(&self.location.error(format!(
+                "Unexpected error when trying to compile a dynamic array"
+            )));
 
             return Some((ty, val));
         }
@@ -112,18 +107,20 @@ impl Codegen<'_> for ArrayLiteral {
         }
 
         for (i, (location, value)) in self.values.iter().enumerate() {
-            let (ty, val) = gen
-                .generate_statement(
-                    ctx.func,
-                    ctx.module,
-                    value.clone(),
-                    if inner_ty.is_some() {
-                        inner_ty.clone()
-                    } else {
-                        first_type.clone()
+            let (ty, val) = value
+                .clone()
+                .compile(
+                    gen,
+                    &CodegenContext {
+                        ty: if inner_ty.is_some() {
+                            inner_ty.clone()
+                        } else {
+                            first_type.clone()
+                        },
+                        value: None,
+                        is_return: false,
+                        ..ctx.clone()
                     },
-                    None,
-                    false,
                 )
                 .expect(&location.error(format!(
                     "Unexpected error when trying to compile an item in an array with index {}",

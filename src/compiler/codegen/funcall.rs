@@ -38,20 +38,20 @@ impl Codegen<'_> for FunctionCall {
                     .error("Tried to get the 0th parameter to parse struct call but failed"),
             );
 
-            let (mut ty, val) = gen.generate_statement(
-                ctx.func,
-                ctx.module,
-                parameter.1.clone(),
-                None,
-                None,
-                false,
-            )
-            .expect(&parameter.0.error(
-                format!(
-                    "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
-                    name
-                ))
-            );
+            let (mut ty, val) = parameter.1.clone().compile(
+                gen,
+                &CodegenContext {
+                    ty: None,
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                })
+                .expect(&parameter.0.error(
+                    format!(
+                        "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
+                        name
+                    ))
+                );
 
             // The first param needs to be compiled to get its type
             // however if the first param is mutating (ie `yield()`)
@@ -140,27 +140,34 @@ impl Codegen<'_> for FunctionCall {
                 generics: vec![],
                 known_generics: hashmap![],
                 // TODO: Allow the function declaration to specify a real signature instead of just `fn *`
-                arguments: parameters.iter().map(|param| {
-                    let mut tmp_func = Function::default();
-                    tmp_func.add_block("start");
+                arguments: parameters
+                    .iter()
+                    .map(|param| {
+                        let mut tmp_func = Function::default();
+                        tmp_func.add_block("start");
 
-                    (gen.generate_statement(
-                        &RefCell::new(tmp_func),
-                        ctx.module,
-                        param.1.clone(),
-                        None,
-                        None,
-                        false,
-                    )
-                    .expect(&param.0.error(
-                        format!(
-                            "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
-                            name
-                        ))
-                    ), false)
-                }).collect(),
+                        (
+                            param.1.clone().compile(
+                                gen,
+                                &CodegenContext {
+                                    func: &RefCell::new(tmp_func),
+                                    ty: None,
+                                    value: None,
+                                    is_return: false,
+                                    ..ctx.clone()
+                                },
+                            ).expect(&param.0.error(
+                                format!(
+                                    "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
+                                    name
+                                ))
+                            ),
+                            false,
+                        )
+                    })
+                    .collect(),
                 return_type: Some(declarative_ty.clone()),
-                blocks: vec![]
+                blocks: vec![],
             };
 
             if let Ok((ty, _)) = callback {
@@ -280,14 +287,12 @@ impl Codegen<'_> for FunctionCall {
             let (ty, val) = if i == 0 && first_param.is_some() && !got_address {
                 first_param.clone().unwrap()
             } else {
-                gen.generate_statement(
-                    ctx.func,
-                    ctx.module,
-                    parameter.1,
-                    param_ty.clone(),
-                    None,
-                    false,
-                )
+                parameter.1.compile(gen, &CodegenContext {
+                    ty: param_ty.clone(),
+                    value: None,
+                    is_return: false,
+                    ..ctx.clone()
+                })
                 .expect(&parameter.0.error(
                     format!(
                         "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
@@ -458,14 +463,15 @@ impl Codegen<'_> for FunctionCall {
         let ty = tmp_function.return_type.clone().unwrap_or(declarative_ty);
 
         if add_meta {
-            let res = gen
-                .generate_statement(
-                    ctx.func,
-                    ctx.module,
-                    meta_struct,
-                    Some(ty.clone()),
-                    None,
-                    false,
+            let res = meta_struct
+                .compile(
+                    gen,
+                    &CodegenContext {
+                        ty: Some(ty.clone()),
+                        value: None,
+                        is_return: false,
+                        ..ctx.clone()
+                    },
                 )
                 .expect(
                     &call_location
@@ -476,18 +482,21 @@ impl Codegen<'_> for FunctionCall {
         }
 
         if tmp_function.variadic {
-            let res = gen
-                .generate_statement(
-                    ctx.func,
-                    ctx.module,
-                    AstNode::Literal(Literal {
-                        kind: TokenKind::ExactLiteral,
-                        value: ValueKind::String("...".into()),
-                        location: Rc::new(call_location.clone()),
-                    }),
-                    Some(ty.clone()),
-                    None,
-                    false,
+            let node = AstNode::Literal(Literal {
+                kind: TokenKind::ExactLiteral,
+                value: ValueKind::String("...".into()),
+                location: Rc::new(call_location.clone()),
+            });
+
+            let res = node
+                .compile(
+                    gen,
+                    &CodegenContext {
+                        ty: Some(ty.clone()),
+                        value: None,
+                        is_return: false,
+                        ..ctx.clone()
+                    },
                 )
                 .expect(
                     &call_location.error(

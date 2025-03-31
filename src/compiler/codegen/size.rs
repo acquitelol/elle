@@ -23,13 +23,19 @@ impl Codegen<'_> for Size {
             }
 
             Err(value) => {
-                let (ty, val) = gen
-                    .generate_statement(ctx.func, ctx.module, *value, ctx.ty.clone(), None, false)
-                    .expect(
-                        &self.location.error(
+                let (ty, val) =
+                    value
+                        .compile(
+                            gen,
+                            &CodegenContext {
+                                value: None,
+                                is_return: false,
+                                ..ctx.clone()
+                            },
+                        )
+                        .expect(&self.location.error(
                             "Unexpected error when trying to compile the size of a statement",
-                        ),
-                    );
+                        ));
 
                 let size = gen.new_temporary(Some("size"), true);
 

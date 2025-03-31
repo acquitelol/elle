@@ -24,14 +24,13 @@ impl Codegen<'_> for Environment {
                 })
             }
 
-            let (ty, val) = gen
-                .generate_statement(
-                    ctx.func,
-                    ctx.module,
-                    *value,
-                    ctx.ty.clone(),
-                    None,
-                    ctx.is_return,
+            let (ty, val) = value
+                .compile(
+                    gen,
+                    &CodegenContext {
+                        value: None,
+                        ..ctx.clone()
+                    },
                 )
                 .expect(
                     &self
