@@ -5,7 +5,8 @@ use std::rc::Rc;
 use super::enums::{
     Address, Argument, ArrayLength, ArrayLiteral, AstNode, BinaryOperation, BitwiseNot, Buffer,
     Conversion, Declare, Environment, FunctionCall, IfStatement, Lambda, Literal, LogicalNot,
-    MemoryOperation, Primitive, Return, SetAllocator, Ternary, VariadicArgument, VariadicStart,
+    MemoryOperation, Primitive, Return, SetAllocator, Size, Ternary, VariadicArgument,
+    VariadicStart,
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
@@ -1900,10 +1901,10 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
-        let mut expression = AstNode::Size {
+        let mut expression = AstNode::Size(Size {
             value,
             location: Rc::new(location),
-        };
+        });
 
         match self.current_token().kind {
             other if other.is_ternary_start() => {
@@ -2684,10 +2685,10 @@ impl<'a> Statement<'a> {
                     (
                         location.clone(),
                         AstNode::BinaryOperation(BinaryOperation {
-                            left: Box::new(AstNode::Size {
+                            left: Box::new(AstNode::Size(Size {
                                 value: Ok(ty),
                                 location: location.clone(),
-                            }),
+                            })),
                             right: Box::new(count),
                             operator: TokenKind::Multiply,
                             treat_as_string: false,
@@ -2789,10 +2790,10 @@ impl<'a> Statement<'a> {
                     (
                         location.clone(),
                         AstNode::BinaryOperation(BinaryOperation {
-                            left: Box::new(AstNode::Size {
+                            left: Box::new(AstNode::Size(Size {
                                 value: Ok(ty),
                                 location: location.clone(),
-                            }),
+                            })),
                             right: Box::new(count),
                             operator: TokenKind::Multiply,
                             treat_as_string: false,

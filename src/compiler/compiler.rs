@@ -649,73 +649,7 @@ impl Compiler {
             AstNode::ArrayLiteral(this) => this.compile(self, &ctx),
             AstNode::Address(this) => this.compile(self, &ctx),
             AstNode::Ternary(this) => this.compile(self, &ctx),
-            AstNode::Size { value, location } => match value {
-                Ok(ty) => {
-                    let tmp_ty = Type::Long;
-                    let temp = self.new_temporary(Some("size"), true);
-
-                    func.borrow_mut().assign_instruction(
-                        &temp,
-                        &tmp_ty,
-                        Instruction::Copy(Value::Const("".into(), ty.size(module) as i128)),
-                    );
-
-                    Some((tmp_ty, temp))
-                }
-
-                Err(value) => {
-                    let (ty, val) = self
-                        .generate_statement(func, module, *value, ty, None, false)
-                        .expect(&location.error(
-                            "Unexpected error when trying to compile the size of a statement",
-                        ));
-
-                    let size = self.new_temporary(Some("size"), true);
-
-                    match &ty {
-                        &Type::Pointer(_) => {
-                            let ty = Type::Long;
-
-                            if let Some((_, buf_val)) = self.buf_metadata.get(&val).cloned() {
-                                func.borrow_mut().assign_instruction(
-                                    &size,
-                                    &ty,
-                                    Instruction::Copy(buf_val),
-                                );
-
-                                return Some((ty, size));
-                            }
-
-                            func.borrow_mut().assign_instruction(
-                                &size,
-                                &ty,
-                                Instruction::Copy(Value::Const("".into(), ty.size(module) as i128)),
-                            );
-
-                            Some((ty, size))
-                        }
-                        other => {
-                            func.borrow_mut().assign_instruction(
-                                &size,
-                                &other,
-                                Instruction::Copy(Value::Const(
-                                    if other.clone() == Type::Double {
-                                        "d_"
-                                    } else if other.clone() == Type::Single {
-                                        "s_"
-                                    } else {
-                                        ""
-                                    }
-                                    .into(),
-                                    ty.size(module) as i128,
-                                )),
-                            );
-
-                            Some((other.to_owned(), size))
-                        }
-                    }
-                }
-            },
+            AstNode::Size(this) => this.compile(self, &ctx),
             AstNode::StructLiteral {
                 mut name,
                 values,

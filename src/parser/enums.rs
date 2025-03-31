@@ -172,6 +172,12 @@ pub struct Ternary {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Size {
+    pub value: Result<Type, Box<AstNode>>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -231,10 +237,7 @@ pub enum AstNode {
     Conversion(Conversion),
     /// Returns the size (in bytes) or length, depending on if `standalone` is set to true
     /// The result is used to allow for getting the size of both expressions and types
-    Size {
-        value: Result<Type, Box<AstNode>>,
-        location: Rc<Location>,
-    },
+    Size(Size),
     /// Creates a capturing closure that takes in some number of arguments
     /// and returns a single line statement result
     Lambda(Lambda),
@@ -476,7 +479,7 @@ fn modify_type_in_node(
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
-        AstNode::Size { value, .. } => match value {
+        AstNode::Size(Size { value, .. }) => match value {
             Ok(ty) => {
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }
