@@ -98,6 +98,12 @@ pub struct VariadicArgument {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Environment {
+    pub value: Option<Box<AstNode>>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -205,10 +211,7 @@ pub enum AstNode {
         location: Rc<Location>,
     },
     /// Allows for getting and setting the global environment pointer, in static memory
-    Environment {
-        value: Option<Box<AstNode>>,
-        location: Rc<Location>,
-    },
+    Environment(Environment),
     /// Allows to set the current allocator to something other than the default allocator
     /// automatically uses the expression's type to get the correct functions as this
     /// needs to be done through polymorphism at runtime
@@ -458,7 +461,7 @@ fn modify_type_in_node(
                 *ast_node = Box::new(new_ast_node);
             }
         },
-        AstNode::Environment { value, .. } => {
+        AstNode::Environment(Environment { value, .. }) => {
             if let Some(val) = value {
                 let new_value =
                     modify_type_in_node(*val.clone(), generics, known_types, struct_pool, tree);

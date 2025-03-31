@@ -19,7 +19,8 @@ use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex
 use parser::enums::{Argument, AstNode, Primitive};
 
 use crate::parser::enums::{
-    BinaryOperation, Declare, FunctionCall, Literal, MemoryOperation, Return, WhileLoopStatement,
+    BinaryOperation, Declare, Environment, FunctionCall, Literal, MemoryOperation, Return,
+    WhileLoopStatement,
 };
 
 pub enum Warning {
@@ -528,7 +529,7 @@ fn main() -> ExitCode {
                         location: loc.clone(),
                         value_location: loc.clone(),
                     }),
-                    AstNode::Environment {
+                    AstNode::Environment(Environment {
                         value: Some(Box::new(AstNode::Address {
                             value: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
@@ -538,7 +539,7 @@ fn main() -> ExitCode {
                             location: loc.clone(),
                         })),
                         location: loc.clone(),
-                    },
+                    }),
                     AstNode::SetAllocator {
                         value: Box::new(AstNode::FieldAccess {
                             left: Box::new(AstNode::Literal(Literal {

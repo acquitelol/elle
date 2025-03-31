@@ -12,8 +12,8 @@ use crate::{
     misc::colors::*,
     parser::{
         enums::{
-            modify_type_in_ast, Argument, AstNode, BinaryOperation, FunctionCall, Literal,
-            Primitive, Return,
+            modify_type_in_ast, Argument, AstNode, BinaryOperation, Environment, FunctionCall,
+            Literal, Primitive, Return,
         },
         parser::StructPool,
     },
@@ -638,48 +638,7 @@ impl Compiler {
             AstNode::WhileLoopStatement(this) => this.compile(self, &ctx),
             AstNode::VariadicStart(this) => this.compile(self, &ctx),
             AstNode::VariadicArgument(this) => this.compile(self, &ctx),
-            AstNode::Environment { value, location } => {
-                if let Some(value) = value {
-                    if !self
-                        .data_sections
-                        .iter()
-                        .find(|data| data.name == ENV_ID)
-                        .is_some()
-                    {
-                        self.data_sections.push(Data {
-                            linkage: Linkage::public(),
-                            name: ENV_ID.into(),
-                            align: None,
-                            items: vec![(Type::Long, DataItem::Const(0))],
-                        })
-                    }
-
-                    let (ty, val) =
-                        self.generate_statement(func, module, *value, ty, None, is_return)
-                            .expect(&location.error(
-                                "Unexpected error when compiling value to set to environment",
-                            ));
-
-                    func.borrow_mut().add_instruction(Instruction::Store(
-                        ty.clone(),
-                        Value::Global(ENV_ID.into()),
-                        val.clone(),
-                    ));
-
-                    Some((ty, val))
-                } else {
-                    let ty = Type::Pointer(Box::new(Type::Struct(ENV_STRUCT_NAME.into())));
-                    let val = self.new_temporary(None, false);
-
-                    func.borrow_mut().assign_instruction(
-                        &val,
-                        &ty,
-                        Instruction::Load(ty.clone(), Value::Global(ENV_ID.into())),
-                    );
-
-                    Some((ty, val))
-                }
-            }
+            AstNode::Environment(this) => this.compile(self, &ctx),
             AstNode::SetAllocator { value, location } => {
                 let mut tmp_func = Function::default();
                 tmp_func.add_block("start");
@@ -762,10 +721,10 @@ impl Compiler {
                         func,
                         module,
                         AstNode::FieldAccess {
-                            left: Box::new(AstNode::Environment {
+                            left: Box::new(AstNode::Environment(Environment {
                                 value: None,
                                 location: location.clone(),
-                            }),
+                            })),
                             right: Box::new(AstNode::FieldAccess {
                                 left: Box::new(AstNode::Literal(Literal {
                                     kind: TokenKind::Identifier,

@@ -3,8 +3,8 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 
 use super::enums::{
-    Argument, AstNode, BinaryOperation, Buffer, Declare, FunctionCall, IfStatement, Literal,
-    MemoryOperation, Primitive, Return, VariadicArgument, VariadicStart,
+    Argument, AstNode, BinaryOperation, Buffer, Declare, Environment, FunctionCall, IfStatement,
+    Literal, MemoryOperation, Primitive, Return, VariadicArgument, VariadicStart,
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
@@ -2575,31 +2575,31 @@ impl<'a> Statement<'a> {
         let location = self.current_token().location.clone();
         self.advance();
 
-        let mut expression = AstNode::Environment {
+        let mut expression = AstNode::Environment(Environment {
             value: None,
             location: location.clone(),
-        };
+        });
 
         match self.current_token().kind {
             TokenKind::Equal => {
                 self.advance();
                 let value_tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
 
-                expression = AstNode::Environment {
+                expression = AstNode::Environment(Environment {
                     value: Some(Box::new(
                         Statement::new(value_tokens, 0, &self.body, self.shared)
                             .parse()
                             .0,
                     )),
                     location: location.clone(),
-                }
+                })
             }
 
             other if other.is_declarative() => {
-                expression = AstNode::Environment {
+                expression = AstNode::Environment(Environment {
                     value: Some(Box::new(self.parse_declarative_node(expression))),
                     location: location.clone(),
-                }
+                })
             }
 
             TokenKind::Dot => {
@@ -2667,10 +2667,10 @@ impl<'a> Statement<'a> {
                     (
                         location.clone(),
                         AstNode::FieldAccess {
-                            left: Box::new(AstNode::Environment {
+                            left: Box::new(AstNode::Environment(Environment {
                                 value: None,
                                 location: location.clone(),
-                            }),
+                            })),
                             right: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("allocator".into()),
@@ -2771,10 +2771,10 @@ impl<'a> Statement<'a> {
                     (
                         location.clone(),
                         AstNode::FieldAccess {
-                            left: Box::new(AstNode::Environment {
+                            left: Box::new(AstNode::Environment(Environment {
                                 value: None,
                                 location: location.clone(),
-                            }),
+                            })),
                             right: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("allocator".into()),
@@ -2858,10 +2858,10 @@ impl<'a> Statement<'a> {
                 (
                     location.clone(),
                     AstNode::FieldAccess {
-                        left: Box::new(AstNode::Environment {
+                        left: Box::new(AstNode::Environment(Environment {
                             value: None,
                             location: location.clone(),
-                        }),
+                        })),
                         right: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("allocator".into()),
@@ -2926,10 +2926,10 @@ impl<'a> Statement<'a> {
 
         AstNode::SetAllocator {
             value: Box::new(AstNode::FieldAccess {
-                left: Box::new(AstNode::Environment {
+                left: Box::new(AstNode::Environment(Environment {
                     value: None,
                     location: location.clone(),
-                }),
+                })),
                 right: Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String("default_allocator".into()),

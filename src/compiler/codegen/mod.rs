@@ -1,6 +1,7 @@
 pub mod binop;
 pub mod buffer;
 pub mod declare;
+pub mod env;
 pub mod funcall;
 pub mod r#if;
 pub mod literal;
