@@ -50,6 +50,14 @@ pub struct FunctionCall {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Buffer {
+    pub name: String,
+    pub r#type: Option<Type>,
+    pub size: Box<AstNode>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -88,12 +96,7 @@ pub enum AstNode {
         location: Rc<Location>,
     },
     /// Declares a buffer named `name` with an inner type `r#type` and size `size`
-    Buffer {
-        name: String,
-        r#type: Option<Type>,
-        size: Box<AstNode>,
-        location: Rc<Location>,
-    },
+    Buffer(Buffer),
     /// Declares an array literal of size `values.len()` and values `values` and returns a pointer to the start of it
     ArrayLiteral {
         explicit_inner: Option<Type>,
@@ -269,7 +272,7 @@ fn modify_type_in_node(
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
-        AstNode::Buffer { r#type, size, .. } => {
+        AstNode::Buffer(Buffer { r#type, size, .. }) => {
             if let Some(ty) = r#type {
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }

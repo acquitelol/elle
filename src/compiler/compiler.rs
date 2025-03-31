@@ -50,7 +50,7 @@ pub struct Compiler {
     struct_pool: StructPool,
     pub loop_labels: Vec<String>,
     // ret_types: HashMap<String, Type>,
-    buf_metadata: HashMap<Value, (Type, Value)>,
+    pub buf_metadata: HashMap<Value, (Type, Value)>,
     tree: Vec<Primitive>,
     warnings: Warnings,
     // lambda functions that should be added as soon as possible
@@ -632,65 +632,7 @@ impl Compiler {
             AstNode::BinaryOperation(this) => this.compile(self, &ctx),
             AstNode::Literal(this) => this.compile(self, &ctx),
             AstNode::FunctionCall(this) => this.compile(self, &ctx),
-            AstNode::Buffer {
-                name,
-                r#type,
-                size,
-                location,
-            } => {
-                let buf_ty = Type::Pointer(Box::new(r#type.clone().unwrap()));
-
-                let (ty, val) = self
-                    .generate_statement(
-                        func,
-                        module,
-                        if let Some(ref ty) = r#type {
-                            AstNode::BinaryOperation(BinaryOperation {
-                                left: size,
-                                right: Box::new(AstNode::Literal(Literal {
-                                    kind: TokenKind::LongLiteral,
-                                    value: ValueKind::Number(ty.size(module) as i128),
-                                    location: location.clone(),
-                                })),
-                                operator: TokenKind::Multiply,
-                                treat_as_string: false,
-                                dunder_methods: true,
-                                location: location.clone(),
-                            })
-                        } else {
-                            AstNode::Literal(Literal {
-                                kind: TokenKind::LongLiteral,
-                                value: ValueKind::Number(0),
-                                location: location.clone(),
-                            })
-                        },
-                        ty,
-                        None,
-                        false,
-                    )
-                    .expect(&location.error(format!(
-                        "Unexpected error when trying to compile size for a buffer named '{}'",
-                        name
-                    )));
-
-                let tmp = self.new_variable(&buf_ty, &name, Some(func), true, false);
-
-                let (_, converted_val) =
-                    self.convert_to_type(func, ty, Type::Long, val, &location, &location, true);
-
-                func.borrow_mut().assign_instruction(
-                    &tmp,
-                    &buf_ty,
-                    Instruction::Alloc8(converted_val.clone()),
-                );
-
-                self.buf_metadata.insert(
-                    tmp.clone(),
-                    (buf_ty.get_pointer_inner().unwrap(), converted_val),
-                );
-
-                Some((Type::Pointer(Box::new(buf_ty)), tmp))
-            }
+            AstNode::Buffer(this) => this.compile(self, &ctx),
             AstNode::MemoryOperation {
                 left,
                 right,

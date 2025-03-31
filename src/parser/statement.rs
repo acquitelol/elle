@@ -3,7 +3,7 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 
 use super::enums::{
-    Argument, AstNode, BinaryOperation, Declare, FunctionCall, Literal, Primitive, Return,
+    Argument, AstNode, BinaryOperation, Buffer, Declare, FunctionCall, Literal, Primitive, Return,
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
@@ -779,12 +779,12 @@ impl<'a> Statement<'a> {
         self.advance();
         self.expect_tokens(vec![TokenKind::Semicolon]);
 
-        AstNode::Buffer {
+        AstNode::Buffer(Buffer {
             name,
             r#type: Some(ty.unwrap_or(Type::Byte)),
             size: Box::new(size.unwrap()),
             location: Rc::new(location),
-        }
+        })
     }
 
     fn parse_array(&mut self, dynamic: bool) -> AstNode {
