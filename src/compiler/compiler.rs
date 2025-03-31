@@ -644,41 +644,7 @@ impl Compiler {
             AstNode::Conversion(this) => this.compile(self, &ctx),
             AstNode::LogicalNot(this) => this.compile(self, &ctx),
             AstNode::BitwiseNot(this) => this.compile(self, &ctx),
-            AstNode::ArrayLength { value, location } => {
-                let (_, val) = self
-                    .generate_statement(
-                        func,
-                        module,
-                        AstNode::BinaryOperation(BinaryOperation {
-                            left: value,
-                            right: Box::new(AstNode::Literal(Literal {
-                                kind: TokenKind::IntegerLiteral,
-                                value: ValueKind::Number(Type::Word.size(module) as i128),
-                                location: location.clone(),
-                            })),
-                            operator: TokenKind::Subtract,
-                            treat_as_string: false,
-                            dunder_methods: true,
-                            location: location.clone(),
-                        }),
-                        ty,
-                        None,
-                        false,
-                    )
-                    .expect(&location.error(
-                        "Unexpected error when trying to compile the formula for getting the array length",
-                    ));
-
-                let temp = self.new_temporary(Some("array.length"), true);
-
-                func.borrow_mut().assign_instruction(
-                    &temp,
-                    &Type::Word,
-                    Instruction::Load(Type::Word, val),
-                );
-
-                Some((Type::Word, temp))
-            }
+            AstNode::ArrayLength(this) => this.compile(self, &ctx),
             AstNode::Lambda {
                 arguments,
                 value,

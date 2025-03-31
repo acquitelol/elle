@@ -1,3 +1,4 @@
+pub mod array_len;
 pub mod binary_op;
 pub mod bitwise_not;
 pub mod block;

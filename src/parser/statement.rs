@@ -3,9 +3,9 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 
 use super::enums::{
-    Argument, AstNode, BinaryOperation, BitwiseNot, Buffer, Conversion, Declare, Environment,
-    FunctionCall, IfStatement, Literal, LogicalNot, MemoryOperation, Primitive, Return,
-    SetAllocator, VariadicArgument, VariadicStart,
+    Argument, ArrayLength, AstNode, BinaryOperation, BitwiseNot, Buffer, Conversion, Declare,
+    Environment, FunctionCall, IfStatement, Literal, LogicalNot, MemoryOperation, Primitive,
+    Return, SetAllocator, VariadicArgument, VariadicStart,
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
@@ -1983,10 +1983,10 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
-        let mut expression = AstNode::ArrayLength {
+        let mut expression = AstNode::ArrayLength(ArrayLength {
             value,
             location: Rc::new(location),
-        };
+        });
 
         match self.current_token().kind {
             other if other.is_ternary_start() => {

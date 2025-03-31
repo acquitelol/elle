@@ -136,6 +136,12 @@ pub struct LogicalNot {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ArrayLength {
+    pub value: Box<AstNode>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -217,10 +223,7 @@ pub enum AstNode {
     },
     /// Calculates the array length of an Elle-generated array
     /// Uses the formula *(array_ptr - #size(i32))
-    ArrayLength {
-        value: Box<AstNode>,
-        location: Rc<Location>,
-    },
+    ArrayLength(ArrayLength),
     /// An expression which allows you to declare a value to something conditionally.
     Ternary {
         condition: Box<AstNode>,
@@ -300,7 +303,7 @@ fn modify_type_in_node(
             }
         }
         AstNode::VariadicStart { .. } => {}
-        AstNode::ArrayLength { value, .. } => {
+        AstNode::ArrayLength(ArrayLength { value, .. }) => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);

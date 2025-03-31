@@ -1,0 +1,57 @@
+/// ! EXCLUSIVELY FOR STATIC ARRAYS !
+/// This essentially returns `*(array_buf - #size(i32))`
+///
+/// Static arrays created in elle preallocate an extra
+/// integer and store the size there, then return the
+/// pointer + #size(i32). When accessing the size,
+/// we simply shift back and return the integer value.
+///
+/// THIS DOESNT WORK FOR DYNAMIC ARRAYS
+/// THEY USE STRUCTS, STATIC ARRAYS ARE JUST
+/// A FAT POINTER (pointer + header)
+use crate::{
+    compiler::{
+        compiler::{Codegen, CodegenContext, Compiler},
+        enums::{Instruction, Type, Value},
+    },
+    lexer::enums::{TokenKind, ValueKind},
+    parser::enums::{ArrayLength, AstNode, BinaryOperation, Literal},
+};
+
+impl Codegen<'_> for ArrayLength {
+    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+        let (_, val) = gen
+            .generate_statement(
+                ctx.func,
+                ctx.module,
+                AstNode::BinaryOperation(BinaryOperation {
+                    left: self.value,
+                    right: Box::new(AstNode::Literal(Literal {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number(Type::Word.size(ctx.module) as i128),
+                        location: self.location.clone(),
+                    })),
+                    operator: TokenKind::Subtract,
+                    treat_as_string: false,
+                    dunder_methods: true,
+                    location: self.location.clone(),
+                }),
+                ctx.ty.clone(),
+                None,
+                false,
+            )
+            .expect(&self.location.error(
+                "Unexpected error when trying to compile the formula for getting the array length",
+            ));
+
+        let temp = gen.new_temporary(Some("array.length"), true);
+
+        ctx.func.borrow_mut().assign_instruction(
+            &temp,
+            &Type::Word,
+            Instruction::Load(Type::Word, val),
+        );
+
+        Some((Type::Word, temp))
+    }
+}
