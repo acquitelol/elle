@@ -648,67 +648,7 @@ impl Compiler {
             AstNode::Lambda(this) => this.compile(self, &ctx),
             AstNode::ArrayLiteral(this) => this.compile(self, &ctx),
             AstNode::Address(this) => this.compile(self, &ctx),
-            AstNode::Ternary {
-                condition,
-                if_true,
-                if_false,
-                location,
-            } => {
-                let temp = self.new_temporary(Some("ternary"), false);
-
-                let true_label = format!("ift.{}", self.tmp_counter);
-                let false_label = format!("iff.{}", self.tmp_counter);
-                let end_label = format!("end.{}", self.tmp_counter);
-
-                let (_, condition_val) = self
-                    .generate_statement(func, module, *condition, None, None, false)
-                    .expect(&location.error(
-                        "Unexpected error when trying to compile the `condition` of a ternary",
-                    ));
-
-                func.borrow_mut().add_instruction(Instruction::JumpNonZero(
-                    condition_val,
-                    true_label.clone(),
-                    false_label.clone(),
-                ));
-
-                func.borrow_mut().add_block(true_label);
-
-                let (if_true_ty, if_true_val) = self
-                    .generate_statement(func, module, *if_true, None, None, is_return)
-                    .expect(&location.error(
-                        "Unexpected error when trying to compile the `true` path of a ternary",
-                    ));
-
-                func.borrow_mut().assign_instruction(
-                    &temp,
-                    &if_true_ty,
-                    Instruction::Copy(if_true_val),
-                );
-
-                func.borrow_mut()
-                    .add_instruction(Instruction::Jump(end_label.clone()));
-
-                func.borrow_mut().add_block(false_label);
-
-                let (if_false_ty, if_false_val) = self
-                    .generate_statement(func, module, *if_false, None, None, is_return)
-                    .expect(&location.error(
-                        "Unexpected error when trying to compile the `false` path of a ternary",
-                    ));
-
-                func.borrow_mut().assign_instruction(
-                    &temp,
-                    &if_false_ty,
-                    Instruction::Copy(if_false_val),
-                );
-
-                func.borrow_mut()
-                    .add_instruction(Instruction::Jump(end_label.clone()));
-
-                func.borrow_mut().add_block(end_label);
-                Some((if_true_ty, temp))
-            }
+            AstNode::Ternary(this) => this.compile(self, &ctx),
             AstNode::Size { value, location } => match value {
                 Ok(ty) => {
                     let tmp_ty = Type::Long;

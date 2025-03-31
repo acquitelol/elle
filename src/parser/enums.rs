@@ -164,6 +164,14 @@ pub struct Address {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Ternary {
+    pub condition: Box<AstNode>,
+    pub if_true: Box<AstNode>,
+    pub if_false: Box<AstNode>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -234,12 +242,7 @@ pub enum AstNode {
     /// Uses the formula *(array_ptr - #size(i32))
     ArrayLength(ArrayLength),
     /// An expression which allows you to declare a value to something conditionally.
-    Ternary {
-        condition: Box<AstNode>,
-        if_true: Box<AstNode>,
-        if_false: Box<AstNode>,
-        location: Rc<Location>,
-    },
+    Ternary(Ternary),
     /// Allows for getting and setting the global environment pointer, in static memory
     Environment(Environment),
     /// Allows to set the current allocator to something other than the default allocator
@@ -348,12 +351,12 @@ fn modify_type_in_node(
                 modify_type_in_node(*right.clone(), generics, known_types, struct_pool, tree);
             *right = Box::new(new_right);
         }
-        AstNode::Ternary {
+        AstNode::Ternary(Ternary {
             condition,
             if_true,
             if_false,
             ..
-        } => {
+        }) => {
             let new_condition =
                 modify_type_in_node(*condition.clone(), generics, known_types, struct_pool, tree);
             *condition = Box::new(new_condition);

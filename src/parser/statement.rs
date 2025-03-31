@@ -5,7 +5,7 @@ use std::rc::Rc;
 use super::enums::{
     Address, Argument, ArrayLength, ArrayLiteral, AstNode, BinaryOperation, BitwiseNot, Buffer,
     Conversion, Declare, Environment, FunctionCall, IfStatement, Lambda, Literal, LogicalNot,
-    MemoryOperation, Primitive, Return, SetAllocator, VariadicArgument, VariadicStart,
+    MemoryOperation, Primitive, Return, SetAllocator, Ternary, VariadicArgument, VariadicStart,
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
@@ -2504,12 +2504,12 @@ impl<'a> Statement<'a> {
             Statement::new(tokens, 0, &self.body, self.shared).parse().0
         });
 
-        AstNode::Ternary {
+        AstNode::Ternary(Ternary {
             condition: Box::new(condition),
             if_true,
             if_false,
             location,
-        }
+        })
     }
 
     fn parse_indexof(&mut self) -> AstNode {
