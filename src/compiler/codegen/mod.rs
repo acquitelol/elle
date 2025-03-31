@@ -8,6 +8,7 @@ pub mod buffer;
 pub mod conversion;
 pub mod declare;
 pub mod env;
+pub mod field;
 pub mod funcall;
 pub mod if_stmt;
 pub mod lambda;

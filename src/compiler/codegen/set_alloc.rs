@@ -7,7 +7,7 @@ use crate::{
     },
     elle_error, get_GREEN, get_RED, get_RESET,
     lexer::enums::{TokenKind, ValueKind},
-    parser::enums::{AstNode, Environment, Literal, SetAllocator},
+    parser::enums::{AstNode, Environment, FieldAccess, Literal, SetAllocator},
     Warning, ARBITRARY_ALLOCATOR_NAME, GREEN, RED, RESET,
 };
 
@@ -94,12 +94,12 @@ impl Codegen<'_> for SetAllocator {
             gen.generate_statement(
                 ctx.func,
                 ctx.module,
-                AstNode::FieldAccess {
+                AstNode::FieldAccess(FieldAccess {
                     left: Box::new(AstNode::Environment(Environment {
                         value: None,
                         location: self.location.clone(),
                     })),
-                    right: Box::new(AstNode::FieldAccess {
+                    right: Box::new(AstNode::FieldAccess(FieldAccess {
                         left: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("allocator".into()),
@@ -112,10 +112,10 @@ impl Codegen<'_> for SetAllocator {
                         })),
                         value: None,
                         location: self.location.clone(),
-                    }),
+                    })),
                     value: Some(Box::new(expr)),
                     location: self.location.clone(),
-                },
+                }),
                 None,
                 None,
                 ctx.is_return,

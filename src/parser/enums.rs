@@ -185,6 +185,13 @@ pub struct StructLiteral {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FieldAccess {
+    pub left: Box<AstNode>,
+    pub right: Box<AstNode>,
+    pub value: Option<Box<AstNode>>,
+    pub location: Rc<Location>,
+}
+
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -212,12 +219,7 @@ pub enum AstNode {
     /// Declares a struct named `name` with values `values`
     StructLiteral(StructLiteral),
     /// Accesses the fields of a struct, optionally assigning a value to the result
-    FieldAccess {
-        left: Box<AstNode>,
-        right: Box<AstNode>,
-        value: Option<Box<AstNode>>,
-        location: Rc<Location>,
-    },
+    FieldAccess(FieldAccess),
     /// Loads or stores information from a pointer through pointer arithmetic
     /// In an expression like a[10], left is `a` and right is `10`
     MemoryOperation(MemoryOperation),
@@ -421,9 +423,9 @@ fn modify_type_in_node(
                 *value = Box::new(new_value);
             }
         }
-        AstNode::FieldAccess {
+        AstNode::FieldAccess(FieldAccess {
             left, right, value, ..
-        } => {
+        }) => {
             let new_left =
                 modify_type_in_node(*left.clone(), generics, known_types, struct_pool, tree);
             *left = Box::new(new_left);

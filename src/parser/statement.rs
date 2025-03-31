@@ -4,8 +4,8 @@ use std::rc::Rc;
 
 use super::enums::{
     Address, Argument, ArrayLength, ArrayLiteral, AstNode, BinaryOperation, BitwiseNot, Buffer,
-    Conversion, Declare, Environment, FunctionCall, IfStatement, Lambda, Literal, LogicalNot,
-    MemoryOperation, Primitive, Return, SetAllocator, Size, StructLiteral, Ternary,
+    Conversion, Declare, Environment, FieldAccess, FunctionCall, IfStatement, Lambda, Literal,
+    LogicalNot, MemoryOperation, Primitive, Return, SetAllocator, Size, StructLiteral, Ternary,
     VariadicArgument, VariadicStart,
 };
 use super::parser::{create_generic_struct, StructPool};
@@ -2361,12 +2361,12 @@ impl<'a> Statement<'a> {
                     Some((inner_location, name)),
                     Some(vec![(
                         location.clone(),
-                        AstNode::FieldAccess {
+                        AstNode::FieldAccess(FieldAccess {
                             left,
                             right,
                             value,
                             location,
-                        },
+                        }),
                     )]),
                     if !tmp.is_empty() { Some(tmp) } else { None },
                     Some(position),
@@ -2374,31 +2374,31 @@ impl<'a> Statement<'a> {
                 );
             }
 
-            if let AstNode::FieldAccess {
+            if let AstNode::FieldAccess(FieldAccess {
                 left,
                 right: inner_right,
                 location,
                 ..
-            } = *right
+            }) = *right
             {
-                right = Box::new(AstNode::FieldAccess {
+                right = Box::new(AstNode::FieldAccess(FieldAccess {
                     left,
-                    right: Box::new(AstNode::FieldAccess {
+                    right: Box::new(AstNode::FieldAccess(FieldAccess {
                         left: inner_right,
                         right: inner,
                         value: None,
                         location: location.clone(),
-                    }),
+                    })),
                     value: None,
                     location,
-                })
+                }))
             } else {
-                right = Box::new(AstNode::FieldAccess {
+                right = Box::new(AstNode::FieldAccess(FieldAccess {
                     left: right,
                     right: inner,
                     value: None, // Only the root may have a value
                     location: location.clone(),
-                });
+                }));
             }
         }
 
@@ -2426,32 +2426,32 @@ impl<'a> Statement<'a> {
             TokenKind::LeftBlockBrace => {
                 return self.parse_offset_store(Some((
                     position,
-                    AstNode::FieldAccess {
+                    AstNode::FieldAccess(FieldAccess {
                         left: left.clone(),
                         right: right.clone(),
                         value,
                         location: location.clone(),
-                    },
+                    }),
                     location,
                 )))
             }
             other if other.is_declarative() => {
-                value = Some(Box::new(self.parse_declarative_node(
-                    AstNode::FieldAccess {
+                value = Some(Box::new(self.parse_declarative_node(AstNode::FieldAccess(
+                    FieldAccess {
                         left: left.clone(),
                         right: right.clone(),
                         value: None,
                         location: location.clone(),
                     },
-                )));
+                ))));
             }
             other if other.is_ternary_start() => {
-                return self.parse_ternary_node(AstNode::FieldAccess {
+                return self.parse_ternary_node(AstNode::FieldAccess(FieldAccess {
                     left,
                     right,
                     value,
                     location,
-                })
+                }))
             }
             other if other.is_arithmetic() => {
                 self.position = position;
@@ -2460,12 +2460,12 @@ impl<'a> Statement<'a> {
             _ => {}
         }
 
-        AstNode::FieldAccess {
+        AstNode::FieldAccess(FieldAccess {
             left,
             right,
             value,
             location,
-        }
+        })
     }
 
     fn parse_ternary_node(&mut self, condition: AstNode) -> AstNode {
@@ -2668,7 +2668,7 @@ impl<'a> Statement<'a> {
                 parameters: vec![
                     (
                         location.clone(),
-                        AstNode::FieldAccess {
+                        AstNode::FieldAccess(FieldAccess {
                             left: Box::new(AstNode::Environment(Environment {
                                 value: None,
                                 location: location.clone(),
@@ -2680,7 +2680,7 @@ impl<'a> Statement<'a> {
                             })),
                             value: None,
                             location: location.clone(),
-                        },
+                        }),
                     ),
                     (
                         location.clone(),
@@ -2772,7 +2772,7 @@ impl<'a> Statement<'a> {
                 parameters: vec![
                     (
                         location.clone(),
-                        AstNode::FieldAccess {
+                        AstNode::FieldAccess(FieldAccess {
                             left: Box::new(AstNode::Environment(Environment {
                                 value: None,
                                 location: location.clone(),
@@ -2784,7 +2784,7 @@ impl<'a> Statement<'a> {
                             })),
                             value: None,
                             location: location.clone(),
-                        },
+                        }),
                     ),
                     (location.clone(), ptr),
                     (
@@ -2859,7 +2859,7 @@ impl<'a> Statement<'a> {
             parameters: vec![
                 (
                     location.clone(),
-                    AstNode::FieldAccess {
+                    AstNode::FieldAccess(FieldAccess {
                         left: Box::new(AstNode::Environment(Environment {
                             value: None,
                             location: location.clone(),
@@ -2871,7 +2871,7 @@ impl<'a> Statement<'a> {
                         })),
                         value: None,
                         location: location.clone(),
-                    },
+                    }),
                 ),
                 (location.clone(), ptr),
             ],
@@ -2927,7 +2927,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         AstNode::SetAllocator(SetAllocator {
-            value: Box::new(AstNode::FieldAccess {
+            value: Box::new(AstNode::FieldAccess(FieldAccess {
                 left: Box::new(AstNode::Environment(Environment {
                     value: None,
                     location: location.clone(),
@@ -2939,7 +2939,7 @@ impl<'a> Statement<'a> {
                 })),
                 value: None,
                 location: location.clone(),
-            }),
+            })),
             location,
         })
     }

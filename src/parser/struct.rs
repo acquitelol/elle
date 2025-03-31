@@ -10,7 +10,8 @@ use crate::{
 
 use super::{
     enums::{
-        Argument, AstNode, BinaryOperation, Declare, FunctionCall, Literal, Primitive, Return,
+        Argument, AstNode, BinaryOperation, Declare, FieldAccess, FunctionCall, Literal, Primitive,
+        Return,
     },
     parser::Parser,
 };
@@ -165,7 +166,7 @@ impl<'a> Struct<'a> {
                 .iter()
                 .cloned()
                 .map(|member| {
-                    let field = AstNode::FieldAccess {
+                    let field = AstNode::FieldAccess(FieldAccess {
                         left: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("self".into()),
@@ -178,7 +179,7 @@ impl<'a> Struct<'a> {
                         })),
                         value: None,
                         location: location.clone(),
-                    };
+                    });
 
                     (
                         location.clone(),

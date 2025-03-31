@@ -19,8 +19,8 @@ use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex
 use parser::enums::{Argument, AstNode, Primitive};
 
 use crate::parser::enums::{
-    Address, BinaryOperation, Declare, Environment, FunctionCall, Literal, MemoryOperation, Return,
-    SetAllocator, StructLiteral, WhileLoopStatement,
+    Address, BinaryOperation, Declare, Environment, FieldAccess, FunctionCall, Literal,
+    MemoryOperation, Return, SetAllocator, StructLiteral, WhileLoopStatement,
 };
 
 pub enum Warning {
@@ -541,7 +541,7 @@ fn main() -> ExitCode {
                         location: loc.clone(),
                     }),
                     AstNode::SetAllocator(SetAllocator {
-                        value: Box::new(AstNode::FieldAccess {
+                        value: Box::new(AstNode::FieldAccess(FieldAccess {
                             left: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("env".into()),
@@ -554,7 +554,7 @@ fn main() -> ExitCode {
                             })),
                             value: None,
                             location: loc.clone(),
-                        }),
+                        })),
                         location: loc.clone(),
                     }),
                 ],
@@ -705,7 +705,7 @@ fn main() -> ExitCode {
                         generics: vec![],
                         parameters: vec![(
                             loc.clone(),
-                            AstNode::FieldAccess {
+                            AstNode::FieldAccess(FieldAccess {
                                 left: Box::new(AstNode::Literal(Literal {
                                     kind: TokenKind::Identifier,
                                     value: ValueKind::String("env".into()),
@@ -718,7 +718,7 @@ fn main() -> ExitCode {
                                 })),
                                 value: None,
                                 location: loc.clone(),
-                            },
+                            }),
                         )],
                         type_method: true,
                         ignore_no_def: false,
