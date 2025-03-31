@@ -5,7 +5,7 @@ pub mod binary_op;
 pub mod bitwise_not;
 pub mod block;
 pub mod buffer;
-pub mod convert;
+pub mod conversion;
 pub mod declare;
 pub mod env;
 pub mod funcall;
