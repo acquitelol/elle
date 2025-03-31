@@ -5,7 +5,7 @@ use crate::{
     },
     elle_error, get_BOLD, get_GREEN, get_RESET,
     lexer::enums::{TokenKind, ValueKind},
-    parser::enums::{AstNode, BinaryOperation, FunctionCall, Literal},
+    parser::enums::{AstNode, BinaryOperation, FunctionCall, Literal, LogicalNot},
     BOLD, EQUALS_CONSTANT, GREEN, RESET,
 };
 
@@ -167,10 +167,10 @@ impl Codegen<'_> for BinaryOperation {
             });
 
             if self.operator == TokenKind::NotEqualTo {
-                node = AstNode::LogicalNot {
+                node = AstNode::LogicalNot(LogicalNot {
                     value: Box::new(node),
                     location: self.location.clone(),
-                }
+                })
             }
 
             let (ty, val) = gen

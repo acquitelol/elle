@@ -4,8 +4,8 @@ use std::rc::Rc;
 
 use super::enums::{
     Argument, AstNode, BinaryOperation, BitwiseNot, Buffer, Conversion, Declare, Environment,
-    FunctionCall, IfStatement, Literal, MemoryOperation, Primitive, Return, SetAllocator,
-    VariadicArgument, VariadicStart,
+    FunctionCall, IfStatement, Literal, LogicalNot, MemoryOperation, Primitive, Return,
+    SetAllocator, VariadicArgument, VariadicStart,
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
@@ -2031,7 +2031,7 @@ impl<'a> Statement<'a> {
 
         let tokens = self.yield_tokens_for_unary();
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
-        let node = AstNode::LogicalNot { value, location };
+        let node = AstNode::LogicalNot(LogicalNot { value, location });
 
         if self.current_token().kind.is_ternary_start() {
             self.parse_ternary_node(node)

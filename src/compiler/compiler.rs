@@ -642,38 +642,7 @@ impl Compiler {
             AstNode::SetAllocator(this) => this.compile(self, &ctx),
             AstNode::BlockStatement(this) => this.compile(self, &ctx),
             AstNode::Conversion(this) => this.compile(self, &ctx),
-            AstNode::LogicalNot { value, location } => {
-                let (ty, val) = self
-                    .generate_statement(func, module, *value, ty, None, false)
-                    .expect(&location.error(
-                        "Unexpected error when trying to compile the value of a not statement",
-                    ));
-
-                let temp = self.new_temporary(Some("not"), true);
-
-                func.borrow_mut().assign_instruction(
-                    &temp,
-                    &Type::Boolean,
-                    Instruction::Compare(
-                        Type::Boolean,
-                        Comparison::Equal,
-                        val,
-                        Value::Const(
-                            if ty.clone() == Type::Double {
-                                "d_"
-                            } else if ty.clone() == Type::Single {
-                                "s_"
-                            } else {
-                                ""
-                            }
-                            .into(),
-                            0,
-                        ),
-                    ),
-                );
-
-                Some((ty, temp))
-            }
+            AstNode::LogicalNot(this) => this.compile(self, &ctx),
             AstNode::BitwiseNot(this) => this.compile(self, &ctx),
             AstNode::ArrayLength { value, location } => {
                 let (_, val) = self

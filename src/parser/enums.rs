@@ -130,6 +130,12 @@ pub struct BitwiseNot {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct LogicalNot {
+    pub value: Box<AstNode>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -186,10 +192,7 @@ pub enum AstNode {
     /// This can be useful for micro-managing memory allocation with defer
     BlockStatement(BlockStatement),
     /// Takes value `value` and negates it (compares it to 0)
-    LogicalNot {
-        value: Box<AstNode>,
-        location: Rc<Location>,
-    },
+    LogicalNot(LogicalNot),
     /// Takes value `value` and flips all its bits
     BitwiseNot(BitwiseNot),
     /// Returns the address of some value `value`
@@ -435,7 +438,7 @@ fn modify_type_in_node(
         AstNode::BlockStatement(BlockStatement { body, .. }) => {
             *body = modify_type_in_ast(body.clone(), generics, known_types, struct_pool, tree);
         }
-        AstNode::LogicalNot { value, .. } => {
+        AstNode::LogicalNot(LogicalNot { value, .. }) => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
