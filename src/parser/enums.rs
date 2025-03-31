@@ -91,6 +91,13 @@ pub struct VariadicStart {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct VariadicArgument {
+    pub name: String,
+    pub r#type: Option<Type>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -99,11 +106,7 @@ pub enum AstNode {
     /// Allocates stack memory of size `valist`, assigns it to `name`, and calls `vastart` on it
     VariadicStart(VariadicStart),
     /// Yields a new argument of type `r#type` from `name`
-    VariadicArgument {
-        name: String,
-        r#type: Option<Type>,
-        location: Rc<Location>,
-    },
+    VariadicArgument(VariadicArgument),
     /// Returns value `value`
     Return(Return),
     /// Calls function `name` with parameters `parameters`
@@ -273,7 +276,7 @@ fn modify_type_in_node(
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
-        AstNode::VariadicArgument { r#type, .. } => {
+        AstNode::VariadicArgument(VariadicArgument { r#type, .. }) => {
             if let Some(ty) = r#type {
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }

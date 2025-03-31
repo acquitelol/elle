@@ -637,30 +637,7 @@ impl Compiler {
             AstNode::IfStatement(this) => this.compile(self, &ctx),
             AstNode::WhileLoopStatement(this) => this.compile(self, &ctx),
             AstNode::VariadicStart(this) => this.compile(self, &ctx),
-            AstNode::VariadicArgument {
-                name,
-                r#type,
-                location,
-            } => {
-                let ptr = self
-                    .get_variable_lazy(&name, Some(func), Some(module), location.clone())
-                    .expect(&location.error(format!(
-                        "Unexpected error when trying to get a variable named '{}'",
-                        name
-                    )))
-                    .1;
-
-                let ty = r#type.unwrap_or(Type::Long);
-                let tmp = self.new_temporary(Some("next"), true);
-
-                func.borrow_mut().assign_instruction(
-                    &tmp,
-                    &ty.clone().into_base(),
-                    Instruction::VAArg(ptr),
-                );
-
-                Some((ty, tmp))
-            }
+            AstNode::VariadicArgument(this) => this.compile(self, &ctx),
             AstNode::Environment { value, location } => {
                 if let Some(value) = value {
                     if !self
