@@ -116,6 +116,14 @@ pub struct BlockStatement {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Conversion {
+    pub r#type: Option<Type>,
+    pub value: Box<AstNode>,
+    pub location: Rc<Location>,
+    pub explicit: bool,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -187,12 +195,7 @@ pub enum AstNode {
         location: Rc<Location>,
     },
     /// Performs an explicit conversion of value `value` to type `r#type`
-    Conversion {
-        r#type: Option<Type>,
-        value: Box<AstNode>,
-        location: Rc<Location>,
-        explicit: bool,
-    },
+    Conversion(Conversion),
     /// Returns the size (in bytes) or length, depending on if `standalone` is set to true
     /// The result is used to allow for getting the size of both expressions and types
     Size {
@@ -444,7 +447,7 @@ fn modify_type_in_node(
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
         }
-        AstNode::Conversion { r#type, value, .. } => {
+        AstNode::Conversion(Conversion { r#type, value, .. }) => {
             if let Some(ty) = r#type {
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }

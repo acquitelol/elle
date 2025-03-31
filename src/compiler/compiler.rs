@@ -12,8 +12,8 @@ use crate::{
     misc::colors::*,
     parser::{
         enums::{
-            modify_type_in_ast, Argument, AstNode, BinaryOperation, Environment, FunctionCall,
-            Literal, Primitive, Return,
+            modify_type_in_ast, Argument, AstNode, BinaryOperation, Conversion, Environment,
+            FunctionCall, Literal, Primitive, Return,
         },
         parser::StructPool,
     },
@@ -641,26 +641,7 @@ impl Compiler {
             AstNode::Environment(this) => this.compile(self, &ctx),
             AstNode::SetAllocator(this) => this.compile(self, &ctx),
             AstNode::BlockStatement(this) => this.compile(self, &ctx),
-            AstNode::Conversion {
-                r#type: second,
-                value,
-                location,
-                explicit,
-            } => {
-                let (first, val) = self
-                    .generate_statement(func, module, *value, ty, None, false)
-                    .expect(&location.error("Unexpected error when trying to compile the value of a conversion statement"));
-
-                Some(self.convert_to_type(
-                    func,
-                    first,
-                    second.unwrap(),
-                    val,
-                    &location,
-                    &location,
-                    explicit,
-                ))
-            }
+            AstNode::Conversion(this) => this.compile(self, &ctx),
             AstNode::LogicalNot { value, location } => {
                 let (ty, val) = self
                     .generate_statement(func, module, *value, ty, None, false)
@@ -863,12 +844,12 @@ impl Compiler {
                                 .map(|(loc, node)| {
                                     (
                                         loc.clone(),
-                                        AstNode::Conversion {
+                                        AstNode::Conversion(Conversion {
                                             r#type: Some(ty.clone()),
                                             value: Box::new(node),
                                             location: loc.clone(),
                                             explicit: false,
-                                        },
+                                        }),
                                     )
                                 })
                                 .collect()

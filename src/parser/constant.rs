@@ -1,9 +1,12 @@
 use std::cell::RefCell;
 
-use crate::{elle_error, lexer::enums::{Token, TokenKind}};
+use crate::{
+    elle_error,
+    lexer::enums::{Token, TokenKind},
+};
 
 use super::{
-    enums::{AstNode, Primitive},
+    enums::{AstNode, Conversion, Primitive},
     parser::Parser,
     statement::{Shared, Statement},
 };
@@ -21,12 +24,10 @@ impl<'a> Constant<'a> {
         let mut tokens = vec![];
 
         if delimiters.contains(&self.parser.current_token().kind) {
-            elle_error!(
-                self.parser.current_token().location.error(format!(
-                    "Expected expression but got {:?}",
-                    self.parser.current_token().kind
-                ))
-            )
+            elle_error!(self.parser.current_token().location.error(format!(
+                "Expected expression but got {:?}",
+                self.parser.current_token().kind
+            )))
         }
 
         loop {
@@ -83,12 +84,12 @@ impl<'a> Constant<'a> {
             name,
             public,
             r#type: Some(ty.clone()),
-            value: Box::new(AstNode::Conversion {
+            value: Box::new(AstNode::Conversion(Conversion {
                 r#type: Some(ty),
                 value: Box::new(value),
                 location: self.parser.current_token().location,
-                explicit: false
-            }),
+                explicit: false,
+            })),
             usable: true,
             imported: false,
             location: self.parser.current_token().location,

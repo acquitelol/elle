@@ -3,8 +3,9 @@ use std::iter::FromIterator;
 use std::rc::Rc;
 
 use super::enums::{
-    Argument, AstNode, BinaryOperation, Buffer, Declare, Environment, FunctionCall, IfStatement,
-    Literal, MemoryOperation, Primitive, Return, SetAllocator, VariadicArgument, VariadicStart,
+    Argument, AstNode, BinaryOperation, Buffer, Conversion, Declare, Environment, FunctionCall,
+    IfStatement, Literal, MemoryOperation, Primitive, Return, SetAllocator, VariadicArgument,
+    VariadicStart,
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
@@ -1799,12 +1800,12 @@ impl<'a> Statement<'a> {
 
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
 
-        AstNode::Conversion {
+        AstNode::Conversion(Conversion {
             r#type: Some(r#type),
             value,
             location,
             explicit: true,
-        }
+        })
     }
 
     fn parse_block(&mut self) -> AstNode {
@@ -2658,7 +2659,7 @@ impl<'a> Statement<'a> {
             })
         };
 
-        let mut expression = AstNode::Conversion {
+        let mut expression = AstNode::Conversion(Conversion {
             r#type: Some(Type::Pointer(Box::new(ty.clone()))),
             value: Box::new(AstNode::FunctionCall(FunctionCall {
                 name: "alloc".into(),
@@ -2701,7 +2702,7 @@ impl<'a> Statement<'a> {
             })),
             location: location.clone(),
             explicit: true,
-        };
+        });
 
         match self.current_token().kind {
             TokenKind::Dot => {
@@ -2762,7 +2763,7 @@ impl<'a> Statement<'a> {
             })
         };
 
-        let mut expression = AstNode::Conversion {
+        let mut expression = AstNode::Conversion(Conversion {
             r#type: Some(Type::Pointer(Box::new(ty.clone()))),
             value: Box::new(AstNode::FunctionCall(FunctionCall {
                 name: "realloc".into(),
@@ -2806,7 +2807,7 @@ impl<'a> Statement<'a> {
             })),
             location: location.clone(),
             explicit: true,
-        };
+        });
 
         match self.current_token().kind {
             TokenKind::Dot => {
