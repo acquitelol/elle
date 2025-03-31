@@ -636,20 +636,7 @@ impl Compiler {
             AstNode::MemoryOperation(this) => this.compile(self, &ctx),
             AstNode::IfStatement(this) => this.compile(self, &ctx),
             AstNode::WhileLoopStatement(this) => this.compile(self, &ctx),
-            AstNode::VariadicStart { name, .. } => {
-                let var = self.new_variable(&Type::Long, &name, Some(func), false, false);
-
-                func.borrow_mut().assign_instruction(
-                    &var,
-                    &Type::Long,
-                    Instruction::Alloc8(Value::Const("".into(), VA_LIST_SIZE_BYTES as i128)),
-                );
-
-                func.borrow_mut()
-                    .add_instruction(Instruction::VAStart(var.clone()));
-
-                Some((Type::Long, var))
-            }
+            AstNode::VariadicStart(this) => this.compile(self, &ctx),
             AstNode::VariadicArgument {
                 name,
                 r#type,

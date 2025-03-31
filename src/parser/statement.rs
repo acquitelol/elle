@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use super::enums::{
     Argument, AstNode, BinaryOperation, Buffer, Declare, FunctionCall, IfStatement, Literal,
-    MemoryOperation, Primitive, Return,
+    MemoryOperation, Primitive, Return, VariadicStart,
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
@@ -1569,7 +1569,7 @@ impl<'a> Statement<'a> {
         let location = self.current_token().location.clone();
 
         self.advance();
-        AstNode::VariadicStart { name, location }
+        AstNode::VariadicStart(VariadicStart { name, location })
     }
 
     fn parse_yield_variadic(&mut self) -> AstNode {

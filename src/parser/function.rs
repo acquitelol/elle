@@ -5,7 +5,7 @@ use crate::{
     elle_error,
     lexer::enums::{Attribute, TokenKind, ValueKind},
     parser::{
-        enums::{IfStatement, WhileLoopStatement},
+        enums::{IfStatement, VariadicStart, WhileLoopStatement},
         statement::Shared,
     },
     Warning, META_STRUCT_NAME,
@@ -309,10 +309,11 @@ impl<'a> Function<'a> {
         let body: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
 
         if let Some(name) = variadic_name {
-            body.borrow_mut().push(AstNode::VariadicStart {
-                name,
-                location: self.parser.current_token().location,
-            });
+            body.borrow_mut()
+                .push(AstNode::VariadicStart(VariadicStart {
+                    name,
+                    location: self.parser.current_token().location,
+                }));
         }
 
         loop {

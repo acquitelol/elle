@@ -85,16 +85,19 @@ pub struct WhileLoopStatement {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct VariadicStart {
+    pub name: String,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
     /// A declaration of name `name` with type `r#type` to value `value
     Declare(Declare),
     /// Allocates stack memory of size `valist`, assigns it to `name`, and calls `vastart` on it
-    VariadicStart {
-        name: String,
-        location: Rc<Location>,
-    },
+    VariadicStart(VariadicStart),
     /// Yields a new argument of type `r#type` from `name`
     VariadicArgument {
         name: String,
