@@ -20,7 +20,7 @@ use parser::enums::{Argument, AstNode, Primitive};
 
 use crate::parser::enums::{
     Address, BinaryOperation, Declare, Environment, FunctionCall, Literal, MemoryOperation, Return,
-    SetAllocator, WhileLoopStatement,
+    SetAllocator, StructLiteral, WhileLoopStatement,
 };
 
 pub enum Warning {
@@ -490,7 +490,7 @@ fn main() -> ExitCode {
                     AstNode::Declare(Declare {
                         name: "env".into(),
                         r#type: Some(Type::Infer),
-                        value: Some(Box::new(AstNode::StructLiteral {
+                        value: Some(Box::new(AstNode::StructLiteral(StructLiteral {
                             name: ENV_STRUCT_NAME.into(),
                             values: vec![
                                 (
@@ -525,7 +525,7 @@ fn main() -> ExitCode {
                                 ),
                             ],
                             location: loc.clone(),
-                        })),
+                        }))),
                         location: loc.clone(),
                         value_location: loc.clone(),
                     }),

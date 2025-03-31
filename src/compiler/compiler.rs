@@ -13,7 +13,7 @@ use crate::{
     parser::{
         enums::{
             modify_type_in_ast, Argument, ArrayLiteral, AstNode, BinaryOperation, BitwiseNot,
-            Conversion, Environment, FunctionCall, Literal, Primitive, Return,
+            Conversion, Environment, FunctionCall, Literal, Primitive, Return, StructLiteral,
         },
         parser::StructPool,
     },
@@ -47,7 +47,7 @@ pub struct Compiler {
     pub data_sections: Vec<Data>,
     pub generic_functions: HashMap<String, Primitive>,
     // Struct Name => ((Field Name, Field Type)[], (Known Generic)[])
-    struct_pool: StructPool,
+    pub struct_pool: StructPool,
     pub loop_labels: Vec<String>,
     // ret_types: HashMap<String, Type>,
     pub buf_metadata: HashMap<Value, (Type, Value)>,
@@ -650,171 +650,7 @@ impl Compiler {
             AstNode::Address(this) => this.compile(self, &ctx),
             AstNode::Ternary(this) => this.compile(self, &ctx),
             AstNode::Size(this) => this.compile(self, &ctx),
-            AstNode::StructLiteral {
-                mut name,
-                values,
-                location,
-            } => {
-                let inner =
-                    ty.unwrap_or(func.borrow_mut().return_type.clone().unwrap_or(Type::Void));
-
-                if inner.is_struct()
-                    && is_generic!(inner.get_struct_inner().unwrap())
-                    && !is_generic!(name)
-                {
-                    let generic_name = Type::from_internal_id(inner.get_struct_inner().unwrap()).0;
-
-                    if name == generic_name {
-                        name = inner.get_struct_inner().unwrap();
-                    }
-                }
-
-                if self.struct_pool.get(&name).is_none() {
-                    if is_generic!(name) {
-                        self.create_monomorphized_struct(module, name.clone())
-                    } else {
-                        elle_error!(
-                            location.error(format!(
-                                "Could not find struct named '{}'. Did you spell it correctly?\nThis struct may be generic but missing generic parameters.",
-                                Type::Struct(name).display()
-                            ))
-                        )
-                    }
-                }
-
-                let td = module
-                    .borrow()
-                    .types
-                    .clone()
-                    .into_iter()
-                    .find(|td| td.name == name)
-                    .expect(&format!("Unable to find struct named '{}'", name));
-
-                if !td.usable && !func.borrow_mut().imported {
-                    elle_error!(location.error(format!(
-                        "Struct named '{}' was not imported and can't be used",
-                        Type::Struct(name.clone()).display()
-                    )))
-                }
-
-                let struct_pool = self.struct_pool.clone();
-                let members = struct_pool.get(&name).unwrap().1.clone();
-                let member_names = members
-                    .iter()
-                    .map(|member| member.name.clone())
-                    .collect::<Vec<String>>();
-
-                let member_set: HashSet<_> = member_names.iter().cloned().collect();
-                let value_set: HashSet<_> = values.iter().map(|value| value.0.clone()).collect();
-
-                let diff: Vec<_> = member_set.difference(&value_set).collect();
-
-                if self.warnings.has_warning(Warning::StructFieldsMissing) {
-                    for member in diff.iter().cloned() {
-                        println!(
-                            "{}",
-                            location.warning(format!(
-                                "Declaring struct '{}' without field '{}'",
-                                Type::Struct(name.clone()).display(),
-                                member
-                            ))
-                        );
-                    }
-                }
-
-                let ty = Type::Struct(name.clone());
-                let size = ty.size(module);
-
-                let alloc_tmp = self.new_temporary(Some(&format!("struct.{name}")), true);
-
-                #[cfg(debug_assertions)]
-                func.borrow_mut()
-                    .add_instruction(Instruction::Comment(format!("size of :{}", name)));
-
-                func.borrow_mut().assign_instruction_front(
-                    &alloc_tmp,
-                    &Type::Long,
-                    Instruction::Alloc8(Value::Const("".into(), size as i128)),
-                );
-
-                for (member_name, value) in values.iter().cloned() {
-                    if !member_names.contains(&member_name) {
-                        elle_error!(
-                            location.error(format!(
-                                "Struct named '{}' has no field named '{}'. Did you spell it correctly?",
-                                name, member_name
-                            ))
-                        );
-                    }
-
-                    let (member_ty, offset) =
-                        self.member_to_offset(module, &name, &member_name).unwrap();
-
-                    let (mut ty, mut val) = self
-                        .generate_statement(
-                            func,
-                            module,
-                            *value,
-                            members
-                                .iter()
-                                .find(|member| member.name == member_name)
-                                .map(|arg| arg.r#type.clone()),
-                            None,
-                            false,
-                        )
-                        .expect(
-                            &location.error(
-                                format!("Unexpected error when trying to compile the value of a field '{}' in struct '{}'", member_name, name)
-                            ),
-                        );
-
-                    if let Some(member_ty) = member_ty {
-                        if ty.weight() > member_ty.weight() || ty.weight() < member_ty.weight() {
-                            let (new_ty, new_val) = self.convert_to_type(
-                                func,
-                                ty.clone(),
-                                member_ty.clone(),
-                                val,
-                                &location,
-                                &location,
-                                false,
-                            );
-
-                            ty = new_ty;
-                            val = new_val
-                        }
-                    }
-
-                    let offset_tmp = self.new_temporary(Some("offset"), true);
-
-                    func.borrow_mut().assign_instruction(
-                        &offset_tmp,
-                        &Type::Long,
-                        Instruction::Add(
-                            alloc_tmp.clone(),
-                            Value::Const("".into(), offset as i128),
-                        ),
-                    );
-
-                    if ty.is_struct() {
-                        func.borrow_mut().add_instruction(Instruction::Call(
-                            Value::Global("memcpy".into()),
-                            // The structs must have their pointers diminished
-                            // to just a `Long` instead of a `Struct(name)`
-                            vec![
-                                (Type::Long, offset_tmp),
-                                (Type::Long, val),
-                                (Type::Word, Value::Const("".into(), ty.size(module) as i128)),
-                            ],
-                        ))
-                    } else {
-                        func.borrow_mut()
-                            .add_instruction(Instruction::Store(ty, offset_tmp, val))
-                    }
-                }
-
-                Some((ty, alloc_tmp))
-            }
+            AstNode::StructLiteral(this) => this.compile(self, &ctx),
             AstNode::FieldAccess {
                 left,
                 right,
@@ -927,7 +763,7 @@ impl Compiler {
         parameters: Vec<(Rc<Location>, AstNode)>,
         location: Rc<Location>,
     ) -> AstNode {
-        let node = AstNode::StructLiteral {
+        let node = AstNode::StructLiteral(StructLiteral {
             name: META_STRUCT_NAME.into(),
             values: vec![
                 (
@@ -1114,12 +950,12 @@ impl Compiler {
                 ),
             ],
             location,
-        };
+        });
 
         return node;
     }
 
-    fn member_to_offset(
+    pub fn member_to_offset(
         &self,
         module: &RefCell<Module>,
         struct_name: &String,
@@ -1532,7 +1368,7 @@ impl Compiler {
         return weights_match || both_int_or_float;
     }
 
-    fn create_monomorphized_struct(&mut self, module: &RefCell<Module>, generic_name: String) {
+    pub fn create_monomorphized_struct(&mut self, module: &RefCell<Module>, generic_name: String) {
         let (name, parts) = Type::from_internal_id(generic_name.clone());
 
         let (generics, members, ..) = self

@@ -178,6 +178,13 @@ pub struct Size {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct StructLiteral {
+    pub name: String,
+    pub values: Vec<(String, Box<AstNode>)>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum AstNode {
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -203,11 +210,7 @@ pub enum AstNode {
     /// Declares an array literal of size `values.len()` and values `values` and returns a pointer to the start of it
     ArrayLiteral(ArrayLiteral),
     /// Declares a struct named `name` with values `values`
-    StructLiteral {
-        name: String,
-        values: Vec<(String, Box<AstNode>)>,
-        location: Rc<Location>,
-    },
+    StructLiteral(StructLiteral),
     /// Accesses the fields of a struct, optionally assigning a value to the result
     FieldAccess {
         left: Box<AstNode>,
@@ -411,7 +414,7 @@ fn modify_type_in_node(
                 *value = new_value;
             }
         }
-        AstNode::StructLiteral { values, .. } => {
+        AstNode::StructLiteral(StructLiteral { values, .. }) => {
             for (_, value) in values {
                 let new_value =
                     modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);

@@ -17,6 +17,7 @@ pub mod memory_op;
 pub mod r#return;
 pub mod set_alloc;
 pub mod size;
+pub mod struct_lit;
 pub mod ternary;
 pub mod vaarg;
 pub mod vastart;

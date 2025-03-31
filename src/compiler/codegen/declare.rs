@@ -5,7 +5,7 @@ use crate::{
     },
     elle_error,
     lexer::enums::{TokenKind, ValueKind},
-    parser::enums::{AstNode, Declare, Literal},
+    parser::enums::{AstNode, Declare, Literal, StructLiteral},
     GC_NOOP,
 };
 
@@ -52,11 +52,11 @@ impl Codegen<'_> for Declare {
             ctx.module,
             *self.value.unwrap_or(Box::new(
                 if self.r#type.clone().is_some_and(|ty| ty.is_struct()) {
-                    AstNode::StructLiteral {
+                    AstNode::StructLiteral(StructLiteral {
                         name: self.r#type.clone().unwrap().get_struct_inner().unwrap(),
                         values: vec![],
                         location: self.location.clone(),
-                    }
+                    })
                 } else {
                     AstNode::Literal(Literal {
                         kind: TokenKind::IntegerLiteral,

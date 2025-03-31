@@ -5,8 +5,8 @@ use std::rc::Rc;
 use super::enums::{
     Address, Argument, ArrayLength, ArrayLiteral, AstNode, BinaryOperation, BitwiseNot, Buffer,
     Conversion, Declare, Environment, FunctionCall, IfStatement, Lambda, Literal, LogicalNot,
-    MemoryOperation, Primitive, Return, SetAllocator, Size, Ternary, VariadicArgument,
-    VariadicStart,
+    MemoryOperation, Primitive, Return, SetAllocator, Size, StructLiteral, Ternary,
+    VariadicArgument, VariadicStart,
 };
 use super::parser::{create_generic_struct, StructPool};
 use crate::lexer::enums::Attribute;
@@ -2226,11 +2226,11 @@ impl<'a> Statement<'a> {
             values.push((name, value));
         }
 
-        AstNode::StructLiteral {
+        AstNode::StructLiteral(StructLiteral {
             name,
             values,
             location,
-        }
+        })
     }
 
     fn parse_field_access(&mut self, lhs: Option<(usize, AstNode, Rc<Location>)>) -> AstNode {
