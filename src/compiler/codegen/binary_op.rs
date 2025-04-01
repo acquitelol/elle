@@ -2,7 +2,9 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Comparison, Instruction, Type, Value},
-        lib::meta::generate_meta_struct,
+        lib::{
+            meta_struct::generate_meta_struct, short_circuit::handle_short_circuiting_operation,
+        },
     },
     elle_error, get_BOLD, get_GREEN, get_RESET,
     lexer::enums::{TokenKind, ValueKind},
@@ -14,7 +16,8 @@ impl Codegen<'_> for BinaryOperation {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         // Implement conditional short circuiting for logical AND and OR
         if matches!(self.operator, TokenKind::And | TokenKind::Or) {
-            return Some(gen.handle_short_circuiting_operation(
+            return Some(handle_short_circuiting_operation(
+                gen,
                 self.left,
                 self.right,
                 ctx.func,

@@ -4,7 +4,7 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Instruction, Type, Value},
-        lib::field::member_to_offset,
+        lib::field_utils::member_to_offset,
     },
     elle_error, is_generic,
     parser::enums::StructLiteral,

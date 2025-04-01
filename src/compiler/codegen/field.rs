@@ -2,7 +2,7 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Instruction, Type, Value},
-        lib::field::process_field_access,
+        lib::field_utils::process_field_access,
     },
     parser::enums::FieldAccess,
 };
