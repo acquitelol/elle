@@ -4,7 +4,10 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Instruction, Type, Value},
-        lib::{convert::convert_to_type, field_utils::member_to_offset},
+        lib::{
+            convert::convert_to_type, field_utils::member_to_offset,
+            mono_struct::create_monomorphized_struct,
+        },
     },
     elle_error, is_generic,
     parser::enums::StructLiteral,
@@ -34,7 +37,7 @@ impl Codegen<'_> for StructLiteral {
 
         if gen.struct_pool.get(&self.name).is_none() {
             if is_generic!(self.name) {
-                gen.create_monomorphized_struct(ctx.module, self.name.clone())
+                create_monomorphized_struct(gen, ctx.module, self.name.clone())
             } else {
                 elle_error!(
                     self.location.error(format!(

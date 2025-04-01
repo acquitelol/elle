@@ -21,7 +21,7 @@ use crate::{
 };
 
 use super::{
-    enums::{Data, Function, Instruction, Module, Type, TypeDef, Value},
+    enums::{Data, Function, Instruction, Module, Type, Value},
     lib::can_convert::can_convert_to_type,
     primitive::{function::generate_function, r#struct::generate_struct},
 };
@@ -73,7 +73,7 @@ pub struct Compiler {
     pub deferred_functions: Vec<Function>,
     // Map from temporary to its stack allocated address
     pub address_pool: HashMap<Value, Value>,
-    output_path: String,
+    pub output_path: String,
     pub pedantic: bool,
     pub no_gc: bool,
 }
@@ -283,79 +283,6 @@ impl Compiler {
                 }
             }
         }
-    }
-
-    pub fn create_monomorphized_struct(&mut self, module: &RefCell<Module>, generic_name: String) {
-        let (name, parts) = Type::from_internal_id(generic_name.clone());
-
-        let (generics, members, ..) = self
-            .struct_pool
-            .get(&name)
-            .expect(&format!("Base {name} should exist"));
-
-        let parsed_generics = HashMap::from_iter(
-            generics
-                .iter()
-                .enumerate()
-                .map(|(i, generic)| (generic.clone(), parts[i].clone())),
-        );
-
-        let struct_pool = RefCell::new(self.struct_pool.clone());
-        let tree = RefCell::new(vec![]);
-
-        let parsed_members = members
-            .iter()
-            .map(|member| Argument {
-                name: member.name.clone(),
-                r#type: member.r#type.clone().unknown_to_known(
-                    Some(&struct_pool),
-                    Some(&tree),
-                    generics.clone(),
-                    parsed_generics.clone(),
-                ),
-                manual: member.manual,
-                no_fmt: member.no_fmt,
-            })
-            .collect::<Vec<Argument>>();
-
-        self.struct_pool = struct_pool.borrow().to_owned();
-
-        for primitive in tree.borrow().to_owned().into_iter() {
-            match primitive {
-                Primitive::Struct(this) => {
-                    let td = generate_struct(this, self);
-                    module.borrow_mut().add_type(td);
-                }
-                _ => {}
-            };
-        }
-
-        let mut items = vec![];
-
-        for member in parsed_members.iter().cloned() {
-            items.push((member.r#type, 1));
-        }
-
-        let td = TypeDef {
-            name: generic_name.clone(),
-            align: None,
-            known_generics: parsed_generics,
-            items,
-            public: false,
-            usable: true,
-            imported: false,
-        };
-
-        module.borrow_mut().add_type(td);
-
-        self.struct_pool.insert(
-            generic_name.clone(),
-            (
-                vec![],
-                parsed_members,
-                Rc::new(Location::default(self.output_path.clone())),
-            ),
-        );
     }
 
     pub fn create_monomorphized_function(
