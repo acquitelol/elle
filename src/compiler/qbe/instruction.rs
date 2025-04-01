@@ -1,11 +1,8 @@
 use std::{fmt, rc::Rc};
 
-use crate::{
-    compiler::enums::{Type, Value},
-    lexer::enums::Location,
-};
+use crate::lexer::enums::Location;
 
-use super::comparison::Comparison;
+use super::{comparison::Comparison, r#type::Type, value::Value};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Instruction {

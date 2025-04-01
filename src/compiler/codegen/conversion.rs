@@ -1,8 +1,8 @@
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        enums::{Type, Value},
         lib::convert::convert_to_type,
+        qbe::{r#type::Type, value::Value},
     },
     parser::enums::Conversion,
 };

@@ -1,4 +1,4 @@
-use crate::compiler::{compiler::Compiler, enums::Type};
+use crate::compiler::{compiler::Compiler, qbe::r#type::Type};
 
 pub fn can_convert_to_type(gen: &mut Compiler, first: Type, second: Type, explicit: bool) -> bool {
     if first.is_struct() || second.is_struct() {

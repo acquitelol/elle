@@ -2,8 +2,10 @@ use codegen::Codegen;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
-    compiler::compiler::{Codegen, CodegenContext, Compiler},
-    compiler::enums::{Type, Value},
+    compiler::{
+        compiler::{Codegen, CodegenContext, Compiler},
+        qbe::{r#type::Type, value::Value},
+    },
     lexer::enums::{Location, Token, TokenKind, ValueKind},
 };
 

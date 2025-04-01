@@ -13,11 +13,11 @@ mod misc;
 mod parser;
 
 use compiler::compiler::Compiler;
-use compiler::enums::Type;
 use lexer::enums::{Location, TokenKind, ValueKind};
 use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex_and_parse};
 use parser::enums::{Argument, AstNode, Primitive};
 
+use crate::compiler::qbe::r#type::Type;
 use crate::parser::enums::{
     Address, BinaryOperation, Declare, Environment, FieldAccess, FunctionCall, FunctionSource,
     Literal, MemoryOperation, Return, SetAllocator, StructLiteral, StructSource,

@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
-    compiler::enums::Type,
+    compiler::qbe::r#type::Type,
     elle_error, ensure_fn_pointer,
     lexer::enums::{Location, Token, TokenKind, ValueKind},
     misc::colors::*,

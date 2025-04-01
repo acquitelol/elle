@@ -6,11 +6,11 @@ use std::process::exit;
 use std::time::Instant;
 use std::{cell::RefCell, rc::Rc};
 
+use crate::compiler::qbe::r#type::Type;
 use crate::parser::enums::{
     ArrayLength, ConstantSource, FunctionSource, Literal, Return, StructSource, UseSource,
 };
 use crate::{
-    compiler::enums::Type,
     elapsed_with_color,
     lexer::{
         enums::{Location, TokenKind, ValueKind},

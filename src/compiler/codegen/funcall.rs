@@ -3,12 +3,12 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        enums::{Function, Linkage, Type, Value},
+        enums::{Function, Linkage},
         lib::{
             convert::convert_to_type, meta_struct::generate_meta_struct,
             mono_function::create_monomorphized_function,
         },
-        qbe::instruction::Instruction,
+        qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
     elle_error, get_GREEN, get_POINTER_ID, get_RESET, hashmap, is_generic,
     lexer::enums::{TokenKind, ValueKind},

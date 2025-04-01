@@ -1,7 +1,7 @@
 use std::fmt;
 use std::rc::Rc;
 
-use crate::compiler::enums::Type;
+use crate::compiler::qbe::r#type::Type;
 use crate::misc::colors::*;
 use crate::{elle_error, ISSUE_URL};
 
@@ -109,7 +109,7 @@ pub enum TokenKind {
     Realloc,
     Free,
     SetAllocator,
-    ResetAllocator
+    ResetAllocator,
 }
 
 impl TokenKind {
@@ -266,7 +266,10 @@ impl TokenKind {
             Self::BitwiseOrEqual => TokenKind::BitwiseOr,
             Self::ShiftLeftEqual => TokenKind::ShiftLeft,
             Self::ShiftRightEqual => TokenKind::ShiftRight,
-            other => elle_error!(Location::base().internal_error(format!("Invalid identifier operation {other:?}"))),
+            other => {
+                elle_error!(Location::base()
+                    .internal_error(format!("Invalid identifier operation {other:?}")))
+            }
         }
     }
 }
@@ -452,7 +455,11 @@ impl Location {
             self.display(is_warning),
             "―".repeat(20),
             RESET = get_RESET!(),
-            fmt = if is_warning { get_YELLOW!() } else { get_RED!() }
+            fmt = if is_warning {
+                get_YELLOW!()
+            } else {
+                get_RED!()
+            }
         );
 
         // Used for calculating the bottom width
@@ -472,14 +479,16 @@ impl Location {
             ident
         };
 
-        let split_index = ctx.char_indices()
+        let split_index = ctx
+            .char_indices()
             .nth(left)
             .map(|(i, _)| i)
             .unwrap_or_else(|| ctx.len());
 
         let (lhs, rhs) = ctx.split_at(split_index);
 
-        let split_index = rhs.char_indices()
+        let split_index = rhs
+            .char_indices()
             .nth(self.length)
             .map(|(i, _)| i)
             .unwrap_or_else(|| rhs.len());
@@ -521,7 +530,11 @@ impl Location {
             "{fmt}{}{RESET}",
             "―".repeat(50),
             RESET = get_RESET!(),
-            fmt = if is_warning { get_YELLOW!() } else { get_RED!() }
+            fmt = if is_warning {
+                get_YELLOW!()
+            } else {
+                get_RED!()
+            }
         );
 
         return format!("\n{lines}\n{}\n{lines}\n", message.into());
@@ -610,7 +623,9 @@ impl Token {
     /// Ensures an attribute is valid and returns its enum variant
     pub fn parse_attribute(&self) -> Attribute {
         if self.kind != TokenKind::Identifier {
-            elle_error!(self.location.error("Tried to parse an attribute on a non-identifier token"));
+            elle_error!(self
+                .location
+                .error("Tried to parse an attribute on a non-identifier token"));
         }
 
         let attribute = self.value.get_string_inner().unwrap();

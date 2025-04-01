@@ -1,8 +1,7 @@
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        enums::{Type, Value},
-        qbe::{comparison::Comparison, instruction::Instruction},
+        qbe::{comparison::Comparison, instruction::Instruction, r#type::Type, value::Value},
     },
     parser::enums::LogicalNot,
 };

@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use crate::{
-    compiler::enums::Type,
+    compiler::qbe::r#type::Type,
     elle_error,
     lexer::enums::{Attribute, TokenKind, ValueKind},
     parser::{

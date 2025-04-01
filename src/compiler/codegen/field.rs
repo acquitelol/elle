@@ -1,9 +1,8 @@
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        enums::{Type, Value},
         lib::field_utils::process_field_access,
-        qbe::instruction::Instruction,
+        qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
     parser::enums::FieldAccess,
 };

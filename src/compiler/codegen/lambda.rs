@@ -1,8 +1,8 @@
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        enums::{Type, Value},
         primitive::function::generate_function,
+        qbe::{r#type::Type, value::Value},
     },
     hashmap,
     parser::enums::{FunctionSource, Lambda},

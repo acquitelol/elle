@@ -3,8 +3,9 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use crate::{
     compiler::{
         compiler::Compiler,
-        enums::{Module, Type, TypeDef},
+        enums::{Module, TypeDef},
         primitive::r#struct::generate_struct,
+        qbe::r#type::Type,
     },
     lexer::enums::Location,
     parser::enums::{Argument, Primitive},

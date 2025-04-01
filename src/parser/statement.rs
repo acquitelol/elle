@@ -8,17 +8,18 @@ use super::enums::{
     LogicalNot, MemoryOperation, Primitive, Return, SetAllocator, Size, StructLiteral, Ternary,
     VariadicArgument, VariadicStart,
 };
+
 use super::parser::{create_generic_struct, StructPool};
+use crate::compiler::qbe::r#type::Type;
 use crate::lexer::enums::Attribute;
 use crate::parser::enums::{BlockStatement, WhileLoopStatement};
+use crate::{elle_error, get_type, INTERNAL_IDX_FORMAT, INTERNAL_ITERATOR_FORMAT, LEN_CONSTANT};
 use crate::{
-    compiler::enums::Type,
     ensure_fn_pointer,
     lexer::enums::{Location, Token, TokenKind, ValueKind},
     misc::colors::*,
     not_valid_struct_or_type, token_to_node, GENERIC_END, GENERIC_IDENTIFIER,
 };
-use crate::{elle_error, get_type, INTERNAL_IDX_FORMAT, INTERNAL_ITERATOR_FORMAT, LEN_CONSTANT};
 
 #[derive(Clone, Copy)]
 pub struct Shared<'a> {
