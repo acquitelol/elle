@@ -4,7 +4,7 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Instruction, Type, Value},
-        lib::field_utils::member_to_offset,
+        lib::{convert::convert_to_type, field_utils::member_to_offset},
     },
     elle_error, is_generic,
     parser::enums::StructLiteral,
@@ -129,7 +129,8 @@ impl Codegen<'_> for StructLiteral {
 
             if let Some(member_ty) = member_ty {
                 if ty.weight() > member_ty.weight() || ty.weight() < member_ty.weight() {
-                    let (new_ty, new_val) = gen.convert_to_type(
+                    let (new_ty, new_val) = convert_to_type(
+                        gen,
                         ctx.func,
                         ty.clone(),
                         member_ty.clone(),

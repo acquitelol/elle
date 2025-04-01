@@ -2,6 +2,7 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Instruction, Type, Value},
+        lib::convert::convert_to_type,
     },
     lexer::enums::{TokenKind, ValueKind},
     parser::enums::{AstNode, BinaryOperation, Buffer, Literal},
@@ -40,7 +41,8 @@ impl Codegen<'_> for Buffer {
 
         let tmp = gen.new_variable(&buf_ty, &self.name, Some(ctx.func), true, false);
 
-        let (_, converted_val) = gen.convert_to_type(
+        let (_, converted_val) = convert_to_type(
+            gen,
             ctx.func,
             ty,
             Type::Long,

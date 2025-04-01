@@ -3,7 +3,8 @@ use crate::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Comparison, Instruction, Type, Value},
         lib::{
-            meta_struct::generate_meta_struct, short_circuit::handle_short_circuiting_operation,
+            convert::convert_to_type, meta_struct::generate_meta_struct,
+            short_circuit::handle_short_circuiting_operation,
         },
     },
     elle_error, get_BOLD, get_GREEN, get_RESET,
@@ -117,7 +118,8 @@ impl Codegen<'_> for BinaryOperation {
         }
 
         if left_ty.weight() > right_ty.weight() {
-            let (_, val) = gen.convert_to_type(
+            let (_, val) = convert_to_type(
+                gen,
                 ctx.func,
                 right_ty.clone(),
                 left_ty.clone(),
@@ -129,7 +131,8 @@ impl Codegen<'_> for BinaryOperation {
 
             right_val = val;
         } else if left_ty.weight() < right_ty.weight() {
-            let (ty, val) = gen.convert_to_type(
+            let (ty, val) = convert_to_type(
+                gen,
                 ctx.func,
                 left_ty,
                 right_ty.clone(),

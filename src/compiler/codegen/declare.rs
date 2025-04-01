@@ -2,6 +2,7 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Instruction, Type, Value},
+        lib::convert::convert_to_type,
     },
     elle_error,
     lexer::enums::{TokenKind, ValueKind},
@@ -104,7 +105,8 @@ impl Codegen<'_> for Declare {
             }
 
             let (final_ty, final_val) = if ret_ty != local_ty {
-                gen.convert_to_type(
+                convert_to_type(
+                    gen,
                     ctx.func,
                     ret_ty,
                     local_ty.clone(),

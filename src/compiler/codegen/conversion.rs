@@ -2,6 +2,7 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Type, Value},
+        lib::convert::convert_to_type,
     },
     parser::enums::Conversion,
 };
@@ -13,7 +14,8 @@ impl Codegen<'_> for Conversion {
                 "Unexpected error when trying to compile the value of a conversion statement",
             ));
 
-        Some(gen.convert_to_type(
+        Some(convert_to_type(
+            gen,
             ctx.func,
             first,
             self.r#type.unwrap(),

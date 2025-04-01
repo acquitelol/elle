@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     elle_error, get_MAIN_ID, hashmap,
-    lexer::enums::{Location, TokenKind},
+    lexer::enums::Location,
     misc::colors::*,
     parser::{
         enums::{
@@ -21,7 +21,8 @@ use crate::{
 };
 
 use super::{
-    enums::{Comparison, Data, Function, Instruction, Module, Type, TypeDef, Value},
+    enums::{Data, Function, Instruction, Module, Type, TypeDef, Value},
+    lib::can_convert::can_convert_to_type,
     primitive::{function::generate_function, r#struct::generate_struct},
 };
 
@@ -73,7 +74,7 @@ pub struct Compiler {
     // Map from temporary to its stack allocated address
     pub address_pool: HashMap<Value, Value>,
     output_path: String,
-    pedantic: bool,
+    pub pedantic: bool,
     pub no_gc: bool,
 }
 
@@ -284,170 +285,6 @@ impl Compiler {
         }
     }
 
-    pub fn convert_to_type(
-        &mut self,
-        func: &RefCell<Function>,
-        first: Type,
-        second: Type,
-        val: Value,
-        left_location: &Location,
-        right_location: &Location,
-        explicit: bool,
-    ) -> (Type, Value) {
-        // TODO: ADD A VARIANT TO `can_convert_to_type` WHEN ADDING A VARIANT HERE
-        if first.is_struct() || second.is_struct() {
-            if first == second {
-                return (second, val);
-            }
-
-            if explicit
-                && ((first.is_struct() && second.is_pointer_like())
-                    || (second.is_struct() && first.is_pointer_like()))
-            {
-                return (second, val);
-            }
-
-            if first.is_pointer() && first.get_pointer_inner().unwrap() == second {
-                if second.is_struct() {
-                    return (second, val);
-                } else {
-                    let tmp = self.new_temporary(Some("load"), false);
-
-                    func.borrow_mut().assign_instruction(
-                        &tmp,
-                        &second.clone(),
-                        Instruction::Load(second.clone(), val),
-                    );
-
-                    return (second, tmp);
-                }
-            }
-
-            elle_error!(left_location
-                .clone()
-                .with_extra_info(format!("This has the type '{}'", first.display()))
-                .error(format!(
-                    "Cannot convert from the type '{}' to the type '{}'.",
-                    first.display(),
-                    second.display()
-                )))
-        }
-
-        macro_rules! implicit_conversion_error {
-            () => {
-                elle_error!(
-                    right_location.clone().with_extra_info(format!(
-                        "This has the type '{}'",
-                        first.display()
-                    )).error(format!(
-                        "Cannot implicitly convert '{}' to '{}' or vice versa.\nTo explicitly convert, use the C-like '(type)variable' syntax.",
-                        first.display(),
-                        second.display()
-                    ))
-                )
-            };
-        }
-
-        if ((first.is_strictly_number() && second.is_string())
-            || (second.is_strictly_number() && first.is_string()))
-            && !explicit
-        {
-            implicit_conversion_error!()
-        }
-
-        if first.is_pointer()
-            && second.is_pointer()
-            && (first.get_pointer_inner().unwrap().is_void()
-                || second.get_pointer_inner().unwrap().is_void())
-        {
-            return (second, val);
-        }
-
-        if ((first.is_pointer() && second.is_pointer())
-            && first.get_pointer_inner().unwrap() != second.get_pointer_inner().unwrap())
-            && !explicit
-            && self.pedantic
-        {
-            implicit_conversion_error!()
-        }
-
-        if first.weight() == second.weight() {
-            return (second, val);
-        } else if (first.is_int() && second.is_int()) || (first.is_float() && second.is_float()) {
-            let conv = self.new_temporary(Some("conv"), true);
-            let is_first_higher = first.weight() > second.weight();
-
-            func.borrow_mut().assign_instruction(
-                &conv,
-                &second,
-                if is_first_higher {
-                    if first.is_float() {
-                        Instruction::Truncate(val)
-                    } else {
-                        // Subtyping in QBE means that longs can automatically
-                        // work as ints but not vice versa
-                        Instruction::Copy(val)
-                    }
-                } else {
-                    Instruction::Extension(first, val)
-                },
-            );
-
-            return (second, conv);
-        } else {
-            let conv = self.new_temporary(Some("conv"), true);
-
-            func.borrow_mut().assign_instruction(
-                &conv,
-                &second,
-                Instruction::Conversion(first, second.clone(), val),
-            );
-
-            return (second, conv);
-        }
-    }
-
-    fn can_convert_to_type(&mut self, first: Type, second: Type, explicit: bool) -> bool {
-        if first.is_struct() || second.is_struct() {
-            let structs_are_the_same = first == second;
-            let explicit_struct_to_ptr = explicit
-                && ((first.is_struct() && second.is_pointer_like())
-                    || (second.is_struct() && first.is_pointer_like()));
-            let first_is_ptr_of_second =
-                first.is_pointer() && first.get_pointer_inner().unwrap() == second;
-
-            return structs_are_the_same || explicit_struct_to_ptr || first_is_ptr_of_second;
-        }
-
-        if ((first.is_strictly_number() && second.is_string())
-            || (second.is_strictly_number() && first.is_string()))
-            && !explicit
-        {
-            return false;
-        }
-
-        if (first.is_pointer() && second.is_pointer())
-            && (first.get_pointer_inner().unwrap().is_void()
-                || second.get_pointer_inner().unwrap().is_void())
-        {
-            return true;
-        }
-
-        if ((first.is_pointer() && second.is_pointer())
-            && first.get_pointer_inner().unwrap() != second.get_pointer_inner().unwrap())
-            && !explicit
-            && self.pedantic
-        {
-            return false;
-        }
-
-        let weights_match = first.weight() == second.weight();
-        let both_int_or_float =
-            (first.is_int() && second.is_int()) || (first.is_float() && second.is_float());
-
-        return weights_match || both_int_or_float;
-    }
-
     pub fn create_monomorphized_struct(&mut self, module: &RefCell<Module>, generic_name: String) {
         let (name, parts) = Type::from_internal_id(generic_name.clone());
 
@@ -626,7 +463,8 @@ impl Compiler {
                             for (key, ty) in inner.iter().map(|(x, y)| (x.clone(), y.clone())) {
                                 match known_generics.get(&key) {
                                     Some(existing_ty)
-                                        if !self.can_convert_to_type(
+                                        if !can_convert_to_type(
+                                            self,
                                             existing_ty.clone(),
                                             ty.clone(),
                                             false,

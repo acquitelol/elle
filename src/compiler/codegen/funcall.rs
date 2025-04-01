@@ -4,7 +4,7 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Function, Instruction, Linkage, Type, Value},
-        lib::meta_struct::generate_meta_struct,
+        lib::{convert::convert_to_type, meta_struct::generate_meta_struct},
     },
     elle_error, get_GREEN, get_POINTER_ID, get_RESET, hashmap, is_generic,
     lexer::enums::{TokenKind, ValueKind},
@@ -300,7 +300,8 @@ impl Codegen<'_> for FunctionCall {
                 ((ty, val), no_fmt)
             } else {
                 (
-                    gen.convert_to_type(
+                    convert_to_type(
+                        gen,
                         ctx.func,
                         ty.into_abi(),
                         param_ty.unwrap(),
