@@ -2,6 +2,7 @@ pub mod block;
 pub mod comparison;
 pub mod data;
 pub mod data_item;
+pub mod function;
 pub mod instruction;
 pub mod statement;
 pub mod r#type;

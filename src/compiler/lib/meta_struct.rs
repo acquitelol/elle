@@ -2,10 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     advance,
-    compiler::{
-        enums::Function,
-        qbe::{r#type::Type, value::Value},
-    },
+    compiler::qbe::{function::Function, r#type::Type, value::Value},
     get_MAIN_ID,
     lexer::enums::{Location, TokenKind, ValueKind},
     parser::enums::{ArrayLiteral, AstNode, Literal, StructLiteral},

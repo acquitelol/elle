@@ -12,9 +12,9 @@ use crate::{
 };
 
 use super::{
-    enums::{Function, Module},
+    enums::Module,
     primitive::{function::generate_function, r#struct::generate_struct},
-    qbe::{data::Data, instruction::Instruction, r#type::Type, value::Value},
+    qbe::{data::Data, function::Function, instruction::Instruction, r#type::Type, value::Value},
 };
 
 #[derive(Clone)]
