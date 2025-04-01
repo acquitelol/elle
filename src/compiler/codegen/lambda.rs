@@ -2,6 +2,7 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Type, Value},
+        primitive::function::generate_function,
     },
     hashmap,
     parser::enums::{FunctionSource, Lambda},
@@ -28,7 +29,7 @@ impl Codegen<'_> for Lambda {
             args.push((ty.into_abi(), tmp));
         }
 
-        let lambda_func = gen.generate_function(
+        let lambda_func = generate_function(
             FunctionSource {
                 name: lambda_name.clone(),
                 public: false,
@@ -48,6 +49,7 @@ impl Codegen<'_> for Lambda {
                 location: self.location.clone(),
                 return_location: self.location,
             },
+            gen,
             true,
             hashmap![],
             ctx.module,
