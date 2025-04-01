@@ -6,27 +6,10 @@ use std::{
 };
 
 use super::qbe::{
-    data::Data, instruction::Instruction, r#type::Type, typedef::TypeDef, value::Value,
+    data::Data, instruction::Instruction, r#type::Type, statement::Statement, typedef::TypeDef,
+    value::Value,
 };
 use crate::{get_MAIN_ID, lexer::enums::Location, DEAD_CODE_ELIMINATION_PASSES, MAIN_ID};
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Statement {
-    Assign(Value, Type, Instruction),
-    Volatile(Instruction),
-}
-
-impl fmt::Display for Statement {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Assign(temp, ty, instr) => {
-                assert!(matches!(temp, Value::Temporary(_)));
-                write!(f, "{} ={} {}", temp, ty, instr)
-            }
-            Self::Volatile(instr) => write!(f, "{}", instr),
-        }
-    }
-}
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Block {
