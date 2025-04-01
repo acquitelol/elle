@@ -4,7 +4,10 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Function, Instruction, Linkage, Type, Value},
-        lib::{convert::convert_to_type, meta_struct::generate_meta_struct},
+        lib::{
+            convert::convert_to_type, meta_struct::generate_meta_struct,
+            mono_function::create_monomorphized_function,
+        },
     },
     elle_error, get_GREEN, get_POINTER_ID, get_RESET, hashmap, is_generic,
     lexer::enums::{TokenKind, ValueKind},
@@ -211,7 +214,8 @@ impl Codegen<'_> for FunctionCall {
         }
 
         if gen.generic_functions.contains_key(&name) {
-            gen.create_monomorphized_function(
+            create_monomorphized_function(
+                gen,
                 &mut name,
                 &mut add_meta,
                 base_known_generics,
@@ -353,7 +357,8 @@ impl Codegen<'_> for FunctionCall {
                         func_name = format!("{real_struct_name}.{FORMAT_CONSTANT}");
 
                         if gen.generic_functions.contains_key(&func_name) {
-                            gen.create_monomorphized_function(
+                            create_monomorphized_function(
+                                gen,
                                 &mut func_name,
                                 &mut false,
                                 vec![],
@@ -392,7 +397,8 @@ impl Codegen<'_> for FunctionCall {
                         .unwrap_or(Function::default());
 
                     if gen.generic_functions.contains_key(&func_name) {
-                        gen.create_monomorphized_function(
+                        create_monomorphized_function(
+                            gen,
                             &mut func_name,
                             &mut false,
                             vec![],
