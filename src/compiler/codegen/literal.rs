@@ -1,8 +1,8 @@
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        enums::{Data, DataItem, Linkage},
-        qbe::{instruction::Instruction, r#type::Type, value::Value},
+        enums::{DataItem, Linkage},
+        qbe::{data::Data, instruction::Instruction, r#type::Type, value::Value},
     },
     elle_error,
     lexer::enums::{TokenKind, ValueKind},

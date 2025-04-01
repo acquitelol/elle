@@ -5,51 +5,10 @@ use std::{
     fmt,
 };
 
-use super::qbe::{instruction::Instruction, r#type::Type, typedef::TypeDef, value::Value};
+use super::qbe::{
+    data::Data, instruction::Instruction, r#type::Type, typedef::TypeDef, value::Value,
+};
 use crate::{get_MAIN_ID, lexer::enums::Location, DEAD_CODE_ELIMINATION_PASSES, MAIN_ID};
-
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct Data {
-    pub linkage: Linkage,
-    pub name: String,
-    pub align: Option<u64>,
-    pub items: Vec<(Type, DataItem)>,
-}
-
-impl Data {
-    pub fn new(
-        linkage: Linkage,
-        name: String,
-        align: Option<u64>,
-        items: Vec<(Type, DataItem)>,
-    ) -> Self {
-        Self {
-            linkage,
-            name,
-            align,
-            items,
-        }
-    }
-}
-
-impl fmt::Display for Data {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "{}data ${} = ", self.linkage, self.name)?;
-
-        if let Some(align) = self.align {
-            write!(formatter, "align {} ", align)?;
-        }
-        write!(
-            formatter,
-            "{{ {} }}",
-            self.items
-                .iter()
-                .map(|(ty, item)| format!("{} {}", ty, item))
-                .collect::<Vec<String>>()
-                .join(", ")
-        )
-    }
-}
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum DataItem {
