@@ -1,3 +1,4 @@
+pub mod block;
 pub mod comparison;
 pub mod data;
 pub mod data_item;
