@@ -1,5 +1,5 @@
 use crate::{
-    compiler::{compiler::Compiler, enums::TypeDef},
+    compiler::{compiler::Compiler, qbe::typedef::TypeDef},
     elle_error, get_GREEN, get_RESET,
     parser::enums::StructSource,
     GREEN, RESET,
