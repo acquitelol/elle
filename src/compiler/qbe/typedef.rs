@@ -1,8 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, fmt};
 
-use crate::{compiler::enums::Module, lexer::enums::Location};
-
-use super::r#type::Type;
+use super::{module::Module, r#type::Type};
+use crate::lexer::enums::Location;
 
 /// QBE aggregate type definition
 #[derive(Debug, Clone, Eq, PartialEq, Default)]

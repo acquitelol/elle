@@ -3,10 +3,9 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     compiler::{
         compiler::{CodegenContext, Compiler},
-        enums::Module,
         qbe::{
-            comparison::Comparison, function::Function, instruction::Instruction, r#type::Type,
-            value::Value,
+            comparison::Comparison, function::Function, instruction::Instruction, module::Module,
+            r#type::Type, value::Value,
         },
     },
     elle_error,

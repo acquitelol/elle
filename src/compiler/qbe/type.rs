@@ -2,7 +2,6 @@ use core::fmt;
 use std::{cell::RefCell, collections::HashMap, iter::Peekable, mem, num::ParseIntError};
 
 use crate::{
-    compiler::enums::Module,
     elle_error, get_POINTER_ID, hashmap, is_generic, is_unknown,
     lexer::enums::Location,
     parser::{
@@ -12,7 +11,7 @@ use crate::{
     GENERIC_END, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN, POINTER_ID, VOID_POINTER_ID,
 };
 
-use super::function::Function;
+use super::{function::Function, module::Module};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Type {

@@ -1,10 +1,6 @@
-// Roughly references https://github.com/garritfra/qbe-rs/blob/main/src/lib.rs
-// https://github.com/garritfra/qbe-rs/blob/main/LICENSE-MIT
 use std::{collections::HashSet, fmt};
 
-use super::qbe::{
-    data::Data, function::Function, r#type::Type, statement::Statement, typedef::TypeDef,
-};
+use super::{data::Data, function::Function, r#type::Type, statement::Statement, typedef::TypeDef};
 use crate::{get_MAIN_ID, DEAD_CODE_ELIMINATION_PASSES, MAIN_ID};
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]

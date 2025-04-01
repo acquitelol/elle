@@ -3,10 +3,9 @@ use std::{cell::RefCell, collections::HashMap};
 use crate::{
     compiler::{
         compiler::{CodegenContext, Compiler},
-        enums::Module,
         qbe::{
-            function::Function, instruction::Instruction, linkage::Linkage, r#type::Type,
-            statement::Statement, value::Value,
+            function::Function, instruction::Instruction, linkage::Linkage, module::Module,
+            r#type::Type, statement::Statement, value::Value,
         },
     },
     elle_error, hashmap, is_generic,

@@ -5,6 +5,7 @@ pub mod data_item;
 pub mod function;
 pub mod instruction;
 pub mod linkage;
+pub mod module;
 pub mod statement;
 pub mod r#type;
 pub mod typedef;

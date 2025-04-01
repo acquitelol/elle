@@ -7,9 +7,8 @@ use std::{
 use crate::{
     compiler::{
         compiler::{CodegenContext, Compiler},
-        enums::Module,
         primitive::{function::generate_function, r#struct::generate_struct},
-        qbe::{function::Function, r#type::Type},
+        qbe::{function::Function, module::Module, r#type::Type},
     },
     elle_error, get_BOLD, get_GREEN, get_RED, get_RESET, hashmap,
     lexer::enums::Location,
