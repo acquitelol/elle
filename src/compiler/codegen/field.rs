@@ -2,6 +2,7 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Instruction, Type, Value},
+        lib::field::process_field_access,
     },
     parser::enums::FieldAccess,
 };
@@ -12,7 +13,8 @@ impl Codegen<'_> for FieldAccess {
             "Unexpected error when trying to compile the left side of a struct field access",
         ));
 
-        let (field_ty, offset_tmp) = gen.process_field_access(
+        let (field_ty, offset_tmp) = process_field_access(
+            gen,
             ctx.func,
             ctx.module,
             ty,

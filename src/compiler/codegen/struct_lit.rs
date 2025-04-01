@@ -4,6 +4,7 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Instruction, Type, Value},
+        lib::field::member_to_offset,
     },
     elle_error, is_generic,
     parser::enums::StructLiteral,
@@ -109,9 +110,8 @@ impl Codegen<'_> for StructLiteral {
                 )));
             }
 
-            let (member_ty, offset) = gen
-                .member_to_offset(ctx.module, &self.name, &member_name)
-                .unwrap();
+            let (member_ty, offset) =
+                member_to_offset(gen, ctx.module, &self.name, &member_name).unwrap();
 
             let (mut ty, mut val) =
                 value.compile(gen, &CodegenContext {
