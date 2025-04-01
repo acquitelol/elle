@@ -1,9 +1,9 @@
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        enums::Linkage,
         qbe::{
-            data::Data, data_item::DataItem, instruction::Instruction, r#type::Type, value::Value,
+            data::Data, data_item::DataItem, instruction::Instruction, linkage::Linkage,
+            r#type::Type, value::Value,
         },
     },
     parser::enums::Environment,

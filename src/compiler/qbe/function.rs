@@ -1,11 +1,11 @@
 use std::{collections::HashMap, fmt};
 
-use crate::{
-    compiler::{enums::Linkage, qbe::statement::Statement},
-    lexer::enums::Location,
-};
+use crate::lexer::enums::Location;
 
-use super::{block::Block, instruction::Instruction, r#type::Type, value::Value};
+use super::{
+    block::Block, instruction::Instruction, linkage::Linkage, r#type::Type, statement::Statement,
+    value::Value,
+};
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Function {

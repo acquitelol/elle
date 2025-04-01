@@ -1,8 +1,6 @@
 use std::fmt;
 
-use crate::compiler::enums::Linkage;
-
-use super::{data_item::DataItem, r#type::Type};
+use super::{data_item::DataItem, linkage::Linkage, r#type::Type};
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Data {
