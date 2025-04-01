@@ -2,6 +2,7 @@ use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         enums::{Comparison, Instruction, Type, Value},
+        lib::meta::generate_meta_struct,
     },
     elle_error, get_BOLD, get_GREEN, get_RESET,
     lexer::enums::{TokenKind, ValueKind},
@@ -208,7 +209,7 @@ impl Codegen<'_> for BinaryOperation {
                 let mut params = vec![((left_ty, left_val), false), ((right_ty, right_val), false)];
 
                 if has_meta {
-                    let meta = Compiler::generate_meta_struct(
+                    let meta = generate_meta_struct(
                         ctx.func,
                         &params,
                         vec![
