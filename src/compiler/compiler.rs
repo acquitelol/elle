@@ -24,7 +24,7 @@ use super::{
     enums::{
         Comparison, Data, Function, Instruction, Linkage, Module, Statement, Type, TypeDef, Value,
     },
-    primitive::function::generate_function,
+    primitive::{function::generate_function, r#struct::generate_struct},
 };
 
 #[derive(Clone)]
@@ -283,41 +283,6 @@ impl Compiler {
                     undefined_error!()
                 }
             }
-        }
-    }
-
-    fn generate_struct(&mut self, this: StructSource) -> TypeDef {
-        let mut items = vec![];
-
-        if this.members.is_empty() && !this.ignore_empty {
-            elle_error!(
-                this.keyword_location
-                    .with_extra_info("Replace this with 'namespace'")
-                    .error(format!(
-                        "Cannot declare an empty struct (with no members).\nIf you intended to make a namespace, use the '{GREEN}namespace{RESET}' keyword instead.",
-                        GREEN = get_GREEN!(),
-                        RESET = get_RESET!()
-                    ))
-            )
-        }
-
-        for member in this.members.iter().cloned() {
-            items.push((member.r#type, 1));
-        }
-
-        self.struct_pool.insert(
-            this.name.clone(),
-            (this.generics, this.members, this.keyword_location),
-        );
-
-        TypeDef {
-            name: this.name,
-            align: None,
-            known_generics: this.known_generics,
-            items,
-            public: this.public,
-            usable: this.usable,
-            imported: this.imported,
         }
     }
 
@@ -988,7 +953,7 @@ impl Compiler {
         for primitive in tree.borrow().to_owned().into_iter() {
             match primitive {
                 Primitive::Struct(this) => {
-                    let td = self.generate_struct(this);
+                    let td = generate_struct(this, self);
                     module.borrow_mut().add_type(td);
                 }
                 _ => {}
@@ -1344,7 +1309,7 @@ impl Compiler {
                     for primitive in tree.borrow().to_owned().into_iter() {
                         match primitive {
                             Primitive::Struct(this) => {
-                                let td = self.generate_struct(this);
+                                let td = generate_struct(this, self);
                                 module.borrow_mut().add_type(td);
                             }
                             _ => {}
@@ -1485,7 +1450,7 @@ impl Compiler {
                     }
                 }
                 Primitive::Struct(this) => {
-                    let td = gen.generate_struct(this);
+                    let td = generate_struct(this, &mut gen);
 
                     if module_ref
                         .borrow()
