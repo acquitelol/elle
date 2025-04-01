@@ -1,11 +1,12 @@
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        enums::{Comparison, Instruction, Type, Value},
+        enums::{Type, Value},
         lib::{
             convert::convert_to_type, meta_struct::generate_meta_struct,
             short_circuit::handle_short_circuiting_operation,
         },
+        qbe::{comparison::Comparison, instruction::Instruction},
     },
     elle_error, get_BOLD, get_GREEN, get_RESET,
     lexer::enums::{TokenKind, ValueKind},

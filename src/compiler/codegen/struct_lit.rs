@@ -3,11 +3,12 @@ use std::collections::HashSet;
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        enums::{Instruction, Type, Value},
+        enums::{Type, Value},
         lib::{
             convert::convert_to_type, field_utils::member_to_offset,
             mono_struct::create_monomorphized_struct,
         },
+        qbe::instruction::Instruction,
     },
     elle_error, is_generic,
     parser::enums::StructLiteral,

@@ -12,7 +12,8 @@
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        enums::{Instruction, Type, Value},
+        enums::{Type, Value},
+        qbe::instruction::Instruction,
     },
     lexer::enums::{TokenKind, ValueKind},
     parser::enums::{ArrayLength, AstNode, BinaryOperation, Literal},

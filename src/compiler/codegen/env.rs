@@ -1,7 +1,8 @@
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        enums::{Data, DataItem, Instruction, Linkage, Type, Value},
+        enums::{Data, DataItem, Linkage, Type, Value},
+        qbe::instruction::Instruction,
     },
     parser::enums::Environment,
     ENV_ID, ENV_STRUCT_NAME,

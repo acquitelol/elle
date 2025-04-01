@@ -3,7 +3,8 @@ use std::{cell::RefCell, collections::HashMap};
 use crate::{
     compiler::{
         compiler::{CodegenContext, Compiler},
-        enums::{Function, Instruction, Linkage, Module, Statement, Type, Value},
+        enums::{Function, Linkage, Module, Statement, Type, Value},
+        qbe::instruction::Instruction,
     },
     elle_error, hashmap, is_generic,
     lexer::enums::TokenKind,

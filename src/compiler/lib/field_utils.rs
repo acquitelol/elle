@@ -3,7 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     compiler::{
         compiler::Compiler,
-        enums::{Function, Instruction, Module, Type, Value},
+        enums::{Function, Module, Type, Value},
+        qbe::instruction::Instruction,
     },
     elle_error,
     lexer::enums::{Location, TokenKind},
