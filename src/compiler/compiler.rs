@@ -7,13 +7,13 @@ use std::{
 };
 
 use crate::{
-    advance, elle_error, get_MAIN_ID, hashmap, is_generic,
+    advance, elle_error, get_MAIN_ID, hashmap,
     lexer::enums::{Location, TokenKind, ValueKind},
     misc::colors::*,
     parser::{
         enums::{
             modify_type_in_ast, Argument, ArrayLiteral, AstNode, ConstantSource, FieldAccess,
-            FunctionSource, Literal, Primitive, Return, StructLiteral, StructSource,
+            FunctionSource, Literal, Primitive, Return, StructLiteral,
         },
         parser::StructPool,
     },
@@ -21,9 +21,7 @@ use crate::{
 };
 
 use super::{
-    enums::{
-        Comparison, Data, Function, Instruction, Linkage, Module, Statement, Type, TypeDef, Value,
-    },
+    enums::{Comparison, Data, Function, Instruction, Module, Type, TypeDef, Value},
     primitive::{function::generate_function, r#struct::generate_struct},
 };
 
