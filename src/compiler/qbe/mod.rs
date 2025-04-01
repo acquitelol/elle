@@ -1,5 +1,6 @@
 pub mod comparison;
 pub mod data;
+pub mod data_item;
 pub mod instruction;
 pub mod r#type;
 pub mod typedef;

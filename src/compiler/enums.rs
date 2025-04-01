@@ -10,21 +10,6 @@ use super::qbe::{
 };
 use crate::{get_MAIN_ID, lexer::enums::Location, DEAD_CODE_ELIMINATION_PASSES, MAIN_ID};
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub enum DataItem {
-    String(String),
-    Const(i128),
-}
-
-impl fmt::Display for DataItem {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::String(string) => write!(f, "\"{}\"", string),
-            Self::Const(val) => write!(f, "{}", val),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Statement {
     Assign(Value, Type, Instruction),
