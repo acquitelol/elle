@@ -6,7 +6,7 @@ use crate::{
 };
 
 use super::{
-    enums::{AstNode, Conversion, Primitive},
+    enums::{AstNode, ConstantSource, Conversion, Primitive},
     parser::Parser,
     statement::{Shared, Statement},
 };
@@ -80,7 +80,7 @@ impl<'a> Constant<'a> {
         .parse()
         .0;
 
-        Primitive::Constant {
+        Primitive::Constant(ConstantSource {
             name,
             public,
             r#type: Some(ty.clone()),
@@ -93,6 +93,6 @@ impl<'a> Constant<'a> {
             usable: true,
             imported: false,
             location: self.parser.current_token().location,
-        }
+        })
     }
 }

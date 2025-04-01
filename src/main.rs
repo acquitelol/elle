@@ -19,8 +19,9 @@ use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex
 use parser::enums::{Argument, AstNode, Primitive};
 
 use crate::parser::enums::{
-    Address, BinaryOperation, Declare, Environment, FieldAccess, FunctionCall, Literal,
-    MemoryOperation, Return, SetAllocator, StructLiteral, WhileLoopStatement,
+    Address, BinaryOperation, Declare, Environment, FieldAccess, FunctionCall, FunctionSource,
+    Literal, MemoryOperation, Return, SetAllocator, StructLiteral, StructSource,
+    WhileLoopStatement,
 };
 
 pub enum Warning {
@@ -362,7 +363,7 @@ fn main() -> ExitCode {
 
     tree.insert(
         0,
-        Primitive::Struct {
+        Primitive::Struct(StructSource {
             name: META_STRUCT_NAME.into(),
             public: false,
             usable: true,
@@ -373,12 +374,12 @@ fn main() -> ExitCode {
             keyword_location: loc.clone(),
             location: loc.clone(),
             ignore_empty: false,
-        },
+        }),
     );
 
     tree.insert(
         0,
-        Primitive::Struct {
+        Primitive::Struct(StructSource {
             name: ENV_STRUCT_NAME.into(),
             public: false,
             usable: true,
@@ -389,7 +390,7 @@ fn main() -> ExitCode {
             keyword_location: loc.clone(),
             location: loc.clone(),
             ignore_empty: false,
-        },
+        }),
     );
 
     if !object_output && !no_alloc {
@@ -397,13 +398,13 @@ fn main() -> ExitCode {
         let mut main_arg_len = 0;
         tree.iter_mut()
             .find(|x| match x {
-                Primitive::Function { name, .. } if name == "main" => true,
+                Primitive::Function(FunctionSource { name, .. }) if name == "main" => true,
                 _ => false,
             })
             .map(|x| match x {
-                Primitive::Function {
+                Primitive::Function(FunctionSource {
                     name, arguments, location, ..
-                } if name == "main" => {
+                }) if name == "main" => {
                     *name = get_MAIN_ID!().into();
                     main_arg_len = arguments.len();
 
@@ -443,7 +444,7 @@ fn main() -> ExitCode {
             });
 
         // Define a custom main
-        tree.push(Primitive::Function {
+        tree.push(Primitive::Function(FunctionSource {
             name: "main".into(),
             public: true,
             usable: true,
@@ -739,7 +740,7 @@ fn main() -> ExitCode {
             .collect(),
             location: loc.clone(),
             return_location: loc.clone(),
-        });
+        }));
     } else {
         unsafe { MAIN_ID = Some("main") };
     }

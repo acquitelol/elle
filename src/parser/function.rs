@@ -5,7 +5,7 @@ use crate::{
     elle_error,
     lexer::enums::{Attribute, TokenKind, ValueKind},
     parser::{
-        enums::{BlockStatement, IfStatement, VariadicStart, WhileLoopStatement},
+        enums::{BlockStatement, FunctionSource, IfStatement, VariadicStart, WhileLoopStatement},
         statement::Shared,
     },
     Warning, META_STRUCT_NAME,
@@ -283,7 +283,7 @@ impl<'a> Function<'a> {
             self.parser.expect_tokens(vec![TokenKind::Semicolon]);
             self.parser.advance();
 
-            return Primitive::Function {
+            return Primitive::Function(FunctionSource {
                 public,
                 variadic,
                 manual,
@@ -301,7 +301,7 @@ impl<'a> Function<'a> {
                 imported: false,
                 location: location.clone(),
                 return_location: return_location.clone(),
-            };
+            });
         }
 
         self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
@@ -430,7 +430,7 @@ impl<'a> Function<'a> {
 
         insert_deferred_statements(&mut res, &deferred, true);
 
-        Primitive::Function {
+        Primitive::Function(FunctionSource {
             public,
             variadic,
             manual,
@@ -448,6 +448,6 @@ impl<'a> Function<'a> {
             imported: false,
             location,
             return_location,
-        }
+        })
     }
 }

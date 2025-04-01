@@ -6,7 +6,9 @@ use std::process::exit;
 use std::time::Instant;
 use std::{cell::RefCell, rc::Rc};
 
-use crate::parser::enums::{ArrayLength, Literal, Return};
+use crate::parser::enums::{
+    ArrayLength, ConstantSource, FunctionSource, Literal, Return, StructSource, UseSource,
+};
 use crate::{
     compiler::enums::Type,
     elapsed_with_color,
@@ -149,27 +151,27 @@ pub fn lex_and_parse(
     if nesting == 0 && !no_fmt {
         imports.insert(
             0,
-            Primitive::Use {
+            Primitive::Use(UseSource {
                 module: "std/fmt".into(),
                 location: loc.clone(),
-            },
+            }),
         );
     }
 
     if nesting == 0 && !no_strings {
         imports.insert(
             0,
-            Primitive::Use {
+            Primitive::Use(UseSource {
                 module: "std/string".into(),
                 location: loc.clone(),
-            },
+            }),
         );
     }
 
     if nesting == 0 && !no_alloc {
         imports.insert(
             0,
-            Primitive::Use {
+            Primitive::Use(UseSource {
                 module: if no_gc {
                     BACKUP_ALLOCATOR_MODULE
                 } else {
@@ -177,23 +179,23 @@ pub fn lex_and_parse(
                 }
                 .into(),
                 location: loc.clone(),
-            },
+            }),
         );
 
         imports.insert(
             0,
-            Primitive::Use {
+            Primitive::Use(UseSource {
                 module: ARBITRARY_ALLOCATOR_MODULE.into(),
                 location: loc.clone(),
-            },
+            }),
         );
     }
 
     for import in imports.iter().cloned() {
         match import {
-            Primitive::Use {
+            Primitive::Use(UseSource {
                 module, location, ..
-            } if !parsed_modules.borrow().contains(&module) => {
+            }) if !parsed_modules.borrow().contains(&module) => {
                 let now = if debug_time {
                     Some(Instant::now())
                 } else {
@@ -258,7 +260,7 @@ pub fn lex_and_parse(
                 for symbol in nodes.iter().rev() {
                     match symbol.clone() {
                         Primitive::Use { .. } => {}
-                        Primitive::Constant { name, public, .. } => {
+                        Primitive::Constant(ConstantSource { name, public, .. }) => {
                             override_and_add_node!(
                                 Primitive::Constant,
                                 &mut tree,
@@ -267,7 +269,7 @@ pub fn lex_and_parse(
                                 public
                             );
                         }
-                        Primitive::Function { name, public, .. } => {
+                        Primitive::Function(FunctionSource { name, public, .. }) => {
                             override_and_add_node!(
                                 Primitive::Function,
                                 &mut tree,
@@ -276,7 +278,7 @@ pub fn lex_and_parse(
                                 public
                             );
                         }
-                        Primitive::Struct { name, public, .. } => {
+                        Primitive::Struct(StructSource { name, public, .. }) => {
                             if let Some(pos) = existing_definition(tree, &name) {
                                 if symbol == tree.get(pos).unwrap() {
                                     tree.remove(pos);
@@ -307,7 +309,7 @@ pub fn lex_and_parse(
                             .iter()
                             .filter(|primitive| matches!(primitive, Primitive::Function { .. }))
                             .map(|f| match f {
-                                Primitive::Function { name, .. } => name.clone(),
+                                Primitive::Function(FunctionSource { name, .. }) => name.clone(),
                                 _ => unreachable!(),
                             })
                             .filter(|x| x.starts_with("string."))
@@ -356,7 +358,7 @@ pub fn lex_and_parse(
     if nesting == 0 {
         tree.insert(
             0,
-            Primitive::Constant {
+            Primitive::Constant(ConstantSource {
                 name: "nil".into(),
                 public: false,
                 usable: true,
@@ -369,12 +371,12 @@ pub fn lex_and_parse(
                     location: loc.clone(),
                 })),
                 location: loc.clone(),
-            },
+            }),
         );
 
         tree.insert(
             0,
-            Primitive::Function {
+            Primitive::Function(FunctionSource {
                 name: format!("{}.{LEN_CONSTANT}", get_POINTER_ID!()).into(),
                 public: false,
                 usable: true,
@@ -407,7 +409,7 @@ pub fn lex_and_parse(
                 })],
                 location: loc.clone(),
                 return_location: loc.clone(),
-            },
+            }),
         );
     }
 
@@ -417,8 +419,8 @@ pub fn lex_and_parse(
 pub fn existing_definition(tree: &mut Vec<Primitive>, node_name: &str) -> Option<usize> {
     tree.iter().position(|item| match item {
         Primitive::Use { .. } => false,
-        Primitive::Constant { name, .. } => name == &node_name,
-        Primitive::Function { name, .. } => name == &node_name,
-        Primitive::Struct { name, .. } => name == &node_name,
+        Primitive::Constant(ConstantSource { name, .. }) => name == &node_name,
+        Primitive::Function(FunctionSource { name, .. }) => name == &node_name,
+        Primitive::Struct(StructSource { name, .. }) => name == &node_name,
     })
 }

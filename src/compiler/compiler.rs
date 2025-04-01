@@ -12,8 +12,8 @@ use crate::{
     misc::colors::*,
     parser::{
         enums::{
-            modify_type_in_ast, Argument, ArrayLiteral, AstNode, FieldAccess, Literal, Primitive,
-            Return, StructLiteral,
+            modify_type_in_ast, Argument, ArrayLiteral, AstNode, ConstantSource, FieldAccess,
+            FunctionSource, Literal, Primitive, Return, StructLiteral, StructSource,
         },
         parser::StructPool,
     },
@@ -39,7 +39,7 @@ impl CodegenContext<'_> {
     /// ty -> None
     /// value -> None
     /// is_return -> false
-    /// 
+    ///
     /// returns a new struct
     pub fn to_nnf(&self) -> Self {
         return CodegenContext {
@@ -160,13 +160,13 @@ impl Compiler {
         if var.is_err() {
             for item in self.tree.iter().cloned() {
                 match item {
-                    Primitive::Constant {
+                    Primitive::Constant(ConstantSource {
                         name: const_name,
                         r#type: ty,
                         location,
                         usable,
                         ..
-                    } => {
+                    }) => {
                         if name == const_name && func.is_some() {
                             if !usable && !func.unwrap().borrow_mut().imported {
                                 elle_error!(location.error(format!(
@@ -186,13 +186,13 @@ impl Compiler {
                             return Ok((ty.unwrap(), temp));
                         }
                     }
-                    Primitive::Function {
+                    Primitive::Function(FunctionSource {
                         name: op_name,
                         usable,
                         location,
                         builtin,
                         ..
-                    } => {
+                    }) => {
                         if name == op_name {
                             if !usable && !func.unwrap().borrow_mut().imported && !builtin {
                                 elle_error!(location.error(format!(
@@ -285,32 +285,16 @@ impl Compiler {
 
     pub fn generate_function(
         &mut self,
-        name: String,
-        public: bool,
-        variadic: bool,
-        manual: bool,
-        external: bool,
-        builtin: bool,
-        volatile: bool,
-        format: bool,
+        this: FunctionSource,
         lambda: bool,
-        unaliased: Option<String>,
-        usable: bool,
-        imported: bool,
-        generics: Vec<String>,
         known_generics: HashMap<String, Type>,
-        arguments: &Vec<Argument>,
-        return_type: Option<Type>,
-        body: Vec<AstNode>,
         module: &RefCell<Module>,
-        location: Rc<Location>,
-        return_location: Rc<Location>,
     ) -> Function {
         self.scopes.push(hashmap!());
 
         let mut args = vec![];
 
-        for argument in arguments {
+        for argument in this.arguments {
             let ty = argument.r#type.clone();
 
             let tmp = if argument.manual {
@@ -323,30 +307,30 @@ impl Compiler {
         }
 
         let mut func = Function {
-            linkage: if public || &name == "main" {
+            linkage: if this.public || &this.name == "main" {
                 Linkage::public()
             } else {
                 Linkage::private()
             },
-            name: name.clone(),
-            variadic,
-            manual,
-            external,
-            builtin,
-            volatile,
-            format,
+            name: this.name.clone(),
+            variadic: this.variadic,
+            manual: this.manual,
+            external: this.external,
+            builtin: this.builtin,
+            volatile: this.volatile,
+            format: this.format,
             lambda,
-            unaliased,
-            usable,
-            imported,
-            generics,
+            unaliased: this.unaliased,
+            usable: this.usable,
+            imported: this.imported,
+            generics: this.generics,
             known_generics,
             arguments: args,
-            return_type,
+            return_type: this.r#return,
             blocks: vec![],
         };
 
-        if external {
+        if this.external {
             self.scopes.pop();
             return func;
         }
@@ -365,7 +349,7 @@ impl Compiler {
             module.borrow_mut().add_function(func.clone());
         }
 
-        for statement in body.iter() {
+        for statement in this.body.iter() {
             // Ignore plain literals that aren't assigned to anything
             // exact literals should not be ignored
             let ctx = CodegenContext {
@@ -574,7 +558,7 @@ impl Compiler {
                 let return_type = return_ty.clone().unwrap();
                 let first_type = first_ty.clone().unwrap();
 
-                handle_inconsistent_types!(return_type, first_type, return_location)
+                handle_inconsistent_types!(return_type, first_type, this.return_location)
             }
         }
 
@@ -584,7 +568,7 @@ impl Compiler {
                 .add_instruction(Instruction::Return(Some((
                     Type::Word,
                     Value::Const("".into(), 0),
-                    location,
+                    this.location,
                 ))));
         }
 
@@ -602,30 +586,18 @@ impl Compiler {
             module
                 .borrow_mut()
                 .functions
-                .retain(|func| func.name != name);
+                .retain(|func| func.name != this.name);
         }
 
         owned_func
     }
 
-    fn generate_struct(
-        &mut self,
-        name: String,
-        public: bool,
-        usable: bool,
-        imported: bool,
-        generics: Vec<String>,
-        known_generics: HashMap<String, Type>,
-        members: Vec<Argument>,
-        ignore_empty: bool,
-        keyword_location: Rc<Location>,
-        _location: Rc<Location>,
-    ) -> TypeDef {
+    fn generate_struct(&mut self, this: StructSource) -> TypeDef {
         let mut items = vec![];
 
-        if members.is_empty() && !ignore_empty {
+        if this.members.is_empty() && !this.ignore_empty {
             elle_error!(
-                keyword_location
+                this.keyword_location
                     .with_extra_info("Replace this with 'namespace'")
                     .error(format!(
                         "Cannot declare an empty struct (with no members).\nIf you intended to make a namespace, use the '{GREEN}namespace{RESET}' keyword instead.",
@@ -635,21 +607,23 @@ impl Compiler {
             )
         }
 
-        for member in members.iter().cloned() {
+        for member in this.members.iter().cloned() {
             items.push((member.r#type, 1));
         }
 
-        self.struct_pool
-            .insert(name.clone(), (generics, members, keyword_location));
+        self.struct_pool.insert(
+            this.name.clone(),
+            (this.generics, this.members, this.keyword_location),
+        );
 
         TypeDef {
-            name,
+            name: this.name,
             align: None,
-            known_generics,
+            known_generics: this.known_generics,
             items,
-            public,
-            usable,
-            imported,
+            public: this.public,
+            usable: this.usable,
+            imported: this.imported,
         }
     }
 
@@ -1319,31 +1293,8 @@ impl Compiler {
 
         for primitive in tree.borrow().to_owned().into_iter() {
             match primitive {
-                Primitive::Struct {
-                    name,
-                    public,
-                    usable,
-                    imported,
-                    generics,
-                    known_generics,
-                    members,
-                    keyword_location,
-                    location,
-                    ignore_empty,
-                } => {
-                    let td = self.generate_struct(
-                        name,
-                        public,
-                        usable,
-                        imported,
-                        generics,
-                        known_generics,
-                        members,
-                        ignore_empty,
-                        keyword_location,
-                        location,
-                    );
-
+                Primitive::Struct(this) => {
+                    let td = self.generate_struct(this);
                     module.borrow_mut().add_type(td);
                 }
                 _ => {}
@@ -1393,7 +1344,7 @@ impl Compiler {
     ) {
         loop {
             match self.generic_functions.get(&name.clone()).unwrap().clone() {
-                Primitive::Function { unaliased, .. } => {
+                Primitive::Function(FunctionSource { unaliased, .. }) => {
                     if unaliased.is_none() {
                         break;
                     }
@@ -1404,29 +1355,11 @@ impl Compiler {
             };
         }
 
-        match self.generic_functions.get(&name.clone()).unwrap().clone() {
-            Primitive::Function {
-                name: _,
-                public,
-                usable,
-                imported,
-                variadic,
-                manual,
-                external,
-                builtin,
-                volatile,
-                format,
-                unaliased,
-                generics,
-                arguments,
-                r#return,
-                body,
-                location,
-                return_location,
-            } => {
+        match &self.generic_functions.get(&name.clone()).unwrap().clone() {
+            Primitive::Function(this) => {
                 // Reassign it if the function is generic
                 // as the function won't have been found last time
-                if let Some(inner) = arguments.get(0) {
+                if let Some(inner) = this.arguments.get(0) {
                     if inner.r#type.is_struct() {
                         let name = inner.r#type.get_struct_inner().unwrap();
 
@@ -1440,19 +1373,19 @@ impl Compiler {
                 // If the function takes <T, U, V>
                 // and the caller does foo<i32>()
                 // it will know T and try to infer U and V
-                if base_known_generics.len() <= generics.len() {
+                if base_known_generics.len() <= this.generics.len() {
                     known_generics.extend(HashMap::<String, Type>::from_iter(
                         base_known_generics
                             .iter()
                             .enumerate()
-                            .map(|(i, known)| (generics[i].clone(), known.clone()))
+                            .map(|(i, known)| (this.generics[i].clone(), known.clone()))
                             .collect::<Vec<(String, Type)>>(),
                     ));
                 }
 
                 for (i, parameter) in parameters.iter().cloned().enumerate() {
                     let param_ty = {
-                        let tmp = arguments.get(i + *add_meta as usize);
+                        let tmp = this.arguments.get(i + *add_meta as usize);
 
                         if tmp.is_some()
                             && !Type::Void.has_generic_type(tmp.unwrap().r#type.clone())
@@ -1485,7 +1418,7 @@ impl Compiler {
                         );
 
                     let other = {
-                        let tmp = arguments.get(i + *add_meta as usize);
+                        let tmp = this.arguments.get(i + *add_meta as usize);
 
                         if tmp.is_some() {
                             tmp.map(|item| item.r#type.clone())
@@ -1518,7 +1451,7 @@ impl Compiler {
                                                     + format!("{}", call_location.row + 1).len()
                                                     + 8
                                             ),
-                                            location.ctx,
+                                            this.location.ctx,
                                             GREEN = get_GREEN!(),
                                             BOLD = get_BOLD!(),
                                             RESET = get_RESET!()
@@ -1529,8 +1462,8 @@ impl Compiler {
                                                 format!(
                                                     "Mismatched type for generic {key} in {}<{}>({}):\n{key} is defined with both type \"{GREEN}{}{RESET}\" and \"{RED}{}{RESET}\"",
                                                     name.replace(".", "::"),
-                                                    generics.join(", "),
-                                                    if arguments.len() > 0 { "..." } else { "" },
+                                                    this.generics.join(", "),
+                                                    if this.arguments.len() > 0 { "..." } else { "" },
                                                     existing_ty.display(),
                                                     ty.display(),
                                                     GREEN = get_GREEN!(),
@@ -1549,7 +1482,7 @@ impl Compiler {
                         } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
                             println!(
                                 "{}",
-                                location.warning(format!(
+                                this.location.warning(format!(
                                     "Failed to deduce a generic type from {} and {}",
                                     ty.display(),
                                     other.display()
@@ -1559,10 +1492,10 @@ impl Compiler {
                     }
                 }
 
-                if let Some(other) = r#return.clone() {
+                if let Some(other) = this.r#return.clone() {
                     if let Some(ty) = ty {
                         if ty.clone().has_generic_type(other.clone())
-                            && known_generics.len() < generics.len()
+                            && known_generics.len() < this.generics.len()
                         {
                             // Possibly Option.generic.8 and Option
                             if let Some(inner) = ty.clone().deduce_generic_type(other.clone()) {
@@ -1572,11 +1505,11 @@ impl Compiler {
                             {
                                 println!(
                                     "{}",
-                                    location.warning(format!(
+                                    this.location.warning(format!(
                                         "Failed to deduce a generic type from {} and {}",
                                         ty.display(),
                                         other.display()
-                                    ),)
+                                    ))
                                 )
                             }
                         }
@@ -1584,7 +1517,7 @@ impl Compiler {
 
                     if let Some(ty) = func.borrow().return_type.clone() {
                         if ty.clone().has_generic_type(other.clone())
-                            && known_generics.len() < generics.len()
+                            && known_generics.len() < this.generics.len()
                         {
                             // Possibly Option.generic.8 and Option
                             if let Some(inner) = ty.clone().deduce_generic_type(other.clone()) {
@@ -1594,7 +1527,7 @@ impl Compiler {
                             {
                                 println!(
                                     "{}",
-                                    location.warning(format!(
+                                    this.location.warning(format!(
                                         "Failed to deduce a generic type from {} and {}",
                                         ty.display(),
                                         other.display()
@@ -1605,12 +1538,12 @@ impl Compiler {
                     }
                 }
 
-                if generics.len() != known_generics.len() {
-                    if generics.len() < known_generics.len() {
+                if this.generics.len() != known_generics.len() {
+                    if this.generics.len() < known_generics.len() {
                         todo!("the user passed too many generics");
                     }
 
-                    let a: HashSet<_> = generics.iter().cloned().collect();
+                    let a: HashSet<_> = this.generics.iter().cloned().collect();
                     let b: HashSet<_> = known_generics.keys().cloned().collect();
 
                     let diff: Vec<_> = a.difference(&b).cloned().collect();
@@ -1625,7 +1558,7 @@ impl Compiler {
                                 + format!("{}", call_location.row + 1).len()
                                 + 8
                         ),
-                        location.ctx,
+                        this.location.ctx,
                         GREEN = get_GREEN!(),
                         BOLD = get_BOLD!(),
                         RESET = get_RESET!()
@@ -1635,18 +1568,18 @@ impl Compiler {
                         call_location.error(format!(
                             "Mismatched number of generics in function {}<{}>({}).\nCould not find generic{} {} where the function specifies <{}>.",
                             name.replace(".", "::"),
-                            generics.join(", "),
-                            if arguments.len() > 0 { "..." } else { "" },
+                            this.generics.join(", "),
+                            if this.arguments.len() > 0 { "..." } else { "" },
                             if diff.len() == 1 { "" } else { "s" },
                             diff.join(", "),
-                            generics.join(", ")
+                            this.generics.join(", ")
                         ))
                     )
                 }
 
                 let generic_name = format!(
                     "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
-                    generics
+                    this.generics
                         .iter()
                         .map(|generic| {
                             known_generics
@@ -1676,7 +1609,8 @@ impl Compiler {
                     let struct_pool = RefCell::new(self.struct_pool.clone());
                     let tree = RefCell::new(vec![]);
 
-                    let parsed_arguments = &arguments
+                    let parsed_arguments = &this
+                        .arguments
                         .iter()
                         .cloned()
                         .map(|arg| Argument {
@@ -1684,7 +1618,7 @@ impl Compiler {
                             r#type: arg.r#type.unknown_to_known(
                                 Some(&struct_pool),
                                 Some(&tree),
-                                generics.clone(),
+                                this.generics.clone(),
                                 known_generics.clone(),
                             ),
                             manual: arg.manual,
@@ -1692,20 +1626,20 @@ impl Compiler {
                         })
                         .collect::<Vec<Argument>>();
 
-                    let parsed_return = if r#return.is_some() {
-                        Some(r#return.unwrap().unknown_to_known(
+                    let parsed_return = if this.r#return.is_some() {
+                        Some(this.r#return.clone().unwrap().unknown_to_known(
                             Some(&struct_pool),
                             Some(&tree),
-                            generics.clone(),
+                            this.generics.clone(),
                             known_generics.clone(),
                         ))
                     } else {
-                        r#return
+                        this.r#return.clone()
                     };
 
                     let parsed_body = modify_type_in_ast(
-                        body,
-                        &generics,
+                        this.body.clone(),
+                        &this.generics,
                         &known_generics,
                         Some(&struct_pool),
                         Some(&tree),
@@ -1715,31 +1649,8 @@ impl Compiler {
 
                     for primitive in tree.borrow().to_owned().into_iter() {
                         match primitive {
-                            Primitive::Struct {
-                                name,
-                                public,
-                                usable,
-                                imported,
-                                generics,
-                                known_generics,
-                                members,
-                                keyword_location,
-                                location,
-                                ignore_empty,
-                            } => {
-                                let td = self.generate_struct(
-                                    name,
-                                    public,
-                                    usable,
-                                    imported,
-                                    generics,
-                                    known_generics,
-                                    members,
-                                    ignore_empty,
-                                    keyword_location,
-                                    location,
-                                );
-
+                            Primitive::Struct(this) => {
+                                let td = self.generate_struct(this);
                                 module.borrow_mut().add_type(td);
                             }
                             _ => {}
@@ -1747,26 +1658,17 @@ impl Compiler {
                     }
 
                     let function = self.generate_function(
-                        generic_name,
-                        public,
-                        variadic,
-                        manual,
-                        external,
-                        builtin,
-                        volatile,
-                        format,
+                        FunctionSource {
+                            name: generic_name,
+                            generics: vec![],
+                            arguments: parsed_arguments.clone(),
+                            r#return: parsed_return,
+                            body: parsed_body,
+                            ..this.clone()
+                        },
                         false,
-                        unaliased,
-                        usable,
-                        imported,
-                        vec![],
                         known_generics.clone(),
-                        parsed_arguments,
-                        parsed_return,
-                        parsed_body,
                         &module,
-                        location,
-                        return_location,
                     );
 
                     module.borrow_mut().add_function(function.clone());
@@ -1818,7 +1720,11 @@ impl Compiler {
             .tree
             .iter()
             .find(|primitive| match primitive {
-                Primitive::Function { name, .. } if &(name.to_owned()) == get_MAIN_ID!() => true,
+                Primitive::Function(FunctionSource { name, .. })
+                    if &(name.to_owned()) == get_MAIN_ID!() =>
+                {
+                    true
+                }
                 _ => false,
             })
             .is_none()
@@ -1835,85 +1741,41 @@ impl Compiler {
 
         for primitive in generator.tree.clone() {
             match primitive.clone() {
-                Primitive::Constant {
-                    name,
-                    public,
-                    r#type: ty,
-                    value,
-                    usable,
-                    imported,
-                    location,
-                } => {
+                Primitive::Constant(this) => {
                     let function = generator.generate_function(
-                        name.clone(),
-                        public,
+                        FunctionSource {
+                            name: this.name.clone(),
+                            public: this.public,
+                            variadic: false,
+                            manual: false,
+                            external: false,
+                            builtin: false,
+                            volatile: false,
+                            format: false,
+                            unaliased: None,
+                            usable: this.usable,
+                            imported: this.imported,
+                            generics: vec![],
+                            arguments: vec![],
+                            r#return: this.r#type,
+                            body: vec![AstNode::Return(Return {
+                                value: this.value,
+                                location: this.location.clone(),
+                            })],
+                            location: this.location.clone(),
+                            return_location: this.location,
+                        },
                         false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        None,
-                        usable,
-                        imported,
-                        vec![],
                         hashmap![],
-                        &vec![],
-                        ty,
-                        vec![AstNode::Return(Return {
-                            value,
-                            location: location.clone(),
-                        })],
                         &module_ref,
-                        location.clone(),
-                        location,
                     );
 
                     module_ref.borrow_mut().add_function(function);
                 }
-                Primitive::Function {
-                    name,
-                    public,
-                    variadic,
-                    manual,
-                    external,
-                    builtin,
-                    volatile,
-                    format,
-                    unaliased,
-                    generics,
-                    arguments,
-                    r#return,
-                    body,
-                    usable,
-                    location,
-                    return_location,
-                    imported,
-                } => {
-                    if generics.is_empty() {
-                        let function = generator.generate_function(
-                            name,
-                            public,
-                            variadic,
-                            manual,
-                            external,
-                            builtin,
-                            volatile,
-                            format,
-                            false,
-                            unaliased,
-                            usable,
-                            imported,
-                            generics,
-                            hashmap![],
-                            &arguments,
-                            r#return,
-                            body,
-                            &module_ref,
-                            location,
-                            return_location,
-                        );
+                Primitive::Function(this) => {
+                    if this.generics.is_empty() {
+                        let function =
+                            generator.generate_function(this, false, hashmap![], &module_ref);
 
                         module_ref.borrow_mut().add_function(function);
 
@@ -1923,33 +1785,11 @@ impl Compiler {
 
                         generator.deferred_functions.clear();
                     } else {
-                        generator.generic_functions.insert(name, primitive);
+                        generator.generic_functions.insert(this.name, primitive);
                     }
                 }
-                Primitive::Struct {
-                    name,
-                    public,
-                    usable,
-                    imported,
-                    members,
-                    generics,
-                    known_generics,
-                    keyword_location,
-                    location,
-                    ignore_empty,
-                } => {
-                    let td = generator.generate_struct(
-                        name.clone(),
-                        public,
-                        usable,
-                        imported,
-                        generics,
-                        known_generics,
-                        members,
-                        ignore_empty,
-                        keyword_location,
-                        location,
-                    );
+                Primitive::Struct(this) => {
+                    let td = generator.generate_struct(this);
 
                     if module_ref
                         .borrow()

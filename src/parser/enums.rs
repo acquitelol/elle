@@ -196,6 +196,15 @@ pub struct FieldAccess {
 
 #[derive(Debug, Clone, Eq, PartialEq, Codegen)]
 pub enum AstNode {
+    /// Only executes code from value `value` when the current scope is about to exit
+    /// This can be function return or an implicit scope exit through `break` or `continue`
+    ///
+    /// This statement is never compiled in IR, it is simply an intermediate node
+    /// which is reinterpreted into a return at the end of the function at parse time.
+    DeferStatement {
+        value: Box<AstNode>,
+        location: Rc<Location>,
+    },
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
     /// A declaration of name `name` with type `r#type` to value `value
@@ -226,12 +235,6 @@ pub enum AstNode {
     /// Loads or stores information from a pointer through pointer arithmetic
     /// In an expression like a[10], left is `a` and right is `10`
     MemoryOperation(MemoryOperation),
-    /// Only executes code from value `value` when the current scope is about to exit
-    /// This can be function return or an implicit scope exit through `break` or `continue`
-    DeferStatement {
-        value: Box<AstNode>,
-        location: Rc<Location>,
-    },
     /// A standalone block that executes code in its scope
     /// This can be useful for micro-managing memory allocation with defer
     BlockStatement(BlockStatement),
@@ -530,51 +533,63 @@ fn modify_type(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UseSource {
+    pub module: String,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StructSource {
+    pub name: String,
+    pub public: bool,
+    pub usable: bool,
+    pub imported: bool,
+    pub generics: Vec<String>,
+    pub known_generics: HashMap<String, Type>,
+    pub members: Vec<Argument>,
+    pub keyword_location: Rc<Location>,
+    pub location: Rc<Location>,
+    pub ignore_empty: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FunctionSource {
+    pub name: String,
+    pub public: bool,
+    pub usable: bool,
+    pub imported: bool,
+    pub variadic: bool,
+    pub manual: bool,
+    pub external: bool,
+    pub builtin: bool,
+    pub volatile: bool,
+    pub format: bool,
+    pub unaliased: Option<String>,
+    pub generics: Vec<String>,
+    pub arguments: Vec<Argument>,
+    pub r#return: Option<Type>,
+    pub body: Vec<AstNode>,
+    pub location: Rc<Location>,
+    pub return_location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConstantSource {
+    pub name: String,
+    pub public: bool,
+    pub usable: bool,
+    pub imported: bool,
+    pub r#type: Option<Type>,
+    pub value: Box<AstNode>,
+    pub location: Rc<Location>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Primitive {
-    Use {
-        module: String,
-        location: Rc<Location>,
-    },
-    Struct {
-        name: String,
-        public: bool,
-        usable: bool,
-        imported: bool,
-        generics: Vec<String>,
-        known_generics: HashMap<String, Type>,
-        members: Vec<Argument>,
-        keyword_location: Rc<Location>,
-        location: Rc<Location>,
-        ignore_empty: bool,
-    },
-    Function {
-        name: String,
-        public: bool,
-        usable: bool,
-        imported: bool,
-        variadic: bool,
-        manual: bool,
-        external: bool,
-        builtin: bool,
-        volatile: bool,
-        format: bool,
-        unaliased: Option<String>,
-        generics: Vec<String>,
-        arguments: Vec<Argument>,
-        r#return: Option<Type>,
-        body: Vec<AstNode>,
-        location: Rc<Location>,
-        return_location: Rc<Location>,
-    },
-    Constant {
-        name: String,
-        public: bool,
-        usable: bool,
-        imported: bool,
-        r#type: Option<Type>,
-        value: Box<AstNode>,
-        location: Rc<Location>,
-    },
+    Use(UseSource),
+    Struct(StructSource),
+    Function(FunctionSource),
+    Constant(ConstantSource),
 }
 
 #[derive(Debug, Clone)]

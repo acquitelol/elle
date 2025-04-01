@@ -109,14 +109,9 @@ macro_rules! override_and_add_node {
         }
 
         let mut new_symbol = $symbol.clone();
-        if let $val {
-            ref mut usable,
-            ref mut imported,
-            ..
-        } = new_symbol
-        {
-            *usable = $public;
-            *imported = true;
+        if let $val(ref mut this) = new_symbol {
+            this.usable = $public;
+            this.imported = true;
         }
 
         $tree.insert(0, new_symbol);

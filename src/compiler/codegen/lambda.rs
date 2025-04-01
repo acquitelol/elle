@@ -4,7 +4,7 @@ use crate::{
         enums::{Type, Value},
     },
     hashmap,
-    parser::enums::Lambda,
+    parser::enums::{FunctionSource, Lambda},
 };
 
 impl Codegen<'_> for Lambda {
@@ -29,26 +29,28 @@ impl Codegen<'_> for Lambda {
         }
 
         let lambda_func = gen.generate_function(
-            lambda_name.clone(),
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
+            FunctionSource {
+                name: lambda_name.clone(),
+                public: false,
+                variadic: false,
+                manual: false,
+                external: false,
+                builtin: false,
+                volatile: false,
+                format: false,
+                unaliased: None,
+                usable: true,
+                imported: false,
+                generics: vec![],
+                arguments: self.arguments,
+                r#return: None,
+                body: self.value,
+                location: self.location.clone(),
+                return_location: self.location,
+            },
             true,
-            None,
-            true,
-            false,
-            vec![],
             hashmap![],
-            &self.arguments,
-            None,
-            self.value,
             ctx.module,
-            self.location.clone(),
-            self.location,
         );
 
         gen.deferred_functions.push(lambda_func.clone());

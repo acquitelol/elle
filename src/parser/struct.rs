@@ -10,8 +10,8 @@ use crate::{
 
 use super::{
     enums::{
-        Argument, AstNode, BinaryOperation, Declare, FieldAccess, FunctionCall, Literal, Primitive,
-        Return,
+        Argument, AstNode, BinaryOperation, Declare, FieldAccess, FunctionCall, FunctionSource,
+        Literal, Primitive, Return, StructSource,
     },
     parser::Parser,
 };
@@ -58,7 +58,7 @@ impl<'a> Struct<'a> {
                 .insert(name.clone(), (vec![], vec![], location.clone()));
 
             return (
-                Primitive::Struct {
+                Primitive::Struct(StructSource {
                     name,
                     public,
                     usable: true,
@@ -69,7 +69,7 @@ impl<'a> Struct<'a> {
                     keyword_location,
                     location,
                     ignore_empty: namespace,
-                },
+                }),
                 vec![],
             );
         }
@@ -258,7 +258,7 @@ impl<'a> Struct<'a> {
                 }),
             ));
 
-            builtins.push(Primitive::Function {
+            builtins.push(Primitive::Function(FunctionSource {
                 name: format!("{}.{FORMAT_CONSTANT}", name),
                 public,
                 usable: true,
@@ -355,11 +355,11 @@ impl<'a> Struct<'a> {
                 ],
                 location: location.clone(),
                 return_location: location.clone(),
-            });
+            }));
         }
 
         (
-            Primitive::Struct {
+            Primitive::Struct(StructSource {
                 name: name.clone(),
                 public,
                 usable: true,
@@ -370,7 +370,7 @@ impl<'a> Struct<'a> {
                 keyword_location,
                 location: location.clone(),
                 ignore_empty: namespace,
-            },
+            }),
             builtins,
         )
     }

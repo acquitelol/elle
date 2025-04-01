@@ -10,7 +10,7 @@ use crate::{
 };
 
 use super::{
-    enums::{Argument, Primitive},
+    enums::{Argument, Primitive, StructSource},
     r#use::Use,
 };
 
@@ -95,7 +95,7 @@ pub fn create_generic_struct(
         })
         .collect::<Vec<Argument>>();
 
-    tree.borrow_mut().push(Primitive::Struct {
+    tree.borrow_mut().push(Primitive::Struct(StructSource {
         name: generic_name.clone(),
         public: false,
         usable: true,
@@ -106,7 +106,7 @@ pub fn create_generic_struct(
         keyword_location: Rc::new(location.clone()),
         location: Rc::new(location.clone()),
         ignore_empty: false,
-    });
+    }));
 
     struct_pool.borrow_mut().insert(
         generic_name.clone(),

@@ -3,7 +3,10 @@ use crate::{
     lexer::enums::{TokenKind, ValueKind},
 };
 
-use super::{enums::Primitive, parser::Parser};
+use super::{
+    enums::{Primitive, UseSource},
+    parser::Parser,
+};
 
 pub struct Use<'a> {
     parser: &'a mut Parser,
@@ -80,6 +83,6 @@ impl<'a> Use<'a> {
         self.parser.expect_tokens(vec![TokenKind::Semicolon]);
         self.parser.advance();
 
-        Primitive::Use { module, location }
+        Primitive::Use(UseSource { module, location })
     }
 }

@@ -1,14 +1,24 @@
 // Roughly references https://github.com/garritfra/qbe-rs/blob/main/src/lib.rs
 // https://github.com/garritfra/qbe-rs/blob/main/LICENSE-MIT
 use std::{
-    cell::RefCell, collections::{HashMap, HashSet}, fmt, iter::Peekable, mem, num::ParseIntError, rc::Rc
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    fmt,
+    iter::Peekable,
+    mem,
+    num::ParseIntError,
+    rc::Rc,
 };
 
 use crate::{
-    elle_error, get_MAIN_ID, get_POINTER_ID, hashmap, is_generic, is_unknown, lexer::enums::Location, parser::{
-        enums::{Argument, Primitive},
+    elle_error, get_MAIN_ID, get_POINTER_ID, hashmap, is_generic, is_unknown,
+    lexer::enums::Location,
+    parser::{
+        enums::{Argument, Primitive, StructSource},
         parser::StructPool,
-    }, DEAD_CODE_ELIMINATION_PASSES, GENERIC_END, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN, MAIN_ID, POINTER_ID, VOID_POINTER_ID
+    },
+    DEAD_CODE_ELIMINATION_PASSES, GENERIC_END, GENERIC_IDENTIFIER, GENERIC_POINTER,
+    GENERIC_UNKNOWN, MAIN_ID, POINTER_ID, VOID_POINTER_ID,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Copy)]
@@ -347,7 +357,7 @@ impl Type {
                         inner
                             .arguments
                             .iter()
-                            .map(|arg| arg.0.0.clone().display())
+                            .map(|arg| arg.0 .0.clone().display())
                             .collect::<Vec<String>>()
                             .join(", ")
                     )
@@ -647,13 +657,13 @@ impl Type {
                                 known_generics.clone(),
                             ),
                             manual: member.manual,
-                            no_fmt: member.no_fmt
+                            no_fmt: member.no_fmt,
                         })
                         .collect::<Vec<Argument>>();
 
                     tree.unwrap().borrow_mut().insert(
                         0,
-                        Primitive::Struct {
+                        Primitive::Struct(StructSource {
                             name: generic_name.clone(),
                             public: false,
                             usable: true,
@@ -664,7 +674,7 @@ impl Type {
                             keyword_location: location.clone(),
                             location: location.clone(),
                             ignore_empty: false,
-                        },
+                        }),
                     );
 
                     struct_pool
@@ -913,7 +923,11 @@ impl Type {
         match self {
             Self::Double => 4,
             Self::Single => 3,
-            Self::Void | Self::Long | Self::UnsignedLong | Self::Pointer(..) | Self::Function(..) => 2,
+            Self::Void
+            | Self::Long
+            | Self::UnsignedLong
+            | Self::Pointer(..)
+            | Self::Function(..) => 2,
             Self::Word => 1,
             other if other.is_map_to_int() => 1,
             _ => 0,
@@ -928,9 +942,11 @@ impl Type {
             Self::Double => 8,
             // Returns 4 on 32-bit and 8 on 64-bit
             // Functions are just pointers to the start of them
-            Self::Void | Self::UnsignedLong | Self::Long | Self::Pointer(..) | Self::Function(..) => {
-                mem::size_of::<usize>() as u64
-            }
+            Self::Void
+            | Self::UnsignedLong
+            | Self::Long
+            | Self::Pointer(..)
+            | Self::Function(..) => mem::size_of::<usize>() as u64,
             _ => 0,
         }
     }
@@ -978,8 +994,10 @@ impl fmt::Display for Type {
             Self::Null => write!(formatter, ""),
             Self::Struct(td) => write!(formatter, ":{}", td),
             Self::Function(_) => write!(formatter, "l"),
-            Self::Unknown(name) => elle_error!(Location::base().internal_error(format!("Tried to compile with a generic type {name}"))),
-            x => elle_error!(Location::base().internal_error(format!("Attempted to format an invalid type: {x:?}")))
+            Self::Unknown(name) => elle_error!(Location::base()
+                .internal_error(format!("Tried to compile with a generic type {name}"))),
+            x => elle_error!(Location::base()
+                .internal_error(format!("Attempted to format an invalid type: {x:?}"))),
         }
     }
 }
@@ -1077,7 +1095,9 @@ impl Value {
             Self::Temporary(val) => val,
             Self::Global(val) => val,
             Self::Literal(val) => val,
-            _ => elle_error!(Location::base().internal_error(format!("Invalid value type {}", self))),
+            _ => {
+                elle_error!(Location::base().internal_error(format!("Invalid value type {}", self)))
+            }
         }
     }
 }
@@ -1407,7 +1427,7 @@ impl Module {
         Module {
             functions: vec![],
             types: vec![],
-            data: vec![]
+            data: vec![],
         }
     }
 
