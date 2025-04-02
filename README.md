@@ -1900,7 +1900,7 @@ All contributions to this project are welcome and I love talking about this stuf
 #### ♡ You can now run `ellec` to get a help message of how to use the compiler!
 Try compiling a simple example!
   ```console
-    $ ellec ./examples/tests/hello.le && ./hello
+    $ ellec ./examples/hello.le && ./hello
   ```
 Try compiling an example with libraries!
   ```
