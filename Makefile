@@ -25,9 +25,9 @@ install-runtime:
 	@rm -f $(RUNTIME_PATH)/libelle.o
 	@rm -f $(RUNTIME_PATH)/libelle.a
 	mkdir -p $(RUNTIME_PATH)
-	# must be compiled without anything because this is the module creating it
-	# its fine because those modules are actually just headers anyway
-	# this is just so the headers dont overwrite the implementation in the stdlib
+	@# must be compiled without anything because this is the module creating it
+	@# its fine because those modules are actually just headers anyway
+	@# this is just so the headers dont overwrite the implementation in the stdlib
 	ellec $(STD_PATH)/runtime/index.le -o libelle.o -c -p --noalloc --nogc --nosm --nofmt --nostd
 	@ar -rcs $(RUNTIME_PATH)/libelle.a libelle.o
 	@rm -f libelle.o
