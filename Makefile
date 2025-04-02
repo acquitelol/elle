@@ -2,6 +2,7 @@ DIST_PATH = $(HOME)/.local
 BIN_PATH = $(DIST_PATH)/bin/
 STD_PATH = $(DIST_PATH)/include/elle/std
 RUNTIME_PATH = $(DIST_PATH)/lib
+MAKEFLAGS += --no-print-directory
 
 default: install-release
 
@@ -48,19 +49,19 @@ test-file:
 test-suite-%:
 	@for file in $$(ls tests/$*); do \
 		if [ -n "$(CLEAR)" ]; then clear; fi; \
-		make $(if $(VERBOSE),VERBOSE=$(VERBOSE),) TEST_FILE=tests/$*/$$file test-file; \
+		$(MAKE) $(if $(VERBOSE),VERBOSE=$(VERBOSE),) $(MAKEFLAGS) TEST_FILE=tests/$*/$$file test-file; \
 		if [ -n "$(DELAY)" ]; then sleep $(DELAY); fi; \
 	done
 
 .PHONY: test
 test:
-	@make $(if $(VERBOSE),VERBOSE=$(VERBOSE),) TEST_FILE=tests/assert.le test-file
-	make $(if $(VERBOSE),VERBOSE=$(VERBOSE),) test-suite-auto
-	@# make $(if $(VERBOSE),VERBOSE=$(VERBOSE),) test-suite-manual
+	@$(MAKE) $(if $(VERBOSE),VERBOSE=$(VERBOSE),) $(MAKEFLAGS) TEST_FILE=tests/assert.le test-file
+	$(MAKE) $(if $(VERBOSE),VERBOSE=$(VERBOSE),) $(MAKEFLAGS) test-suite-auto
+	@#$(MAKE) $(if $(VERBOSE),VERBOSE=$(VERBOSE),) $(MAKEFLAGS) test-suite-manual
 
 .PHONY: test-manual
 test-manual:
-	@make VERBOSE=1 DELAY=1 CLEAR=1 test-suite-manual
+	@$(MAKE) $(MAKEFLAGS) VERBOSE=1 DELAY=1 CLEAR=1 test-suite-manual
 
 repl:
 	ellec tools/repl.le
