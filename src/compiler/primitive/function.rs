@@ -309,6 +309,24 @@ pub fn generate_function(
         owned_func.return_type = Some(Type::Word)
     }
 
+    // If there are statements after a return in the very last block
+    // QBE will throw an error. This simply gets rid of statements
+    // after a return in the last block.
+    //
+    // This is fine because a return will jump from the function anyways,
+    // so any statements that are removed wouldn't be executed anyway.
+    if let Some(index) = owned_func
+        .blocks
+        .last()
+        .unwrap()
+        .statements
+        .iter()
+        .position(|x| matches!(x, Statement::Volatile(Instruction::Return(..))))
+    {
+        owned_func.blocks.last_mut().unwrap().statements =
+            owned_func.blocks.last().unwrap().statements[..=index].to_vec();
+    }
+
     // Remove the empty function from the module
     // it will be added automatically when this function leaves scope
     if !func_ref.borrow().lambda {
