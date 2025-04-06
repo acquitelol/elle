@@ -57,3 +57,11 @@ fn Option::is_some<T>(Option<T> self) {
 fn Option::is_none<T>(Option<T> self) {
     return !self.is_some();
 }
+
+fn Option::resolve<T>(Option<T> self, fn *if_some, fn *if_none) {
+    if self.is_some() {
+        return if_some(self.unwrap());
+    }
+
+    return if_none();
+}
