@@ -2,14 +2,7 @@ namespace libc;
 namespace io;
 global pub;
 
-struct FILE @nofmt {
-    i32 fd;                 // File descriptor
-    string buffer;          // Buffer for file I/O
-    i64 buffer_size;        // Size of the buffer
-    i64 position;           // Current position in the buffer
-    i64 file_size;          // Total size of the file
-    i32 mode;               // Mode in which the file is opened
-};
+namespace FILE;
 
 external fn fdopen(i64 descriptor, string mode) @alias("libc::fdopen") -> FILE *;
 external fn printf(string formatter, ...) @alias("io::cprintf") -> i32;
