@@ -30,5 +30,5 @@ fn main() {
     $assert(c.unwrap_or(-1) == -1, nil);
     $assert(d.unwrap_or(-1) == 39, nil);
 
-    io::println("All `option` tests have passed!".color("green").reset());
+    $println("All `option` tests have passed!".color("green").reset());
 }

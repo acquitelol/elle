@@ -14,7 +14,7 @@ fn main() {
 
     if ticket_type == "Infant" {
         price = 0;
-    } else { if ticket_type == "Student" || ticket_type == "Senior" {
+    } else if ticket_type == "Student" || ticket_type == "Senior" {
         price *= 0.8;
 
         if member {
@@ -22,7 +22,7 @@ fn main() {
         }
     } else {
         ticket_type = "Adult";
-    }}
+    }
 
     io::printf("Ticket type: {}", ticket_type);
     io::printf("Membership: {}", member);

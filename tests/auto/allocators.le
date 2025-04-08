@@ -144,5 +144,5 @@ fn main() {
 
     // -
 
-    io::println("All `allocator` tests have passed!".color("green").reset());
+    $println("All `allocator` tests have passed!".color("green").reset());
 }

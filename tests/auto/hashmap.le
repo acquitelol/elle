@@ -45,5 +45,5 @@ fn main() {
     $assert(!map.contains_key(98), nil);
     $assert(!map.contains_key(1000), nil);
 
-    io::println("All `HashMap` tests have passed!".color("green").reset());
+    $println("All `HashMap` tests have passed!".color("green").reset());
 }

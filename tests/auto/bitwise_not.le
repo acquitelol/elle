@@ -9,5 +9,5 @@ fn main() {
     $assert(~a == ~0xffff, "~a should equal ~0xffff but it is {}".format(~a));
     $assert(~a == -65536, "~a should equal -65536 but it is {}".format(~a));
 
-    io::println("All `bitwise not` tests have passed!".color("green").reset());
+    $println("All `bitwise not` tests have passed!".color("green").reset());
 }

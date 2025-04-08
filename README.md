@@ -68,16 +68,27 @@ i64[] arr = [];
 
 * You can define an `if` statement and then an optional `else` statement
 * If statement conditions can be wrapped in `()` but this is not mandatory
-* There is currently no `else if` or similar. A workaround is to just define another `if statement` with your new condition.
 * Example:
 
 ```rs
-let a = 0;
+a := 0;
 
 if expression {
     a += 1;
 } else {
     a -= 1;
+}
+```
+
+```rs
+a := 1;
+
+if a == 1 {
+    $println("hello world");
+} else if a == 2 {
+    $println("foo bar baz");
+} else {
+    $println("test");
 }
 ```
 

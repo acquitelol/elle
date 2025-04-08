@@ -985,15 +985,37 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
         self.advance();
 
-        let body = self.yield_block(false); // If statements are.. well.. statements
+        let body = self.yield_block(false);
+
+        let mut elifs: Vec<(Box<AstNode>, Vec<AstNode>)> = vec![];
         let mut else_body: Vec<AstNode> = vec![];
 
-        if self.current_token().kind == TokenKind::Else {
-            self.advance();
-            self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
-            self.advance();
+        loop {
+            if self.current_token().kind == TokenKind::Else {
+                self.advance();
 
-            else_body = self.yield_block(false); // Else is also a statement
+                if self.current_token().kind == TokenKind::If {
+                    self.advance();
+
+                    let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::LeftCurlyBrace]);
+                    let elif_condition =
+                        Statement::new(tokens, 0, &self.body, self.shared).parse().0;
+
+                    self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
+                    self.advance();
+
+                    let elif_body = self.yield_block(false);
+                    elifs.push((Box::new(elif_condition), elif_body));
+                } else {
+                    self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
+                    self.advance();
+
+                    else_body = self.yield_block(false);
+                    break;
+                }
+            } else {
+                break;
+            }
         }
 
         self.position -= 1;
@@ -1001,6 +1023,7 @@ impl<'a> Statement<'a> {
         AstNode::IfStatement(IfStatement {
             condition: Box::new(expression),
             body,
+            elifs,
             else_body,
             location: self.current_token().location,
         })
@@ -3139,18 +3162,25 @@ impl<'a> Statement<'a> {
                     AstNode::IfStatement(IfStatement {
                         condition,
                         body,
+                        elifs,
                         else_body,
                         location,
                     }) => {
                         let mut new_body = body;
                         let mut new_else_body = else_body;
+                        let mut new_elifs = elifs;
 
                         insert_deferred_statements(&mut new_body, deferred, false);
                         insert_deferred_statements(&mut new_else_body, deferred, false);
 
+                        for (_cond, elif) in new_elifs.iter_mut() {
+                            insert_deferred_statements(elif, deferred, false);
+                        }
+
                         new_nodes.push(AstNode::IfStatement(IfStatement {
                             condition,
                             body: new_body,
+                            elifs: new_elifs,
                             else_body: new_else_body,
                             location,
                         }));

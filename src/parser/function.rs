@@ -389,18 +389,25 @@ impl<'a> Function<'a> {
                     AstNode::IfStatement(IfStatement {
                         condition,
                         body,
+                        elifs,
                         else_body,
                         location,
                     }) => {
                         let mut new_body = body;
                         let mut new_else_body = else_body;
+                        let mut new_elifs = elifs;
 
                         insert_deferred_statements(&mut new_body, deferred, false);
                         insert_deferred_statements(&mut new_else_body, deferred, false);
 
+                        for (_cond, elif) in new_elifs.iter_mut() {
+                            insert_deferred_statements(elif, deferred, false);
+                        }
+
                         new_nodes.push(AstNode::IfStatement(IfStatement {
                             condition,
                             body: new_body,
+                            elifs: new_elifs,
                             else_body: new_else_body,
                             location,
                         }));

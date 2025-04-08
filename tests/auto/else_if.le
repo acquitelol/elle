@@ -1,0 +1,190 @@
+use std/prelude;
+
+fn `if.works`() {
+    a := 1;
+
+    if a == 1 {
+        $assert(true, nil);
+    }
+}
+
+fn `if.else.works`() {
+    a := 1;
+
+    if a == 1 {
+        $assert(true, nil);
+    } else {
+        $assert(false, nil);
+    }
+}
+
+fn `if.else_if.picks.if`() {
+    a := 1;
+
+    if a == 1 {
+        $assert(true, nil);
+    } else if a == 2 {
+        $assert(false, nil);
+    }
+}
+
+fn `if.else_if.picks.else_if`() {
+    a := 2;
+
+    if a == 1 {
+        $assert(false, nil);
+    } else if a == 2 {
+        $assert(true, nil);
+    }
+}
+
+fn `if.else_if.else.picks.if`() {
+    a := 1;
+
+    if a == 1 {
+        $assert(true, nil);
+    } else if a == 2 {
+        $assert(false, nil);
+    } else {
+        $assert(false, nil);
+    }
+}
+
+fn `if.else_if.else.picks.else_if`() {
+    a := 2;
+
+    if a == 1 {
+        $assert(false, nil);
+    } else if a == 2 {
+        $assert(true, nil);
+    } else {
+        $assert(false, nil);
+    }
+}
+
+fn `if.else_if.else.picks.else`() {
+    a := 3;
+
+    if a == 1 {
+        $assert(false, nil);
+    } else if a == 2 {
+        $assert(false, nil);
+    } else {
+        $assert(true, nil);
+    }
+}
+
+fn `if.else_if.1.else_if.2.picks.if`() {
+    a := 1;
+
+    if a == 1 {
+        $assert(true, nil);
+    } else if a == 2 {
+        $assert(false, nil);
+    } else if a == 3 {
+        $assert(false, nil);
+    }
+}
+
+fn `if.else_if.1.else_if.2.picks.else_if.1`() {
+    a := 2;
+
+    if a == 1 {
+        $assert(false, nil);
+    } else if a == 2 {
+        $assert(true, nil);
+    } else if a == 3 {
+        $assert(false, nil);
+    }
+}
+
+fn `if.else_if.1.else_if.2.picks.else_if.2`() {
+    a := 3;
+
+    if a == 1 {
+        $assert(false, nil);
+    } else if a == 2 {
+        $assert(false, nil);
+    } else if a == 3 {
+        $assert(true, nil);
+    }
+}
+
+fn `if.else_if.1.else_if.2.else.picks.if`() {
+    a := 1;
+
+    if a == 1 {
+        $assert(true, nil);
+    } else if a == 2 {
+        $assert(false, nil);
+    } else if a == 3 {
+        $assert(false, nil);
+    } else {
+        $assert(false, nil);
+    }
+}
+
+fn `if.else_if.1.else_if.2.else.picks.else_if.1`() {
+    a := 2;
+
+    if a == 1 {
+        $assert(false, nil);
+    } else if a == 2 {
+        $assert(true, nil);
+    } else if a == 3 {
+        $assert(false, nil);
+    } else {
+        $assert(false, nil);
+    }
+}
+
+fn `if.else_if.1.else_if.2.else.picks.else_if.2`() {
+    a := 3;
+
+    if a == 1 {
+        $assert(false, nil);
+    } else if a == 2 {
+        $assert(false, nil);
+    } else if a == 3 {
+        $assert(true, nil);
+    } else {
+        $assert(false, nil);
+    }
+}
+
+fn `if.else_if.1.else_if.2.else.picks.else`() {
+    a := 4;
+
+    if a == 1 {
+        $assert(false, nil);
+    } else if a == 2 {
+        $assert(false, nil);
+    } else if a == 3 {
+        $assert(false, nil);
+    } else {
+        $assert(true, nil);
+    }
+}
+
+fn main() {
+    `if.works`();
+    `if.else.works`();
+
+    `if.else_if.picks.if`();
+    `if.else_if.picks.else_if`();
+
+    `if.else_if.else.picks.if`();
+    `if.else_if.else.picks.else_if`();
+    `if.else_if.else.picks.else`();
+
+    `if.else_if.1.else_if.2.picks.if`();
+    `if.else_if.1.else_if.2.picks.else_if.1`();
+    `if.else_if.1.else_if.2.picks.else_if.2`();
+
+    `if.else_if.1.else_if.2.else.picks.if`();
+    `if.else_if.1.else_if.2.else.picks.else_if.1`();
+    `if.else_if.1.else_if.2.else.picks.else_if.2`();
+    `if.else_if.1.else_if.2.else.picks.else`();
+
+    $println("All `if statement` tests have passed!".color("green").reset());
+}

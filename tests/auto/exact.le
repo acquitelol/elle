@@ -12,5 +12,5 @@ fn main() {
     `add.works`();
     `mul.works`();
 
-    io::println("All `exact literal` tests have passed!".color("green").reset());
+    $println("All `exact literal` tests have passed!".color("green").reset());
 }

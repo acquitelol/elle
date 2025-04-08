@@ -76,6 +76,7 @@ pub struct MemoryOperation {
 pub struct IfStatement {
     pub condition: Box<AstNode>,
     pub body: Vec<AstNode>,
+    pub elifs: Vec<(Box<AstNode>, Vec<AstNode>)>,
     pub else_body: Vec<AstNode>,
     pub location: Rc<Location>,
 }
