@@ -16,11 +16,9 @@ impl Codegen<'_> for Return {
             },
         );
 
-        if !ctx.func.borrow_mut().manual {
-            ctx.func.borrow_mut().add_instruction(Instruction::Return(
-                res.map(|(ty, val)| (ty, val, self.location)),
-            ))
-        }
+        ctx.func.borrow_mut().add_instruction(Instruction::Return(
+            res.map(|(ty, val)| (ty, val, self.location)),
+        ));
 
         None
     }

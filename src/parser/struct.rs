@@ -143,7 +143,6 @@ impl<'a> Struct<'a> {
             members.push(Argument {
                 name,
                 r#type: ty,
-                manual: false,
                 no_fmt: false,
             })
         }
@@ -264,7 +263,6 @@ impl<'a> Struct<'a> {
                 usable: true,
                 imported: false,
                 variadic: false,
-                manual: false,
                 external: false,
                 builtin: true,
                 volatile: false,
@@ -287,13 +285,11 @@ impl<'a> Struct<'a> {
                         } else {
                             name.clone()
                         }),
-                        manual: false,
                         no_fmt: false,
                     },
                     Argument {
                         name: "nesting".into(),
                         r#type: Type::Word,
-                        manual: false,
                         no_fmt: false,
                     },
                 ],

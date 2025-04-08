@@ -234,19 +234,10 @@ impl Codegen<'_> for BinaryOperation {
                 }
 
                 if tmp_function.variadic {
-                    let node = AstNode::Literal(Literal {
-                        kind: TokenKind::ExactLiteral,
-                        value: ValueKind::String("...".into()),
-                        location: self.location.clone(),
-                    });
-
-                    let res = node
-                        .compile(gen, &ctx.to_nnf())
-                        .expect(&self.location.error(
-                            "Unexpected error when trying to compile the variadic literal '...'",
-                        ));
-
-                    params.insert(tmp_function.arguments.len(), (res, false));
+                    params.insert(
+                        tmp_function.arguments.len(),
+                        ((Type::Null, Value::Literal("...".into())), false),
+                    );
                 }
 
                 let instr = Instruction::Call(

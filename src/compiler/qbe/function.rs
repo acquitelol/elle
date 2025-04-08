@@ -12,7 +12,6 @@ pub struct Function {
     pub linkage: Linkage,
     pub name: String,
     pub variadic: bool,
-    pub manual: bool,
     pub external: bool,
     pub builtin: bool,
     pub volatile: bool,

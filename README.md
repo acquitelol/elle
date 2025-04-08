@@ -812,43 +812,36 @@ fn main() {
 
 ### ♡ **Exact literals**
 
-> [!NOTE]
-> You will probably never use exact literals when writing pure Elle code. Their only realistic use is to implement language features that don't exist yet.
+* An exact literal is an identifier which is not explicitly parsed. As in, you can make and call functions with arbitrary names which may be invalid in Elle but valid in the IR.
 
-* An exact literal is Elle's way of implementing inline IR into the language. This basically means that you can write intermediate language code directly in Elle which compiles without any type, size, scope, or name context.
+You can create an "exact literal" by wrapping the content you wish with "`" on both sides of the expression.
 
-You can create an "exact literal" by wrapping the inline IR with "`" on both sides of the expression, and ensuring you include a semicolon at the end.
-
-You can also use the manual return directive, which states that Elle should **NOT** include an automatic return if the function does not return anything by default. You can do this by adding the `@manual` attribute to your function.
-
-Here is a basic example that dereferences an `i32 *` to the underlying `i32`:
+Here is a basic example:
 
 ```rs
 use std/io;
 
-fn deref(i32 *`ptr`) @manual -> i32 {
-    `%res =w loadsw %ptr`;
-    `ret %res`;
+fn `add.works`() {
+    $assert(42 + 42 == 84, nil);
+}
+
+fn `mul.works`() {
+    $assert(42 * 2 == 84, nil);
 }
 
 fn main() {
-    let x = 5;
+    `add.works`();
+    `mul.works`();
 
-    // Print the value at the 0th index (pointer start)
-    // This is identical to `x[0]`
-    io::println(deref(x));
+    io::println("All `exact literal` tests have passed!".color("green").reset());
 }
 ```
 
-* These expressions will expand into the exact characters you type into the intermediate language code.
-* Typing "`storeb 0, %tmp_12`;" will write exactly `storeb 0, %tmp_12` into the intermediate language, completely ignoring types, IR sigils, etc.
-* Only use this for basic operations, it is not intended as a replacement for writing Elle code as block-scoped variables are written with a temporary counter and cannot be referenced directly from exact literals.
-
-You can also create functions with names that are valid in the IR but not in Elle, such as with the `.` character:
+Here's another example;
 
 ```rs
-fn `identity.foo.$.bar`(i32 `x`) @manual -> i32 {
-    `ret %x`;
+fn `identity.foo.$.bar`(i32 x) {
+    return x;
 }
 
 fn main() {

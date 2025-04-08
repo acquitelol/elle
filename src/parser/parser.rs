@@ -90,7 +90,6 @@ pub fn create_generic_struct(
                 generics.clone(),
                 parsed_generics.clone(),
             ),
-            manual: false,
             no_fmt: member.no_fmt,
         })
         .collect::<Vec<Argument>>();

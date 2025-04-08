@@ -1,29 +1,16 @@
 use std/io;
 
-fn deref(i32 *`ptr`) @manual -> i32 {
-    `%res =w loadsw %ptr`;
-    `ret %res`;
+fn `add.works`() {
+    $assert(42 + 42 == 84, nil);
 }
 
-fn add_one(i8 `val`) @manual -> i8 {
-    `%res =w add %val, 1`;
-    `ret %res`;
-}
-
-fn `identity`(i32 `val`) @manual -> i32 {
-    `ret %val`;
+fn `mul.works`() {
+    $assert(42 * 2 == 84, nil);
 }
 
 fn main() {
-    let a = 123;
-
-    $assert(deref(&a) == 123, nil);
-    $assert(add_one(a) == 124, nil);
-    $assert(identity(a) == 123, nil);
-    $assert(`identity`(a) == 123, nil);
-
-    // The function name can be represented without exact literals too in this case
-    $assert(`identity`(a) == identity(a), nil);
+    `add.works`();
+    `mul.works`();
 
     io::println("All `exact literal` tests have passed!".color("green").reset());
 }

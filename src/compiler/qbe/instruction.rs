@@ -31,7 +31,6 @@ pub enum Instruction {
     // Alloc16(u128),
     Store(Type, Value, Value),
     Load(Type, Value),
-    Literal(Value),
     Conversion(Type, Type, Value),
     Extension(Type, Value),
     Truncate(Value),
@@ -68,7 +67,6 @@ impl Instruction {
             // | Self::Cast(v)
             | Self::VAArg(v)
             | Self::VAStart(v)
-            | Self::Literal(v)
             | Self::Copy(v)
             | Self::JumpNonZero(v, _, _)
             | Self::Alloc8(v)
@@ -209,9 +207,6 @@ impl fmt::Display for Instruction {
                     },
                     src
                 )
-            }
-            Self::Literal(val) => {
-                write!(formatter, "{}", val)
             }
             Self::Conversion(first, second, value) => {
                 write!(

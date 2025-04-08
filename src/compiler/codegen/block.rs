@@ -1,7 +1,7 @@
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        qbe::{instruction::Instruction, r#type::Type, value::Value},
+        qbe::{r#type::Type, value::Value},
     },
     hashmap,
     lexer::enums::TokenKind,
@@ -20,13 +20,6 @@ impl Codegen<'_> for BlockStatement {
         for statement in self.body.iter() {
             match statement {
                 AstNode::Literal(Literal { kind, .. }) => match kind {
-                    TokenKind::ExactLiteral => {
-                        if let Some((_, value)) = statement.clone().compile(gen, ctx) {
-                            ctx.func
-                                .borrow_mut()
-                                .add_instruction(Instruction::Literal(value));
-                        }
-                    }
                     TokenKind::Break | TokenKind::Continue => {
                         statement.clone().compile(gen, ctx);
                     }

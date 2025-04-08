@@ -26,12 +26,7 @@ pub fn generate_function(
 
     for argument in this.arguments {
         let ty = argument.r#type.clone();
-
-        let tmp = if argument.manual {
-            gen.new_manual_argument(&ty, &argument.name)
-        } else {
-            gen.new_variable(&ty, &argument.name, None, false, false)
-        };
+        let tmp = gen.new_variable(&ty, &argument.name, None, false, false);
 
         args.push(((ty.into_abi(), tmp), argument.no_fmt));
     }
@@ -44,7 +39,6 @@ pub fn generate_function(
         },
         name: this.name.clone(),
         variadic: this.variadic,
-        manual: this.manual,
         external: this.external,
         builtin: this.builtin,
         volatile: this.volatile,
@@ -92,13 +86,6 @@ pub fn generate_function(
 
         match statement {
             AstNode::Literal(Literal { kind, .. }) => match kind {
-                TokenKind::ExactLiteral => {
-                    if let Some((_, value)) = statement.clone().compile(gen, &ctx) {
-                        func_ref
-                            .borrow_mut()
-                            .add_instruction(Instruction::Literal(value));
-                    }
-                }
                 TokenKind::Break | TokenKind::Continue => {
                     statement.clone().compile(gen, &ctx);
                 }
@@ -291,7 +278,7 @@ pub fn generate_function(
         }
     }
 
-    if !func_ref.borrow_mut().returns() && !func_ref.borrow_mut().manual {
+    if !func_ref.borrow_mut().returns() {
         func_ref
             .borrow_mut()
             .add_instruction(Instruction::Return(Some((

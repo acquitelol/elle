@@ -561,7 +561,6 @@ pub struct FunctionSource {
     pub usable: bool,
     pub imported: bool,
     pub variadic: bool,
-    pub manual: bool,
     pub external: bool,
     pub builtin: bool,
     pub volatile: bool,
@@ -605,6 +604,5 @@ pub struct Case {
 pub struct Argument {
     pub name: String,
     pub r#type: Type,
-    pub manual: bool,
     pub no_fmt: bool,
 }

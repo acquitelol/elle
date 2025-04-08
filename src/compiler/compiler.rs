@@ -116,18 +116,6 @@ impl Compiler {
         tmp
     }
 
-    pub fn new_manual_argument(&mut self, ty: &Type, name: &str) -> Value {
-        let tmp = Value::Temporary(name.into());
-
-        let scope = self
-            .scopes
-            .last_mut()
-            .expect("Expected last scope to exist");
-
-        scope.insert(name.to_owned(), (ty.to_owned(), tmp.to_owned()));
-        tmp
-    }
-
     pub fn get_variable(
         &mut self,
         name: &str,
@@ -341,7 +329,6 @@ impl Compiler {
                             name: this.name.clone(),
                             public: this.public,
                             variadic: false,
-                            manual: false,
                             external: false,
                             builtin: false,
                             volatile: false,

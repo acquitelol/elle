@@ -1673,7 +1673,6 @@ impl<'a> Statement<'a> {
             arguments.push(Argument {
                 r#type: ty,
                 name,
-                manual: false,
                 no_fmt,
             });
         }

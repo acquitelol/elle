@@ -243,7 +243,6 @@ fn main() -> ExitCode {
             name: "exprs".into(),
             // string[]
             r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
-            manual: false,
             no_fmt: false,
         },
         // Holds an array of the type of arguments passed into the function as strings
@@ -251,7 +250,6 @@ fn main() -> ExitCode {
             name: "types".into(),
             // string[]
             r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
-            manual: false,
             no_fmt: false,
         },
         // Holds the number of arguments that were passed into a function
@@ -259,7 +257,6 @@ fn main() -> ExitCode {
             name: "arity".into(),
             // i32
             r#type: Type::Word,
-            manual: false,
             no_fmt: false,
         },
         // Holds the name of the caller method as a string
@@ -267,7 +264,6 @@ fn main() -> ExitCode {
             name: "caller".into(),
             // string
             r#type: Type::Pointer(Box::new(Type::Char)),
-            manual: false,
             no_fmt: false,
         },
         // The name of the file that the struct was generated in
@@ -275,7 +271,6 @@ fn main() -> ExitCode {
             name: "file".into(),
             // string
             r#type: Type::Pointer(Box::new(Type::Char)),
-            manual: false,
             no_fmt: false,
         },
         // The line number that the struct was generated on
@@ -283,7 +278,6 @@ fn main() -> ExitCode {
             name: "line".into(),
             // i32
             r#type: Type::Word,
-            manual: false,
             no_fmt: false,
         },
         // The column number that the struct was generated on
@@ -291,7 +285,6 @@ fn main() -> ExitCode {
             name: "column".into(),
             // i32
             r#type: Type::Word,
-            manual: false,
             no_fmt: false,
         },
     ];
@@ -301,21 +294,18 @@ fn main() -> ExitCode {
         Argument {
             name: "allocator".into(),
             r#type: Type::Pointer(Box::new(Type::Struct(ARBITRARY_ALLOCATOR_NAME.into()))),
-            manual: false,
             no_fmt: false,
         },
         // The pointer to the default allocator
         Argument {
             name: "default_allocator".into(),
             r#type: Type::Pointer(Box::new(Type::Struct(default_allocator.into()))),
-            manual: false,
             no_fmt: false,
         },
         // An approximation of the top of the stack
         Argument {
             name: "stack_top".into(),
             r#type: Type::Pointer(Box::new(Type::Void)),
-            manual: false,
             no_fmt: false,
         },
     ];
@@ -450,7 +440,6 @@ fn main() -> ExitCode {
             usable: true,
             imported: false,
             variadic: false,
-            manual: false,
             external: false,
             builtin: true,
             volatile: true,
@@ -461,13 +450,11 @@ fn main() -> ExitCode {
                 Argument {
                     name: "argc".into(),
                     r#type: Type::Word,
-                    manual: false,
                     no_fmt: false,
                 },
                 Argument {
                     name: "argv".into(),
                     r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
-                    manual: false,
                     no_fmt: false,
                 },
             ],

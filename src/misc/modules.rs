@@ -382,7 +382,6 @@ pub fn lex_and_parse(
                 usable: true,
                 imported: false,
                 variadic: false,
-                manual: false,
                 external: false,
                 builtin: true,
                 volatile: false,
@@ -392,7 +391,6 @@ pub fn lex_and_parse(
                 arguments: vec![Argument {
                     name: "self".into(),
                     r#type: Type::Pointer(Box::new(Type::Unknown("T".into()))),
-                    manual: false,
                     no_fmt: false,
                 }],
                 r#return: Some(Type::Word),

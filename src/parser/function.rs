@@ -159,13 +159,8 @@ impl<'a> Function<'a> {
                     break;
                 }
 
-                let mut manual = false;
                 let name = match self.parser.current_token().kind {
                     TokenKind::Identifier => self.parser.get_identifier(),
-                    TokenKind::ExactLiteral => {
-                        manual = true;
-                        self.parser.get_identifier()
-                    }
                     other => elle_error!(self
                         .parser
                         .current_token()
@@ -179,7 +174,6 @@ impl<'a> Function<'a> {
                 arguments.push(Argument {
                     r#type,
                     name,
-                    manual,
                     no_fmt,
                 })
             }
@@ -206,7 +200,6 @@ impl<'a> Function<'a> {
         let mut unaliased = None;
         let mut volatile = false;
         let mut format = false;
-        let mut manual = false;
 
         if self.parser.match_token(TokenKind::Attribute, false) {
             while self.parser.current_token().kind == TokenKind::Attribute {
@@ -255,10 +248,6 @@ impl<'a> Function<'a> {
                         format = true;
                         self.parser.advance();
                     }
-                    Attribute::Manual => {
-                        manual = true;
-                        self.parser.advance();
-                    }
                     _ => elle_error!(self.parser.current_token().location.error(format!(
                         "Unknown attribute for function '{}'",
                         self.parser
@@ -286,7 +275,6 @@ impl<'a> Function<'a> {
             return Primitive::Function(FunctionSource {
                 public,
                 variadic,
-                manual,
                 name,
                 external,
                 builtin: false,
@@ -433,7 +421,6 @@ impl<'a> Function<'a> {
         Primitive::Function(FunctionSource {
             public,
             variadic,
-            manual,
             name,
             external,
             builtin: false,

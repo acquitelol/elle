@@ -128,7 +128,6 @@ impl Codegen<'_> for FunctionCall {
                 linkage: Linkage::public(),
                 name: name.clone(),
                 variadic: false,
-                manual: false,
                 external: false,
                 builtin: false,
                 volatile: false,
@@ -481,29 +480,10 @@ impl Codegen<'_> for FunctionCall {
         }
 
         if tmp_function.variadic {
-            let node = AstNode::Literal(Literal {
-                kind: TokenKind::ExactLiteral,
-                value: ValueKind::String("...".into()),
-                location: Rc::new(call_location.clone()),
-            });
-
-            let res = node
-                .compile(
-                    gen,
-                    &CodegenContext {
-                        ty: Some(ty.clone()),
-                        value: None,
-                        is_return: false,
-                        ..ctx.clone()
-                    },
-                )
-                .expect(
-                    &call_location.error(
-                        "Unexpected error when trying to compile the variadic literal '...'",
-                    ),
-                );
-
-            params.insert(tmp_function.arguments.len(), (res, false));
+            params.insert(
+                tmp_function.arguments.len(),
+                ((Type::Null, Value::Literal("...".into())), false),
+            );
         }
 
         if !tmp_function.variadic {

@@ -304,7 +304,6 @@ pub fn create_monomorphized_function(
                             this.generics.clone(),
                             known_generics.clone(),
                         ),
-                        manual: arg.manual,
                         no_fmt: arg.no_fmt,
                     })
                     .collect::<Vec<Argument>>();

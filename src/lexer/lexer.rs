@@ -405,7 +405,9 @@ impl Lexer {
                                 "free" => (TokenKind::Free, ValueKind::Nil),
                                 "set_allocator" => (TokenKind::SetAllocator, ValueKind::Nil),
                                 "reset_allocator" => (TokenKind::ResetAllocator, ValueKind::Nil),
-                                other => elle_error!(self.get_location().error(format!("Unimplemented directive: '{}'", other))),
+                                other => elle_error!(self
+                                    .get_location()
+                                    .error(format!("Unimplemented directive: '{}'", other))),
                             },
                             _ => unreachable!(),
                         }
@@ -414,7 +416,9 @@ impl Lexer {
             }
             _ => {
                 self.advance();
-                elle_error!(self.get_location().error(format!("Unexpected character: '{}'", c)))
+                elle_error!(self
+                    .get_location()
+                    .error(format!("Unexpected character: '{}'", c)))
             }
         };
 
@@ -628,21 +632,17 @@ impl Lexer {
 
         if radix != 10 {
             if self.current_char().is_digit(10) {
-                elle_error!(
-                    self.get_location().error(format!(
-                        "Character '{}' is not a valid digit of radix {}.",
-                        self.current_char(),
-                        radix
-                    ))
-                );
+                elle_error!(self.get_location().error(format!(
+                    "Character '{}' is not a valid digit of radix {}.",
+                    self.current_char(),
+                    radix
+                )));
             }
 
             if float {
-                elle_error!(
-                    self.get_location().error(format!(
-                        "Cannot have a floating point or scientific literal of a base other than 10."
-                    ))
-                )
+                elle_error!(self.get_location().error(format!(
+                    "Cannot have a floating point or scientific literal of a base other than 10."
+                )))
             }
 
             literal = format!("{:?}", u128::from_str_radix(&literal[2..], radix).unwrap());
@@ -778,7 +778,9 @@ impl Lexer {
                 'v' => '\x0B',
                 '0' => '\0',
                 '\'' => '\'',
-                _ => elle_error!(self.get_location().error(format!("Invalid escape sequence: '{}'", character))),
+                _ => elle_error!(self
+                    .get_location()
+                    .error(format!("Invalid escape sequence: '{}'", character))),
             };
 
             self.advance();

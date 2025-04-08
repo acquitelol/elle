@@ -20,11 +20,7 @@ impl Codegen<'_> for Lambda {
 
         for argument in self.arguments.clone() {
             let ty = argument.r#type.clone();
-            let tmp = if argument.manual {
-                gen.new_manual_argument(&ty, &argument.name)
-            } else {
-                gen.new_variable(&ty, &argument.name, None, false, false)
-            };
+            let tmp = gen.new_variable(&ty, &argument.name, None, false, false);
 
             args.push((ty.into_abi(), tmp));
         }
@@ -34,7 +30,6 @@ impl Codegen<'_> for Lambda {
                 name: lambda_name.clone(),
                 public: false,
                 variadic: false,
-                manual: false,
                 external: false,
                 builtin: false,
                 volatile: false,

@@ -42,7 +42,6 @@ pub fn create_monomorphized_struct(
                 generics.clone(),
                 parsed_generics.clone(),
             ),
-            manual: member.manual,
             no_fmt: member.no_fmt,
         })
         .collect::<Vec<Argument>>();

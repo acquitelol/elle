@@ -23,10 +23,6 @@ impl Codegen<'_> for Literal {
                 ),
                 _ => None,
             },
-            TokenKind::ExactLiteral => match self.value {
-                ValueKind::String(val) => Some((Type::Null, Value::Literal(val))),
-                _ => None,
-            },
             TokenKind::Break => {
                 if let Some(label) = &gen.loop_labels.last() {
                     ctx.func
