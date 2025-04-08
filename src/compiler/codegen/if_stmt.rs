@@ -57,6 +57,7 @@ impl Codegen<'_> for IfStatement {
         }
 
         ensure_jumps!(ctx, end_label);
+        let elifs_len = self.elifs.len();
 
         for (i, (elif_cond, elif_body)) in self.elifs.into_iter().enumerate() {
             let elif_true_label = format!("elift.{}.{}", gen.tmp_counter, i);
@@ -75,7 +76,7 @@ impl Codegen<'_> for IfStatement {
                 .add_instruction(Instruction::JumpNonZero(
                     cond_val,
                     elif_true_label.clone(),
-                    if self.else_body.is_empty() {
+                    if self.else_body.is_empty() && i == elifs_len - 1 {
                         end_label.clone()
                     } else {
                         next_false_label.clone()
