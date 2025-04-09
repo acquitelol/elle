@@ -25,7 +25,32 @@ impl<'a> Struct<'a> {
         Struct { parser }
     }
 
-    pub fn parse(&mut self, public: bool, namespace: bool) -> (Primitive, Vec<Primitive>) {
+    pub fn parse(
+        &mut self,
+        public: bool,
+        namespace: bool,
+        should_parse: bool,
+    ) -> Option<(Primitive, Vec<Primitive>)> {
+        if !should_parse {
+            if namespace {
+                while self.parser.current_token().kind != TokenKind::Semicolon {
+                    self.parser.advance();
+                }
+            } else {
+                while self.parser.current_token().kind != TokenKind::RightCurlyBrace {
+                    self.parser.advance();
+                }
+
+                self.parser.expect_tokens(vec![TokenKind::RightCurlyBrace]);
+                self.parser.advance();
+            }
+
+            self.parser.expect_tokens(vec![TokenKind::Semicolon]);
+            self.parser.advance();
+
+            return None;
+        }
+
         let keyword_location = self.parser.current_token().location.clone();
         self.parser.advance();
 
@@ -57,7 +82,7 @@ impl<'a> Struct<'a> {
                 .borrow_mut()
                 .insert(name.clone(), (vec![], vec![], location.clone()));
 
-            return (
+            return Some((
                 Primitive::Struct(StructSource {
                     name,
                     public,
@@ -71,7 +96,7 @@ impl<'a> Struct<'a> {
                     ignore_empty: namespace,
                 }),
                 vec![],
-            );
+            ));
         }
 
         let mut generics = vec![];
@@ -354,7 +379,7 @@ impl<'a> Struct<'a> {
             }));
         }
 
-        (
+        Some((
             Primitive::Struct(StructSource {
                 name: name.clone(),
                 public,
@@ -368,6 +393,6 @@ impl<'a> Struct<'a> {
                 ignore_empty: namespace,
             }),
             builtins,
-        )
+        ))
     }
 }

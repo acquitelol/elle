@@ -462,6 +462,8 @@ impl Parser {
 
         let mut global_public = self.global_public;
 
+        // TODO: Change the parser to group together tokens which makes it easier to skip them for the wrong pass
+        // ie: functions should be `fn <name>($1) { $2 }` where $1 and $2 are seperate tagged token streams which can be easily skipped
         while self.position < self.tokens.len() - 1 {
             match self.current_token().kind {
                 TokenKind::Global => {
@@ -492,20 +494,23 @@ impl Parser {
                     local = true;
                     self.advance();
                 }
-                TokenKind::External if do_only == &DoOnly::FunctionsAndConstants => {
+                TokenKind::External => {
                     external = true;
                     self.advance();
                 }
-                TokenKind::Use if do_only == &DoOnly::Imports => {
+                TokenKind::Use => {
                     let mut r#use = Use::new(self);
                     let statement = r#use.parse();
-                    self.tree.borrow_mut().push(statement);
+
+                    if do_only == &DoOnly::Imports {
+                        self.tree.borrow_mut().push(statement);
+                    }
 
                     public = false;
                     local = false;
                     external = false;
                 }
-                TokenKind::Function if do_only == &DoOnly::FunctionsAndConstants => {
+                TokenKind::Function => {
                     if local && public {
                         elle_error!(self
                             .current_token()
@@ -513,6 +518,7 @@ impl Parser {
                             .error("Cannot specify a function as both private and public"));
                     }
 
+                    // function pointer
                     if let Some(next) = self.next_token() {
                         if next.kind == TokenKind::Multiply {
                             self.advance();
@@ -563,15 +569,19 @@ impl Parser {
                             global_public || public
                         },
                         external,
+                        do_only == &DoOnly::FunctionsAndConstants,
                     );
 
-                    self.tree.borrow_mut().push(statement);
+                    // Will only be Some(T) if do_only == &DoOnly::FunctionsAndConstants
+                    if let Some(statement) = statement {
+                        self.tree.borrow_mut().push(statement);
+                    }
 
                     public = false;
                     local = false;
                     external = false;
                 }
-                TokenKind::Constant if do_only == &DoOnly::FunctionsAndConstants => {
+                TokenKind::Constant => {
                     if external {
                         elle_error!(self.current_token().location.error("Cannot have an external constant. Please remove the `external` keyword."))
                     }
@@ -585,19 +595,24 @@ impl Parser {
 
                     let mut constant = Constant::new(self);
 
-                    let statement = constant.parse(if local {
-                        false
-                    } else {
-                        global_public || public
-                    });
+                    let statement = constant.parse(
+                        if local {
+                            false
+                        } else {
+                            global_public || public
+                        },
+                        do_only == &DoOnly::FunctionsAndConstants,
+                    );
 
-                    self.tree.borrow_mut().push(statement);
+                    if let Some(statement) = statement {
+                        self.tree.borrow_mut().push(statement);
+                    }
 
                     public = false;
                     local = false;
                     external = false;
                 }
-                TokenKind::Struct if do_only == &DoOnly::Structs => {
+                TokenKind::Struct => {
                     if external {
                         elle_error!(self.current_token().location.error(
                             "Cannot have an external struct. Please remove the `external` keyword."
@@ -613,40 +628,46 @@ impl Parser {
 
                     let mut r#struct = Struct::new(self);
 
-                    let (statement, mut builtins) = r#struct.parse(
+                    let res = r#struct.parse(
                         if local {
                             false
                         } else {
                             global_public || public
                         },
                         false,
+                        do_only == &DoOnly::Structs,
                     );
 
-                    self.tree.borrow_mut().push(statement);
-                    self.tree.borrow_mut().append(&mut builtins);
+                    if let Some((statement, mut builtins)) = res {
+                        self.tree.borrow_mut().push(statement);
+                        self.tree.borrow_mut().append(&mut builtins);
+                    }
 
                     public = false;
                     local = false;
                     external = false;
                 }
-                TokenKind::Namespace if do_only == &DoOnly::Structs => {
+                TokenKind::Namespace => {
                     if external {
                         elle_error!(self.current_token().location.error("Cannot have an external namespace. Please remove the `external` keyword."))
                     }
 
                     let mut r#struct = Struct::new(self);
-                    let (statement, mut builtins) = r#struct.parse(false, true);
+                    let res = r#struct.parse(false, true, do_only == &DoOnly::Structs);
 
-                    self.tree.borrow_mut().push(statement);
-                    self.tree.borrow_mut().append(&mut builtins);
+                    if let Some((statement, mut builtins)) = res {
+                        self.tree.borrow_mut().push(statement);
+                        self.tree.borrow_mut().append(&mut builtins);
 
-                    public = false;
-                    local = false;
-                    external = false;
+                        public = false;
+                        local = false;
+                        external = false;
+                    }
                 }
-                _ => {
-                    self.advance();
-                }
+                _ => elle_error!(self
+                    .current_token()
+                    .location
+                    .error("Unexpected token found while parsing")),
             }
         }
 

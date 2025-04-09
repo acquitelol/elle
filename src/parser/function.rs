@@ -26,8 +26,48 @@ impl<'a> Function<'a> {
         Function { parser }
     }
 
-    pub fn parse(&mut self, public: bool, external: bool) -> Primitive {
+    pub fn parse(&mut self, public: bool, external: bool, should_parse: bool) -> Option<Primitive> {
         self.parser.advance();
+
+        if !should_parse {
+            if external {
+                while self.parser.current_token().kind != TokenKind::Semicolon {
+                    self.parser.advance();
+                }
+
+                self.parser.expect_tokens(vec![TokenKind::Semicolon]);
+                self.parser.advance();
+            } else {
+                while self.parser.current_token().kind != TokenKind::LeftCurlyBrace {
+                    self.parser.advance();
+                }
+
+                self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
+                self.parser.advance();
+                let mut nesting = 0;
+
+                loop {
+                    if self.parser.current_token().kind == TokenKind::LeftCurlyBrace {
+                        nesting += 1;
+                    }
+
+                    if self.parser.current_token().kind == TokenKind::RightCurlyBrace {
+                        if nesting > 0 {
+                            nesting -= 1;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    self.parser.advance();
+                }
+
+                self.parser.expect_tokens(vec![TokenKind::RightCurlyBrace]);
+                self.parser.advance(); // Go past the right curly brace
+            }
+
+            return None;
+        }
 
         let mut name = self.parser.get_identifier();
         let location = self.parser.current_token().location.clone();
@@ -272,7 +312,7 @@ impl<'a> Function<'a> {
             self.parser.expect_tokens(vec![TokenKind::Semicolon]);
             self.parser.advance();
 
-            return Primitive::Function(FunctionSource {
+            return Some(Primitive::Function(FunctionSource {
                 public,
                 variadic,
                 name,
@@ -289,7 +329,7 @@ impl<'a> Function<'a> {
                 imported: false,
                 location: location.clone(),
                 return_location: return_location.clone(),
-            });
+            }));
         }
 
         self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
@@ -425,7 +465,7 @@ impl<'a> Function<'a> {
 
         insert_deferred_statements(&mut res, &deferred, true);
 
-        Primitive::Function(FunctionSource {
+        Some(Primitive::Function(FunctionSource {
             public,
             variadic,
             name,
@@ -442,6 +482,6 @@ impl<'a> Function<'a> {
             imported: false,
             location,
             return_location,
-        })
+        }))
     }
 }

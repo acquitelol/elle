@@ -50,8 +50,19 @@ impl<'a> Constant<'a> {
         tokens
     }
 
-    pub fn parse(&mut self, public: bool) -> Primitive {
+    pub fn parse(&mut self, public: bool, should_parse: bool) -> Option<Primitive> {
         self.parser.advance();
+
+        if !should_parse {
+            while self.parser.current_token().kind != TokenKind::Semicolon {
+                self.parser.advance();
+            }
+
+            self.parser.expect_tokens(vec![TokenKind::Semicolon]);
+            self.parser.advance();
+
+            return None;
+        }
 
         let ty = self.parser.get_type(None);
         self.parser.advance();
@@ -80,7 +91,7 @@ impl<'a> Constant<'a> {
         .parse()
         .0;
 
-        Primitive::Constant(ConstantSource {
+        Some(Primitive::Constant(ConstantSource {
             name,
             public,
             r#type: Some(ty.clone()),
@@ -93,6 +104,6 @@ impl<'a> Constant<'a> {
             usable: true,
             imported: false,
             location: self.parser.current_token().location,
-        })
+        }))
     }
 }
