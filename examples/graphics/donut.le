@@ -4,11 +4,11 @@ use std/io;
 
 const f32 THETA_SPACING = 0.07;
 const f32 PHI_SPACING = 0.02;
-const string LIGHTING = ".,-~:;=!*#$@";
+const LIGHTING = ".,-~:;=!*#$@";
 
-const i32 WIDTH = 60;
-const i32 HEIGHT = 24;
-const i32 SIZE = WIDTH * HEIGHT;
+const WIDTH = 60;
+const HEIGHT = 24;
+const SIZE = WIDTH * HEIGHT;
 
 fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 *lightDirection) {
     memset(zBuffer, 0, SIZE * #size(f32));

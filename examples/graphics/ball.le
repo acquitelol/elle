@@ -1,39 +1,33 @@
-use ../resources/raylib;
-use std/math;
-use std/io;
+use std/raylib;
 
-const i32 SCREEN_WIDTH = 600;
-const i32 SCREEN_HEIGHT = 600;
-const i32 FONT_SIZE = 40;
-const i32 UPDATE_FACTOR = 4;
+const SCREEN_WIDTH = 600;
+const SCREEN_HEIGHT = 600;
+const FONT_SIZE = 40;
+const UPDATE_FACTOR = 4;
 
-const f32 VELOCITY_FACTOR = 2.0;
-const f32 CIRCLE_RADIUS = 50.0;
-const f32 GRAVITY = 1000.0;
-const f32 DAMPING = -0.8;
-const f32 EPSILON = 5;
+const VELOCITY_FACTOR = 2.0;
+const CIRCLE_RADIUS = 50.0;
+const GRAVITY = 1000.0;
+const DAMPING = -0.8;
+const EPSILON = 5.0;
 
-const Color BLACK = raylib::get_color(0x00000000);
-const Color PINK = raylib::get_color(0xFF7DFBFF);
-const Color BERRY = raylib::get_color(0x2E172DFF);
-const Color PURPLE = raylib::get_color(0xE785FFFF);
-const Color YELLOW = raylib::get_color(0xFFE2B8FF);
-const Color BLUE = raylib::get_color(0xC6B5FFFF);
+const PINK = rl::get_color(0xFF7DFBFF);
+const BERRY = rl::get_color(0x2E172DFF);
 
 fn main() {
     let title = "Using raylib in Elle! <3";
     let subtitle = "Try controlling the ball with W, A, S, D!";
 
-    raylib::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, title);
-    defer raylib::close_window();
+    rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, title);
+    defer rl::close_window();
 
-    raylib::init_audio_device();
-    defer raylib::close_audio_device();
+    rl::init_audio_device();
+    defer rl::close_audio_device();
 
-    let sound = raylib::load_sound("./examples/resources/hit.wav");
-    defer raylib::unload_sound(sound);
+    let sound = rl::load_sound("./examples/resources/hit.wav");
+    defer rl::unload_sound(sound);
 
-    raylib::set_target_fps(60);
+    rl::set_target_fps(60);
 
     let padding = SCREEN_WIDTH >= 100 ? 100 : 0;
     let position = Vector2 {
@@ -49,8 +43,8 @@ fn main() {
     let finished = false;
     let bounces = 0;
 
-    while !raylib::window_should_close() {
-        let deltaTime = raylib::get_frame_time();
+    while !rl::window_should_close() {
+        let deltaTime = rl::get_frame_time();
 
         if finished {
             finished = false;
@@ -58,42 +52,42 @@ fn main() {
             velocity.y = GRAVITY * UPDATE_FACTOR * 0.2;
         }
 
-        raylib::begin_drawing();
+        rl::begin_drawing();
         velocity.y += GRAVITY * deltaTime;
-        raylib::clear_background(BERRY);
+        rl::clear_background(BERRY);
 
-        if raylib::is_key_down('W') {
+        if rl::is_key_down(KEY_W) {
             velocity.y = -200;
         }
 
-        if raylib::is_key_down('S') {
+        if rl::is_key_down(KEY_S) {
             velocity.y = 200;
         }
 
-        if raylib::is_key_down('A') {
+        if rl::is_key_down(KEY_A) {
             velocity.x = -200;
         }
 
-        if raylib::is_key_down('D') {
+        if rl::is_key_down(KEY_D) {
             velocity.x = 200;
         }
 
         let newX = position.x + velocity.x * deltaTime;
 
-        if newX < CIRCLE_RADIUS || newX + CIRCLE_RADIUS > raylib::get_screen_width() {
+        if newX < CIRCLE_RADIUS || newX + CIRCLE_RADIUS > rl::get_screen_width() {
             bounces += 1;
             velocity.x *= DAMPING;
-            raylib::play_sound(sound);
+            rl::play_sound(sound);
         } else {
             position.x = newX;
         }
 
         let newY = position.y + velocity.y * deltaTime;
 
-        if newY < CIRCLE_RADIUS || newY + CIRCLE_RADIUS > raylib::get_screen_height() {
+        if newY < CIRCLE_RADIUS || newY + CIRCLE_RADIUS > rl::get_screen_height() {
             bounces += 1;
             velocity.y *= DAMPING;
-            raylib::play_sound(sound);
+            rl::play_sound(sound);
         } else {
             position.y = newY;
         }
@@ -105,18 +99,18 @@ fn main() {
             finished = true;
         }
 
-        raylib::draw_circle((i32)position.x, (i32)position.y, CIRCLE_RADIUS, PINK);
+        rl::draw_circle((i32)position.x, (i32)position.y, CIRCLE_RADIUS, PINK);
 
         // Title
-        raylib::draw_text(title, (SCREEN_WIDTH - raylib::measure_text(title, FONT_SIZE)) / 2, 40, FONT_SIZE, BLUE);
+        rl::draw_text(title, (SCREEN_WIDTH - rl::measure_text(title, FONT_SIZE)) / 2, 40, FONT_SIZE, BLUE);
 
         // Bounces
         string bouncesString = "Bounces: {}".format(bounces);
-        raylib::draw_text(bouncesString, (SCREEN_WIDTH - raylib::measure_text(bouncesString, FONT_SIZE)) / 2, 100, FONT_SIZE, YELLOW);
+        rl::draw_text(bouncesString, (SCREEN_WIDTH - rl::measure_text(bouncesString, FONT_SIZE)) / 2, 100, FONT_SIZE, YELLOW);
 
         // Subtitle
-        raylib::draw_text(subtitle, (SCREEN_WIDTH - raylib::measure_text(subtitle, FONT_SIZE / 2)) / 2, 160, FONT_SIZE / 2, PURPLE);
-        raylib::draw_fps(SCREEN_WIDTH - 80, SCREEN_HEIGHT - 24);
-        raylib::end_drawing();
+        rl::draw_text(subtitle, (SCREEN_WIDTH - rl::measure_text(subtitle, FONT_SIZE / 2)) / 2, 160, FONT_SIZE / 2, PURPLE);
+        rl::draw_fps(SCREEN_WIDTH - 80, SCREEN_HEIGHT - 24);
+        rl::end_drawing();
     }
 }

@@ -1,24 +1,20 @@
-use ../resources/raylib;
-use std/vectors;
+use std/raylib;
 
-const i32 SCREEN_WIDTH = 800;
-const i32 SCREEN_HEIGHT = 450;
+const SCREEN_WIDTH = 800;
+const SCREEN_HEIGHT = 450;
 
-const i32 PADDLE_WIDTH = 20;
-const i32 PADDLE_HEIGHT = 100;
-const f32 PADDLE_SPEED = 5.0;
+const PADDLE_WIDTH = 20;
+const PADDLE_HEIGHT = 100;
+const PADDLE_SPEED = 5.0;
 
-const i32 BALL_SIZE = 10;
-const f32 BALL_SPEED = 5.0;
-
-const Color BLACK = raylib::get_color(0x00000000);
-const Color WHITE = raylib::get_color(0xFFFFFFFF);
+const BALL_SIZE = 10;
+const BALL_SPEED = 5.0;
 
 fn main() {
-    raylib::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Pong :3");
-    defer raylib::close_window();
+    rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Pong :3");
+    defer rl::close_window();
 
-    raylib::set_target_fps(60);
+    rl::set_target_fps(60);
 
     leftPaddle := Rectangle {
         x = 50,
@@ -41,22 +37,20 @@ fn main() {
     rightScore := 0;
     velocitySign := 1;
 
-    while !raylib::window_should_close() {
-        if raylib::is_key_down('W') && leftPaddle.y > 0 {
+    while !rl::window_should_close() {
+        if rl::is_key_down(KEY_W) && leftPaddle.y > 0 {
             leftPaddle.y -= PADDLE_SPEED;
         }
 
-        if raylib::is_key_down('S') && leftPaddle.y < SCREEN_HEIGHT - PADDLE_HEIGHT {
+        if rl::is_key_down(KEY_S) && leftPaddle.y < SCREEN_HEIGHT - PADDLE_HEIGHT {
             leftPaddle.y += PADDLE_SPEED;
         }
 
-        // KEY_LEFT = 263
-        if raylib::is_key_down(263) && rightPaddle.y > 0 {
+        if rl::is_key_down(KEY_LEFT) && rightPaddle.y > 0 {
             rightPaddle.y -= PADDLE_SPEED;
         }
 
-        // KEY_RIGHT = 262
-        if raylib::is_key_down(262) && rightPaddle.y < SCREEN_HEIGHT - PADDLE_HEIGHT {
+        if rl::is_key_down(KEY_RIGHT) && rightPaddle.y < SCREEN_HEIGHT - PADDLE_HEIGHT {
             rightPaddle.y += PADDLE_SPEED;
         }
 
@@ -67,8 +61,8 @@ fn main() {
             ballVelocity.y *= -1;
         }
 
-        if raylib::check_collision_circle_rec(ballPosition, BALL_SIZE / 2, leftPaddle) ||
-            raylib::check_collision_circle_rec(ballPosition, BALL_SIZE / 2, rightPaddle) {
+        if rl::check_collision_circle_rec(ballPosition, BALL_SIZE / 2, leftPaddle) ||
+            rl::check_collision_circle_rec(ballPosition, BALL_SIZE / 2, rightPaddle) {
             ballVelocity.x *= -1;
         }
 
@@ -86,16 +80,16 @@ fn main() {
             ballVelocity = Vector2::from(BALL_SPEED * velocitySign);
         }
 
-        raylib::begin_drawing();
-        raylib::clear_background(BLACK);
+        rl::begin_drawing();
+        defer rl::end_drawing();
 
-        raylib::draw_rectangle_rec(leftPaddle, WHITE);
-        raylib::draw_rectangle_rec(rightPaddle, WHITE);
-        raylib::draw_circle_v(ballPosition, BALL_SIZE / 2, WHITE);
+        rl::clear_background(BLACK);
 
-        raylib::draw_text("{}".format(leftScore), SCREEN_WIDTH / 4, 20, 40, WHITE);
-        raylib::draw_text("{}".format(rightScore), 3 * SCREEN_WIDTH / 4, 20, 40, WHITE);
+        rl::draw_rectangle_rec(leftPaddle, WHITE);
+        rl::draw_rectangle_rec(rightPaddle, WHITE);
+        rl::draw_circle_v(ballPosition, BALL_SIZE / 2, WHITE);
 
-        raylib::end_drawing();
+        rl::draw_text("{}".format(leftScore), SCREEN_WIDTH / 4, 20, 40, WHITE);
+        rl::draw_text("{}".format(rightScore), 3 * SCREEN_WIDTH / 4, 20, 40, WHITE);
     }
 }

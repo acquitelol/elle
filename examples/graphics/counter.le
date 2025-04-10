@@ -1,54 +1,51 @@
-use ../resources/raylib;
-use std/prelude;
+use std/raylib;
 
-const i32 SCREEN_WIDTH = 800;
-const i32 SCREEN_HEIGHT = 450;
+const SCREEN_WIDTH = 800;
+const SCREEN_HEIGHT = 450;
 
-const Color BUTTON_UNHOVER = raylib::get_color(0x777777FF);
-const Color BUTTON_HOVER = raylib::get_color(0x555555FF);
-const Color BACKGROUND = raylib::get_color(0x333333FF);
-const Color BLACK = raylib::get_color(0x000000FF);
-const Color WHITE = raylib::get_color(0xFFFFFFFF);
+const BUTTON_UNHOVER = rl::get_color(0x777777FF);
+const BUTTON_HOVER = rl::get_color(0x555555FF);
+const BACKGROUND = rl::get_color(0x333333FF);
 
 fn render_button(string text, f32 y_offset, Vector2 mouse_pos, i32 *counter, fn *action) {
     button := Rectangle {
-        x = (SCREEN_WIDTH - raylib::measure_text(text, 20) - 30) / 2,
+        x = (SCREEN_WIDTH - rl::measure_text(text, 20) - 30) / 2,
         y = (SCREEN_HEIGHT - 40 * 2 * y_offset) / 2.0,
-        width = raylib::measure_text(text, 20) + 30,
+        width = rl::measure_text(text, 20) + 30,
         height = 40
     };
 
-    hovering := check_collision_point_rec(mouse_pos, button);
+    hovering := rl::elle_check_collision_point_rec(mouse_pos, button);
     button_color := hovering ? BUTTON_HOVER : BUTTON_UNHOVER;
 
-    if hovering && raylib::is_mouse_button_pressed(0) {
+    if hovering && rl::is_mouse_button_pressed(MOUSE_BUTTON_LEFT) {
         action(counter);
     }
 
-    raylib::draw_rectangle_rec(button, button_color);
-    raylib::draw_rectangle_lines_ex(button, 2, BLACK);
-    raylib::draw_text(text, button.x + 15, button.y + 10, 20, WHITE);
+    rl::draw_rectangle_rec(button, button_color);
+    rl::draw_rectangle_lines_ex(button, 2, BLACK);
+    rl::draw_text(text, button.x + 15, button.y + 10, 20, WHITE);
 }
 
 fn main() {
-    raylib::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Counter :3");
-    defer raylib::close_window();
+    rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Counter :3");
+    defer rl::close_window();
 
-    raylib::set_target_fps(60);
+    rl::set_target_fps(60);
     counter := 0;
 
-    while !raylib::window_should_close() {
-        raylib::begin_drawing();
-        defer raylib::end_drawing();
+    while !rl::window_should_close() {
+        rl::begin_drawing();
+        defer rl::end_drawing();
 
-        raylib::clear_background(BACKGROUND);
-        mouse_pos := raylib::get_mouse_position();
+        rl::clear_background(BACKGROUND);
+        mouse_pos := rl::get_mouse_position();
 
         render_button("Increment", 1, mouse_pos, &counter, fn(i32 *counter) { *counter += 1; });
         render_button("Decrement", -0.35, mouse_pos, &counter, fn(i32 *counter) { *counter -= 1; });
         render_button("Reset", -1.7, mouse_pos, &counter, fn(i32 *counter) { *counter = 0; });
 
         count := "Counter: {}".format(counter);
-        raylib::draw_text(count, (SCREEN_WIDTH - raylib::measure_text(count, 40)) / 2, 100, 40, WHITE);
+        rl::draw_text(count, (SCREEN_WIDTH - rl::measure_text(count, 40)) / 2, 100, 40, WHITE);
     }
 }
