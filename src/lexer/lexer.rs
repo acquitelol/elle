@@ -550,7 +550,6 @@ impl Lexer {
             "external" => TokenKind::External,
             "struct" => TokenKind::Struct,
             "global" => TokenKind::Global,
-            "local" => TokenKind::Local,
             "namespace" => TokenKind::Namespace,
             "in" => TokenKind::In,
             "let" => TokenKind::Let,

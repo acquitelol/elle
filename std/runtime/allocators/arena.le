@@ -1,7 +1,7 @@
 use std/libc/mem;
 global pub;
 
-local fn __internal_alloc_align8(i32 n) {
+!pub fn __internal_alloc_align8(i32 n) {
     return (n + 7) & ~7;
 }
 

@@ -1,16 +1,16 @@
-global pub;
+global pub, external;
 
 // used to force stack allocated pointers to be pushed to the stack
 // and not be optimized into registers so that the GC can detect
 // them as a root when scanning the stack for valid roots
-external fn __internal_gc_noop(void *x);
+fn __internal_gc_noop(void *x);
 
 namespace GCAllocator; // entirely opaque
 
-external fn GCAllocator::new() -> GCAllocator *;
-external fn GCAllocator::mark(GCAllocator *self);
-external fn GCAllocator::sweep(GCAllocator *self);
-external fn GCAllocator::collect(GCAllocator *self);
-external fn GCAllocator::alloc(GCAllocator *self, i32 size) -> void *;
-external fn GCAllocator::realloc(GCAllocator *self, void *ptr, i32 new_size) -> void *;
-external fn GCAllocator::free_self(GCAllocator *self);
+fn GCAllocator::new() -> GCAllocator *;
+fn GCAllocator::mark(GCAllocator *self);
+fn GCAllocator::sweep(GCAllocator *self);
+fn GCAllocator::collect(GCAllocator *self);
+fn GCAllocator::alloc(GCAllocator *self, i32 size) -> void *;
+fn GCAllocator::realloc(GCAllocator *self, void *ptr, i32 new_size) -> void *;
+fn GCAllocator::free_self(GCAllocator *self);

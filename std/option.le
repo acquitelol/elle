@@ -7,7 +7,7 @@ struct Option<T> {
     bool __is_some;
 };
 
-local fn Option::new<T>(T value, bool is_some) -> Option<T> {
+!pub fn Option::new<T>(T value, bool is_some) -> Option<T> {
     let option = #alloc(Option<T>);
 
     option.__value = value;

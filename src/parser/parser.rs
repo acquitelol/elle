@@ -326,6 +326,7 @@ pub struct Parser {
     // Map of struct name to members and generics
     pub struct_pool: RefCell<StructPool>,
     pub global_public: bool,
+    pub global_external: bool,
     pub warnings: Warnings,
 }
 
@@ -337,6 +338,7 @@ impl Parser {
             tree: RefCell::new(vec![]),
             struct_pool: RefCell::new(struct_pool),
             global_public: false,
+            global_external: false,
             warnings,
         }
     }
@@ -458,9 +460,20 @@ impl Parser {
         self.position = 0;
         let mut public = false;
         let mut local = false;
+        let mut defined = false;
         let mut external = false;
 
+        macro_rules! clean {
+            () => {{
+                public = false;
+                local = false;
+                defined = false;
+                external = false;
+            }};
+        }
+
         let mut global_public = self.global_public;
+        let mut global_external = self.global_external;
 
         // TODO: Change the parser to group together tokens which makes it easier to skip them for the wrong pass
         // ie: functions should be `fn <name>($1) { $2 }` where $1 and $2 are seperate tagged token streams which can be easily skipped
@@ -469,12 +482,51 @@ impl Parser {
                 TokenKind::Global => {
                     self.advance();
 
+                    macro_rules! match_one {
+                        () => {{
+                            match self.current_token().kind {
+                                TokenKind::Public => {
+                                    global_public = true;
+                                }
+                                TokenKind::External => {
+                                    global_external = true;
+                                }
+                                _ => elle_error!(self.current_token().location.error(format!(
+                                    "Invalid global identifier named '{}'",
+                                    self.current_token()
+                                        .value
+                                        .get_string_inner()
+                                        .unwrap_or(self.current_token().kind.to_string())
+                                ))),
+                            }
+
+                            self.advance();
+                        }};
+                    }
+
+                    match_one!(); // Must have one identifier
+
+                    // Match until no more commas
+                    while self.current_token().kind == TokenKind::Comma {
+                        self.advance();
+                        match_one!()
+                    }
+
+                    self.expect_tokens(vec![TokenKind::Semicolon]);
+                    self.advance();
+                }
+                TokenKind::Not => {
+                    self.advance();
+
                     match self.current_token().kind {
                         TokenKind::Public => {
-                            global_public = true;
+                            local = true;
+                        }
+                        TokenKind::External => {
+                            defined = true;
                         }
                         _ => elle_error!(self.current_token().location.error(format!(
-                            "Invalid global identifier named '{}'",
+                            "Invalid local specifier named '{}'",
                             self.current_token()
                                 .value
                                 .get_string_inner()
@@ -483,15 +535,9 @@ impl Parser {
                     }
 
                     self.advance();
-                    self.expect_tokens(vec![TokenKind::Semicolon]);
-                    self.advance();
                 }
                 TokenKind::Public => {
                     public = true;
-                    self.advance();
-                }
-                TokenKind::Local => {
-                    local = true;
                     self.advance();
                 }
                 TokenKind::External => {
@@ -506,9 +552,7 @@ impl Parser {
                         self.tree.borrow_mut().push(statement);
                     }
 
-                    public = false;
-                    local = false;
-                    external = false;
+                    clean!()
                 }
                 TokenKind::Function => {
                     if local && public {
@@ -526,40 +570,6 @@ impl Parser {
                         }
                     }
 
-                    if self.position >= 2 && self.tokens.len() > 2 {
-                        let mut position = self.position.clone();
-
-                        // Skip over function meta
-                        while [
-                            TokenKind::Function,
-                            TokenKind::External,
-                            TokenKind::Public,
-                            TokenKind::Local,
-                        ]
-                        .contains(&self.tokens[position].kind)
-                        {
-                            position -= 1;
-                        }
-
-                        if position >= 1
-                            && ![TokenKind::Semicolon, TokenKind::RightCurlyBrace]
-                                .contains(&self.tokens[position].kind)
-                        {
-                            let mut location = (*self
-                                .tokens
-                                .get(self.position - 2)
-                                .unwrap_or(&self.tokens[self.position - 2])
-                                .location)
-                                .clone();
-
-                            location.ctx = Rc::from(format!("{} ", location.ctx));
-                            location.column += 1;
-                            elle_error!(
-                                location.error("Expected semicolon here, but definition has ended")
-                            )
-                        }
-                    }
-
                     let mut function = Function::new(self);
 
                     let statement = function.parse(
@@ -568,7 +578,11 @@ impl Parser {
                         } else {
                             global_public || public
                         },
-                        external,
+                        if defined {
+                            false
+                        } else {
+                            global_external || external
+                        },
                         do_only == &DoOnly::FunctionsAndConstants,
                     );
 
@@ -577,9 +591,7 @@ impl Parser {
                         self.tree.borrow_mut().push(statement);
                     }
 
-                    public = false;
-                    local = false;
-                    external = false;
+                    clean!()
                 }
                 TokenKind::Constant => {
                     if external {
@@ -608,9 +620,7 @@ impl Parser {
                         self.tree.borrow_mut().push(statement);
                     }
 
-                    public = false;
-                    local = false;
-                    external = false;
+                    clean!()
                 }
                 TokenKind::Struct => {
                     if external {
@@ -643,9 +653,7 @@ impl Parser {
                         self.tree.borrow_mut().append(&mut builtins);
                     }
 
-                    public = false;
-                    local = false;
-                    external = false;
+                    clean!()
                 }
                 TokenKind::Namespace => {
                     if external {
@@ -659,19 +667,18 @@ impl Parser {
                         self.tree.borrow_mut().push(statement);
                         self.tree.borrow_mut().append(&mut builtins);
 
-                        public = false;
-                        local = false;
-                        external = false;
+                        clean!()
                     }
                 }
                 _ => elle_error!(self
                     .current_token()
                     .location
-                    .error("Unexpected token found while parsing")),
+                    .error(format!("Unexpected token found while parsing: {:?}", self.current_token().kind))),
             }
         }
 
         self.global_public = global_public;
+        self.global_external = global_external;
         return (
             self.tree.borrow_mut().to_owned(),
             self.struct_pool.borrow_mut().to_owned(),

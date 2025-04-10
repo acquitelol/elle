@@ -35,11 +35,3 @@ fn LinkedList::add<T>(LinkedList<T> *self, T data) {
     new.next = self.head;
     self.head = new;
 }
-
-fn LinkedList::free<T>(LinkedList<T> *self) {
-    while self.head {
-        next := self.head.next;
-        mem::free(self.head);
-        self.head = next;
-    }
-}

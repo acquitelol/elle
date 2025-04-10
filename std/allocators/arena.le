@@ -1,8 +1,7 @@
-global pub;
-
+global pub, external;
 namespace ArenaAllocator;
 
-external fn ArenaAllocator::new() -> ArenaAllocator *;
-external fn ArenaAllocator::alloc(ArenaAllocator *self, i32 size) -> void *;
-external fn ArenaAllocator::realloc(ArenaAllocator *self, void *ptr, i32 new_size) -> void *;
-external fn ArenaAllocator::free_self(ArenaAllocator *self);
+fn ArenaAllocator::new() -> ArenaAllocator *;
+fn ArenaAllocator::alloc(ArenaAllocator *self, i32 size) -> void *;
+fn ArenaAllocator::realloc(ArenaAllocator *self, void *ptr, i32 new_size) -> void *;
+fn ArenaAllocator::free_self(ArenaAllocator *self);

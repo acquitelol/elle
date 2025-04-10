@@ -4,6 +4,7 @@ use std/libc/io;
 use std/hashes;
 use std/core;
 use std/math;
+
 global pub;
 
 const void *HashMap_EMPTY = i32::min();
@@ -30,7 +31,7 @@ struct HashMap<T, U> {
     i32 capacity;
 };
 
-local fn __internal_key_exists_check<T, U>(HashMap<T, U> *self, T key, ElleMeta meta) {
+!pub fn __internal_key_exists_check<T, U>(HashMap<T, U> *self, T key, ElleMeta meta) {
     if !self.contains_key(key) {
         io::cprintf(
             "[%s:%d%d] ERROR: Key '%s' does not exist in this HashMap.\n"
@@ -143,7 +144,7 @@ fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
 
 external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) @alias("HashMap::set") -> bool;
 
-local fn __internal_hashmap_get<T, U>(HashMap<T, U> *self, T key) -> U {
+!pub fn __internal_hashmap_get<T, U>(HashMap<T, U> *self, T key) -> U {
     i32 idx = key.__hash__(self.capacity);
     let start_idx = idx;
 

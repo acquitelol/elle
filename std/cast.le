@@ -1,13 +1,13 @@
-global pub;
+global pub, external;
 
-external fn bool::parse(string str) -> bool;
-external fn i32::parse(string str) -> i32;
-external fn i64::parse(string str) -> i64;
-external fn f32::parse(string str) -> f32;
-external fn f64::parse(string str) -> f64;
+fn bool::parse(string str) -> bool;
+fn i32::parse(string str) -> i32;
+fn i64::parse(string str) -> i64;
+fn f32::parse(string str) -> f32;
+fn f64::parse(string str) -> f64;
 
-external fn bool::try_parse(string str, bool *res) -> bool;
-external fn i32::try_parse(string str, i32 *res) -> bool;
-external fn i64::try_parse(string str, i64 *res) -> bool;
-external fn f32::try_parse(string str, f32 *res) -> bool;
-external fn f64::try_parse(string str, f64 *res) -> bool;
+fn bool::try_parse(string str, bool *res) -> bool;
+fn i32::try_parse(string str, i32 *res) -> bool;
+fn i64::try_parse(string str, i64 *res) -> bool;
+fn f32::try_parse(string str, f32 *res) -> bool;
+fn f64::try_parse(string str, f64 *res) -> bool;

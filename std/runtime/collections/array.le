@@ -9,7 +9,7 @@ struct Array<T> @nofmt {
     T *elements;
 };
 
-local fn __internal_array_bounds_check(string file, i32 line, i32 col, i64 i, i64 length) {
+!pub fn __internal_array_bounds_check(string file, i32 line, i32 col, i64 i, i64 length) {
     if i < 0 || i > length - 1 {
         io::cprintf(
             "[%s:%d:%d] ERROR: Index %ld is out of bounds for array length %ld\n",
@@ -147,7 +147,7 @@ fn Array::sort<T>(T[] self) {
     __internal_qsort(self.elements, 0, self.len() - 1);
 }
 
-local fn __internal_qsort<T>(T *array, i32 low, i32 high) {
+!pub fn __internal_qsort<T>(T *array, i32 low, i32 high) {
     if low >= high {
         return;
     }
@@ -186,7 +186,7 @@ fn Array::cartesian_product<T>(T[] self, i32 n) {
     return results;
 }
 
-local fn __internal_cartesian_product_generate<T>(T[] self, T[] current, i32 n, T[][] results) {
+!pub fn __internal_cartesian_product_generate<T>(T[] self, T[] current, i32 n, T[][] results) {
     if current.len() == n {
         T[] combination = current.clone();
         results.push((T)combination);

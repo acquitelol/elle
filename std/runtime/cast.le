@@ -21,19 +21,19 @@ fn bool::try_parse(string str, bool *res) {
     return false;
 }
 
-local fn __internal_is_valid(string str, string type) -> bool {
+!pub fn __internal_is_valid(string str, string ty) -> bool {
     let valid_strspn = #["-0123456789", "-0123456789", "-0123456789."];
     let valid_types = #["i32", "i64", "f64"];
     let type_index = -1;
 
     for let i = 0; i < #len(valid_types); i += 1 {
-        if valid_types[i] == type {
+        if valid_types[i] == ty {
             type_index = i;
         }
     }
 
     if type_index == -1 {
-        io::eprintln(type, " is not a valid type for casting. Falling back to 0", type);
+        io::eprintln(ty, " is not a valid type for casting. Falling back to 0");
         io::eprintln("Valid types:");
 
         for let i = 0; i < #len(valid_types); i += 1 {
@@ -50,8 +50,8 @@ local fn __internal_is_valid(string str, string type) -> bool {
     return true;
 }
 
-local fn __internal_is_valid_with_err(string str, string type) -> bool {
-    let res = __internal_is_valid(str, type);
+!pub fn __internal_is_valid_with_err(string str, string ty) -> bool {
+    let res = __internal_is_valid(str, ty);
 
     if !res {
         io::eprintln("Invalid input: '", str, "'. Falling back to 0.");

@@ -3,7 +3,7 @@ namespace __void_ptr__;
 namespace __ptr__;
 global pub;
 
-fn __internal_hash_mod<T, U>(T self, U other) {
+!pub fn __internal_hash_mod<T, U>(T self, U other) {
     return (self % other + other) % other;
 }
 

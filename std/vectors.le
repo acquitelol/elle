@@ -1,6 +1,6 @@
 use std/math;
 
-global pub;
+global pub, external;
 
 struct Vector2 {
     f32 x;
@@ -13,32 +13,32 @@ struct Vector3 {
     f32 z;
 };
 
-external fn Vector2::zero() -> Vector2;
-external fn Vector2::clone(Vector2 self) -> Vector2;
-external fn Vector2::new(f32 x, f32 y) -> Vector2;
-external fn Vector2::from(f32 scalar) -> Vector2;
-external fn Vector2::dot(Vector2 self, Vector2 v2) -> f32;
-external fn Vector2::cross(Vector2 self, Vector2 v2) -> f32;
-external fn Vector2::length_sq(Vector2 self) -> f32;
-external fn Vector2::length(Vector2 self) -> f32;
-external fn Vector2::add(Vector2 self, Vector2 v2) -> Vector2;
-external fn Vector2::sub(Vector2 self, Vector2 v2) -> Vector2;
-external fn Vector2::scale(Vector2 self, f32 scalar) -> Vector2;
-external fn Vector2::normalize(Vector2 self) -> Vector2;
-external fn Vector2::rotate(Vector2 self, f32 angle) -> Vector2;
-external fn Vector2::angle(Vector2 self, Vector2 v2) -> f32;
+fn Vector2::zero() -> Vector2;
+fn Vector2::clone(Vector2 self) -> Vector2;
+fn Vector2::new(f32 x, f32 y) -> Vector2;
+fn Vector2::from(f32 scalar) -> Vector2;
+fn Vector2::dot(Vector2 self, Vector2 v2) -> f32;
+fn Vector2::cross(Vector2 self, Vector2 v2) -> f32;
+fn Vector2::length_sq(Vector2 self) -> f32;
+fn Vector2::length(Vector2 self) -> f32;
+fn Vector2::add(Vector2 self, Vector2 v2) -> Vector2;
+fn Vector2::sub(Vector2 self, Vector2 v2) -> Vector2;
+fn Vector2::scale(Vector2 self, f32 scalar) -> Vector2;
+fn Vector2::normalize(Vector2 self) -> Vector2;
+fn Vector2::rotate(Vector2 self, f32 angle) -> Vector2;
+fn Vector2::angle(Vector2 self, Vector2 v2) -> f32;
 
-external fn Vector3::zero() -> Vector3;
-external fn Vector3::clone(Vector3 self) -> Vector3;
-external fn Vector3::new(f32 x, f32 y, f32 z) -> Vector3;
-external fn Vector3::from(f32 scalar) -> Vector3;
-external fn Vector3::dot(Vector3 self, Vector3 v2) -> f32;
-external fn Vector3::cross(Vector3 self, Vector3 v2) -> Vector3;
-external fn Vector3::length_sq(Vector3 self) -> f32;
-external fn Vector3::length(Vector3 self) -> f32;
-external fn Vector3::add(Vector3 self, Vector3 v2) -> Vector3;
-external fn Vector3::sub(Vector3 self, Vector3 v2) -> Vector3;
-external fn Vector3::scale(Vector3 self, f32 scalar) -> Vector3;
-external fn Vector3::normalize(Vector3 self) -> Vector3;
-external fn Vector3::rotate(Vector3 self, Vector3 axis, f32 angle) -> Vector3;
-external fn Vector3::angle(Vector3 self, Vector3 v2) -> f32;
+fn Vector3::zero() -> Vector3;
+fn Vector3::clone(Vector3 self) -> Vector3;
+fn Vector3::new(f32 x, f32 y, f32 z) -> Vector3;
+fn Vector3::from(f32 scalar) -> Vector3;
+fn Vector3::dot(Vector3 self, Vector3 v2) -> f32;
+fn Vector3::cross(Vector3 self, Vector3 v2) -> Vector3;
+fn Vector3::length_sq(Vector3 self) -> f32;
+fn Vector3::length(Vector3 self) -> f32;
+fn Vector3::add(Vector3 self, Vector3 v2) -> Vector3;
+fn Vector3::sub(Vector3 self, Vector3 v2) -> Vector3;
+fn Vector3::scale(Vector3 self, f32 scalar) -> Vector3;
+fn Vector3::normalize(Vector3 self) -> Vector3;
+fn Vector3::rotate(Vector3 self, Vector3 axis, f32 angle) -> Vector3;
+fn Vector3::angle(Vector3 self, Vector3 v2) -> f32;

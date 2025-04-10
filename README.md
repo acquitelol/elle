@@ -1338,22 +1338,50 @@ fn main() {
 }
 ```
 
-You can also add `global pub;` to your module to automatically make every symbol public in the module.
-If you want to make a symbol private after declaring them all public, use the `local` keyword.
+You can also enable a modifier globally for a module.
 
-Example:
-
+For example, by default everything in a module is private, but you can use the `pub` keyword to make it public.
 ```rs
-global pub;
+// by default all private
 
-const i32 a = 100; // Public
-const i32 b = 10; // Public
-local const i32 c = 5; // Private
+fn foo() {} // foo is implicitly private
+fn bar() {} // bar is implicitly private
+pub fn baz() {} // baz is explicitly public
+```
 
-// Private
-local fn increment(i32 a) {
-    return a + 1;
-}
+However, you can make everything in a module public by default, and then mark something as private with `!pub`:
+```rs
+global pub; // every function in the module is public
+
+!pub fn foo() {} // foo is explicitly private
+!pub fn bar() {} // bar is explicitly private
+fn baz() {} // baz is implicitly public
+```
+
+Similarly, by default every function in a module has a definition, unless you use the `external` keyword:
+```rs
+// by default every method is defined unless specified with the `external` keyword
+fn foo() {} // implicitly defined, requires a body
+fn bar() {} // implicitly defined, requires a body
+external fn bar(); // explicitly external, so requires just `;` and throws if you try to provide a body
+```
+
+You can make every function in a module be external by default. This is useful for headers of functions whose bodies are defined elsewhere, and prevents the repetition of `external fn` so much:
+```rs
+global external;
+
+fn foo(); // implicitly external, requires just `;`
+fn bar(); // implicitly external, requires just `;`
+!external fn bar() {} // explicitly defined, so requires a body
+```
+
+Finally, you can group together global specifiers:
+```rs
+global pub, external;
+
+fn foo(); // implicitly public and external
+!pub fn bar(); // explicitly private and external
+!pub !external fn baz() {} // explicitly private and defined
 ```
 
 <hr />

@@ -1,9 +1,9 @@
 use std/runtime/libc/io;
 global pub;
 
-local external fn __internal_stdin() -> FILE *;
-local external fn __internal_stdout() -> FILE *;
-local external fn __internal_stderr() -> FILE *;
+!pub external fn __internal_stdin() -> FILE *;
+!pub external fn __internal_stdout() -> FILE *;
+!pub external fn __internal_stderr() -> FILE *;
 
 const FILE *stdin = __internal_stdin();
 const FILE *stdout = __internal_stdout();

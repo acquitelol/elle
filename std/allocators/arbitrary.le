@@ -1,10 +1,10 @@
 use std/runtime/allocators/__internal__;
-global pub;
+global pub, external;
 
-external fn ArbitraryAllocator::new();
-external fn ArbitraryAllocator::noop();
-external fn ArbitraryAllocator::set_allocator(ArbitraryAllocator *self, void *inner, void *alloc, void *realloc, void *free_self);
-external fn ArbitraryAllocator::alloc(ArbitraryAllocator *self, i32 size);
-external fn ArbitraryAllocator::realloc(ArbitraryAllocator *self, void *ptr, i32 new_size);
-external fn ArbitraryAllocator::free(ArbitraryAllocator *self, void *ptr);
-external fn ArbitraryAllocator::free_self(ArbitraryAllocator *self);
+fn ArbitraryAllocator::new();
+fn ArbitraryAllocator::noop();
+fn ArbitraryAllocator::set_allocator(ArbitraryAllocator *self, void *inner, void *alloc, void *realloc, void *free_self);
+fn ArbitraryAllocator::alloc(ArbitraryAllocator *self, i32 size);
+fn ArbitraryAllocator::realloc(ArbitraryAllocator *self, void *ptr, i32 new_size);
+fn ArbitraryAllocator::free(ArbitraryAllocator *self, void *ptr);
+fn ArbitraryAllocator::free_self(ArbitraryAllocator *self);

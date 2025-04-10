@@ -96,7 +96,6 @@ pub enum TokenKind {
     ShiftRightEqual,
     ShiftLeftEqual,
     Global,
-    Local,
     Attribute,
     Namespace,
     Hashtag,

@@ -137,7 +137,7 @@ fn GCAllocator::new() {
     return gc;
 }
 
-local fn GCAllocator::__internal_mark_region(GCAllocator *self, void **start, void **end) {
+!pub fn GCAllocator::__internal_mark_region(GCAllocator *self, void **start, void **end) {
     let current = start;
     let end_ptr = end;
 

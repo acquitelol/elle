@@ -1,8 +1,7 @@
-global pub;
-
+global pub, external;
 namespace HeapAllocator;
 
-external fn HeapAllocator::new() -> HeapAllocator *;
-external fn HeapAllocator::alloc(HeapAllocator *self, i32 size) -> void *;
-external fn HeapAllocator::realloc(HeapAllocator *self, void *ptr, i32 new_size) -> void *;
-external fn HeapAllocator::free(HeapAllocator *self, void *ptr);
+fn HeapAllocator::new() -> HeapAllocator *;
+fn HeapAllocator::alloc(HeapAllocator *self, i32 size) -> void *;
+fn HeapAllocator::realloc(HeapAllocator *self, void *ptr, i32 new_size) -> void *;
+fn HeapAllocator::free(HeapAllocator *self, void *ptr);

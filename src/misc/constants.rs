@@ -56,7 +56,7 @@ pub static DUNDER_CONSTANTS: &[&'static str] = &[
 // Keywords
 pub static RESERVED_KEYWORDS: &[&'static str] = &[
     "as", "mut", "enum", "match", "static", "super", "do", "macro", "step", "of", "class", "var",
-    "impl",
+    "impl", "type"
 ];
 
 // Miscellaneous
