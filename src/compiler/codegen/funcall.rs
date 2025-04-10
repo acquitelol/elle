@@ -79,9 +79,6 @@ impl Codegen<'_> for FunctionCall {
             // string access
             } else if ty.is_string() {
                 name = format!("string.{}", name)
-            // string* access
-            } else if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_string() {
-                name = format!("string.{}", name)
             // void* access
             } else if ty.is_void_pointer() {
                 name = format!("{}.{}", VOID_POINTER_ID, name)
@@ -91,6 +88,9 @@ impl Codegen<'_> for FunctionCall {
                 && type_method
             {
                 name = format!("{}.{}", get_POINTER_ID!(), name)
+            // string* access
+            } else if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_string() {
+                name = format!("string.{}", name)
             // struct* access
             } else if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct() {
                 name = format!(
@@ -98,9 +98,6 @@ impl Codegen<'_> for FunctionCall {
                     ty.get_pointer_inner().unwrap().get_struct_inner().unwrap(),
                     name
                 )
-            // void* access
-            } else if ty.is_void_pointer() {
-                name = format!("{}.{}", VOID_POINTER_ID, name)
             // dunder access
             } else if ty.is_pointer() && DUNDER_CONSTANTS.contains(&name.as_str()) && type_method {
                 name = format!("{}.{}", get_POINTER_ID!(), name)

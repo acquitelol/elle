@@ -64,8 +64,30 @@ impl<'a> Constant<'a> {
             return None;
         }
 
-        let ty = self.parser.get_type(None);
-        self.parser.advance();
+        macro_rules! yield_ty {
+            () => {{
+                let ty = Some(self.parser.get_type(None));
+                self.parser.advance();
+
+                ty
+            }};
+        }
+
+        let ty = if self.parser.current_token().kind == TokenKind::Identifier
+            || self.parser.current_token().kind == TokenKind::ExactLiteral
+        {
+            if let Some(next) = self.parser.tokens.get(self.parser.position + 1) {
+                if next.kind == TokenKind::Equal {
+                    None
+                } else {
+                    yield_ty!()
+                }
+            } else {
+                yield_ty!()
+            }
+        } else {
+            yield_ty!()
+        };
 
         let name = self.parser.get_identifier();
         self.parser.advance();
@@ -94,13 +116,17 @@ impl<'a> Constant<'a> {
         Some(Primitive::Constant(ConstantSource {
             name,
             public,
-            r#type: Some(ty.clone()),
-            value: Box::new(AstNode::Conversion(Conversion {
-                r#type: Some(ty),
-                value: Box::new(value),
-                location: self.parser.current_token().location,
-                explicit: false,
-            })),
+            r#type: ty.clone(),
+            value: Box::new(if let Some(ty) = ty {
+                AstNode::Conversion(Conversion {
+                    r#type: Some(ty),
+                    value: Box::new(value),
+                    location: self.parser.current_token().location,
+                    explicit: false,
+                })
+            } else {
+                value
+            }),
             usable: true,
             imported: false,
             location: self.parser.current_token().location,

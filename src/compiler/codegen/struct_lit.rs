@@ -122,6 +122,7 @@ impl Codegen<'_> for StructLiteral {
                         .iter()
                         .find(|member| member.name == member_name)
                         .map(|arg| arg.r#type.clone()),
+                    is_return: false,
                     ..ctx.clone()
                 })
                 .expect(

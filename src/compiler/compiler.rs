@@ -145,18 +145,26 @@ impl Compiler {
                 match item {
                     Primitive::Constant(ConstantSource {
                         name: const_name,
-                        r#type: ty,
                         location,
                         usable,
                         ..
                     }) => {
-                        if name == const_name && func.is_some() {
+                        if name == const_name && func.is_some() && module.is_some() {
                             if !usable && !func.unwrap().borrow_mut().imported {
                                 elle_error!(location.error(format!(
                                     "Constant named '{}' was not imported and can't be used",
                                     name
                                 )))
                             }
+
+                            let ty = module
+                                .unwrap()
+                                .borrow()
+                                .functions
+                                .iter()
+                                .find(|f| f.name == const_name)
+                                .map(|f| f.return_type.clone())
+                                .expect(&location.error("Constant does not exist"));
 
                             let temp = self.new_temporary(Some("constant"), true);
 
