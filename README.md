@@ -1699,7 +1699,7 @@ The current existing directives are:
 
 The current existing attributes are:
 
-- Alias - Allows you to specify an alias for external functions `@alias("name")`
+- Alias - Allows you to specify an alias for external functions `@alias(name) || @alias(namespace::name)`
 - Volatile - Allows you to specify that Elle should not discard this function if it is unused. `@volatile`
 - Format - Puts every argument through its formatter before passing it to the function `@fmt`
 - NoFormat - Specifies that a struct should not have a format function automatically generated for it `@nofmt`
@@ -1717,13 +1717,13 @@ Example of attribute usage:
 // Attributes go BEFORE the return type
 // The alias attribute will be purposefully ignored
 // because this function is not external
-fn add(i32 x, i32 y) @alias("foo") @volatile -> i32 {
+fn add(i32 x, i32 y) @alias(foo) @volatile -> i32 {
     return x + y;
 }
 
 // The volatile attribute will be purposefully ignored
 // because external functions do not generate IR
-external fn printf(string formatter, ...) @alias("formatted_print") @volatile;
+external fn printf(string formatter, ...) @alias(formatted_print) @volatile;
 ```
 
 If you specify an alias attribute on a non-external function, you will only be warned, an error will **not** be thrown. Keep in mind that external functions do not generate IR, so the @volatile attribute will have no effect on them.
@@ -1887,8 +1887,8 @@ In fact the order of prefixes before `fn` is not enforced, you can write `extern
 You may also alias exported functions, and allow them to be accessible through a pseudo-namespace:
 
 ```rs
-pub external fn InitWindow(i32 width, i32 height, string title) @alias("raylib::init_window");
-struct raylib {};
+namespace raylib;
+pub external fn InitWindow(i32 width, i32 height, string title) @alias(raylib::init_window);
 
 // You can now call raylib::init_window() and it will internally reference the InitWindow symbol
 ```

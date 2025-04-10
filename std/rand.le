@@ -1,6 +1,6 @@
 namespace rand;
-global pub;
+global pub, external;
 
-external fn srand(i32 seed) @alias("rand::seed");
-external fn rand() @alias("rand::rand") -> i32;
-external fn rand::random(i32 lower, i32 upper) -> i32;
+fn srand(i32 seed) @alias(rand::seed);
+fn rand() @alias(rand::rand) -> i32;
+fn rand::random(i32 lower, i32 upper) -> i32;

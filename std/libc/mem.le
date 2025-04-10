@@ -1,10 +1,10 @@
 namespace mem;
-global pub;
+global pub, external;
 
-external fn malloc(i64 size) @alias("mem::malloc") -> void *;
-external fn realloc(void *ptr, i64 size) @alias("mem::realloc") -> void *;
-external fn calloc(i64 count, i64 size) @alias("mem::calloc") -> void *;
-external fn free(void *ptr) @alias("mem::free");
-external fn memcpy(void *dest, void *src, i64 n) @alias("mem::memcpy") -> i64;
-external fn memmove(void *dest, void *src, i64 n) @alias("mem::memmove") -> i64;
-external fn memset(void *str, char character, i64 n) @alias("mem::memset") -> i64;
+fn malloc(i64 size) @alias(mem::malloc) -> void *;
+fn realloc(void *ptr, i64 size) @alias(mem::realloc) -> void *;
+fn calloc(i64 count, i64 size) @alias(mem::calloc) -> void *;
+fn free(void *ptr) @alias(mem::free);
+fn memcpy(void *dest, void *src, i64 n) @alias(mem::memcpy) -> i64;
+fn memmove(void *dest, void *src, i64 n) @alias(mem::memmove) -> i64;
+fn memset(void *str, char character, i64 n) @alias(mem::memset) -> i64;

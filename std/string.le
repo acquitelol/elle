@@ -1,25 +1,25 @@
 use std/runtime/collections/array;
 use std/runtime/libc/io;
 use std/libc/string;
-global pub;
+global pub, external;
 
-external fn string::is_empty(string self) -> bool;
-external fn string::equals(string self, string other) -> bool;
-external fn string::equals(string self, string other) @alias("string::__equals__") -> bool;
-external fn string::contains(ElleMeta meta, string self, ...args) -> bool;
-external fn string::find(ElleMeta meta, string self, ...args) -> i64;
-external fn string::count(string self, char needle) -> i32;
-external fn string::starts_with(string self, string prefix) -> bool;
-external fn string::ends_with(string self, string suffix) -> bool;
-external fn string::default(string self, string default) -> string;
-external fn string::to_upper(string self) -> string;
-external fn string::to_lower(string self) -> string;
-external fn string::split(string self, string delimiter) -> string[];
-external fn string::split(string self, string delimiter) @alias("string::explode") -> string[];
+fn string::is_empty(string self) -> bool;
+fn string::equals(string self, string other) -> bool;
+fn string::equals(string self, string other) @alias(string::__equals__) -> bool;
+fn string::contains(ElleMeta meta, string self, ...args) -> bool;
+fn string::find(ElleMeta meta, string self, ...args) -> i64;
+fn string::count(string self, char needle) -> i32;
+fn string::starts_with(string self, string prefix) -> bool;
+fn string::ends_with(string self, string suffix) -> bool;
+fn string::default(string self, string default) -> string;
+fn string::to_upper(string self) -> string;
+fn string::to_lower(string self) -> string;
+fn string::split(string self, string delimiter) -> string[];
+fn string::split(string self, string delimiter) @alias(string::explode) -> string[];
 
 // Note: these are null terminated strings, which means this
 // function returns a CLONE of the slice, NOT a string view
-external fn string::slice(string self, i32 start, i32 end) -> string;
+fn string::slice(string self, i32 start, i32 end) -> string;
 
 // Concatenates all of the arguments into 1 final string
 //
@@ -27,7 +27,7 @@ external fn string::slice(string self, i32 start, i32 end) -> string;
 //
 // "a".concat("b") == "ab"
 // string::concat("me", "ow") == "meow"
-external fn string::concat(ElleMeta meta, ...args) -> string;
+fn string::concat(ElleMeta meta, ...args) -> string;
 
 // Concatenates all of the strings provided and then finally reassigns
 // the original string to the new string
@@ -41,37 +41,37 @@ external fn string::concat(ElleMeta meta, ...args) -> string;
 // string a = "me";
 // string::extend(a, "ow");
 // a == "meow"
-external fn string::extend(ElleMeta meta, string *self, ...args);
-external fn string::clone(string self) -> string;
-external fn string::color(string self, string color) -> string;
-external fn string::reset(string self) -> string;
-external fn string::capitalize(string self);
-external fn string::replace(string self, string needle, string replacement) -> string;
-external fn string::repeat(string self, i32 count) -> string;
-external fn string::insert(string *self, i32 index, char c);
-external fn string::pop(string *self) -> char;
-external fn string::push(string *self, char c);
+fn string::extend(ElleMeta meta, string *self, ...args);
+fn string::clone(string self) -> string;
+fn string::color(string self, string color) -> string;
+fn string::reset(string self) -> string;
+fn string::capitalize(string self);
+fn string::replace(string self, string needle, string replacement) -> string;
+fn string::repeat(string self, i32 count) -> string;
+fn string::insert(string *self, i32 index, char c);
+fn string::pop(string *self) -> char;
+fn string::push(string *self, char c);
 
 // !! Do not use this unless you know what you're doing !!
 // If you want to turn a value of arbitrary type to a string
 // please use string::as_string or string::as_string_wrapped
-external fn __to_string(string ty, i64 args, bool wrap) -> string;
+fn __to_string(string ty, i64 args, bool wrap) -> string;
 
-external fn string::as_string(ElleMeta meta, ...args) -> string;
-external fn string::as_string_wrapped(ElleMeta meta, ...args) -> string;
+fn string::as_string(ElleMeta meta, ...args) -> string;
+fn string::as_string_wrapped(ElleMeta meta, ...args) -> string;
 
 // !! Do not use this unless you know what you're doing !!
 // If you want to format arguments of arbitrary types
 // into a new string, use string::format() instead
-external fn __internal_fmt(string fmt, ElleMeta meta, i64 args) -> string;
+fn __internal_fmt(string fmt, ElleMeta meta, i64 args) -> string;
 
 // Internal formatting function that does not automatically run
 // parameters through their formatter (no @fmt attribute)
-external fn string::__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(ElleMeta meta, string fmt, ...args) -> string;
+fn string::__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(ElleMeta meta, string fmt, ...args) -> string;
 
 // Safe formatter
-external fn string::format(ElleMeta meta, string fmt, ...args) @fmt -> string;
+fn string::format(ElleMeta meta, string fmt, ...args) @fmt -> string;
 
-external fn string::ascii_lower() -> string;
-external fn string::ascii_upper() -> string;
-external fn string::ascii_numerics() -> string;
+fn string::ascii_lower() -> string;
+fn string::ascii_upper() -> string;
+fn string::ascii_numerics() -> string;

@@ -252,18 +252,22 @@ impl<'a> Function<'a> {
                         self.parser.advance();
                         self.parser.expect_tokens(vec![TokenKind::LeftParenthesis]);
                         self.parser.advance();
-                        self.parser.expect_tokens(vec![TokenKind::StringLiteral]);
 
-                        let alias = self
-                            .parser
-                            .current_token()
-                            .value
-                            .get_string_inner()
-                            .unwrap();
+                        let mut alias = self.parser.get_identifier();
+
+                        if let Some(token) = self.parser.tokens.get(self.parser.position + 1) {
+                            if token.kind == TokenKind::DoubleColon {
+                                self.parser.advance(); // past namespace
+                                self.parser.advance(); // past ::
+
+                                let identifier = self.parser.get_identifier();
+                                alias = format!("{alias}.{identifier}");
+                            }
+                        }
 
                         if external {
                             unaliased = Some(name);
-                            name = alias.replace("::", ".");
+                            name = alias;
                         } else {
                             if self.parser.warnings.has_warning(Warning::InvalidAlias) {
                                 println!(

@@ -39,4 +39,4 @@ fn Triple::new<T, U, V>(T x, U y, V z) {
     return triple;
 }
 
-external fn Triple::new<T, U, V>(T x, U y, V z) @alias("$$") -> Triple<T, U, V> *;
+external fn Triple::new<T, U, V>(T x, U y, V z) @alias($$) -> Triple<T, U, V> *;

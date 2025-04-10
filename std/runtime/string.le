@@ -12,7 +12,7 @@ fn string::equals(string self, string other) {
     return (i64)self == (i64)other || strcmp(self, other) == 0;
 }
 
-external fn string::equals(string self, string other) @alias("string::__equals__") -> bool;
+external fn string::equals(string self, string other) @alias(string::__equals__) -> bool;
 
 !pub fn __internal_throw_invalid_needle(ElleMeta meta, ElleMeta caller_meta, ...args) {
     io::cprintf(

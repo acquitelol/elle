@@ -171,7 +171,7 @@ fn BigInt::equals(BigInt *self, BigInt *other) {
     return self.compare(other) == 0;
 }
 
-external fn BigInt::equals(BigInt *self, BigInt *other) @alias("BigInt::__equals__") -> bool;
+external fn BigInt::equals(BigInt *self, BigInt *other) @alias(BigInt::__equals__) -> bool;
 
 fn BigInt::mul(BigInt *self, BigInt *other) -> BigInt * {
     let result = BigInt::empty(false);

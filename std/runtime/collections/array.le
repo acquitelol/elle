@@ -230,7 +230,7 @@ fn Array::join<T>(T[] self, string separator) {
     return res;
 }
 
-external fn Array::join<T>(T[] self, string separator) @alias("Array::implode") -> string;
+external fn Array::join<T>(T[] self, string separator) @alias(Array::implode) -> string;
 
 fn Array::contains<T>(T[] self, T element) {
     for item in self {

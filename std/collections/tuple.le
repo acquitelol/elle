@@ -35,4 +35,4 @@ fn Tuple::new<T, U>(T x, U y) {
     return tuple;
 }
 
-external fn Tuple::new<T, U>(T x, U y) @alias("$") -> (T, U);
+external fn Tuple::new<T, U>(T x, U y) @alias($) -> (T, U);

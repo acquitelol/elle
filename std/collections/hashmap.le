@@ -142,7 +142,7 @@ fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
     return false;
 }
 
-external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) @alias("HashMap::set") -> bool;
+external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) @alias(HashMap::set) -> bool;
 
 !pub fn __internal_hashmap_get<T, U>(HashMap<T, U> *self, T key) -> U {
     i32 idx = key.__hash__(self.capacity);
