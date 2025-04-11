@@ -1943,6 +1943,7 @@ Try compiling an example with libraries!
 
 ### ♡ **Licensing**
 
+* Please read [LICENSE.md](https://github.com/acquitelol/elle/blob/rewrite/LICENSE.md)
 * Copyright © 2024 Rosie ([acquitelol](https://github.com/acquitelol))
 
 <hr />
