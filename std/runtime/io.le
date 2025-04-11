@@ -73,9 +73,7 @@ fn io::printf(ElleMeta meta, string fmt, ...args) @fmt {
     io::println(__internal_fmt(fmt, meta, args));
 }
 
-fn io::eprintf(ElleMeta meta, string fmt, ...) @fmt {
-    variadic args;
-
+fn io::eprintf(ElleMeta meta, string fmt, ...args) @fmt {
     for let i = 0; i < meta.arity; i += 1 {
         meta.types[i] = "string";
     }
@@ -83,9 +81,7 @@ fn io::eprintf(ElleMeta meta, string fmt, ...) @fmt {
     io::eprintln(__internal_fmt(fmt, meta, args));
 }
 
-fn io::panic(ElleMeta meta, string fmt, ...) @fmt {
-    variadic args;
-
+fn io::panic(ElleMeta meta, string fmt, ...args) @fmt {
     for let i = 0; i < meta.arity; i += 1 {
         meta.types[i] = "string";
     }
