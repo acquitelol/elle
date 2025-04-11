@@ -49,7 +49,7 @@ struct HashMap<T, U> {
 
 fn HashMap::__load__<T, U>(ElleMeta meta, HashMap<T, U> *self, T key) {
     __internal_key_exists_check(self, key, meta);
-    return self.get(key);
+    return self.unsafe_get(key);
 }
 
 fn HashMap::__store__<T, U>(HashMap<T, U> *self, T key, U value) {
@@ -164,7 +164,7 @@ external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) @alias(HashM
 }
 
 // Panics if the key does not exist
-fn HashMap::get<T, U>(ElleMeta meta, HashMap<T, U> *self, T key) {
+fn HashMap::unsafe_get<T, U>(ElleMeta meta, HashMap<T, U> *self, T key) {
     __internal_key_exists_check(self, key, meta);
     return __internal_hashmap_get(self, key);
 }
@@ -179,7 +179,7 @@ fn HashMap::get_or_insert<T, U>(HashMap<T, U> *self, T key, U value) {
 }
 
 // Returns nil (0) if the key does not exist
-fn HashMap::safe_get<T, U>(HashMap<T, U> *self, T key) -> U {
+fn HashMap::get<T, U>(HashMap<T, U> *self, T key) -> U {
     return __internal_hashmap_get(self, key);
 }
 
