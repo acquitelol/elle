@@ -39,7 +39,7 @@ struct HashMap<T, U> {
                 .reset(),
             meta.file,
             meta.line,
-            meta.column
+            meta.column,
             key.__fmt__(0)
         );
 
