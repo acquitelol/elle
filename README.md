@@ -16,7 +16,7 @@
 - It's not. It never will be. As it stands, this is a project developed by a single person, me. I am neither smart enough nor efficient enough to mimic an enterprise programming language compiler such as clang.
 - Elle does, however, provide deferring, generic types, methods on structs (allowing for OOP-like semantics), pseudo-namespaces, function call metadata, custom allocators, a built-in GC, type inference, and more. There are still many issues with the parser, compiler, and there is a huge lack of optimisations, but you may view these features as an improvement to C.
 
-### ✩ *If you like this project, consider giving it a star!* ✩
+### ✩ _If you like this project, consider giving it a star!_ ✩
 
 ### ♡ **Hello, World!**
 
@@ -32,22 +32,24 @@ fn main() {
 
 Let's dissect the code:
 
-* The `fn` keyword declares the statement as a function declaration.
-* The word `main` is the function's name and defines the function as the entry point of our program.
-* The function call `io::println` is a function which prints all of its arguments using their formatter.
+- The `fn` keyword declares the statement as a function declaration.
+- The word `main` is the function's name and defines the function as the entry point of our program.
+- The function call `io::println` is a function which prints all of its arguments using their formatter.
 
-* Simple enough! ♡
+- Simple enough! ♡
 
 <hr />
 
 ### ♡ **Variable declarations**
 
-* Variables can be declared in 3 ways:
+- Variables can be declared in 3 ways:
+
   - Using their type (useful for inference of information based on the left-hand side like generics)
   - Using let (useful for inferring based on the right-hand side)
   - Using the walrus operator `:=` (cannot be used with a type, equivalent to `let`)
 
-* Example:
+- Example:
+
 ```rs
 let a = 0; // a is inferred to be i32 because 0 is i32
 i64 a = 5; // 5 is inferred to be i64 because a is i64
@@ -55,6 +57,7 @@ a := 0;    // acts the same as `let a = 0;`
 ```
 
 This is especially useful for dynamic array declarations:
+
 ```rs
 arr := [i64;];
 i64[] arr = [];
@@ -64,11 +67,11 @@ i64[] arr = [];
 
 ### ♡ **If statements**
 
-* An if statement is an expression that evaluates a block if the condition is non-zero, with an optional `else` block which is evaluated if the condition **is** zero.
+- An if statement is an expression that evaluates a block if the condition is non-zero, with an optional `else` block which is evaluated if the condition **is** zero.
 
-* You can define an `if` statement and then an optional `else` statement
-* If statement conditions can be wrapped in `()` but this is not mandatory
-* Example:
+- You can define an `if` statement and then an optional `else` statement
+- If statement conditions can be wrapped in `()` but this is not mandatory
+- Example:
 
 ```rs
 a := 0;
@@ -96,12 +99,12 @@ if a == 1 {
 
 ### ♡ **While loops**
 
-* A while loop is an expression that evaluates the block specified **only** if the condition is non-zero, otherwise breaks and continues execution on the primary branch.
+- A while loop is an expression that evaluates the block specified **only** if the condition is non-zero, otherwise breaks and continues execution on the primary branch.
 
-* Even though you can loop via recursion, the while loop primitive may be simpler to understand and use in many cases, therefore it is provided in Elle.
-* While loop expressions can be wrapped in `()` but this is not mandatory
-* There is no `do while` or `finally` functionality at the time of writing this.
-* Example:
+- Even though you can loop via recursion, the while loop primitive may be simpler to understand and use in many cases, therefore it is provided in Elle.
+- While loop expressions can be wrapped in `()` but this is not mandatory
+- There is no `do while` or `finally` functionality at the time of writing this.
+- Example:
 
 ```rs
 while expression {
@@ -109,7 +112,7 @@ while expression {
 }
 ```
 
-* You also have access to block scoped variables inside of this loop. This means you can create a pseudo `for loop` with the following code:
+- You also have access to block scoped variables inside of this loop. This means you can create a pseudo `for loop` with the following code:
 
 ```rs
 let i = 0;
@@ -126,7 +129,7 @@ Please keep in mind that you also have access to the `break` and `continue` keyw
 
 ### ♡ **For loops**
 
-* A for loop is an expression that has 3 main parts:
+- A for loop is an expression that has 3 main parts:
 
 1. Variable declaration - Declaring an iterator to be used in the loop
 2. Condition - The condition to break out of the loop
@@ -134,8 +137,8 @@ Please keep in mind that you also have access to the `break` and `continue` keyw
 
 Essentially, the loop creates the variable defined in (1), and evaluates the block (code) specified, aswell as (3), until the condition defined in (2) is false (zero), when it returns to the main branch and continues execution.
 
-* For loop expressions can be wrapped in `()` but this is not mandatory
-* Basic example of a for loop that prints the digits 0-9 to the stdout:
+- For loop expressions can be wrapped in `()` but this is not mandatory
+- Basic example of a for loop that prints the digits 0-9 to the stdout:
 
 ```rs
 for i32 i = 0; i < 10; i += 1 {
@@ -143,7 +146,8 @@ for i32 i = 0; i < 10; i += 1 {
 }
 ```
 
-* More advanced example:
+- More advanced example:
+
 ```rs
 use std/io;
 
@@ -177,19 +181,20 @@ Please keep in mind that you also have access to the `break` and `continue` keyw
 
 ### ♡ **Foreach loops**
 
-* A foreach loop is an expression that has 2 main parts:
+- A foreach loop is an expression that has 2 main parts:
 
 1. Variable declaration - Declaring a variable for each element
 2. Iterator - The iterator value (which must have a `__len__` function defined on its type)
 
-* Example:
+- Example:
+
 ```rs
 for x in ["a", "b", "c"] {
     io::println(x);
 }
 ```
 
-* Any iterable type can be used as an iterator:
+- Any iterable type can be used as an iterator:
 
 ```rs
 for c in "hello world" {
@@ -224,7 +229,7 @@ Please keep in mind that you also have access to the `break` and `continue` keyw
 
 ### ♡ **Standalone blocks**
 
-* A standalone block is somewhat equivalent to an `if true` statement, although they are not implemented exactly the same internally. It creates a block of code that is executed on a seperate "branch" to the main code in the function. This means that if you run something like `defer` inside of a standalone block it would call that when the *standalone block* leaves scope, not the function itself.
+- A standalone block is somewhat equivalent to an `if true` statement, although they are not implemented exactly the same internally. It creates a block of code that is executed on a seperate "branch" to the main code in the function. This means that if you run something like `defer` inside of a standalone block it would call that when the _standalone block_ leaves scope, not the function itself.
 
 Here's a simple example:
 
@@ -321,13 +326,14 @@ fn main() {
 
 ### ♡ **Function Metadata**
 
-* Elle can provide you with extra metadata using the `ElleMeta` struct.
+- Elle can provide you with extra metadata using the `ElleMeta` struct.
 
 This is done by ensuring the 0th argument of your function has the type `ElleMeta`.
 <br />
 The compiler will automatically supply the struct to you when the function is called, you do not need to manually pass it to the function.
 
 This struct is not defined in Elle code, however its equivalent structure may look like:
+
 ```rs
 struct ElleMeta {
     string *exprs; // An array of every argument's expression passed to the function as a string
@@ -377,9 +383,9 @@ fn main() {
 
 Elle has a moderately complicated allocator system. Here's how it works:
 
-* By default:
+- By default:
   - garbage collection
-* Using the `--nogc` flag at compilation:
+- Using the `--nogc` flag at compilation:
   - arena-based allocation
 
 #### **Changing the allocator:**
@@ -420,12 +426,12 @@ fn main() {
 
 #### **What should an allocator have defined on it?**
 
-* Allocators should have the following methods defined on them:
-  * `MyAllocator::new()` (preferrably allocating the allocator structure itself via `mem::malloc`)
-  * `MyAllocator::alloc(MyAllocator *self, i32 size) -> void *` (size in bytes to allocate, should return `void *`)
-  * `MyAllocator::realloc(MyAllocator *self, void *ptr, i32 new_size) -> void *` (new_size in bytes. should return `void *`)
-  * `MyAllocator::free(MyAllocator *self, void *ptr)` (frees a specific object passed by pointer, may be omitted if permitted by the allocation model, will become `noop`)
-  * `MyAllocator::free_self(MyAllocator *self)` (destructor for the allocator itself including all of its allocations, **NOT** objects created by it)
+- Allocators should have the following methods defined on them:
+  - `MyAllocator::new()` (preferrably allocating the allocator structure itself via `mem::malloc`)
+  - `MyAllocator::alloc(MyAllocator *self, i32 size) -> void *` (size in bytes to allocate, should return `void *`)
+  - `MyAllocator::realloc(MyAllocator *self, void *ptr, i32 new_size) -> void *` (new_size in bytes. should return `void *`)
+  - `MyAllocator::free(MyAllocator *self, void *ptr)` (frees a specific object passed by pointer, may be omitted if permitted by the allocation model, will become `noop`)
+  - `MyAllocator::free_self(MyAllocator *self)` (destructor for the allocator itself including all of its allocations, **NOT** objects created by it)
 
 #### **Disabling allocation altogether:**
 
@@ -465,7 +471,9 @@ By default, memory deallocation is managed by the compiler via garbage collectio
 // allocators disabled.
 --noalloc
 ```
+
 OR
+
 ```rs
 // Import the heap allocator
 use std/allocators/heap;
@@ -517,7 +525,7 @@ fn main() {
 
 Keep in mind that you can also use the libc standard manual memory management functions, like `malloc`, `realloc`, and `free`. These methods are defined in `std/libc/mem`. These allocations will **not** be freed automatically because the garbage collector isn't tracking them.
 
-The compiler also provides you handy builtins for easy and quick allocation: `#alloc` and `#realloc`. As these builtins take a *type* and not the *size of a type* they can actually evaluate to exactly `T *` instead of `void *` when called. This means you can write this:
+The compiler also provides you handy builtins for easy and quick allocation: `#alloc` and `#realloc`. As these builtins take a _type_ and not the _size of a type_ they can actually evaluate to exactly `T *` instead of `void *` when called. This means you can write this:
 
 ```rs
 let x = #alloc(i32, 5); // x -> i32 *
@@ -566,7 +574,7 @@ machine := #alloc(Machine);
 
 ### ♡ **Variadic Functions**
 
-* A variadic function is a function that can take in a variable amount of arguments. This works similar to C except that Elle provides you with mechanisms to make this much nicer to use, both as the producer and consumer of the function.
+- A variadic function is a function that can take in a variable amount of arguments. This works similar to C except that Elle provides you with mechanisms to make this much nicer to use, both as the producer and consumer of the function.
 
 Here's a basic example of a variadic function which takes in any amount of arguments and returns their sum:
 
@@ -597,7 +605,7 @@ Examples that contain variadic functions include [`variadic.le`](https://github.
 
 ### ♡ **Arrays**
 
-There are 2 kinds of arrays in Elle: *dynamic* and *static*.
+There are 2 kinds of arrays in Elle: _dynamic_ and _static_.
 
 Dynamic arrays are allocated on the heap, and are designed to grow or shrink, allowing you to push and pop values. They also have far more utility methods on them compared to static arrays. These kinds of arrays are created with the following syntax:
 
@@ -655,12 +663,14 @@ f32 *x = #[1, 2, 3]; // 1, 2, 3 are casted to floats
 ```
 
 You can also use `let`/`:=` when declaring dynamic arrays which have values:
+
 ```rs
 x := [1, 2, 3]; // x's type is i32[]
 y := ["a", "b", "c"]; // y's type is string[]
 ```
 
 You can also define multi-dimensional arrays:
+
 ```rs
 grid := [
     [1, 2],
@@ -710,6 +720,7 @@ To define a tuple, use `$(x, y)` or `Tuple::new(x, y)`.
 To define a triple, use `$$(x, y, z)` or `Triple::new(x, y, z)`.
 
 You can put tuples inside of arrays:
+
 ```rs
 let foo = [$(1, "a"), $(2, "b")];
 
@@ -787,6 +798,7 @@ fn main() {
 ```
 
 Please note the following:
+
 - These lambdas do **not** capture surrounding variables
 - They are not automatically passed ElleMeta by the compiler (because there is not enough context to do so)
 - You cannot declare the interface for a lambda on the type level
@@ -823,7 +835,7 @@ fn main() {
 
 ### ♡ **Exact literals**
 
-* An exact literal is an identifier which is not explicitly parsed. As in, you can make and call functions with arbitrary names which may be invalid in Elle but valid in the IR.
+- An exact literal is an identifier which is not explicitly parsed. As in, you can make and call functions with arbitrary names which may be invalid in Elle but valid in the IR.
 
 You can create an "exact literal" by wrapping the content you wish with "`" on both sides of the expression.
 
@@ -864,8 +876,8 @@ fn main() {
 
 ### ♡ **Static buffers**
 
-* A static buffer is a basic allocation of stack memory with a specified size.
-* You can allocate a buffer with the `type buf[size];` syntax.
+- A static buffer is a basic allocation of stack memory with a specified size.
+- You can allocate a buffer with the `type buf[size];` syntax.
 
 This would allocate memory on the stack of that size and give you back a pointer to that type.
 
@@ -910,7 +922,7 @@ The type of a static buffer cannot be inferred. You must declare it explicitly.
 
 ### ♡ **Defer statements**
 
-* A defer statement is commonly used to group together memory allocation and deallocation. A simple explanation is that it stores whatever operation is defined inside and does not run it until the function is about to go out of scope, ie during a return, a block being left, or an implicit return due to the function scope being left.
+- A defer statement is commonly used to group together memory allocation and deallocation. A simple explanation is that it stores whatever operation is defined inside and does not run it until the function is about to go out of scope, ie during a return, a block being left, or an implicit return due to the function scope being left.
 
 A very simple example of this is declaring a variable and deferring printing its value, like this:
 
@@ -929,9 +941,11 @@ fn main() {
     i *= i;
 }
 ```
-You can see how this only calls `io::print` right before it returns 0, which is indeed *after* the `i` variable has had changes made to it. This also works if you return in other scopes, such as if statements, while loops, standalone blocks, etc, as stated above. Any defer statements in inner blocks will not be called on any return, rather will only be called when the inner block is about to leave scope.
+
+You can see how this only calls `io::print` right before it returns 0, which is indeed _after_ the `i` variable has had changes made to it. This also works if you return in other scopes, such as if statements, while loops, standalone blocks, etc, as stated above. Any defer statements in inner blocks will not be called on any return, rather will only be called when the inner block is about to leave scope.
 
 This also means that if you, hypothetically, design a program like this
+
 ```rs
 use std/io;
 
@@ -952,6 +966,7 @@ The expected output is 2, then 4.
 This is because it will call `io::print` once when the standalone block will leave scope, at which point `i` is 2, then it will call `io::print` again when the function itself (`main`) will leave scope, at which point it will be 4 because `i` was squared (`i *= i`).
 
 You can also write something like this:
+
 ```rs
 fn main() {
     let i = 0;
@@ -969,6 +984,7 @@ fn main() {
     i *= i;
 }
 ```
+
 Here we expect `i` (`2`) to be printed to the console twice. Why? When the function returns, the scope created by the standalone block is also inherently about to be left. Hence, we also need to call all non-root deferrers here.
 
 The most useful application of deferring is for memory management, however.
@@ -1006,7 +1022,7 @@ Of course for a function like the above, you are able to determine what path the
 
 ### ♡ **Type definitions**
 
-* A type definition is used to differentiate between the scope and size of different variables. You must define a type when declaring variables, taking variables as arguments in a function, and yielding the next value from a variadic argument pointer.
+- A type definition is used to differentiate between the scope and size of different variables. You must define a type when declaring variables, taking variables as arguments in a function, and yielding the next value from a variadic argument pointer.
 
 Elle's types are quite similar to C in terms of their definition. They can be a recursive pointer type too such as `char **` (An array of strings). Although C has a limit on the number of pointers that a type can have (it is 2 in the C spec), Elle does **not**.
 
@@ -1030,7 +1046,7 @@ These are the mappings of types in Elle:
 
 ### ♡ **Type Conversion / Casting**
 
-* A type conversion consists of converting a variable from one type to another, usually compromising precision if converting to a type with a lower size (f64 -> f32) or having more precision if promoting a type (i32 -> i64).
+- A type conversion consists of converting a variable from one type to another, usually compromising precision if converting to a type with a lower size (f64 -> f32) or having more precision if promoting a type (i32 -> i64).
 
 You can cast a type in a similar manner to C.
 <br />
@@ -1048,14 +1064,16 @@ Casting is not necessary here, because the Elle compiler is smart enough to auto
 
 <br />
 
-You can also cast to pointer types, however note that, unlike C, casting to a pointer type when using `mem::malloc` is *not* necessary because the Elle compiler automatically casts the `void *` into the type of the variable.
+You can also cast to pointer types, however note that, unlike C, casting to a pointer type when using `mem::malloc` is _not_ necessary because the Elle compiler automatically casts the `void *` into the type of the variable.
 
 This means you can write:
+
 ```rs
 fn main() {
     f64 *a = mem::malloc(1024 * #size(f64));
 }
 ```
+
 and Elle will not complain.
 
 > [!IMPORTANT]
@@ -1065,10 +1083,11 @@ and Elle will not complain.
 
 ### ♡ **Unary operators**
 
-* A unary operator is a token used as a prefix to a literal or identifer to apply some operation to it, like negating it.
+- A unary operator is a token used as a prefix to a literal or identifer to apply some operation to it, like negating it.
 
 There are 5 unary operators in Elle:
 <br />
+
 - `!` - Logical NOT
 - `~` - Bitwise NOT
 - `&` - Stack address
@@ -1155,6 +1174,7 @@ fn main() {
 ```
 
 The example also implies that you can store values at those dereferenced addresses. You can put as many tokens as you want after the operator. It will yield until:
+
 - it matches a semicolon (`;`)
 - it matches an arithmetic operator
 - it reaches the end of the token vector
@@ -1162,22 +1182,26 @@ The example also implies that you can store values at those dereferenced address
 This means that if you want to manipulate the address before it is dereferenced, you can wrap it in `()`.
 
 This code:
+
 ```rs
 io::println(*a + 1);
 ```
+
 will dereference `a` and then add 1 to the result.
 
 This code, however:
+
 ```rs
 io::println(*(a + 1));
 ```
+
 will first add 1 to the address of `a`, and then will dereference that address.
 
 <hr />
 
 ### ♡ **Arithmetic operations**
 
-* All arithmetic operations are declared with an expression on the left and right of an operator. This means you can call functions, do other arithmetic operations inside of operations, etc.
+- All arithmetic operations are declared with an expression on the left and right of an operator. This means you can call functions, do other arithmetic operations inside of operations, etc.
 
 This is the mapping defined by Elle:
 
@@ -1234,6 +1258,7 @@ fn main() {
 ```
 
 Here's another example, using the string concatenation operator:
+
 ```rs
 use std/io; // std/io contains std/string so we don't need to import it
 
@@ -1248,9 +1273,9 @@ fn main() {
 
 ### ♡ **Constants**
 
-* A constant is a value that cannot be redeclared. In Elle, constants can only be defined at the top level of files, and vice versa too, where the top level of files can *only* be constants and functions. You cannot define normal variables at the top level.
-* Constants can be public, declared using the `pub` keyword.
-* Constants that create pointers (such as string literals) are referenced as the first statement of each function to bring them in scope.
+- A constant is a value that cannot be redeclared. In Elle, constants can only be defined at the top level of files, and vice versa too, where the top level of files can _only_ be constants and functions. You cannot define normal variables at the top level.
+- Constants can be public, declared using the `pub` keyword.
+- Constants that create pointers (such as string literals) are referenced as the first statement of each function to bring them in scope.
 
 Consider this example that uses constants:
 
@@ -1275,7 +1300,7 @@ It is labelled as a "`constant`", because although it can return a different val
 
 ### ♡ **Non-base-10 literals**
 
-* These are literal numbers which are not declared in base 10.
+- These are literal numbers which are not declared in base 10.
 
 These may include:
 
@@ -1329,6 +1354,7 @@ pub fn foo() {
 ```
 
 which you can then import
+
 ```rs
 use std/io;
 use module;
@@ -1341,6 +1367,7 @@ fn main() {
 You can also enable a modifier globally for a module.
 
 For example, by default everything in a module is private, but you can use the `pub` keyword to make it public.
+
 ```rs
 // by default all private
 
@@ -1350,6 +1377,7 @@ pub fn baz() {} // baz is explicitly public
 ```
 
 However, you can make everything in a module public by default, and then mark something as private with `!pub`:
+
 ```rs
 global pub; // every function in the module is public
 
@@ -1359,6 +1387,7 @@ fn baz() {} // baz is implicitly public
 ```
 
 Similarly, by default every function in a module has a definition, unless you use the `external` keyword:
+
 ```rs
 // by default every method is defined unless specified with the `external` keyword
 fn foo() {} // implicitly defined, requires a body
@@ -1367,6 +1396,7 @@ external fn bar(); // explicitly external, so requires just `;` and throws if yo
 ```
 
 You can make every function in a module be external by default. This is useful for headers of functions whose bodies are defined elsewhere, and prevents the repetition of `external fn` so much:
+
 ```rs
 global external;
 
@@ -1376,6 +1406,7 @@ fn bar(); // implicitly external, requires just `;`
 ```
 
 Finally, you can group together global specifiers:
+
 ```rs
 global pub, external;
 
@@ -1440,6 +1471,7 @@ fn main() {
 > There is no equivalent of the `a->b` operator in Elle. Any pointer to a struct will automatically be dereferenced before processing any fields in the struct.
 > You can still manually dereference the struct pointer manually if you like, but it will have no difference compared to directly using dot notation.
 > This means that the following code will accurately update the value inside the struct Foo:
+
 ```rs
 use std/io;
 
@@ -1510,6 +1542,7 @@ In this case, `foo1.add(foo2)` is an identical expression to `Foo::add(foo1, foo
 For more examples, please view [vectors.le](https://github.com/acquitelol/elle/blob/rewrite/std/vectors.le)
 
 You may also specify that `self` is a `<ty> *` instead of a `<ty>` if you require editing it in-place:
+
 ```rs
 use std/io;
 
@@ -1531,13 +1564,13 @@ fn main() {
 
 The compiler will automatically pass the **address** of `foo` instead of `foo` itself to the function.
 <br />
-In the case of a method that takes in a `self` *pointer*, the equivalent expression to `foo1.divideBy(2)` is `Foo::divideBy(&foo1, 2)`.
+In the case of a method that takes in a `self` _pointer_, the equivalent expression to `foo1.divideBy(2)` is `Foo::divideBy(&foo1, 2)`.
 
 <hr />
 
 ### ♡ **Generics**
 
-* Elle allows you to create generic structs and functions which may hold any inner type.
+- Elle allows you to create generic structs and functions which may hold any inner type.
 
 For example, here's a generic function which allows you to pass both integers and floats:
 
@@ -1552,7 +1585,7 @@ fn main() {
 }
 ```
 
-Notice how seamless using the generic was? Elle was able to infer 2 things here: T is whatever type `x` and `y` are, and the return type is *also* T. This means, even though you can, you usually don't *need* to explicitly specify all the generics. This is a more verbose but still correct way to do it:
+Notice how seamless using the generic was? Elle was able to infer 2 things here: T is whatever type `x` and `y` are, and the return type is _also_ T. This means, even though you can, you usually don't _need_ to explicitly specify all the generics. This is a more verbose but still correct way to do it:
 
 ```rs
 fn add<T>(T x, T y) -> T {
@@ -1578,9 +1611,10 @@ fn main() {
 }
 ```
 
-In this struct, the `a` field can be of *any* type. Note that for structs, you cannot explicitly declare their inner type. You must do so via inference. Elle will infer the inner type based on the struct's variable declaration most of the time. Take the example above, where we declare `Foo<i32> x = Foo { a = 1 };`. The Elle compiler sees that the type of the left hand side and right hand side are both of Foo, however it sees that the right hand side is a struct declaration of a generic struct, so it uses the left hand side to infer the inner types of the right hand side.
+In this struct, the `a` field can be of _any_ type. Note that for structs, you cannot explicitly declare their inner type. You must do so via inference. Elle will infer the inner type based on the struct's variable declaration most of the time. Take the example above, where we declare `Foo<i32> x = Foo { a = 1 };`. The Elle compiler sees that the type of the left hand side and right hand side are both of Foo, however it sees that the right hand side is a struct declaration of a generic struct, so it uses the left hand side to infer the inner types of the right hand side.
 
 This allows for almost rust-like declarations of generic structs and their methods:
+
 ```rs
 use std/io;
 
@@ -1644,17 +1678,20 @@ Keep in mind that to use this, you must have the dynamic array module imported. 
 
 ### ♡ **Sigils (identifier prefixes)**
 
-* As you might have noticed, Elle has a notion of "sigils" which are used as prefixes to the names of various things to give them a special meaning.
+- As you might have noticed, Elle has a notion of "sigils" which are used as prefixes to the names of various things to give them a special meaning.
 
 These are the current sigils:
 
 The `$x` sigil (stdlib alias):
+
 - Used to alias a common standard library function.
 
 The `#x` sigil (directive):
+
 - Used to denote a compiler built-in.
 
 The `@x` sigil (attribute):
+
 - Used to denote a tag that can be placed on a function or struct.
 
 For more information on stdlib alises, directives and attributes, please read below the below chapters.
@@ -1667,17 +1704,17 @@ For more information on stdlib alises, directives and attributes, please read be
 
 - Used to alias a common standard library function which should be easily accessible but also shouldn't pollute the global namespace.
 - Examples of this include:
-    - `io::dbg(...)` -> `$dbg(...)`
-    - `io::panic(...)` -> `$panic(...)`
-    - `Tuple::new(...)` -> `$(...)`
-    - `Triple::new(...)` -> `$$(...)`
+  - `io::dbg(...)` -> `$dbg(...)`
+  - `io::panic(...)` -> `$panic(...)`
+  - `Tuple::new(...)` -> `$(...)`
+  - `Triple::new(...)` -> `$$(...)`
 - Note that this is created as an **alias** of the original function. This means you can call `io::dbg` instead of `$dbg`, for example.
 
 <hr />
 
 ### ♡ **Directives**
 
-* These are compiler builtins you can call to get a result at compile-time.
+- These are compiler builtins you can call to get a result at compile-time.
 
 The current existing directives are:
 
@@ -1695,7 +1732,7 @@ The current existing directives are:
 
 ### ♡ **Attributes**
 
-* These are tags you can put on functions to specify extra functionality
+- These are tags you can put on functions to specify extra functionality
 
 The current existing attributes are:
 
@@ -1746,7 +1783,8 @@ fn Foo::__fmt__<T>(Foo<T> self, i32 nesting) {
 ```
 
 Some things to keep in mind:
-- The format function *must* return a string.
+
+- The format function _must_ return a string.
 - The format function takes a `nesting` argument. This is used to determine the depth of nested structs when printed.
 
 If an automatically generated struct's format method is too much bloat and you need the size of your executable to be small, you can specify that a struct should not generate an automatic formatting method with the `@nofmt` attribute:
@@ -1797,7 +1835,7 @@ fn main() {
 }
 ```
 
-You can also define a function which formats everything *except* the arguments you specify. This is especially useful for formatting instance methods defined on structs:
+You can also define a function which formats everything _except_ the arguments you specify. This is especially useful for formatting instance methods defined on structs:
 
 ```rs
 use std/prelude;
@@ -1842,13 +1880,17 @@ pub fn add(i32 a, i32 b) @volatile {
     return a + b;
 }
 ```
+
 Then, compile it into an object file:
+
 ```console
 $ ellec -c foo.le
 ```
+
 which will emit foo.o
 
 Finally, use it:
+
 ```rs
 // main.le
 use std/io;
@@ -1859,7 +1901,9 @@ fn main() {
     io::println(add(23, 16));
 }
 ```
+
 and compile it:
+
 ```console
 $ ellec main.le foo.o && ./main
 ```
@@ -1868,10 +1912,11 @@ $ ellec main.le foo.o && ./main
 
 ### ♡ **External symbols**
 
-* An external symbol is a definition for a function or constant that was defined elsewhere (such as in C) and is implicitly defined in Elle. This is used to give definition and context to functions that were not defined in Elle but you wish to use in when writing Elle code.
-<br/>
+- An external symbol is a definition for a function or constant that was defined elsewhere (such as in C) and is implicitly defined in Elle. This is used to give definition and context to functions that were not defined in Elle but you wish to use in when writing Elle code.
+  <br/>
 
 You can do this with the following example:
+
 ```rs
 external fn printf(string formatter, ...);
 ```
@@ -1879,9 +1924,11 @@ external fn printf(string formatter, ...);
 It essentially tells Elle where it should put the variadic argument starter. You could exclude this, if you like, but you will have to explicitly declare where the variadic arguments begin, because Elle no longer has this context.
 
 You can also make these statements public:
+
 ```rs
 pub external fn fprintf(FILE *fd, string formatter, ...);
 ```
+
 In fact the order of prefixes before `fn` is not enforced, you can write `external pub fn` and achieve the same result.
 
 You may also alias exported functions, and allow them to be accessible through a pseudo-namespace:
@@ -1898,53 +1945,59 @@ pub external fn InitWindow(i32 width, i32 height, string title) @alias(raylib::i
 <hr />
 
 ### ♡ If you have any questions, please **[raise an issue](https://github.com/acquitelol/elle/issues/new) :3**
+
 All contributions to this project are welcome and I love talking about this stuff!
 
 <hr />
 
 ### ♡ **How to run**
 
-* Ensure you have [Rust](https://www.rust-lang.org/), [Cargo](https://crates.io/) and the [QBE](https://c9x.me/compile/) compiler backend.
-    ```terminal
-      $ git clone https://github.com/acquitelol/elle
-    ```
+- Ensure you have [Rust](https://www.rust-lang.org/), [Cargo](https://crates.io/) and the [QBE](https://c9x.me/compile/) compiler backend.
 
-    ```terminal
-      $ cd elle
-    ```
+  ```terminal
+    $ git clone https://github.com/acquitelol/elle
+  ```
 
-    ```console
-      $ make
-    ```
+  ```terminal
+    $ cd elle
+  ```
 
-    to install the compiler and standard library (installs into ~/.local/ by default)
+  ```console
+    $ make
+  ```
 
-    **OR**
+  to install the compiler and standard library (installs into ~/.local/ by default)
 
-    ```console
-      $ make compile-release
-    ```
+  **OR**
 
-    to get only a compiler executable and not install anything (does not require root)
+  ```console
+    $ make compile-release
+  ```
 
-  * **You're done!**
+  to get only a compiler executable and not install anything (does not require root)
+
+  - **You're done!**
 
 #### ♡ You can now run `ellec` to get a help message of how to use the compiler!
+
 Try compiling a simple example!
-  ```console
-    $ ellec ./examples/hello.le && ./hello
-  ```
+
+```console
+  $ ellec ./examples/hello.le && ./hello
+```
+
 Try compiling an example with libraries!
-  ```
-    $ ellec ./examples/graphics/ball.le -z -lraylib && ./ball
-  ```
+
+```
+  $ ellec ./examples/graphics/ball.le -z -lraylib && ./ball
+```
 
 <hr />
 
 ### ♡ **Licensing**
 
-* Please read [LICENSE.md](https://github.com/acquitelol/elle/blob/rewrite/LICENSE.md)
-* Copyright © 2024 Rosie ([acquitelol](https://github.com/acquitelol))
+- Please read [LICENSE.md](https://github.com/acquitelol/elle/blob/rewrite/LICENSE.md)
+- Copyright © 2024 Rosie ([acquitelol](https://github.com/acquitelol))
 
 <hr />
 
