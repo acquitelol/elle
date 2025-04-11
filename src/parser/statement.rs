@@ -438,7 +438,7 @@ impl<'a> Statement<'a> {
             if self.current_token().kind == TokenKind::LessThan {
                 self.advance();
 
-                while self.current_token().kind != TokenKind::GreaterThan {
+                while self.current_token().kind != TokenKind::GreaterThan && !self.is_eof() {
                     tmp.push(self.get_type(Some(self.shared.generics)));
                     self.advance();
 
@@ -729,7 +729,7 @@ impl<'a> Statement<'a> {
     fn parse_expression(&mut self) -> AstNode {
         let mut node = self.parse_primary();
 
-        while self.current_token().kind.is_arithmetic() {
+        while self.current_token().kind.is_arithmetic() && !self.is_eof() {
             let operator = self.current_token().kind;
 
             self.advance();
@@ -990,30 +990,25 @@ impl<'a> Statement<'a> {
         let mut elifs: Vec<(Box<AstNode>, Vec<AstNode>)> = vec![];
         let mut else_body: Vec<AstNode> = vec![];
 
-        loop {
-            if self.current_token().kind == TokenKind::Else {
+        while self.current_token().kind == TokenKind::Else {
+            self.advance();
+
+            if self.current_token().kind == TokenKind::If {
                 self.advance();
 
-                if self.current_token().kind == TokenKind::If {
-                    self.advance();
+                let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::LeftCurlyBrace]);
+                let elif_condition = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
-                    let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::LeftCurlyBrace]);
-                    let elif_condition =
-                        Statement::new(tokens, 0, &self.body, self.shared).parse().0;
+                self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
+                self.advance();
 
-                    self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
-                    self.advance();
-
-                    let elif_body = self.yield_block(false);
-                    elifs.push((Box::new(elif_condition), elif_body));
-                } else {
-                    self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
-                    self.advance();
-
-                    else_body = self.yield_block(false);
-                    break;
-                }
+                let elif_body = self.yield_block(false);
+                elifs.push((Box::new(elif_condition), elif_body));
             } else {
+                self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
+                self.advance();
+
+                else_body = self.yield_block(false);
                 break;
             }
         }
@@ -1060,7 +1055,7 @@ impl<'a> Statement<'a> {
             let mut i = self.position;
 
             wrapped = 'x: {
-                while !self.is_eof() && self.tokens[i].kind != TokenKind::LeftCurlyBrace {
+                while self.tokens[i].kind != TokenKind::LeftCurlyBrace && !self.is_eof() {
                     if self.tokens[i].kind == TokenKind::In {
                         break 'x false;
                     }
@@ -1375,7 +1370,7 @@ impl<'a> Statement<'a> {
         let position = self.position.clone();
         let location = self.current_token().location.clone();
 
-        loop {
+        while index <= self.tokens.len() - 1 {
             let token = self.tokens[index].clone();
 
             match token.kind {
@@ -1661,7 +1656,7 @@ impl<'a> Statement<'a> {
 
         let mut arguments = vec![];
 
-        while self.current_token().kind != TokenKind::RightParenthesis {
+        while self.current_token().kind != TokenKind::RightParenthesis && !self.is_eof() {
             if self.current_token().kind == TokenKind::Ellipsis {
                 elle_error!(self
                     .current_token()
@@ -2169,7 +2164,7 @@ impl<'a> Statement<'a> {
 
         let mut values = vec![];
 
-        loop {
+        while !self.is_eof() {
             if self.current_token().kind == TokenKind::RightCurlyBrace {
                 self.advance();
                 break;
@@ -2245,7 +2240,6 @@ impl<'a> Statement<'a> {
             }
 
             let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
-
             values.push((name, value));
         }
 
@@ -2313,7 +2307,7 @@ impl<'a> Statement<'a> {
         {
             self.advance();
 
-            while self.current_token().kind != TokenKind::GreaterThan {
+            while self.current_token().kind != TokenKind::GreaterThan && !self.is_eof() {
                 tmp.push(self.get_type(Some(self.shared.generics)));
                 self.advance();
 
@@ -2339,7 +2333,7 @@ impl<'a> Statement<'a> {
         }
 
         // Parse the rest of the field accesses
-        while valid_tokens.contains(&self.current_token().kind) {
+        while valid_tokens.contains(&self.current_token().kind) && !self.is_eof() {
             self.advance(); // Ignore the TokenKind::Dot
 
             self.expect_tokens(vec![TokenKind::Identifier]);
@@ -2366,7 +2360,7 @@ impl<'a> Statement<'a> {
             {
                 self.advance();
 
-                while self.current_token().kind != TokenKind::GreaterThan {
+                while self.current_token().kind != TokenKind::GreaterThan && !self.is_eof() {
                     tmp.push(self.get_type(Some(self.shared.generics)));
                     self.advance();
 
@@ -2856,7 +2850,7 @@ impl<'a> Statement<'a> {
         let mut tokens = vec![];
         let mut nesting = 0;
 
-        loop {
+        while !self.is_eof() {
             if self.current_token().kind == TokenKind::LeftParenthesis {
                 nesting += 1;
             }
@@ -2913,7 +2907,7 @@ impl<'a> Statement<'a> {
         let mut tokens = vec![];
         let mut nesting = 0;
 
-        loop {
+        while !self.is_eof() {
             if self.current_token().kind == TokenKind::LeftParenthesis {
                 nesting += 1;
             }
@@ -3077,7 +3071,7 @@ impl<'a> Statement<'a> {
     fn yield_block(&mut self, expect_semicolon: bool) -> Vec<AstNode> {
         let cell: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
 
-        loop {
+        while !self.is_eof() {
             let current = self.current_token();
 
             match current.kind {

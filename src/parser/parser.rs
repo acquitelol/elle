@@ -147,7 +147,8 @@ macro_rules! get_type {
 
             let mut types = vec![];
 
-            while $self.current_token().kind != TokenKind::RightParenthesis {
+            while $self.current_token().kind != TokenKind::RightParenthesis
+                && !$self.is_eof() {
                 types.push($self.get_type($generics));
                 $self.advance();
 
@@ -210,7 +211,7 @@ macro_rules! get_type {
 
         let mut found_ptr = false;
 
-        loop {
+        while !$self.is_eof() {
             let tmp = $self.next_token();
 
             if tmp.is_some() {
@@ -271,7 +272,8 @@ macro_rules! get_type {
 
                         let mut known_generics = vec![];
 
-                        while $self.current_token().kind != TokenKind::GreaterThan {
+                        while $self.current_token().kind != TokenKind::GreaterThan
+                            && !$self.is_eof() {
                             known_generics.push($self.get_type($generics));
                             $self.advance();
 
@@ -507,7 +509,7 @@ impl Parser {
                     match_one!(); // Must have one identifier
 
                     // Match until no more commas
-                    while self.current_token().kind == TokenKind::Comma {
+                    while self.current_token().kind == TokenKind::Comma && !self.is_eof() {
                         self.advance();
                         match_one!()
                     }
@@ -670,10 +672,10 @@ impl Parser {
                         clean!()
                     }
                 }
-                _ => elle_error!(self
-                    .current_token()
-                    .location
-                    .error(format!("Unexpected token found while parsing: {:?}", self.current_token().kind))),
+                _ => elle_error!(self.current_token().location.error(format!(
+                    "Unexpected token found while parsing: {:?}",
+                    self.current_token().kind
+                ))),
             }
         }
 

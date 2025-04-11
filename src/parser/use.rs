@@ -39,7 +39,7 @@ impl<'a> Use<'a> {
             TokenKind::Dot,
         ];
 
-        while valid.contains(&self.parser.current_token().kind) {
+        while valid.contains(&self.parser.current_token().kind) && !self.parser.is_eof() {
             match self.parser.current_token().kind {
                 TokenKind::Range => {
                     // Allow for ../foo/bar
@@ -57,7 +57,9 @@ impl<'a> Use<'a> {
                     self.parser.advance();
 
                     // Allow for foo////bar to parse as foo/bar
-                    while self.parser.current_token().kind == TokenKind::Divide {
+                    while self.parser.current_token().kind == TokenKind::Divide
+                        && !self.parser.is_eof()
+                    {
                         self.parser.advance();
                     }
 

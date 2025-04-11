@@ -31,6 +31,7 @@ pub fn create_monomorphized_function(
     tmp_function: &mut Function,
     ty: Option<Type>,
 ) {
+    // the aliasing could be multiple levels deep
     loop {
         match gen.generic_functions.get(&name.clone()).unwrap().clone() {
             Primitive::Function(FunctionSource { unaliased, .. }) => {

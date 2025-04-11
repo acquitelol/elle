@@ -31,14 +31,18 @@ impl<'a> Function<'a> {
 
         if !should_parse {
             if external {
-                while self.parser.current_token().kind != TokenKind::Semicolon {
+                while self.parser.current_token().kind != TokenKind::Semicolon
+                    && !self.parser.is_eof()
+                {
                     self.parser.advance();
                 }
 
                 self.parser.expect_tokens(vec![TokenKind::Semicolon]);
                 self.parser.advance();
             } else {
-                while self.parser.current_token().kind != TokenKind::LeftCurlyBrace {
+                while self.parser.current_token().kind != TokenKind::LeftCurlyBrace
+                    && !self.parser.is_eof()
+                {
                     self.parser.advance();
                 }
 
@@ -46,7 +50,7 @@ impl<'a> Function<'a> {
                 self.parser.advance();
                 let mut nesting = 0;
 
-                loop {
+                while !self.parser.is_eof() {
                     if self.parser.current_token().kind == TokenKind::LeftCurlyBrace {
                         nesting += 1;
                     }
@@ -348,7 +352,7 @@ impl<'a> Function<'a> {
                 }));
         }
 
-        loop {
+        while !self.parser.is_eof() {
             self.parser.advance();
 
             let current = self.parser.current_token();

@@ -33,11 +33,15 @@ impl<'a> Struct<'a> {
     ) -> Option<(Primitive, Vec<Primitive>)> {
         if !should_parse {
             if namespace {
-                while self.parser.current_token().kind != TokenKind::Semicolon {
+                while self.parser.current_token().kind != TokenKind::Semicolon
+                    && !self.parser.is_eof()
+                {
                     self.parser.advance();
                 }
             } else {
-                while self.parser.current_token().kind != TokenKind::RightCurlyBrace {
+                while self.parser.current_token().kind != TokenKind::RightCurlyBrace
+                    && !self.parser.is_eof()
+                {
                     self.parser.advance();
                 }
 
@@ -104,7 +108,9 @@ impl<'a> Struct<'a> {
         if self.parser.current_token().kind == TokenKind::LessThan {
             self.parser.advance();
 
-            while self.parser.current_token().kind != TokenKind::GreaterThan {
+            while self.parser.current_token().kind != TokenKind::GreaterThan
+                && !self.parser.is_eof()
+            {
                 generics.push(self.parser.get_identifier());
                 self.parser.advance();
 
@@ -120,7 +126,8 @@ impl<'a> Struct<'a> {
         let mut should_add_fmt_builtin = true;
 
         if self.parser.match_token(TokenKind::Attribute, false) {
-            while self.parser.current_token().kind == TokenKind::Attribute {
+            while self.parser.current_token().kind == TokenKind::Attribute && !self.parser.is_eof()
+            {
                 self.parser.advance();
                 let attribute = self.parser.current_token().parse_attribute();
 

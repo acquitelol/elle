@@ -54,7 +54,8 @@ impl<'a> Constant<'a> {
         self.parser.advance();
 
         if !should_parse {
-            while self.parser.current_token().kind != TokenKind::Semicolon {
+            while self.parser.current_token().kind != TokenKind::Semicolon && !self.parser.is_eof()
+            {
                 self.parser.advance();
             }
 
