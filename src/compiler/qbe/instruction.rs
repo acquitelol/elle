@@ -116,12 +116,21 @@ impl fmt::Display for Instruction {
                     formatter,
                     // All comparisons start with c
                     "c{}{} {}, {}",
-                    if ty.is_float() || ty.is_unsigned() {
+                    if ty.is_float() {
                         match comparison {
                             Comparison::LessThan => "lt",
                             Comparison::LessThanEqual => "le",
                             Comparison::GreaterThan => "gt",
                             Comparison::GreaterThanEqual => "ge",
+                            Comparison::Equal => "eq",
+                            Comparison::NotEqual => "ne",
+                        }
+                    } else if ty.is_unsigned() {
+                        match comparison {
+                            Comparison::LessThan => "ult",
+                            Comparison::LessThanEqual => "ule",
+                            Comparison::GreaterThan => "ugt",
+                            Comparison::GreaterThanEqual => "uge",
                             Comparison::Equal => "eq",
                             Comparison::NotEqual => "ne",
                         }
@@ -198,7 +207,7 @@ impl fmt::Display for Instruction {
                     if !r#type.is_unsigned() && r#type.is_map_to_int() {
                         format!("s{}", r#type.clone())
                     } else {
-                        if r#type.is_struct() {
+                        if r#type.is_struct() || r#type.is_unsigned() {
                             r#type.clone().into_base()
                         } else {
                             r#type.clone()
@@ -225,7 +234,7 @@ impl fmt::Display for Instruction {
                 write!(
                     formatter,
                     "ext{} {}",
-                    if ty.is_float() {
+                    if ty.is_float() || ty.is_unsigned() {
                         ty.to_string()
                     } else {
                         format!("s{}", ty)
