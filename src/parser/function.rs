@@ -394,6 +394,8 @@ impl<'a> Function<'a> {
             _ => true,
         });
 
+        deferred.reverse();
+
         fn insert_deferred_statements(
             nodes: &mut Vec<AstNode>,
             deferred: &Vec<AstNode>,
