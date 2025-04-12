@@ -1,0 +1,53 @@
+use std/prelude;
+use std/raylib;
+
+const SCREEN_FACTOR = 80;
+const SCREEN_WIDTH = 8 * SCREEN_FACTOR;
+const SCREEN_HEIGHT = 8 * SCREEN_FACTOR;
+
+const TITLE_FONT_SIZE = 30;
+const ENTRY_FONT_SIZE = 15;
+const RECT_HEIGHT = 40;
+const PADDING = 40;
+
+const TOP_OFFSET = PADDING * 2 + TITLE_FONT_SIZE;        // Offset from the top with enough padding to render nicely
+const TEXT_OFFSET = (RECT_HEIGHT - ENTRY_FONT_SIZE) / 2; // Offset to center text vertically in the rectangle
+
+fn main() {
+    rl::init_window(SCREEN_HEIGHT, SCREEN_HEIGHT, "Drag & Drop");
+    defer rl::close_window();
+
+    rl::set_window_state(FLAG_WINDOW_RESIZABLE);
+    files := [string;];
+
+    while !rl::window_should_close() {
+        if rl::is_file_dropped() {
+            tmp_files := rl::load_dropped_files();
+
+            for file in tmp_files {
+                files.push(file.clone());
+            }
+
+            rl::unload_dropped_files(tmp_files);
+        }
+
+        rl::begin_drawing();
+            rl::clear_background(rl::get_color(0x181818FF));
+            rl::draw_text("Drop files here...", PADDING, PADDING, TITLE_FONT_SIZE, DARKGRAY);
+
+            for file in files {
+                rl::draw_rectangle(
+                    0, TOP_OFFSET + RECT_HEIGHT * #i(file),
+                    rl::get_screen_width(), RECT_HEIGHT,
+                    rl::fade(DARKGRAY, #i(file) % 2 == 0 ? 0.3 : 0.1)
+                );
+
+                rl::draw_text(
+                    file, PADDING,
+                    TOP_OFFSET + TEXT_OFFSET + RECT_HEIGHT * #i(file),
+                    ENTRY_FONT_SIZE, GRAY
+                );
+            }
+        rl::end_drawing();
+    }
+}
