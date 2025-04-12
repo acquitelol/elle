@@ -1637,7 +1637,48 @@ impl<'a> Statement<'a> {
     fn parse_defer(&mut self) -> AstNode {
         self.advance();
 
-        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
+        let mut tokens = vec![];
+        let mut paren_nesting = 0;
+        let mut curly_nesting = 0;
+        let mut block_nesting = 0;
+
+        while !self.is_eof() {
+            if self.current_token().kind == TokenKind::LeftParenthesis {
+                paren_nesting += 1;
+            }
+
+            if self.current_token().kind == TokenKind::LeftCurlyBrace {
+                curly_nesting += 1;
+            }
+
+            if self.current_token().kind == TokenKind::LeftBlockBrace {
+                block_nesting += 1;
+            }
+
+            tokens.push(self.current_token());
+            self.advance();
+
+            if self.current_token().kind == TokenKind::Semicolon
+                && paren_nesting == 0
+                && curly_nesting == 0
+                && block_nesting == 0
+            {
+                break;
+            }
+
+            if self.current_token().kind == TokenKind::RightParenthesis && paren_nesting > 0 {
+                paren_nesting -= 1;
+            }
+
+            if self.current_token().kind == TokenKind::RightCurlyBrace && curly_nesting > 0 {
+                curly_nesting -= 1;
+            }
+
+            if self.current_token().kind == TokenKind::RightBlockBrace && block_nesting > 0 {
+                block_nesting -= 1;
+            }
+        }
+
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
         AstNode::DeferStatement {
             value,
