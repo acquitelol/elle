@@ -328,10 +328,18 @@ struct Music {
 
 // File path list
 struct FilePathList {
-    u64 capacity;          // Filepaths max entries
-    u64 count;             // Filepaths entries count
+    u32 capacity;          // Filepaths max entries
+    u32 count;             // Filepaths entries count
     string *paths;         // Filepaths entries
 };
+
+!external fn FilePathList::__len__(FilePathList self) {
+    return self.count;
+}
+
+!external fn FilePathList::__load__(FilePathList self, u32 i) {
+    return self.paths[i];
+}
 
 // Automation event
 struct AutomationEvent {
