@@ -14,7 +14,7 @@ impl Codegen<'_> for Ternary {
         let false_label = format!("iff.{}", gen.tmp_counter);
         let end_label = format!("end.{}", gen.tmp_counter);
 
-        let (_, condition_val) = self.condition.compile(gen, ctx).expect(
+        let (_, condition_val) = self.condition.compile(gen, &ctx.to_nnf()).expect(
             &self
                 .location
                 .error("Unexpected error when trying to compile the `condition` of a ternary"),
