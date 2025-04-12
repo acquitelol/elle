@@ -922,7 +922,19 @@ The type of a static buffer cannot be inferred. You must declare it explicitly.
 
 ### ♡ **Defer statements**
 
-- A defer statement is commonly used to group together memory allocation and deallocation. A simple explanation is that it stores whatever operation is defined inside and does not run it until the function is about to go out of scope, ie during a return, a block being left, or an implicit return due to the function scope being left.
+- A `defer` statement is commonly used to group together memory allocation and deallocation. A simple explanation is that it stores whatever statement is defined inside and inserts it when the current scope is about to be left, ie during a return, a block being exited, or an implicit return due to the function scope being left. `defer` statements are inserted backwards.
+
+> [!IMPORTANT]
+> If you create a `defer` statement which forces the current scope to be left, any other `defer` statements created before it will NOT be inserted. Observe:
+
+```rs
+fn main() {
+    defer $println("hi"); // WILL NOT RUN
+    defer return 1;
+}
+```
+
+<hr />
 
 A very simple example of this is declaring a variable and deferring printing its value, like this:
 
