@@ -1,0 +1,4 @@
+fn main() {
+    // This throws an error because you can't assign stmts to vars.
+    x := return 1;
+}

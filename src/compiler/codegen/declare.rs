@@ -191,8 +191,14 @@ impl Codegen<'_> for Declare {
             gen.address_pool
                 .insert(temp.clone().unwrap(), addr_val.clone());
             return Some((final_ty, final_val));
+        } else {
+            elle_error!(self
+                .location
+                .with_extra_info("This variable might be assigned to a statement")
+                .error(format!(
+                    "Unexpected error when declaring variable named '{}'\nCould not generate a valid value for this variable.\nMaybe '{}' is being incorrectly assigned to a statement?",
+                    self.name, self.name
+                )));
         }
-
-        None
     }
 }
