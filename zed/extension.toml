@@ -1,0 +1,11 @@
+id = "elle-zed"
+name = "Elle"
+version = "0.0.5"
+schema_version = 1
+authors = ["Rosie <acquitefx@gmail.com>", "tnixc <tnixxc@gmail.com>"]
+description = "Elle support."
+repository = "https://github.com/acquitelol/elle/tree/rewrite/zed"
+
+[grammars.elle]
+repository = "https://github.com/acquitelol/tree-sitter-elle/"
+rev = "ef1891ef621f945191e66edc1f3eee693e578b75"

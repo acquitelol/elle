@@ -539,7 +539,6 @@ impl Lexer {
             "return" => TokenKind::Return,
             "true" => TokenKind::TrueLiteral,
             "false" => TokenKind::FalseLiteral,
-            "store" => TokenKind::Store,
             "break" => TokenKind::Break,
             "continue" => TokenKind::Continue,
             // "to" => TokenKind::To,

@@ -73,7 +73,6 @@ pub enum TokenKind {
     ConcatEqual,
     None,
     Constant,
-    Store,
     Break,
     Continue,
     // To,
