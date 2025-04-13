@@ -81,9 +81,8 @@
 (call_expression function: (member_expression property: (identifier) @function))
 (call_expression function: (exact_literal) @function)
 
-; Directives and sigils
+; Directives
 (directive_expression name: _ @function)
-(sigil_expression (identifier) @embedded)
 
 ; last item of qualified_identifier
 (qualified_identifier name: (identifier) @function)
