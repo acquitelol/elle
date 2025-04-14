@@ -1073,7 +1073,7 @@ fn main() {
 }
 ```
 
-Casting is not necessary here, because the Elle compiler is smart enough to automatically cast the `f32` to an `i32` when compiling the arithmetic operation, based on a [weight](https://github.com/acquitelol/elle/blob/rewrite/src/compiler/enums.rs#L912-L921) that each type is assigned.
+Casting is not necessary here, because the Elle compiler is smart enough to automatically cast the `f32` to an `i32` when compiling the arithmetic operation, based on a [weight](https://github.com/acquitelol/elle/blob/rewrite/src/compiler/qbe/type.rs#L649-L662) that each type is assigned.
 
 <br />
 
@@ -1252,7 +1252,7 @@ fn main() {
 
 And of course, this works for every arithmetic operator, not just `^`.
 
-Elle follows the standard [order of operations](https://github.com/acquitelol/elle/blob/rewrite/src/lexer/enums.rs#L121-L137) described by mathematics (typically defined as BIDMAS or PEMDAS), which means you can also wrap expressions in `()` to evaluate them before other expressions that may have a higher precedence.
+Elle follows the standard [order of operations](https://github.com/acquitelol/elle/blob/rewrite/src/lexer/enums.rs#L115-L136) described by mathematics (typically defined as BIDMAS or PEMDAS), which means you can also wrap expressions in `()` to evaluate them before other expressions that may have a higher precedence.
 
 Example of a program that calculates the xor (`^`) and sum (`+`) of some values:
 
