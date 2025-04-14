@@ -56,7 +56,7 @@ pub static DUNDER_CONSTANTS: &[&'static str] = &[
 // Keywords
 pub static RESERVED_KEYWORDS: &[&'static str] = &[
     "as", "mut", "enum", "match", "static", "super", "do", "macro", "step", "of", "class", "var",
-    "impl", "type"
+    "impl",
 ];
 
 // Miscellaneous
@@ -65,7 +65,15 @@ pub static DEAD_CODE_ELIMINATION_PASSES: usize = 6;
 pub static DIVIDER_SIZE: usize = 50;
 
 #[macro_export]
-macro_rules! INTERNAL_IDX_FORMAT { () => { "__internal_{}_idx" }; }
+macro_rules! INTERNAL_IDX_FORMAT {
+    () => {
+        "__internal_{}_idx"
+    };
+}
 
 #[macro_export]
-macro_rules! INTERNAL_ITERATOR_FORMAT { () => { "__internal_{}_iterator" }; }
+macro_rules! INTERNAL_ITERATOR_FORMAT {
+    () => {
+        "__internal_{}_iterator"
+    };
+}
