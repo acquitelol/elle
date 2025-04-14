@@ -1060,7 +1060,8 @@ These are the mappings of types in Elle:
 
 - A type conversion consists of converting a variable from one type to another, usually compromising precision if converting to a type with a lower size (f64 -> f32) or having more precision if promoting a type (i32 -> i64).
 
-You can cast a type in a similar manner to C.
+Casting in Elle is a compiler builtin, hence it uses `#cast(T, expr)`.
+
 <br />
 
 Here is an example that casts a float to an integer to add it to another integer:
@@ -1068,7 +1069,7 @@ Here is an example that casts a float to an integer to add it to another integer
 ```rs
 fn main() {
     f32 a = 1.5;
-    i32 b = (i32)a + 2;
+    i32 b = #cast(i32, a) + 2;
 }
 ```
 
@@ -1086,10 +1087,10 @@ fn main() {
 }
 ```
 
-and Elle will not complain.
+and Elle will not complain because implicitly converting `void *` -> `T *` and vice versa is allowed.
 
 > [!IMPORTANT]
-> Strings are different to regular pointers. Even though they are just `char*`, the compiler will not allow you to implicitly cast a `void*` to a `string`. You will need to explicitly cast it.
+> Strings are different to regular pointers. Even though they are just `char *`, the compiler will not allow you to implicitly cast a `void*` to a `string`. You will need to explicitly cast it.
 
 <hr />
 
@@ -1739,6 +1740,7 @@ The current existing directives are:
 - `#free(ptr_expr)` - Frees a pointer using the current allocator. If the allocator didn't define a `free` method, this does nothing.
 - `#set_allocator(allocator_expr)` - Sets the current allocator to the one specified by `allocator_expr`
 - `#reset_allocator()` - Sets the current allocator back to `#env.default_allocator`. **Does not call `#env.allocator.free_self`.**
+- `#cast(T, cast_expr)` - Uses a set of rules to convert `cast_expr` to type `T`. If it fails, it will throw a compile-time error.
 
 <hr />
 

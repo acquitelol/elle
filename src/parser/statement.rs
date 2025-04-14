@@ -1804,28 +1804,18 @@ impl<'a> Statement<'a> {
         let position = self.position;
         self.advance();
 
-        let location = self.current_token().location.clone();
-        let r#type = self.get_type(Some(self.shared.generics));
-
+        self.expect_tokens(vec![TokenKind::LeftParenthesis]);
         self.advance();
 
-        if self.current_token().kind == TokenKind::Comma {
-            self.position = position;
-            return self.parse_declare(None);
-        }
+        let location = self.current_token().location.clone();
+        let r#type = self.get_type(Some(self.shared.generics));
+        self.advance();
 
-        self.expect_tokens(vec![TokenKind::RightParenthesis]);
+        self.expect_tokens(vec![TokenKind::Comma]);
         self.advance();
 
         let mut tokens = vec![];
         let mut nesting = 0;
-
-        if self.current_token().kind == TokenKind::Semicolon {
-            elle_error!(self
-                .current_token()
-                .location
-                .error("Expected type conversion but got empty passthrough"))
-        }
 
         loop {
             if self.current_token().kind == TokenKind::LeftParenthesis {
@@ -1834,12 +1824,6 @@ impl<'a> Statement<'a> {
 
             tokens.push(self.current_token());
             let res = self.advance_opt();
-
-            if self.current_token().kind == TokenKind::Semicolon
-                || (self.current_token().kind.is_arithmetic() && nesting == 0)
-            {
-                break;
-            }
 
             if self.current_token().kind == TokenKind::RightParenthesis {
                 if nesting > 0 {
@@ -1858,14 +1842,33 @@ impl<'a> Statement<'a> {
             }
         }
 
-        let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
+        self.expect_tokens(vec![TokenKind::RightParenthesis]);
+        self.advance();
 
-        AstNode::Conversion(Conversion {
+        let stmt = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
+        let mut expression = AstNode::Conversion(Conversion {
             r#type: Some(r#type),
-            value,
-            location,
+            value: Box::new(stmt),
+            location: location.clone(),
             explicit: true,
-        })
+        });
+
+        match self.current_token().kind {
+            TokenKind::Dot => {
+                expression = self.parse_field_access(Some((position, expression, location)))
+            }
+            TokenKind::LeftBlockBrace => {
+                expression = self.parse_offset_store(Some((position, expression, location)))
+            }
+            TokenKind::Question => expression = self.parse_ternary_node(expression),
+            other if other.is_arithmetic() => {
+                self.position = position;
+                return self.parse_arithmetic();
+            }
+            _ => {}
+        }
+
+        expression
     }
 
     fn parse_block(&mut self) -> AstNode {
@@ -3264,42 +3267,12 @@ impl<'a> Statement<'a> {
             TokenKind::Free => self.parse_free(),
             TokenKind::SetAllocator => self.parse_set_allocator(),
             TokenKind::ResetAllocator => self.parse_reset_allocator(),
+            TokenKind::Cast => self.parse_type_conversion(),
             TokenKind::Let => {
                 self.advance();
                 self.parse_declare(Some(Some(Type::Infer)))
             }
-            TokenKind::LeftParenthesis => {
-                let next = self.next_token();
-
-                if let Some(token) = next {
-                    let ty_name = token.value.get_string_inner().unwrap_or("".into());
-
-                    if token.kind == TokenKind::Identifier
-                        && (self.shared.struct_pool.borrow().contains_key(&ty_name)
-                            || self.shared.generics.contains(&ty_name)
-                            || token.value.is_base_type()
-                            || token.kind == TokenKind::LeftParenthesis)
-                    {
-                        let next = self.next_token_seek(2);
-
-                        if let Some(next) = next {
-                            if next.kind == TokenKind::LeftCurlyBrace
-                                || next.kind == TokenKind::DoubleColon
-                            {
-                                self.parse_wrapped_statement()
-                            } else {
-                                self.parse_type_conversion()
-                            }
-                        } else {
-                            self.parse_type_conversion()
-                        }
-                    } else {
-                        self.parse_wrapped_statement()
-                    }
-                } else {
-                    self.parse_wrapped_statement()
-                }
-            }
+            TokenKind::LeftParenthesis => self.parse_wrapped_statement(),
             TokenKind::Hashtag => {
                 self.advance();
 
