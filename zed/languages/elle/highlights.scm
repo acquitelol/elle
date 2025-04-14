@@ -2,13 +2,29 @@
 (identifier) @variable
 (qualified_identifier) @variable
 
+; Highlight some identifiers with variable.special
+((identifier) @variable.special
+    (#any-of? @variable.special
+        "self"))
+
+; Highlight the ElleMeta one
+(parameter
+  type: (type) @type
+  name: (identifier) @variable.special
+  (#eq? @type "ElleMeta"))
+
+(attribute_parameter
+  type: (type) @type
+  name: (identifier) @variable.special
+  (#eq? @type "ElleMeta"))
+
 ; Assume uppercase names are structs
 ((identifier) @type
-  (#match? @type "^[A-Z]"))
+    (#match? @type "^[A-Z]"))
 
 ; Assume all-caps names are constants
 ((identifier) @constant
-  (#match? @constant "^[A-Z][A-Z\\d_]+$"))
+    (#match? @constant "^[A-Z][A-Z\\d_]+$"))
 
 ; If the regex doesn't match, at least it's right once
 (struct_definition (identifier) @type)
@@ -17,7 +33,7 @@
 ; Types
 (type) @type
 (type (identifier) @type)
-(array_type) @type
+(array_type (type) @type)
 (pointer_type) @type
 (tuple_type) @type
 
@@ -42,6 +58,7 @@
 (string_literal) @string
 (character_literal) @string
 (boolean_literal) @boolean
+(nil_literal) @keyword
 (escape_sequence) @string.escape
 
 ; Comments
@@ -81,16 +98,14 @@
 (call_expression function: (member_expression property: (identifier) @function))
 (call_expression function: (exact_literal) @function)
 
-; Directives
+; Directives and attributes
 (directive_expression name: _ @function)
+(attribute (identifier) @keyword)
 
-; last item of qualified_identifier
-(qualified_identifier name: (identifier) @function)
-
-; Parameters
-(parameter (identifier) @variable.special)
-(attribute_parameter (identifier) @variable.special)
-(variadic_parameter (identifier) @variable.special)
+(qualified_identifier (identifier) @function)
+(qualified_identifier
+    module: (identifier) @type
+    (identifier) @function)
 
 ; Struct fields
 (struct_field (identifier) @property)
@@ -98,9 +113,7 @@
 
 ; Member access
 (member_expression property: (identifier) @property)
-
-; Attributes
-(attribute (identifier) @attribute)
+(yield_expression property: "yield" @property)
 
 ; Operators
 [

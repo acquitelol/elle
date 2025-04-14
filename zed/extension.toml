@@ -1,6 +1,6 @@
 id = "elle-zed"
 name = "Elle"
-version = "0.0.8"
+version = "0.0.9"
 schema_version = 1
 authors = ["Rosie <acquitefx@gmail.com>", "tnixc <tnixxc@gmail.com>"]
 description = "Elle support."
@@ -8,4 +8,4 @@ repository = "https://github.com/acquitelol/elle/tree/rewrite/zed"
 
 [grammars.elle]
 repository = "https://github.com/acquitelol/tree-sitter-elle/"
-rev = "2b5159f0a0a74d9705d183da611d7e78a782d59a"
+rev = "453c5a05cf411f1dbb883a75f5d50a8ccd86135d"
