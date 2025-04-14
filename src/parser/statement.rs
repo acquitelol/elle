@@ -161,6 +161,13 @@ impl<'a> Statement<'a> {
             Some(tmp)
         };
 
+        if self.is_eof() {
+            elle_error!(self
+                .current_token()
+                .location
+                .error("Expected identifier here but got EOF."));
+        }
+
         let name = self.get_identifier();
         let location = self.current_token().location.clone();
 
@@ -1625,8 +1632,10 @@ impl<'a> Statement<'a> {
             TokenKind::LeftBlockBrace => {
                 expression = self.parse_offset_store(Some((position, expression, location)))
             }
-            TokenKind::Question => {
-                expression = self.parse_ternary_node(expression);
+            TokenKind::Question => expression = self.parse_ternary_node(expression),
+            other if other.is_arithmetic() => {
+                self.position = position;
+                return self.parse_arithmetic();
             }
             _ => {}
         }
@@ -2665,6 +2674,11 @@ impl<'a> Statement<'a> {
                 })
             }
 
+            other if other.is_arithmetic() => {
+                self.position = position;
+                return self.parse_arithmetic();
+            }
+
             TokenKind::Dot => {
                 expression = self.parse_field_access(Some((position, expression, location.clone())))
             }
@@ -2774,6 +2788,12 @@ impl<'a> Statement<'a> {
             TokenKind::LeftBlockBrace => {
                 expression = self.parse_offset_store(Some((position, expression, location.clone())))
             }
+
+            TokenKind::Question => expression = self.parse_ternary_node(expression),
+            other if other.is_arithmetic() => {
+                self.position = position;
+                return self.parse_arithmetic();
+            }
             _ => {}
         }
 
@@ -2878,6 +2898,12 @@ impl<'a> Statement<'a> {
 
             TokenKind::LeftBlockBrace => {
                 expression = self.parse_offset_store(Some((position, expression, location.clone())))
+            }
+
+            TokenKind::Question => expression = self.parse_ternary_node(expression),
+            other if other.is_arithmetic() => {
+                self.position = position;
+                return self.parse_arithmetic();
             }
             _ => {}
         }
