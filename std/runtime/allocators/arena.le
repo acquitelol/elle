@@ -35,6 +35,7 @@ fn ArenaAllocator::new() {
     self.chunk_size = 64 * 1024; // 64kb chunks
     self.min_chunk_size = 1024;  // 1kb minimum
     self.current = __internal_Arena::new(self.chunk_size);
+
     return self;
 }
 
@@ -60,7 +61,7 @@ fn ArenaAllocator::alloc(ArenaAllocator *self, i32 _size) {
 
     // alloc from current arena
     let offset = __internal_alloc_align8(self.current.used);
-    let ptr = (void *)self.current.buffer + offset;
+    let ptr = #cast(void *, self.current.buffer) + offset;
     self.current.used = offset + size;
     return ptr;
 }

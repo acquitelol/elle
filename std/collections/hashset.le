@@ -39,7 +39,7 @@ fn HashSet::with_capacity<T>(i32 initial_capacity) -> HashSet<T> * {
     set.size = 0;
 
     for i32 i = 0; i < capacity; i += 1 {
-        set.table.push((T)HashSet_NEVER_USED);
+        set.table.push(#cast(T, HashSet_NEVER_USED));
     }
 
     return set;
@@ -68,7 +68,9 @@ fn HashSet::add<T>(HashSet<T> *self, T value) -> bool {
     let start_idx = idx;
 
     while true {
-        if ((void *)self.table[idx] == HashSet_NEVER_USED) || ((void *)self.table[idx] == HashSet_TOMBSTONE) {
+        if #cast(void *, self.table[idx]) == HashSet_NEVER_USED
+            || #cast(void *, self.table[idx]) == HashSet_TOMBSTONE
+        {
             self.table[idx] = value;
             self.size += 1;
             return true;
@@ -87,12 +89,14 @@ fn HashSet::remove<T>(HashSet<T> *self, T value) -> bool {
     let start_idx = idx;
 
     while true {
-        if (void *)self.table[idx] == HashSet_NEVER_USED {
+        if #cast(void *, self.table[idx]) == HashSet_NEVER_USED {
             return false;
         }
 
-        if ((void *)self.table[idx] != HashSet_TOMBSTONE) && self.table[idx] == value {
-            self.table[idx] = (T)HashSet_TOMBSTONE;
+        if #cast(void *, self.table[idx]) != HashSet_TOMBSTONE
+            && self.table[idx] == value
+        {
+            self.table[idx] = #cast(T, HashSet_TOMBSTONE);
             self.size -= 1;
             return true;
         }
@@ -110,11 +114,13 @@ fn HashSet::contains<T>(HashSet<T> *self, T value) -> bool {
     let start_idx = idx;
 
     while true {
-        if (void *)self.table[idx] == HashSet_NEVER_USED {
+        if #cast(void *, self.table[idx]) == HashSet_NEVER_USED {
             return false;
         }
 
-        if ((void *)self.table[idx] != HashSet_TOMBSTONE) && self.table[idx] == value {
+        if #cast(void *, self.table[idx]) != HashSet_TOMBSTONE &&
+            self.table[idx] == value
+        {
             return true;
         }
 
@@ -142,11 +148,13 @@ fn HashSet::resize<T>(HashSet<T> *self, i32 new_capacity) {
     self.size = 0;
 
     for i32 i = 0; i < new_capacity; i += 1 {
-        self.table.push((T)HashSet_NEVER_USED);
+        self.table.push(#cast(T, HashSet_NEVER_USED));
     }
 
     for item in old_table {
-        if ((void *)item != HashSet_NEVER_USED) && ((void *)item != HashSet_TOMBSTONE) {
+        if #cast(void *, item) != HashSet_NEVER_USED
+            && #cast(void *, item) != HashSet_TOMBSTONE
+        {
             self.add(item);
         }
     }
@@ -156,7 +164,9 @@ fn HashSet::values<T>(HashSet<T> *self) -> T[] {
     let result = Array::with_capacity(self.size);
 
     for i32 i = 0; i < self.capacity; i += 1 {
-        if ((void *)self.table[i] != HashSet_NEVER_USED) && ((void *)self.table[i] != HashSet_TOMBSTONE) {
+        if #cast(void *, item) != HashSet_NEVER_USED
+            && #cast(void *, item) != HashSet_TOMBSTONE
+        {
             result.push(self.table[i]);
         }
     }
@@ -165,14 +175,15 @@ fn HashSet::values<T>(HashSet<T> *self) -> T[] {
 }
 
 fn HashSet::is_full<T>(T element) {
-    return ((void *)element != HashSet_NEVER_USED) && ((void *)element != HashSet_TOMBSTONE);
+    return #cast(void *, element) != HashSet_NEVER_USED
+        && #cast(void *, element) != HashSet_TOMBSTONE;
 }
 
 fn HashSet::clear<T>(HashSet<T> *self) {
     self.size = 0;
 
     for i32 i = 0; i < self.capacity; i += 1 {
-        self.table[i] = (T)HashSet_NEVER_USED;
+        self.table[i] = #cast(T, HashSet_NEVER_USED);
     }
 }
 
@@ -180,7 +191,9 @@ fn HashSet::clone<T>(HashSet<T> *self) -> HashSet<T> * {
     HashSet<T> *new_set = HashSet::with_capacity(self.capacity);
 
     for i32 i = 0; i < self.capacity; i += 1 {
-        if ((void *)self.table[i] != HashSet_NEVER_USED) && ((void *)self.table[i] != HashSet_TOMBSTONE) {
+        if #cast(void *, self.table[i]) != HashSet_NEVER_USED
+            && #cast(void *, self.table[i]) != HashSet_TOMBSTONE
+        {
             new_set.add(self.table[i]);
         }
     }

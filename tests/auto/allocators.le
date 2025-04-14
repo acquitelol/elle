@@ -15,7 +15,7 @@ fn main() {
     );
 
     $assert(
-        #env.allocator.inner == (void *)#env.default_allocator,
+        #env.allocator.inner == #cast(void *, #env.default_allocator),
         "The allocator pointer itself should have switched to the {}.".format(gc_kind)
     );
 
@@ -61,7 +61,7 @@ fn main() {
     );
 
     $assert(
-        #env.allocator.inner == (void *)heap,
+        #env.allocator.inner == #cast(void *, heap),
         "The allocator pointer itself should have switched to {}.".format(heap_kind)
     );
 
@@ -107,7 +107,7 @@ fn main() {
     );
 
     $assert(
-        #env.allocator.inner == (void *)arena,
+        #env.allocator.inner == #cast(void *, arena),
         "The allocator pointer itself should have switched to {}.".format(arena_kind)
     );
 

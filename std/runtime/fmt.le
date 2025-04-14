@@ -50,7 +50,7 @@ fn f64::__fmt__(f64 self, i32 nesting) {
 }
 
 fn string::__fmt__(string self, i32 nesting) {
-    if (void *)self == 0 {
+    if !#cast(void *, self) {
         return "(nil)";
     }
 

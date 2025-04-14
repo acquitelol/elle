@@ -48,7 +48,7 @@ fn __internal_ElleGC_HashMap::insert(__internal_ElleGC_HashMap *self, void *key,
     let current = self.buckets[hash];
 
     while current {
-        if (current.key == key) {
+        if current.key == key {
             return;
         }
 
@@ -150,7 +150,7 @@ fn GCAllocator::new() {
 
             // only mark if not already marked because
             // recursively marking more is expensive
-            if (bool)block && !block.marked {
+            if #cast(bool, block) && !block.marked {
                 block.marked = true;
 
                 self.__internal_mark_region(
@@ -176,7 +176,7 @@ fn GCAllocator::mark(GCAllocator *self) {
     }
 
     // scan the stack for roots
-    self.__internal_mark_region((void **)(&0), #env.stack_top);
+    self.__internal_mark_region(#cast(void **, &0), #env.stack_top);
 }
 
 fn GCAllocator::sweep(GCAllocator *self) {

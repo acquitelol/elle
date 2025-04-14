@@ -49,11 +49,11 @@ fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 *lightDirecti
             }
 
             let illumination = normal.dot(*lightDirection);
-            let lightingIndex = (i32)(math::abs(illumination) * (LIGHTING.len() - 1));
+            let lightingIndex = #cast(i32, math::abs(illumination) * (LIGHTING.len() - 1));
 
             if HEIGHT > y && y > 0 && x > 0 && WIDTH > x && depth > zBuffer[offset] {
                 zBuffer[offset] = depth;
-                let lightingMapping = (i32)lightingIndex % (LIGHTING.len() - 1);
+                let lightingMapping = #cast(i32, lightingIndex) % (LIGHTING.len() - 1);
                 output[offset] = LIGHTING[lightingMapping < 0 ? 0 : lightingMapping];
             }
         }

@@ -12,14 +12,14 @@ fn string::__hash__(string self, i32 capacity) {
 
     for i32 i = 0; i < self.len(); i += 1 {
         char c = self[i];
-        hash = (hash * 33 + (i32)c) % capacity;
+        hash = (hash * 33 + #cast(i32, c)) % capacity;
     }
 
     return __internal_hash_mod(hash, capacity);
 }
 
 fn __void_ptr__::__hash__(void *self, i32 capacity) {
-    return __internal_hash_mod((i64)self, capacity);
+    return __internal_hash_mod(#cast(i64, self), capacity);
 }
 
 fn char::__hash__(char self, i32 capacity) {
@@ -64,10 +64,10 @@ fn u64::__hash__(u64 self, i32 capacity) {
 
 fn f32::__hash__(f32 self, i32 capacity) {
     f32 temp = self;
-    return __internal_hash_mod(*(i32 *)(&temp), capacity);
+    return __internal_hash_mod(*#cast(i32 *, &temp), capacity);
 }
 
 fn f64::__hash__(f64 self, i32 capacity) {
     f64 temp = self;
-    return __internal_hash_mod(*(i64 *)(&temp), capacity);
+    return __internal_hash_mod(*#cast(i64 *, &temp), capacity);
 }

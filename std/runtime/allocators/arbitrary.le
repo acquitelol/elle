@@ -14,12 +14,12 @@ fn ArbitraryAllocator::noop() {
 
 fn ArbitraryAllocator::alloc(ArbitraryAllocator *self, i32 size) -> void * {
     fn *temp = self.alloc;
-    return (void *)temp(self.inner, size);
+    return #cast(void *, temp(self.inner, size));
 }
 
 fn ArbitraryAllocator::realloc(ArbitraryAllocator *self, void *ptr, i32 new_size) -> void * {
     fn *temp = self.realloc;
-    return (void *)temp(self.inner, ptr, new_size);
+    return #cast(void *, temp(self.inner, ptr, new_size));
 }
 
 fn ArbitraryAllocator::free(ArbitraryAllocator *self, void *ptr) {

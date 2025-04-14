@@ -9,6 +9,7 @@ external fn rlGetTextureIdDefault() -> u32;
 fn main() {
     rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "UV Mango");
     defer rl::close_window();
+
     rl::set_target_fps(60);
 
     shader := rl::load_shader_from_memory(nil, "
@@ -50,7 +51,7 @@ fn main() {
             rl::set_shader_value(
                 shader,
                 rl::get_shader_location(shader, "time"),
-                &((f32)rl::get_time()),
+                &#cast(f32, rl::get_time()),
                 SHADER_UNIFORM_FLOAT
             );
 

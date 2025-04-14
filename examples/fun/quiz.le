@@ -4,8 +4,8 @@ use std/rand;
 use std/time;
 use std/cast;
 
-const i32 QUESTION_COUNT = 10;
-const i32 LARGEST_INT = 12;
+const QUESTION_COUNT = 10;
+const LARGEST_INT = 12;
 
 struct Question {
     string display;
@@ -15,7 +15,7 @@ struct Question {
 };
 
 fn Question::new(Operation *[] operators, i32 index) {
-    let question = #alloc(Question);
+    let self = #alloc(Question);
     let lhs = rand::random(1, LARGEST_INT);
     let rhs = rand::random(1, LARGEST_INT);
     let operator = rand::random(0, operators.len() - 1);
@@ -23,11 +23,11 @@ fn Question::new(Operation *[] operators, i32 index) {
     let operation = operators[operator];
     fn *func = operation.func;
 
-    question.display = "What is {} {} {}? -> ".format(lhs, operation.display, rhs);
-    question.answer = func(lhs, rhs);
-    question.index = index;
+    self.display = "What is {} {} {}? -> ".format(lhs, operation.display, rhs);
+    self.answer = func(lhs, rhs);
+    self.index = index;
 
-    return question;
+    return self;
 }
 
 struct Operation {
@@ -69,7 +69,7 @@ fn main() {
     io::printf("\nYou answered {}/{} questions correctly!", correct, QUESTION_COUNT);
     io::printf(
         "That's {}%. Congrats!",
-        (i32)((f32)correct * 100 / QUESTION_COUNT)
+        #cast(i32, #cast(f32, correct) * 100 / QUESTION_COUNT)
     );
 
     if !incorrect.is_empty() {

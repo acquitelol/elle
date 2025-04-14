@@ -4,7 +4,7 @@ global pub;
 namespace HeapAllocator;
 
 fn HeapAllocator::new() {
-    return (HeapAllocator *)nil;
+    return #cast(HeapAllocator *, nil);
 }
 
 fn HeapAllocator::alloc(HeapAllocator *self, i32 size) {

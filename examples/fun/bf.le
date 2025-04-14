@@ -6,7 +6,7 @@ fn skip(string *pc, i32 dir) -> string {
     let loop = 1;
 
     while loop > 0 {
-        *pc += (string)dir;
+        *pc += #cast(string, dir);
 
         if *(*pc) == '[' {
             loop += dir;
@@ -25,11 +25,11 @@ fn interpret(string program) {
 
     while *pc {
         if *pc == '>' {
-            ptr += (string)1;
+            ptr += #cast(string, 1);
         }
 
         if *pc == '<' {
-            ptr -= (string)1;
+            ptr -= #cast(string, 1);
         }
 
         if *pc == '+' {
@@ -60,7 +60,7 @@ fn interpret(string program) {
             }
         }
 
-        pc += (string)1;
+        pc += #cast(string, 1);
     }
 }
 

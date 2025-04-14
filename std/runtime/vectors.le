@@ -95,7 +95,7 @@ fn Vector2::rotate(Vector2 self, f32 angle) {
 }
 
 fn Vector2::angle(Vector2 self, Vector2 v2) {
-    return (f32)(math::atan2(v2.y, v2.x) - math::atan2(self.y, self.x));
+    return #cast(f32, math::atan2(v2.y, v2.x) - math::atan2(self.y, self.x));
 }
 
 // ----- Vector3 methods -----
@@ -230,5 +230,5 @@ fn Vector3::angle(Vector3 self, Vector3 v2) {
     cos_theta = math::fclamp(cos_theta, -1.0, 1.0);
 
     // Unwrap the cos(θ) into just θ
-    return (f32)math::acos(cos_theta);
+    return #cast(f32, math::acos(cos_theta));
 }

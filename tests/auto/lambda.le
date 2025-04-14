@@ -9,7 +9,7 @@ fn main() {
 
     let multiline = fn(f32 x) {
         let foo = math::sqrt(x) * E;
-        return (i32)(foo / 4);
+        return #cast(i32, foo / 4);
     };
 
     $assert(multiline(81) == 6, nil);

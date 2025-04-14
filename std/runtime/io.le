@@ -164,7 +164,7 @@ fn io::read_to_string(string path) -> string {
     io::fseek(file, 0, 2);
     let file_size = io::ftell(file);
     io::fseek(file, 0, 0);
-    let buf_size = file_size > 0 ? file_size + 1 : (i64)4096;
+    let buf_size = file_size > 0 ? file_size + 1 : #cast(i64, 4096);
 
     let buf = #alloc(char, buf_size);
 

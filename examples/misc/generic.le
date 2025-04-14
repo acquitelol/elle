@@ -26,5 +26,5 @@ fn main() {
     let foo = Foo::new(100, 1.2);
     foo.double_all();
 
-    io::println(foo);
+    $dbg(foo, foo.get_a(), foo.get_b());
 }

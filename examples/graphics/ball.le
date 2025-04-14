@@ -99,7 +99,7 @@ fn main() {
             finished = true;
         }
 
-        rl::draw_circle((i32)position.x, (i32)position.y, CIRCLE_RADIUS, PINK);
+        rl::draw_circle(#cast(i32, position.x), #cast(i32, position.y), CIRCLE_RADIUS, PINK);
 
         // Title
         rl::draw_text(title, (SCREEN_WIDTH - rl::measure_text(title, FONT_SIZE)) / 2, 40, FONT_SIZE, BLUE);

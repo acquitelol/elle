@@ -106,7 +106,7 @@ fn f32::parse(string str) -> f32 {
     let valid = __internal_is_valid_with_err(str, "f64");
 
     if valid {
-        return (f32)str.atof();
+        return #cast(f32, str.atof());
     }
 
     return 0;
@@ -116,7 +116,7 @@ fn f32::try_parse(string str, f32 *res) -> bool {
     let valid = __internal_is_valid(str, "f64");
 
     if valid {
-        *res = (f32)str.atof();
+        *res = #cast(f32, str.atof());
         return true;
     }
 

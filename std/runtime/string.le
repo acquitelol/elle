@@ -9,7 +9,7 @@ fn string::is_empty(string self) {
 }
 
 fn string::equals(string self, string other) {
-    return (i64)self == (i64)other || strcmp(self, other) == 0;
+    return #cast(void *, self) == #cast(void *, other) || strcmp(self, other) == 0;
 }
 
 external fn string::equals(string self, string other) @alias(string::__equals__) -> bool;
@@ -42,7 +42,7 @@ fn string::contains(ElleMeta meta, string self, ...args) -> bool {
         ? #[args.yield(char), '\0']
         : args.yield(string);
 
-    return (void *)strstr(self, needle) != nil;
+    return #cast(void *, strstr(self, needle)) != nil;
 }
 
 fn string::find(ElleMeta meta, string self, ...args) -> i64 {
@@ -60,11 +60,11 @@ fn string::find(ElleMeta meta, string self, ...args) -> i64 {
 
     let result = strstr(self, needle);
 
-    if (void *)result == nil {
+    if !#cast(void *, result) {
         return -1;
     }
 
-    return (i64)result - (i64)self;
+    return #cast(i64, result) - #cast(i64, self);
 }
 
 fn string::count(string self, char needle) -> i32 {
@@ -87,15 +87,15 @@ fn string::ends_with(string self, string suffix) -> bool {
     let self_length = self.len();
     let suffix_length = suffix.len();
 
-    if (suffix_length > self_length) {
+    if suffix_length > self_length {
         return false;
     }
 
-    return strncmp((string)((i64)self + (i64)self_length - suffix_length), suffix, suffix_length) == 0;
+    return strncmp(#cast(string, #cast(void *, self) + #cast(void *, self_length) - suffix_length), suffix, suffix_length) == 0;
 }
 
 fn string::default(string self, string default) {
-    if ((void *)self) == 0 || self.is_empty() {
+    if !#cast(bool, self) || self.is_empty() {
         return default;
     }
 
@@ -225,41 +225,23 @@ fn string::color(string self, string color) {
 
     if color == "bold" {
         code = 1;
-    }
-
-    if color == "italic" {
+    } else if color == "italic" {
         code = 3;
-    }
-
-    if color == "underline" {
+    } else if color == "underline" {
         code = 4;
-    }
-
-    if color == "red" {
+    } else if color == "red" {
         code = 31;
-    }
-
-    if color == "green" {
+    } else if color == "green" {
         code = 32;
-    }
-
-    if color == "yellow" {
+    } else if color == "yellow" {
         code = 33;
-    }
-
-    if color == "blue" {
+    } else if color == "blue" {
         code = 34;
-    }
-
-    if color == "magenta" {
+    } else if color == "magenta" {
         code = 35;
-    }
-
-    if color == "cyan" {
+    } else if color == "cyan" {
         code = 36;
-    }
-
-    if color == "white" {
+    } else if color == "white" {
         code = 37;
     }
 
@@ -338,13 +320,13 @@ fn string::replace(string self, string needle, string replacement) -> string {
     let i = 0;
 
     while i < self_len {
-        if strncmp((string)((i64)self + i), needle, needle_len) == 0 {
+        if strncmp(#cast(string, #cast(i64, self) + i), needle, needle_len) == 0 {
             if res_index + replacement_len > buf_size {
                 buf_size += replacement_len;
                 res = #realloc(res, char, buf_size + 1);
             }
 
-            strcpy((string)((i64)res + res_index), replacement);
+            strcpy(#cast(string, #cast(i64, res) + res_index), replacement);
             res_index += replacement_len;
             i += needle_len;
         } else {
@@ -403,7 +385,7 @@ fn string::insert(string *self, i32 index, char c) {
 
     strncpy(result, *self, index);
     result[index] = c;
-    strcpy((string)((i64)result + index + (i64)1), (string)((i64)(*self) + index));
+    strcpy(#cast(string, #cast(void *, result) + index + #cast(i64, 1)), #cast(string, #cast(i64, *self) + index));
 
     result[length + 1] = '\0';
     *self = result;
@@ -447,7 +429,7 @@ fn string::push(string *self, char c) {
     let length = (*self).len();
     let result = #alloc(char, length + 2);
 
-    if (!result) {
+    if !result {
         return nil;
     }
 

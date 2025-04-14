@@ -121,13 +121,13 @@ fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
     let start_idx = idx;
 
     while true {
-        if (!self.table[idx].full) || ((T)(self.table[idx].key) == key) {
+        if (!self.table[idx].full) || (#cast(T, self.table[idx].key) == key) {
             if !self.table[idx].full {
                 self.size += 1;
             }
 
-            self.table[idx].key = (void *)key;
-            self.table[idx].value = (void *)value;
+            self.table[idx].key = #cast(void *, key);
+            self.table[idx].value = #cast(void *, value);
             self.table[idx].full = true;
             return true;
         }
@@ -149,8 +149,8 @@ external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) @alias(HashM
     let start_idx = idx;
 
     while self.table[idx].full {
-        if (T)(self.table[idx].key) == key {
-            return (U)(self.table[idx].value);
+        if #cast(T, self.table[idx].key) == key {
+            return #cast(U, self.table[idx].value);
         }
 
         idx = (idx + 1) % self.capacity;
@@ -160,7 +160,7 @@ external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) @alias(HashM
         }
     }
 
-    return (U)nil;
+    return #cast(U, nil);
 }
 
 // Panics if the key does not exist
@@ -188,7 +188,7 @@ fn HashMap::remove<T, U>(HashMap<T, U> *self, T key) -> U {
     let start_idx = idx;
 
     while self.table[idx].full {
-        if (T)(self.table[idx].key) == key {
+        if #cast(T, self.table[idx].key) == key {
             U value = self.table[idx].value;
 
             self.table[idx].key = HashMap_EMPTY;
@@ -206,7 +206,7 @@ fn HashMap::remove<T, U>(HashMap<T, U> *self, T key) -> U {
         }
     }
 
-    return (U)nil;
+    return #cast(U, nil);
 }
 
 fn HashMap::contains_key<T, U>(HashMap<T, U> *self, T key) -> bool {
@@ -214,7 +214,7 @@ fn HashMap::contains_key<T, U>(HashMap<T, U> *self, T key) -> bool {
     let start_idx = idx;
 
     while self.table[idx].full {
-        if (T)(self.table[idx].key) == key {
+        if #cast(T, self.table[idx].key) == key {
             return true;
         }
 
@@ -253,7 +253,7 @@ fn HashMap::resize<T, U>(HashMap<T, U> *self, i32 new_capacity) {
 
     for i32 i = 0; i < old_table.len(); i += 1 {
         if old_table[i].full {
-            self.put((T)(old_table[i].key), (U)(old_table[i].value));
+            self.put(#cast(T, old_table[i].key), #cast(U, old_table[i].value));
         }
     }
 }

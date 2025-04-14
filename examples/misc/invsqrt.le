@@ -6,10 +6,10 @@ use std/io;
 
 fn fast_inv_sqrt(f32 x) {
     let y = x;
-    let i = *(i32 *)(&y);        // Interpret the bits of a float as an integer
+    let i = *#cast(i32 *, &y);        // Interpret the bits of a float as an integer
 
     i = 0x5f3759df - (i >> 1);   // "what the fuck?"
-    y = *(f32 *)(&i);            // Interpret the result as a float again
+    y = *#cast(f32 *, &i);            // Interpret the result as a float again
     y *= 1.5 - 0.5 * x * y * y;  // 1st iteration of Newton-Raphson
     y *= 1.5 - 0.5 * x * y * y;  // 2nd iteration, can be removed
 

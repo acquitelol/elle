@@ -21,7 +21,7 @@ fn Option::Some<T>(T value) -> Option<T> {
 }
 
 fn Option::None<T>() -> Option<T> {
-    return Option::new((T)nil, false);
+    return Option::new(#cast(T, nil), false);
 }
 
 // Returns the inner T if the option is some, otherwise aborts with a custom message

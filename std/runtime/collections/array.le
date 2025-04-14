@@ -51,12 +51,12 @@ fn Array::__len__<T>(T[] self) -> i32 {
 
 fn Array::__equals__<T, U>(T[] self, U[] other) -> bool {
     // If the pointers are the same (nil == nil)
-    if (void *)self == (void *)other {
+    if #cast(void *, self) == #cast(void *, other) {
         return true;
     }
 
     // If one is nil
-    if ((void *)self == nil) || ((void *)other == nil)
+    if #cast(void *, self) == nil || #cast(void *, other) == nil
         || self.len() != other.len() // If lengths don't match
     {
         return false;
@@ -121,10 +121,10 @@ fn Array::push<T>(T[] self, T element) {
 
 fn Array::pop<T>(T[] self) -> T {
     if self.is_empty() {
-        return (T)nil;
+        return #cast(T, nil);
     }
 
-    T last = self.elements[(i32)self.size - 1];
+    T last = self.elements[#cast(i32, self.size - 1)];
     self.size -= 1;
 
     if self.size < self.capacity / 4 {
@@ -135,7 +135,6 @@ fn Array::pop<T>(T[] self) -> T {
 }
 
 fn Array::clear<T>(T[] self) {
-    self.resize(1);
     self.size = 0;
 }
 
@@ -178,7 +177,7 @@ fn Array::cartesian_product<T>(T[] self, i32 n) {
 
     if n == 0 {
         T[] combination = [];
-        results.push((T)combination);
+        results.push(#cast(T, combination));
         return results;
     }
 
@@ -189,7 +188,7 @@ fn Array::cartesian_product<T>(T[] self, i32 n) {
 !pub fn __internal_cartesian_product_generate<T>(T[] self, T[] current, i32 n, T[][] results) {
     if current.len() == n {
         T[] combination = current.clone();
-        results.push((T)combination);
+        results.push(#cast(T, combination));
         return;
     }
 
@@ -251,7 +250,7 @@ fn Array::extend<T>(T[] self, T[] other) {
 
 fn Array::remove<T>(T[] self, i32 index) -> T {
     if index < 0 || index >= self.size {
-        return (T)nil;
+        return #cast(T, nil);
     }
 
     T removedElement = self[index];
@@ -297,7 +296,7 @@ fn Array::map<T, U>(U[] self, fn *mapping) -> T[] {
     let new_self = Array::with_capacity<T>(self.len());
 
     for let i = 0; i < self.len(); i += 1 {
-        new_self.push((T)mapping(self[i], i, new_self));
+        new_self.push(#cast(T, mapping(self[i], i, new_self)));
     }
 
     return new_self;
@@ -305,7 +304,7 @@ fn Array::map<T, U>(U[] self, fn *mapping) -> T[] {
 
 fn Array::every<T>(T[] self, fn *cb) {
     for x in self {
-        if !(bool)cb(x) {
+        if !#cast(bool, cb(x)) {
             return false;
         }
     }
@@ -315,7 +314,7 @@ fn Array::every<T>(T[] self, fn *cb) {
 
 fn Array::any<T>(T[] self, fn *cb) {
     for x in self {
-        if (bool)cb(x) {
+        if #cast(bool, cb(x)) {
             return true;
         }
     }
@@ -325,7 +324,7 @@ fn Array::any<T>(T[] self, fn *cb) {
 
 fn Array::find<T>(T[] self, fn *cb, void *arg) -> T {
     for let i = 0; i < self.len(); i += 1 {
-        if (bool)cb(self[i], arg) {
+        if #cast(bool, cb(self[i], arg)) {
             return self[i];
         }
     }
@@ -375,7 +374,7 @@ fn Array::product<T>(T[] self) {
 
 fn Array::first<T>(T[] self) -> T {
     if self.len() < 1 {
-        return (T)nil;
+        return #cast(T, nil);
     }
 
     return self[0];
@@ -383,15 +382,15 @@ fn Array::first<T>(T[] self) -> T {
 
 fn Array::last<T>(T[] self) -> T {
     if self.len() < 1 {
-        return (T)nil;
+        return #cast(T, nil);
     }
 
-    return (T)(self[self.len() - 1]);
+    return #cast(T, self[self.len() - 1]);
 }
 
 fn Array::max<T>(T[] self) -> T {
     if self.len() == 0 {
-        return (T)nil;
+        return #cast(T, nil);
     }
 
     T max = self[0];
@@ -407,7 +406,7 @@ fn Array::max<T>(T[] self) -> T {
 
 fn Array::min<T>(T[] self) -> T {
     if self.len() == 0 {
-        return (T)nil;
+        return #cast(T, nil);
     }
 
     T min = self[0];

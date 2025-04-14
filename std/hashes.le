@@ -9,11 +9,11 @@ global pub, external;
 }
 
 !external fn __ptr__::__hash__<T>(T *self, i32 capacity) {
-    return hash::mod((i64)self, capacity);
+    return hash::mod(#cast(i64, self), capacity);
 }
 
 !external fn __clean_ptr__::__hash__<T>(T *self, i32 capacity) {
-    return hash::mod((i64)self, capacity);
+    return hash::mod(#cast(i64, self), capacity);
 }
 
 fn string::__hash__(string self, i32 capacity) -> i64;

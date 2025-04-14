@@ -84,7 +84,7 @@ fn main() {
 
     let j = string::format(
         "abc {}, {}, escaped {{}, mrow {} and a char but i32: {}",
-        1, true, ":3", (i32)'a'
+        1, true, ":3", #cast(i32, 'a')
     );
 
     $assert(

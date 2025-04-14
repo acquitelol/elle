@@ -16,5 +16,5 @@ fn add(i32 a) {
 fn main() {
     let res = add(13);
     fn *curried = res.func;
-    $dbg((i32)curried(res.env, 26));
+    $dbg(#cast(i32, curried(res.env, 26)));
 }
