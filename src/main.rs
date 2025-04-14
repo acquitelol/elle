@@ -9,13 +9,16 @@ use std::{cell::RefCell, fs};
 
 mod compiler;
 mod lexer;
+mod lsp;
 mod misc;
 mod parser;
 
 use compiler::compiler::Compiler;
 use lexer::enums::{Location, TokenKind, ValueKind};
+use lsp::lsp::Backend;
 use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex_and_parse};
 use parser::enums::{Argument, AstNode, Primitive};
+use tower_lsp::{LspService, Server};
 
 use crate::compiler::qbe::r#type::Type;
 use crate::parser::enums::{
@@ -74,7 +77,8 @@ impl Warnings {
     }
 }
 
-fn main() -> ExitCode {
+#[tokio::main]
+async fn main() -> ExitCode {
     let mut args = env::args().peekable();
     let program = args.next().expect("program");
 
@@ -121,6 +125,7 @@ fn main() -> ExitCode {
     let mut no_gc = false; // no gc
     let mut no_fmt = false; // no primitive fmt methods
     let mut pedantic = false; // extra checks in type conversions
+    let mut lsp = false; // LSP support for IDEs
     let mut object_files: Vec<String> = vec![];
 
     let mut linker_flags = vec![];
@@ -138,6 +143,8 @@ fn main() -> ExitCode {
             "--ssa" | "--emit-ssa" | "--emit-qbe" => emit_qbe = true,
             "--asm" | "--emit-s" | "--emit-asm" => emit_asm = true,
             "--ast" | "--emit-ast" | "--emit-tree" => ast = true,
+            "--lsp" | "--lsp-server" => lsp = true,
+            "-x" | "--diagnostic-only" => unsafe { RAW_ERRORS = Some(true) },
             "-p" | "--pedantic" => pedantic = true,
             "-o" => output_path = args.next(),
             "-h" | "--help" => {
@@ -216,6 +223,14 @@ fn main() -> ExitCode {
                 )))
             }
         }
+    }
+
+    if lsp {
+        dbg!("Starting LSP...");
+        let stdin = tokio::io::stdin();
+        let stdout = tokio::io::stdout();
+        let (service, socket) = LspService::new(|client| Backend::new(client));
+        Server::new(stdin, stdout, socket).serve(service).await;
     }
 
     if emit_qbe && emit_asm {
@@ -767,7 +782,10 @@ fn main() -> ExitCode {
     let leaked: &'static mut str = Box::leak(build_path.into_boxed_str());
     unsafe { BUILD_PATH = Some(leaked) };
 
-    fs::create_dir_all(get_BUILD_PATH!()).expect("Failed to create ./.build.");
+    if !get_RAW_ERRORS!() {
+        fs::create_dir_all(get_BUILD_PATH!()).expect("Failed to create ./.build.");
+    }
+
     let path_to_qbe_dist = format!("{}/target.ssa", get_BUILD_PATH!());
 
     Compiler::compile(
@@ -785,6 +803,10 @@ fn main() -> ExitCode {
             "✦ Compilation took {}\n",
             elapsed_with_color!(now.unwrap().elapsed())
         );
+    }
+
+    if get_RAW_ERRORS!() {
+        return ExitCode::SUCCESS;
     }
 
     let parsed_output_path = if let Some(output_path) = output_path {

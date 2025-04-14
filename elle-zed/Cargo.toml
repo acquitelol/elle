@@ -1,0 +1,12 @@
+[package]
+name = "elle"
+version = "0.0.1"
+edition = "2021"
+authors = ["Rosie <acquitefx@gmail.com>"]
+
+[lib]
+path = "src/elle.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+zed_extension_api = "0.1.0"

@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use crate::compiler::qbe::r#type::Type;
 use crate::misc::colors::*;
+use crate::misc::constants::{get_RAW_ERRORS, RAW_ERRORS};
 use crate::{elle_error, ISSUE_URL};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -539,18 +540,54 @@ impl Location {
     }
 
     pub fn warning(&self, message: impl Into<String>) -> String {
+        if get_RAW_ERRORS!() {
+            return format!(
+                "warning\n{}\n{}\n{}",
+                self.display_plain(),
+                self.length,
+                message.into()
+            );
+        }
+
         self.display_pretty(message, true)
     }
 
     pub fn basic_warning(&self, message: impl Into<String>) -> String {
+        if get_RAW_ERRORS!() {
+            return format!(
+                "warning\n{}\n{}\n{}",
+                self.display_plain(),
+                self.length,
+                message.into()
+            );
+        }
+
         self.display_pretty_no_lines(message, true)
     }
 
     pub fn error(&self, message: impl Into<String>) -> String {
+        if get_RAW_ERRORS!() {
+            return format!(
+                "error\n{}\n{}\n{}",
+                self.display_plain(),
+                self.length,
+                message.into()
+            );
+        }
+
         self.display_pretty(message, false)
     }
 
     pub fn basic_error(&self, message: impl Into<String>) -> String {
+        if get_RAW_ERRORS!() {
+            return format!(
+                "error\n{}\n{}\n{}",
+                self.display_plain(),
+                self.length,
+                message.into()
+            );
+        }
+
         self.display_pretty_no_lines(message, false)
     }
 

@@ -6,6 +6,7 @@ global!(RUNTIME_PATH: &'static str = ".local/lib", get_RUNTIME_PATH);
 global!(BUILD_PATH: &'static str = "./.build/", get_BUILD_PATH);
 global!(MAIN_ID: &'static str = "__internal.elle.__main__", get_MAIN_ID);
 global!(POINTER_ID: &'static str = "__ptr__", get_POINTER_ID);
+global!(RAW_ERRORS: bool = false, get_RAW_ERRORS);
 
 // URLS
 pub static ISSUE_URL: &'static str = "https://github.com/acquitelol/elle/issues/new";

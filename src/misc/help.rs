@@ -1,10 +1,25 @@
 use crate::{misc::colors::*, DIVIDER_SIZE};
 
 pub fn print_help(program: String) {
-    println!("{}Welcome to the Elle compiler! (˶ᵔ ᵕ ᵔ˶){}", get_GREEN!(), get_RESET!());
+    println!(
+        "{}Welcome to the Elle compiler! (˶ᵔ ᵕ ᵔ˶){}",
+        get_GREEN!(),
+        get_RESET!()
+    );
     println!("{}", "―".repeat(DIVIDER_SIZE));
-    println!("{}Usage: {program} [..options] <entry.le> [<file1.o>, <file2.o>...]{}", get_GREEN!(), get_RESET!());
-    println!("{}Version: {} ({} built on {}){}", get_GREEN!(), env!("CARGO_PKG_VERSION"), env!("GIT_HASH"), env!("BUILD_DATE"), get_RESET!());
+    println!(
+        "{}Usage: {program} [..options] <entry.le> [<file1.o>, <file2.o>...]{}",
+        get_GREEN!(),
+        get_RESET!()
+    );
+    println!(
+        "{}Version: {} ({} built on {}){}",
+        get_GREEN!(),
+        env!("CARGO_PKG_VERSION"),
+        env!("GIT_HASH"),
+        env!("BUILD_DATE"),
+        get_RESET!()
+    );
 
     let help_message_options = vec![
         (
@@ -21,12 +36,12 @@ pub fn print_help(program: String) {
                 ),
                 (
                     "-v, --version",
-                    "Prints the current ellec version (along with extra information)"
+                    "Prints the current ellec version (along with extra information)",
                 ),
                 (
                     "-p, --pedantic",
-                    "Enables extra validations/checks when performing type conversions"
-                )
+                    "Enables extra validations/checks when performing type conversions",
+                ),
             ],
         ),
         (
@@ -47,7 +62,7 @@ pub fn print_help(program: String) {
                 (
                     "--ast, --emit-ast, --emit-tree",
                     "Prints the AST representation of the program to standard output",
-                )
+                ),
             ],
         ),
         (
@@ -72,8 +87,8 @@ pub fn print_help(program: String) {
                 ),
                 (
                     "-Wallocator-methods-missing",
-                    "Setting an allocator which is missing some of the possible methods"
-                )
+                    "Setting an allocator which is missing some of the possible methods",
+                ),
             ],
         ),
         (
@@ -101,13 +116,13 @@ pub fn print_help(program: String) {
                 ),
                 (
                     "--noclr, --no-ansi",
-                    "Disables ANSI color output (alternative to NO_COLOR=1)"
+                    "Disables ANSI color output (alternative to NO_COLOR=1)",
                 ),
                 (
                     "--cpfmt, --clean-ptr-fmt",
-                    "Cleans up formatting for pointer types when printing to the console."
-                )
-            ]
+                    "Cleans up formatting for pointer types when printing to the console.",
+                ),
+            ],
         ),
         (
             "Compilation Flags",
@@ -115,6 +130,14 @@ pub fn print_help(program: String) {
                 (
                     "-c, --compile-only",
                     "Compiles but does not link anything. Produces an object file.",
+                ),
+                (
+                    "--lsp, --lsp-server",
+                    "Starts an LSP server instead of compiling. Usefol for IDEs",
+                ),
+                (
+                    "-x, --diagnostic-only",
+                    "Only prints diagnostics in an easily-parsable format.",
                 ),
                 (
                     "-z, --link-flag <flag>",
@@ -140,13 +163,11 @@ pub fn print_help(program: String) {
         ),
         (
             "Environment Variables",
-            vec![
-                (
-                    "NO_COLOR",
-                    "Disables colored output, see https://no-color.org/ (same as --noclr)"
-                )
-            ]
-        )
+            vec![(
+                "NO_COLOR",
+                "Disables colored output, see https://no-color.org/ (same as --noclr)",
+            )],
+        ),
     ];
 
     print_options(help_message_options);

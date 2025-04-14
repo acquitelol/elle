@@ -3,7 +3,10 @@ use std::{cell::RefCell, collections::HashMap, fs::File, io::Write, rc::Rc};
 use crate::{
     elle_error, get_MAIN_ID, hashmap,
     lexer::enums::Location,
-    misc::colors::*,
+    misc::{
+        colors::*,
+        constants::{get_RAW_ERRORS, RAW_ERRORS},
+    },
     parser::{
         enums::{AstNode, ConstantSource, FunctionSource, Primitive, Return},
         parser::StructPool,
@@ -417,10 +420,15 @@ impl Compiler {
                 .retain(|f| !string_module_methods.contains(&f.name))
         }
 
-        let mut file = File::create(output_path).expect("Failed to create the file.");
-        file.write_all(module_ref.borrow().to_string().as_bytes())
-            .expect(&format!("{RED}Failed to write to file.", RED = get_RED!()));
+        // assuming RAW_ERRORS is lsp-mode
+        // maybe a better name is `--lsp-mode`
+        // or `--diagnostics-only`?
+        if !get_RAW_ERRORS!() {
+            let mut file = File::create(output_path).expect("Failed to create the file.");
+            file.write_all(module_ref.borrow().to_string().as_bytes())
+                .expect(&format!("{RED}Failed to write to file.", RED = get_RED!()));
 
-        file.flush().expect("Failed to flush file");
+            file.flush().expect("Failed to flush file");
+        }
     }
 }

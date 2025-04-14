@@ -111,6 +111,9 @@
 (struct_field (identifier) @property)
 (struct_field_initializer (identifier) @property)
 
+; Struct literals
+(struct_literal name: (identifier) @type)
+
 ; Member access
 (member_expression property: (identifier) @property)
 (yield_expression property: "yield" @property)
