@@ -112,6 +112,9 @@ fn HashMap::with_entries<T, U>(ElleMeta meta, T first_key, U first_value, ...arg
     return map;
 }
 
+external fn HashMap::with_entries<T, U>(ElleMeta meta, T first_key, U first_value, ...)
+    @alias(HashMap::from_entries) -> HashMap<T, U> *;
+
 fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
     if self.size >= self.capacity / 2 {
         self.resize(self.capacity * 2);
@@ -233,7 +236,34 @@ fn HashMap::keys<T, U>(HashMap<T, U> *self) -> T[] {
 
     for i32 i = 0; i < self.capacity; i += 1 {
         if self.table[i].full {
-            array.push((T)self.table[i].key);
+            array.push(#cast(T, self.table[i].key));
+        }
+    }
+
+    return array;
+}
+
+fn HashMap::values<T, U>(HashMap<T, U> *self) -> U[] {
+    let array = Array::with_capacity<U>(self.size);
+
+    for i32 i = 0; i < self.capacity; i += 1 {
+        if self.table[i].full {
+            array.push(#cast(U, self.table[i].value));
+        }
+    }
+
+    return array;
+}
+
+fn HashMap::entries<T, U>(HashMap<T, U> *self) {
+    let array = Array::with_capacity<(T, U)>(self.size);
+
+    for i32 i = 0; i < self.capacity; i += 1 {
+        if self.table[i].full {
+            array.push($(
+                #cast(T, self.table[i].key),
+                #cast(U, self.table[i].value)
+            ));
         }
     }
 
