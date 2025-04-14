@@ -108,6 +108,7 @@ pub enum TokenKind {
     Free,
     SetAllocator,
     ResetAllocator,
+    Cast,
 }
 
 impl TokenKind {
@@ -539,6 +540,10 @@ impl Location {
 
     pub fn warning(&self, message: impl Into<String>) -> String {
         self.display_pretty(message, true)
+    }
+
+    pub fn basic_warning(&self, message: impl Into<String>) -> String {
+        self.display_pretty_no_lines(message, true)
     }
 
     pub fn error(&self, message: impl Into<String>) -> String {

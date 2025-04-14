@@ -57,7 +57,7 @@ impl Codegen<'_> for SetAllocator {
                         if gen.warnings.has_warning(Warning::AllocatorMethodsMissing) {
                             println!(
                                 "{}",
-                                self.location.warning(format!(
+                                self.location.basic_warning(format!(
                                     "The allocator '{GREEN}{}{RESET}' has no method named '{GREEN}{}{RESET}'.\nIt will be set to a function which returns {RED}nil{RESET} instead.",
                                     allocator_name,
                                     method_name.replace(".", "::"),
