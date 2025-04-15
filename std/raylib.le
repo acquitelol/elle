@@ -907,7 +907,7 @@ fn EndShaderMode()                                       @alias(rl::end_shader_m
 fn BeginBlendMode(i32 mode)                              @alias(rl::begin_blend_mode);                              // Begin blending mode (alpha, additive, multiplied, subtract, custom)
 fn EndBlendMode()                                        @alias(rl::end_blend_mode);                                // End blending mode (reset to default: alpha blending)
 fn BeginScissorMode(i32 x, i32 y, i32 width, i32 height) @alias(rl::begin_scissor_mode);                            // Begin scissor mode (define screen area for following drawing)
-fn EndScissorMode(void)                                  @alias(rl::end_scissor_mode);                              // End scissor mode
+fn EndScissorMode()                                      @alias(rl::end_scissor_mode);                              // End scissor mode
 fn BeginVrStereoMode(VrStereoConfig config)              @alias(rl::begin_vr_stereo_mode);                          // Begin stereo rendering (requires VR simulator)
 fn EndVrStereoMode()                                     @alias(rl::end_vr_stereo_mode);                            // End stereo rendering (requires VR simulator)
 

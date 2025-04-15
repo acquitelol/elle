@@ -25,7 +25,7 @@ const i64 __internal_EOF = -1;
     }
 }
 
-!pub fn __err(i64 args, ElleMeta meta, bool newline) {
+!pub fn __err(void *args, ElleMeta meta, bool newline) {
     let stderr = libc::fdopen(2, "w");
     let fmt = "\x1b[31m[ERROR]: %s\x1b[0m";
     let error = "";

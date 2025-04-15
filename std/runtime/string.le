@@ -1,5 +1,6 @@
 use std/runtime/collections/array;
 use std/runtime/libc/io;
+use std/runtime/libc/fd;
 use std/libc/string;
 use std/libc/mem;
 global pub;
