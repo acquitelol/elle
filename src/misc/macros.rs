@@ -175,10 +175,17 @@ macro_rules! unknown_field {
             let contains_name = arg.contains($name.as_str());
             let distance = levenshtein::levenshtein($name.as_str(), arg.clone().as_str());
 
-            if contains_name && (distance <= lowest_distance || similar_name.is_none()) {
+            if contains_name
+                && (distance <= lowest_distance || similar_name.is_none())
+                && distance <= 3
+            {
                 lowest_distance = distance;
                 similar_name = Some(arg.clone());
-            } else if !contains_name && distance < lowest_distance && similar_name.is_none() {
+            } else if !contains_name
+                && distance < lowest_distance
+                && similar_name.is_none()
+                && distance <= 3
+            {
                 lowest_distance = distance;
                 similar_name = Some(arg.clone());
             }
@@ -208,7 +215,7 @@ macro_rules! unknown_function {
         }) {
             let distance = levenshtein::levenshtein($name.as_str(), func.name.clone().as_str());
 
-            if distance <= lowest_distance {
+            if distance <= lowest_distance && distance <= 3 {
                 lowest_distance = distance;
                 similar_name = Some(func.name.clone());
             }
