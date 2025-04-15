@@ -17,7 +17,7 @@ impl Backend {
     pub async fn try_report_diagnostics(&self, uri: &Url) {
         if let Some(path) = uri.to_file_path().ok() {
             if let Ok(output) = get_file_output(&path).await {
-                let diagnostics = get_diagnostics(&output);
+                let diagnostics = get_diagnostics(&path, &output);
                 dbg!(&diagnostics);
 
                 self.client
