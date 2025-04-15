@@ -81,7 +81,7 @@ pub fn get_diagnostic(primary_file: &PathBuf, output: &str) -> Option<Diagnostic
 
     Some(Diagnostic {
         range,
-        message: message.trim().to_string(),
+        message: message.trim().replace("\n", "\n\n").to_string(),
         severity,
         ..Default::default()
     })
