@@ -352,15 +352,6 @@ impl Parser {
         }
     }
 
-    pub fn advance_opt(&mut self) -> Option<()> {
-        if self.is_eof() {
-            None
-        } else {
-            self.position += 1;
-            Some(())
-        }
-    }
-
     pub fn is_eof(&mut self) -> bool {
         self.position >= self.tokens.len() - 1
     }

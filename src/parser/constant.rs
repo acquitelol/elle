@@ -1,9 +1,6 @@
 use std::{cell::RefCell, ops::Deref, rc::Rc};
 
-use crate::{
-    elle_error,
-    lexer::enums::{Location, Token, TokenKind},
-};
+use crate::lexer::enums::{Location, Token, TokenKind};
 
 use super::{
     enums::{AstNode, ConstantSource, Conversion, Primitive},
@@ -20,29 +17,51 @@ impl<'a> Constant<'a> {
         Constant { parser }
     }
 
-    fn yield_tokens_with_delimiters(&mut self, delimiters: Vec<TokenKind>) -> Vec<Token> {
+    fn yield_tokens_wrapped_with_semi(&mut self) -> Vec<Token> {
+        let mut paren_nesting = 0;
+        let mut block_nesting = 0;
+        let mut curly_nesting = 0;
         let mut tokens = vec![];
 
-        if delimiters.contains(&self.parser.current_token().kind) {
-            elle_error!(self.parser.current_token().location.error(format!(
-                "Expected expression but got {:?}",
-                self.parser.current_token().kind
-            )))
-        }
-
-        loop {
-            tokens.push(self.parser.current_token());
-            let res = self.parser.advance_opt();
-
-            if delimiters.contains(&self.parser.current_token().kind) {
-                break;
+        while !self.parser.is_eof() {
+            if self.parser.current_token().kind == TokenKind::LeftParenthesis {
+                paren_nesting += 1;
             }
 
-            if self.parser.is_eof() {
-                if res.is_some() {
-                    tokens.push(self.parser.current_token());
-                }
+            if self.parser.current_token().kind == TokenKind::LeftBlockBrace {
+                block_nesting += 1;
+            }
 
+            if self.parser.current_token().kind == TokenKind::LeftCurlyBrace {
+                curly_nesting += 1;
+            }
+
+            tokens.push(self.parser.current_token());
+            self.parser.advance();
+
+            if self.parser.current_token().kind == TokenKind::RightParenthesis {
+                if paren_nesting > 0 {
+                    paren_nesting -= 1;
+                }
+            }
+
+            if self.parser.current_token().kind == TokenKind::RightBlockBrace {
+                if block_nesting > 0 {
+                    block_nesting -= 1;
+                }
+            }
+
+            if self.parser.current_token().kind == TokenKind::RightCurlyBrace {
+                if curly_nesting > 0 {
+                    curly_nesting -= 1;
+                }
+            }
+
+            if self.parser.current_token().kind == TokenKind::Semicolon
+                && paren_nesting == 0
+                && block_nesting == 0
+                && curly_nesting == 0
+            {
                 break;
             }
         }
@@ -59,11 +78,7 @@ impl<'a> Constant<'a> {
         self.parser.advance();
 
         if !should_parse {
-            while self.parser.current_token().kind != TokenKind::Semicolon && !self.parser.is_eof()
-            {
-                self.parser.advance();
-            }
-
+            self.yield_tokens_wrapped_with_semi();
             self.parser.expect_tokens(vec![TokenKind::Semicolon]);
             self.parser.advance();
 
@@ -102,7 +117,7 @@ impl<'a> Constant<'a> {
         self.parser.advance();
 
         let mut value_location = self.parser.current_token().location.deref().clone();
-        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
+        let tokens = self.yield_tokens_wrapped_with_semi();
         value_location.end = self.parser.current_token().location.end.clone();
         self.parser.advance();
 
