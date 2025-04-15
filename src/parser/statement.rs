@@ -2550,6 +2550,15 @@ impl<'a> Statement<'a> {
             }
         }
 
+        location.end = self.current_token().location.end.clone();
+
+        let mut expression = AstNode::FieldAccess(FieldAccess {
+            left: left.clone(),
+            right: right.clone(),
+            value: value.clone(),
+            location: Rc::new(location.clone()),
+        });
+
         match self.current_token().kind {
             TokenKind::Equal => {
                 self.advance();
@@ -2560,63 +2569,48 @@ impl<'a> Statement<'a> {
                         .parse()
                         .0,
                 ));
+
+                expression = AstNode::FieldAccess(FieldAccess {
+                    left,
+                    right,
+                    value,
+                    location: Rc::new(location),
+                });
             }
             // foo.a.meow() = meow(foo.a)
             TokenKind::LeftParenthesis => {
-                return self.parse_function(
+                expression = self.parse_function(
                     Some((location.clone(), name)),
                     Some(vec![(Rc::new(location.clone()), *left)]),
                     if !tmp.is_empty() { Some(tmp) } else { None },
                     Some(position),
                     true,
-                )
+                );
             }
             TokenKind::LeftBlockBrace => {
-                return self.parse_offset_store(Some((
-                    position,
-                    AstNode::FieldAccess(FieldAccess {
-                        left: left.clone(),
-                        right: right.clone(),
-                        value,
-                        location: Rc::new(location.clone()),
-                    }),
-                    location,
-                )))
+                expression = self.parse_offset_store(Some((position, expression, location)));
             }
             other if other.is_declarative() => {
-                value = Some(Box::new(self.parse_declarative_node(AstNode::FieldAccess(
-                    FieldAccess {
-                        left: left.clone(),
-                        right: right.clone(),
-                        value: None,
-                        location: Rc::new(location.clone()),
-                    },
-                ))));
+                value = Some(Box::new(self.parse_declarative_node(expression)));
+
+                expression = AstNode::FieldAccess(FieldAccess {
+                    left,
+                    right,
+                    value,
+                    location: Rc::new(location),
+                });
             }
             other if other.is_ternary_start() => {
-                return self.parse_ternary_node(
-                    AstNode::FieldAccess(FieldAccess {
-                        left,
-                        right,
-                        value,
-                        location: Rc::new(location.clone()),
-                    }),
-                    location,
-                )
+                expression = self.parse_ternary_node(expression, location);
             }
             other if other.is_arithmetic() => {
                 self.position = position;
-                return self.parse_arithmetic();
+                expression = self.parse_arithmetic();
             }
             _ => {}
         }
 
-        AstNode::FieldAccess(FieldAccess {
-            left,
-            right,
-            value,
-            location: Rc::new(location),
-        })
+        expression
     }
 
     fn parse_ternary_node(&mut self, condition: AstNode, mut location: Location) -> AstNode {
