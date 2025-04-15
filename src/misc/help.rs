@@ -1,4 +1,10 @@
-use crate::{misc::colors::*, DIVIDER_SIZE};
+use crate::{
+    misc::{
+        colors::*,
+        constants::{get_RUNTIME_PATH, get_STD_LIB_PATH, RUNTIME_PATH, STD_LIB_PATH},
+    },
+    DIVIDER_SIZE,
+};
 
 pub fn print_help(program: String) {
     println!(
@@ -19,6 +25,16 @@ pub fn print_help(program: String) {
         env!("GIT_HASH"),
         env!("BUILD_DATE"),
         get_RESET!()
+    );
+
+    let default_std_path = format!(
+        "Pass a custom std path, the default is \"~/{}\"",
+        get_STD_LIB_PATH!()
+    );
+
+    let default_runtime_path = format!(
+        "Pass a custom runtime path, the default is \"~/{}\"",
+        get_RUNTIME_PATH!()
     );
 
     let help_message_options = vec![
@@ -151,14 +167,8 @@ pub fn print_help(program: String) {
                     "-Q, --qbe-path <path>",
                     "Allows you to pass a custom QBE path, the default is \"qbe\"",
                 ),
-                (
-                    "-S, --std-path <path>",
-                    "Pass a custom std path, the default is \"/usr/local/include/elle\"",
-                ),
-                (
-                    "-R, --runtime-path <path>",
-                    "Pass a custom runtime path, the default is \"/usr/local/lib\"",
-                ),
+                ("-S, --std-path <path>", &default_std_path),
+                ("-R, --runtime-path <path>", &default_runtime_path),
             ],
         ),
         (
