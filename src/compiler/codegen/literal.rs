@@ -78,7 +78,11 @@ impl Codegen<'_> for Literal {
                         _ => Type::Word,
                     };
 
-                    let mut final_ty = if ctx.ty.clone().is_some_and(|ty| !ty.is_pointer()) {
+                    let mut final_ty = if ctx
+                        .ty
+                        .clone()
+                        .is_some_and(|ty| !ty.is_pointer() && ty.is_strictly_number())
+                    {
                         ctx.ty.clone().unwrap_or(num_ty)
                     } else {
                         num_ty

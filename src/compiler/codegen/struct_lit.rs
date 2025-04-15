@@ -136,21 +136,19 @@ impl Codegen<'_> for StructLiteral {
                 ));
 
             if let Some(member_ty) = member_ty {
-                if ty.weight() > member_ty.weight() || ty.weight() < member_ty.weight() {
-                    let (new_ty, new_val) = convert_to_type(
-                        gen,
-                        ctx.func,
-                        ty.clone(),
-                        member_ty.clone(),
-                        val,
-                        &self.location,
-                        &self.location,
-                        false,
-                    );
+                let (new_ty, new_val) = convert_to_type(
+                    gen,
+                    ctx.func,
+                    ty.clone(),
+                    member_ty.clone(),
+                    val,
+                    &self.location,
+                    &self.location,
+                    false,
+                );
 
-                    ty = new_ty;
-                    val = new_val
-                }
+                ty = new_ty;
+                val = new_val;
             }
 
             let offset_tmp = gen.new_temporary(Some("offset"), true);

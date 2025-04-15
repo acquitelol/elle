@@ -1,7 +1,7 @@
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        lib::field_utils::process_field_access,
+        lib::{convert::convert_to_type, field_utils::process_field_access},
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
     elle_error,
@@ -28,7 +28,7 @@ impl Codegen<'_> for FieldAccess {
         );
 
         if let Some(value) = self.value {
-            let (_, compiled) = value
+            let (ty, compiled) = value
                 .compile(
                     gen,
                     &CodegenContext {
@@ -42,13 +42,24 @@ impl Codegen<'_> for FieldAccess {
                     ))
                 });
 
-            ctx.func.borrow_mut().add_instruction(Instruction::Store(
-                field_ty.clone(),
-                offset_tmp.clone(),
+            let (final_ty, final_val) = convert_to_type(
+                gen,
+                ctx.func,
+                ty,
+                field_ty,
                 compiled,
+                &self.location,
+                &self.location,
+                false,
+            );
+
+            ctx.func.borrow_mut().add_instruction(Instruction::Store(
+                final_ty.clone(),
+                offset_tmp.clone(),
+                final_val,
             ));
 
-            return Some((field_ty, offset_tmp));
+            return Some((final_ty, offset_tmp));
         }
 
         let temp = gen.new_temporary(Some("field"), true);
