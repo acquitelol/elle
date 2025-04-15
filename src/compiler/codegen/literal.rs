@@ -15,12 +15,35 @@ impl Codegen<'_> for Literal {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         match self.kind {
             TokenKind::Identifier => match self.value {
-                ValueKind::String(name) => gen.get_variable_lazy(
-                    &name,
-                    Some(ctx.func),
-                    Some(ctx.module),
-                    self.location.clone(),
-                ),
+                ValueKind::String(name) => {
+                    let res = gen.get_variable_lazy(
+                        &name,
+                        Some(ctx.func),
+                        Some(ctx.module),
+                        self.location.clone(),
+                    );
+
+                    if self.tagged {
+                        let is_constant = ctx
+                            .module
+                            .borrow()
+                            .functions
+                            .iter()
+                            .find(|function| function.name == name)
+                            .map(|function| function.constant)
+                            .unwrap_or(false);
+
+                        elle_error!(format!(
+                            "hover\n{}\n{}\n{} {name}: {};",
+                            self.location.display_plain(false),
+                            self.location.display_plain(true),
+                            if is_constant { "const" } else { "let" },
+                            res.unwrap().0.display()
+                        ));
+                    }
+
+                    res
+                }
                 _ => None,
             },
             TokenKind::Break => {

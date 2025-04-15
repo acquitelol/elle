@@ -1,7 +1,10 @@
 use anyhow::Result;
 use tower_lsp::{jsonrpc::Error, lsp_types::*, Client, LanguageServer};
 
-use crate::lsp::{get_diagnostics::get_diagnostics, get_file_output::get_file_output};
+use crate::lsp::{
+    get_diagnostics::get_diagnostics, get_file_output::get_file_output,
+    get_hover_info::get_hover_info,
+};
 
 pub struct Backend {
     client: Client,
@@ -16,7 +19,7 @@ impl Backend {
 impl Backend {
     pub async fn try_report_diagnostics(&self, uri: &Url) {
         if let Some(path) = uri.to_file_path().ok() {
-            if let Ok(output) = get_file_output(&path).await {
+            if let Ok(output) = get_file_output(&path, None).await {
                 let diagnostics = get_diagnostics(&path, &output);
                 dbg!(&diagnostics);
 
@@ -25,6 +28,21 @@ impl Backend {
                     .await;
             }
         }
+    }
+
+    pub async fn try_report_hover(&self, uri: &Url, pos: Position) -> Option<Hover> {
+        let path = uri.to_file_path().ok()?;
+        let output = get_file_output(
+            &path,
+            Some(vec!["-i", &format!("{}:{}", pos.line, pos.character)]),
+        )
+        .await
+        .ok()?;
+
+        let hover_info = get_hover_info(&output);
+        dbg!(&hover_info);
+
+        hover_info
     }
 }
 
@@ -67,11 +85,12 @@ impl LanguageServer for Backend {
             params.text_document_position_params.position
         );
 
-        Ok(None)
-        // Ok(Some(Hover {
-        //     contents: HoverContents::Scalar(MarkedString::String("hello world".into())),
-        //     range: None,
-        // }))
+        Ok(self
+            .try_report_hover(
+                &params.text_document_position_params.text_document.uri,
+                params.text_document_position_params.position,
+            )
+            .await)
     }
 
     async fn shutdown(&self) -> Result<(), Error> {
