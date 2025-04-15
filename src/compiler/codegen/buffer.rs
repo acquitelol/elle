@@ -4,6 +4,7 @@ use crate::{
         lib::convert::convert_to_type,
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
+    elle_error,
     lexer::enums::{TokenKind, ValueKind},
     parser::enums::{AstNode, BinaryOperation, Buffer, Literal},
 };
@@ -32,12 +33,12 @@ impl Codegen<'_> for Buffer {
             })
         };
 
-        let (ty, val) = node
-            .compile(gen, &ctx.to_nnf())
-            .expect(&self.location.error(format!(
+        let (ty, val) = node.compile(gen, &ctx.to_nnf()).unwrap_or_else(|| {
+            elle_error!(self.location.error(format!(
                 "Unexpected error when trying to compile size for a buffer named '{}'",
                 self.name
-            )));
+            )))
+        });
 
         let tmp = gen.new_variable(&buf_ty, &self.name, Some(ctx.func), true, false);
 

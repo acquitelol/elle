@@ -651,14 +651,12 @@ impl Lexer {
         }
 
         if scientific {
-            let base_string =
-                literal
-                    .split("e")
-                    .next()
-                    .expect(&self.get_location().error(format!(
-                        "Failed to get the base string of {} for scientific literal",
-                        literal
-                    )));
+            let base_string = literal.split("e").next().unwrap_or_else(|| {
+                elle_error!(self.get_location(start_row, start_col).error(format!(
+                    "Failed to get the base string of {} for scientific literal",
+                    literal
+                )))
+            });
 
             let base = if float {
                 base_string
@@ -671,27 +669,26 @@ impl Lexer {
                     .map(ParseResult::Int)
                     .map_err(|e| e.to_string())
             }
-            .expect(&self.get_location().error(format!(
-                "Failed to parse the base {} of scientific literal into a number",
-                base_string
-            )));
+            .unwrap_or_else(|err| {
+                elle_error!(self.get_location(start_row, start_col).error(format!(
+                    "Failed to parse the base {} of scientific literal into a number\n{err}",
+                    base_string
+                )))
+            });
 
-            let exponent_base =
-                literal
-                    .split("e")
-                    .skip(1)
-                    .next()
-                    .expect(&self.get_location().error(format!(
-                        "Failed to get the base string of {} for scientific literal",
-                        literal
-                    )));
+            let exponent_base = literal.split("e").skip(1).next().unwrap_or_else(|| {
+                elle_error!(self.get_location(start_row, start_col).error(format!(
+                    "Failed to get the base string of {} for scientific literal",
+                    literal
+                )))
+            });
 
-            let exponent = exponent_base
-                .parse::<i64>()
-                .expect(&self.get_location().error(format!(
-                    "Failed to parse the exponent {} of scientific literal into an integer",
+            let exponent = exponent_base.parse::<i64>().unwrap_or_else(|err| {
+                elle_error!(self.get_location(start_row, start_col).error(format!(
+                    "Failed to parse the exponent {} of scientific literal into an integer\n{err}",
                     exponent_base
-                )));
+                )))
+            });
 
             match base {
                 ParseResult::Float(val) => {

@@ -3,16 +3,17 @@ use crate::{
         compiler::{Codegen, CodegenContext, Compiler},
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
+    elle_error,
     parser::enums::BitwiseNot,
 };
 
 impl Codegen<'_> for BitwiseNot {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let (ty, val) = self.value.compile(gen, ctx).expect(
-            &self
-                .location
-                .error("Unexpected error when trying to compile the value of a not statement"),
-        );
+        let (ty, val) = self.value.compile(gen, ctx).unwrap_or_else(|| {
+            elle_error!(self.location.error(
+                "Unexpected error when trying to compile the value of a `bitwise not` expression",
+            ))
+        });
 
         let temp = gen.new_temporary(Some("negate"), true);
 

@@ -3,6 +3,7 @@ use crate::{
         compiler::{Codegen, CodegenContext, Compiler},
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
+    elle_error,
     parser::enums::VariadicArgument,
 };
 
@@ -15,10 +16,12 @@ impl Codegen<'_> for VariadicArgument {
                 Some(ctx.module),
                 self.location.clone(),
             )
-            .expect(&self.location.error(format!(
-                "Unexpected error when trying to get a variable named '{}'",
-                self.name
-            )))
+            .unwrap_or_else(|| {
+                elle_error!(self.location.error(format!(
+                    "Unexpected error when trying to get a variable named '{}'",
+                    self.name
+                )))
+            })
             .1;
 
         let ty = self.r#type.unwrap_or(Type::Long);

@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, fmt};
 
 use super::{module::Module, r#type::Type};
-use crate::lexer::enums::Location;
+use crate::{elle_error, lexer::enums::Location};
 
 /// QBE aggregate type definition
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
@@ -26,10 +26,12 @@ impl TypeDef {
                     .types
                     .iter()
                     .find(|td| td.name == ty.get_struct_inner().unwrap())
-                    .expect(&Location::base().internal_error(format!(
-                        "Unable to find struct named '{}'",
-                        ty.get_struct_inner().unwrap(),
-                    )))
+                    .unwrap_or_else(|| {
+                        elle_error!(Location::base().internal_error(format!(
+                            "Unable to find struct named '{}'",
+                            ty.get_struct_inner().unwrap(),
+                        )))
+                    })
                     .size(module);
 
                 size += tmp_size

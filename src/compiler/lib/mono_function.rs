@@ -98,12 +98,11 @@ pub fn create_monomorphized_function(
                             is_return: false
                         }
                     )
-                    .expect(&parameter.0.error(
+                    .unwrap_or_else(|| elle_error!(parameter.0.error(
                         format!(
                             "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
                             name
-                        ))
-                    );
+                        ))));
 
                 let other = {
                     let tmp = this.arguments.get(i + *add_meta as usize);

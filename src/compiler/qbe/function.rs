@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt};
 
-use crate::lexer::enums::Location;
+use crate::{elle_error, lexer::enums::Location};
 
 use super::{
     block::Block, instruction::Instruction, linkage::Linkage, r#type::Type, statement::Statement,
@@ -38,22 +38,26 @@ impl Function {
     }
 
     pub fn last_block(&self) -> &Block {
-        self.blocks
-            .last()
-            .expect(&Location::base().internal_error("Function must have at least one block"))
+        self.blocks.last().unwrap_or_else(|| {
+            elle_error!(Location::base().internal_error("Function must have at least one block"))
+        })
     }
 
     pub fn add_instruction(&mut self, instruction: Instruction) {
         self.blocks
             .last_mut()
-            .expect(&Location::base().internal_error("Couldn't find last block!"))
+            .unwrap_or_else(|| {
+                elle_error!(Location::base().internal_error("Couldn't find last block!"))
+            })
             .add_instruction(instruction);
     }
 
     pub fn assign_instruction(&mut self, temp: &Value, r#type: &Type, instruction: Instruction) {
         self.blocks
             .last_mut()
-            .expect(&Location::base().internal_error("Couldn't find last block!"))
+            .unwrap_or_else(|| {
+                elle_error!(Location::base().internal_error("Couldn't find last block!"))
+            })
             .assign_instruction(temp, r#type, instruction);
     }
 
@@ -65,7 +69,9 @@ impl Function {
     ) {
         self.blocks
             .first_mut()
-            .expect(&Location::base().internal_error("Couldn't find last block!"))
+            .unwrap_or_else(|| {
+                elle_error!(Location::base().internal_error("Couldn't find last block!"))
+            })
             .assign_instruction_front(temp, r#type, instruction);
     }
 

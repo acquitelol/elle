@@ -45,11 +45,11 @@ pub fn handle_short_circuiting_operation(
                 is_return,
             },
         )
-        .expect(
-            &location.error(
+        .unwrap_or_else(|| {
+            elle_error!(location.error(
                 "Unexpected error when trying to parse left side of an arithmetic operation",
-            ),
-        );
+            ))
+        });
 
     func.borrow_mut().assign_instruction(
         &result_tmp,
@@ -105,21 +105,22 @@ pub fn handle_short_circuiting_operation(
 
     func.borrow_mut().add_block(right_label);
 
-    let (_, right_val) =
-        (*right)
-            .compile(
-                gen,
-                &CodegenContext {
-                    func,
-                    module,
-                    ty,
-                    value: None,
-                    is_return,
-                },
-            )
-            .expect(&location.error(
+    let (_, right_val) = (*right)
+        .compile(
+            gen,
+            &CodegenContext {
+                func,
+                module,
+                ty,
+                value: None,
+                is_return,
+            },
+        )
+        .unwrap_or_else(|| {
+            elle_error!(location.error(
                 "Unexpected error when trying to parse right side of an arithmetic operation",
-            ));
+            ))
+        });
 
     let right_tmp = gen.new_temporary(Some(&format!("{}.right", kind)), true);
 

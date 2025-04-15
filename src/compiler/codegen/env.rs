@@ -6,6 +6,7 @@ use crate::{
             r#type::Type, value::Value,
         },
     },
+    elle_error,
     parser::enums::Environment,
     ENV_ID, ENV_STRUCT_NAME,
 };
@@ -27,11 +28,11 @@ impl Codegen<'_> for Environment {
                 })
             }
 
-            let (ty, val) = value.compile(gen, ctx).expect(
-                &self
+            let (ty, val) = value.compile(gen, ctx).unwrap_or_else(|| {
+                elle_error!(&self
                     .location
-                    .error("Unexpected error when compiling value to set to environment"),
-            );
+                    .error("Unexpected error when compiling the value to assign to environment"))
+            });
 
             ctx.func.borrow_mut().add_instruction(Instruction::Store(
                 ty.clone(),

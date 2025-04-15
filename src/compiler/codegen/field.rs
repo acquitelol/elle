@@ -4,14 +4,17 @@ use crate::{
         lib::field_utils::process_field_access,
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
+    elle_error,
     parser::enums::FieldAccess,
 };
 
 impl Codegen<'_> for FieldAccess {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let (ty, left) = self.left.compile(gen, ctx).expect(&self.location.error(
-            "Unexpected error when trying to compile the left side of a struct field access",
-        ));
+        let (ty, left) = self.left.compile(gen, ctx).unwrap_or_else(|| {
+            elle_error!(self.location.error(
+                "Unexpected error when trying to compile the left side of a struct field access",
+            ))
+        });
 
         let (field_ty, offset_tmp) = process_field_access(
             gen,
@@ -33,9 +36,11 @@ impl Codegen<'_> for FieldAccess {
                         ..ctx.clone()
                     },
                 )
-                .expect(&self.location.error(
-                    "Unexpected error when trying to compile the value of a store statement",
-                ));
+                .unwrap_or_else(|| {
+                    elle_error!(self.location.error(
+                        "Unexpected error when trying to compile the value of a store statement",
+                    ))
+                });
 
             ctx.func.borrow_mut().add_instruction(Instruction::Store(
                 field_ty.clone(),

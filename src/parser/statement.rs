@@ -3472,12 +3472,12 @@ impl<'a> Statement<'a> {
                 {
                     self.parse_literal()
                 } else {
-                    let next = self.next_token().expect(
-                        &self
+                    let next = self.next_token().unwrap_or_else(|| {
+                        elle_error!(self
                             .current_token()
                             .location
-                            .error("Unexpected EOF when parsing an identifier"),
-                    );
+                            .error("Unexpected EOF when parsing an identifier"))
+                    });
 
                     if next.kind == TokenKind::LeftParenthesis {
                         self.parse_function(None, None, None, None, false)
@@ -3497,7 +3497,7 @@ impl<'a> Statement<'a> {
 
                         let tie = self
                             .next_token_seek(2)
-                            .expect(&unexpected_error(next, "EOF".into()));
+                            .unwrap_or_else(|| elle_error!(unexpected_error(next, "EOF".into())));
 
                         match tie.clone().kind {
                             TokenKind::Yield => self.parse_yield_variadic(),
@@ -3628,12 +3628,12 @@ impl<'a> Statement<'a> {
                         )
                     } else if token.kind == TokenKind::DoubleColon {
                         let ty = self.current_token().clone();
-                        let method =
-                            self.next_token_seek(2)
-                                .expect(&self.current_token().location.error(format!(
-                                    "Expected method name after '{}::'",
-                                    ty.value.get_string_inner().unwrap()
-                                )));
+                        let method = self.next_token_seek(2).unwrap_or_else(|| {
+                            elle_error!(self.current_token().location.error(format!(
+                                "Expected method name after '{}::'",
+                                ty.value.get_string_inner().unwrap()
+                            )))
+                        });
 
                         if method.kind != TokenKind::Identifier {
                             elle_error!(method.location.error(format!(

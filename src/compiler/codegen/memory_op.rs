@@ -26,14 +26,16 @@ impl Codegen<'_> for MemoryOperation {
                     ..ctx.clone()
                 },
             )
-            .expect(&self.left_location.error(format!(
-                "Unexpected error when trying to compile the left side of a {} statement",
-                if self.value.is_some() {
-                    "store"
-                } else {
-                    "load"
-                }
-            )));
+            .unwrap_or_else(|| {
+                elle_error!(self.left_location.error(format!(
+                    "Unexpected error when trying to compile the left side of a {} statement",
+                    if self.value.is_some() {
+                        "store"
+                    } else {
+                        "load"
+                    }
+                )))
+            });
 
         if !self.is_deref
             && (left_ty.is_struct()
@@ -100,31 +102,27 @@ impl Codegen<'_> for MemoryOperation {
             }
         }
 
-        let (left_ty, _) = self
-            .left
-            .clone()
-            .compile(gen, ctx)
-            .expect(&self.left_location.error(format!(
+        let (left_ty, _) = self.left.clone().compile(gen, ctx).unwrap_or_else(|| {
+            elle_error!(self.left_location.error(format!(
                 "Unexpected error when trying to compile the left side of a {} statement",
                 if self.value.is_some() {
                     "store"
                 } else {
                     "load"
                 }
-            )));
+            )))
+        });
 
-        let (right_ty, _) =
-            self.right
-                .clone()
-                .compile(gen, ctx)
-                .expect(&self.right_location.error(format!(
-                    "Unexpected error when trying to compile the right side of a {} statement",
-                    if self.value.is_some() {
-                        "store"
-                    } else {
-                        "load"
-                    }
-                )));
+        let (right_ty, _) = self.right.clone().compile(gen, ctx).unwrap_or_else(|| {
+            elle_error!(self.right_location.error(format!(
+                "Unexpected error when trying to compile the right side of a {} statement",
+                if self.value.is_some() {
+                    "store"
+                } else {
+                    "load"
+                }
+            )))
+        });
 
         if !(matches!(left_ty, Type::Pointer(_)) || matches!(right_ty, Type::Pointer(_))) {
             elle_error!(self.left_location.error(format!(
@@ -174,16 +172,16 @@ impl Codegen<'_> for MemoryOperation {
             location: self.right_location.clone(),
         });
 
-        let (_, compiled_location) =
-            node.compile(gen, &ctx.to_nnf())
-                .expect(&self.right_location.error(format!(
-                    "Unexpected error when trying to compile the offset of a {} statement",
-                    if self.value.is_some() {
-                        "store"
-                    } else {
-                        "load"
-                    }
-                )));
+        let (_, compiled_location) = node.compile(gen, &ctx.to_nnf()).unwrap_or_else(|| {
+            elle_error!(self.right_location.error(format!(
+                "Unexpected error when trying to compile the offset of a {} statement",
+                if self.value.is_some() {
+                    "store"
+                } else {
+                    "load"
+                }
+            )))
+        });
 
         if let Some(ref val) = self.value {
             let (_, compiled) = val
@@ -195,14 +193,16 @@ impl Codegen<'_> for MemoryOperation {
                         ..ctx.clone()
                     },
                 )
-                .expect(&self.value_location.error(format!(
-                    "Unexpected error when trying to compile the value of a {} statement",
-                    if self.value.is_some() {
-                        "store"
-                    } else {
-                        "load"
-                    }
-                )));
+                .unwrap_or_else(|| {
+                    elle_error!(self.value_location.error(format!(
+                        "Unexpected error when trying to compile the value of a {} statement",
+                        if self.value.is_some() {
+                            "store"
+                        } else {
+                            "load"
+                        }
+                    )))
+                });
 
             ctx.func.borrow_mut().add_instruction(Instruction::Store(
                 inner.clone(),

@@ -55,7 +55,11 @@ impl Codegen<'_> for StructLiteral {
             .clone()
             .into_iter()
             .find(|td| td.name == self.name)
-            .expect(&format!("Unable to find struct named '{}'", self.name));
+            .unwrap_or_else(|| {
+                elle_error!(self
+                    .location
+                    .error(format!("Unable to find struct named '{}'", self.name)))
+            });
 
         if !td.usable && !ctx.func.borrow_mut().imported {
             elle_error!(self.location.error(format!(
@@ -125,11 +129,11 @@ impl Codegen<'_> for StructLiteral {
                     is_return: false,
                     ..ctx.clone()
                 })
-                .expect(
-                    &self.location.error(
+                .unwrap_or_else(||
+                    elle_error!(self.location.error(
                         format!("Unexpected error when trying to compile the value of a field '{}' in struct '{}'", member_name, self.name)
-                    ),
-                );
+                    )
+                ));
 
             if let Some(member_ty) = member_ty {
                 if ty.weight() > member_ty.weight() || ty.weight() < member_ty.weight() {

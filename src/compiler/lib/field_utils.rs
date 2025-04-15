@@ -79,12 +79,14 @@ pub fn process_field_access(
                 let struct_name = ty.get_struct_inner().unwrap();
 
                 let (member_ty, offset) = member_to_offset(gen, module, &struct_name, &field)
-                    .expect(&unknown_field!(
-                        gen.struct_pool.get(&struct_name).unwrap(),
-                        ty,
-                        field,
-                        location
-                    ));
+                    .unwrap_or_else(|| {
+                        elle_error!(unknown_field!(
+                            gen.struct_pool.get(&struct_name).unwrap(),
+                            ty,
+                            field,
+                            location
+                        ))
+                    });
 
                 let offset_tmp = gen.new_temporary(Some("offset"), true);
 

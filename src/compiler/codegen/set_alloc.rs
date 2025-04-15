@@ -26,11 +26,11 @@ impl Codegen<'_> for SetAllocator {
                     ..ctx.clone()
                 },
             )
-            .expect(
-                &self
+            .unwrap_or_else(|| {
+                elle_error!(self
                     .location
-                    .error("Unexpected error when compiling allocator expresssion"),
-            );
+                    .error("Unexpected error when compiling a `set allocator` expresssion"))
+            });
 
         if !ty.is_struct() && !(ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct()) {
             elle_error!(self
@@ -115,11 +115,11 @@ impl Codegen<'_> for SetAllocator {
                 location: self.location.clone(),
             });
 
-            node.compile(gen, ctx).expect(
-                &self
+            node.compile(gen, ctx).unwrap_or_else(|| {
+                elle_error!(self
                     .location
-                    .error("Unexpected error when compiling a statement to set the allocator."),
-            );
+                    .error("Unexpected error when compiling a `set allocator` expression"))
+            });
         }
 
         None

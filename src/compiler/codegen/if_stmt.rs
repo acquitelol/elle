@@ -3,7 +3,7 @@ use crate::{
         compiler::{Codegen, CodegenContext, Compiler},
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
-    hashmap,
+    elle_error, hashmap,
     parser::enums::IfStatement,
 };
 
@@ -31,11 +31,11 @@ impl Codegen<'_> for IfStatement {
         let mut current_false_label = format!("iff.{}", gen.tmp_counter);
         let end_label = format!("end.{}", gen.tmp_counter);
 
-        let (_, if_value) = self.condition.compile(gen, ctx).expect(
-            &self
+        let (_, if_value) = self.condition.compile(gen, ctx).unwrap_or_else(|| {
+            elle_error!(self
                 .location
-                .error("Unexpected error when trying to compile the condition of an if statement"),
-        );
+                .error("Unexpected error when trying to compile the condition of an if statement"))
+        });
 
         let if_true_label = format!("ift.{}", gen.tmp_counter);
 
@@ -65,11 +65,11 @@ impl Codegen<'_> for IfStatement {
 
             ctx.func.borrow_mut().add_block(current_false_label.clone());
 
-            let (_, cond_val) = elif_cond.compile(gen, ctx).expect(
-                &self
+            let (_, cond_val) = elif_cond.compile(gen, ctx).unwrap_or_else(|| {
+                elle_error!(self
                     .location
-                    .error("Unexpected error when compiling else if condition"),
-            );
+                    .error("Unexpected error when compiling else if condition"))
+            });
 
             ctx.func
                 .borrow_mut()

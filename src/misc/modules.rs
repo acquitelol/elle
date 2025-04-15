@@ -224,14 +224,16 @@ pub fn lex_and_parse(
 
                 if !is_std_import {
                     // Set the path to where the current file is so that imports are relative in that regard
-                    set_current_dir(Path::new(final_path.parent().expect(
-                        &location.basic_error(format!(
+                    set_current_dir(Path::new(final_path.parent().unwrap_or_else(|| {
+                        elle_error!(location.basic_error(format!(
                             "Failed to get the parent directory of {final_path:#?}"
-                        )),
-                    )))
-                    .expect(&location.basic_error(format!(
-                        "Failed to set the current directory of {final_path:#?}"
-                    )));
+                        )))
+                    })))
+                    .unwrap_or_else(|err| {
+                        elle_error!(location.basic_error(format!(
+                            "Failed to set the current directory of {final_path:#?}\n{err}"
+                        )))
+                    });
                 }
 
                 let nodes = lex_and_parse(
@@ -253,9 +255,11 @@ pub fn lex_and_parse(
 
                 if !is_std_import {
                     // Set the path back
-                    set_current_dir(current.clone()).expect(&location.basic_error(format!(
-                        "Failed to set the current directory to {current:#?}"
-                    )));
+                    set_current_dir(current.clone()).unwrap_or_else(|err| {
+                        elle_error!(location.basic_error(format!(
+                            "Failed to set the current directory to {current:#?}\n{err}"
+                        )))
+                    });
                 }
 
                 for symbol in nodes.iter().rev() {

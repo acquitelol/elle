@@ -167,7 +167,9 @@ impl Compiler {
                                 .iter()
                                 .find(|f| f.name == const_name)
                                 .map(|f| f.return_type.clone())
-                                .expect(&location.error("Constant does not exist"));
+                                .unwrap_or_else(|| {
+                                    elle_error!(location.error("Constant does not exist"))
+                                });
 
                             let temp = self.new_temporary(Some("constant"), true);
 

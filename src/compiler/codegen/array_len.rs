@@ -14,6 +14,7 @@ use crate::{
         compiler::{Codegen, CodegenContext, Compiler},
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
+    elle_error,
     lexer::enums::{TokenKind, ValueKind},
     parser::enums::{ArrayLength, AstNode, BinaryOperation, Literal},
 };
@@ -33,9 +34,11 @@ impl Codegen<'_> for ArrayLength {
             location: self.location.clone(),
         });
 
-        let (_, val) = node.compile(gen, ctx).expect(&self.location.error(
-            "Unexpected error when trying to compile the formula for getting the array length",
-        ));
+        let (_, val) = node.compile(gen, ctx).unwrap_or_else(|| {
+            elle_error!(self.location.error(
+                "Unexpected error when trying to compile the formula for getting the array length",
+            ))
+        });
 
         let temp = gen.new_temporary(Some("array.length"), true);
 

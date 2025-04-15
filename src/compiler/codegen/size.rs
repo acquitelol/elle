@@ -3,6 +3,7 @@ use crate::{
         compiler::{Codegen, CodegenContext, Compiler},
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
+    elle_error,
     parser::enums::Size,
 };
 
@@ -23,11 +24,12 @@ impl Codegen<'_> for Size {
             }
 
             Err(value) => {
-                let (ty, val) = value.compile(gen, ctx).expect(
-                    &self
-                        .location
-                        .error("Unexpected error when trying to compile the size of a statement"),
-                );
+                let (ty, val) =
+                    value.compile(gen, ctx).unwrap_or_else(|| {
+                        elle_error!(self.location.error(
+                            "Unexpected error when trying to compile the size of an expression",
+                        ))
+                    });
 
                 let size = gen.new_temporary(Some("size"), true);
 

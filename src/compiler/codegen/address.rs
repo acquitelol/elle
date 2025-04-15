@@ -3,15 +3,17 @@ use crate::{
         compiler::{Codegen, CodegenContext, Compiler},
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
+    elle_error,
     parser::enums::Address,
 };
 
 impl Codegen<'_> for Address {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let (ty, val) =
-            self.value.compile(gen, ctx).expect(&self.location.error(
-                "Unexpected error when trying to compile the value of an address statement",
-            ));
+        let (ty, val) = self.value.compile(gen, ctx).unwrap_or_else(|| {
+            elle_error!(self.location.error(
+                "Unexpected error when trying to compile the value of an address expression",
+            ))
+        });
 
         if ty.is_struct() {
             return Some((Type::Pointer(Box::new(ty)), val));

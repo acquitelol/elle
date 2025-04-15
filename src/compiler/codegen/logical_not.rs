@@ -3,16 +3,17 @@ use crate::{
         compiler::{Codegen, CodegenContext, Compiler},
         qbe::{comparison::Comparison, instruction::Instruction, r#type::Type, value::Value},
     },
+    elle_error,
     parser::enums::LogicalNot,
 };
 
 impl Codegen<'_> for LogicalNot {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let (ty, val) = self.value.compile(gen, ctx).expect(
-            &self
-                .location
-                .error("Unexpected error when trying to compile the value of a not statement"),
-        );
+        let (ty, val) = self.value.compile(gen, ctx).unwrap_or_else(|| {
+            elle_error!(&self.location.error(
+                "Unexpected error when trying to compile the value of a `logical not` expression"
+            ))
+        });
 
         let temp = gen.new_temporary(Some("not"), true);
 

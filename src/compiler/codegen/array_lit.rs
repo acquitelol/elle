@@ -32,9 +32,11 @@ impl Codegen<'_> for ArrayLiteral {
                             ..ctx.clone()
                         },
                     )
-                    .expect(&self.location.error(format!(
-                        "Unexpected error when trying to compile the first item in an array"
-                    )));
+                    .unwrap_or_else(|| {
+                        elle_error!(self.location.error(format!(
+                            "Unexpected error when trying to compile the first item in an array"
+                        )))
+                    });
 
                 Some(ty.clone())
             } else if !self.known_generics.is_empty() {
@@ -81,9 +83,11 @@ impl Codegen<'_> for ArrayLiteral {
                 location: self.location.clone(),
             });
 
-            let (ty, val) = node.compile(gen, ctx).expect(&self.location.error(format!(
-                "Unexpected error when trying to compile a dynamic array"
-            )));
+            let (ty, val) = node.compile(gen, ctx).unwrap_or_else(|| {
+                elle_error!(self.location.error(format!(
+                    "Unexpected error when trying to compile a dynamic array"
+                )))
+            });
 
             return Some((ty, val));
         }
@@ -117,10 +121,12 @@ impl Codegen<'_> for ArrayLiteral {
                         ..ctx.clone()
                     },
                 )
-                .expect(&location.error(format!(
-                    "Unexpected error when trying to compile an item in an array with index {}",
-                    i
-                )));
+                .unwrap_or_else(|| {
+                    elle_error!(location.error(format!(
+                        "Unexpected error when trying to compile an item in an array with index {}",
+                        i
+                    )))
+                });
 
             results.push(val);
 

@@ -40,18 +40,20 @@ impl Codegen<'_> for FunctionCall {
         let mut known_generics = hashmap![String, Type];
 
         if type_method {
-            let parameter = parameters.get(0).expect(
-                &call_location
-                    .error("Tried to get the 0th parameter to parse struct call but failed"),
-            );
+            let parameter = parameters.get(0).unwrap_or_else(|| {
+                elle_error!(call_location
+                    .error("Tried to get the 0th parameter to parse struct call but failed"))
+            });
 
             let (mut ty, val) = parameter.1.clone().compile(gen, ctx)
-                .expect(&parameter.0.error(
-                    format!(
-                        "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
-                        name
-                    ))
-                );
+                .unwrap_or_else(|| {
+                    elle_error!(parameter
+                        .0
+                        .error(format!(
+                            "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
+                            name
+                        )))
+                });
 
             // The first param needs to be compiled to get its type
             // however if the first param is mutating (ie `yield()`)
@@ -149,12 +151,11 @@ impl Codegen<'_> for FunctionCall {
                                     func: &RefCell::new(tmp_func),
                                     ..ctx.clone()
                                 },
-                            ).expect(&param.0.error(
+                            ).unwrap_or_else(|| elle_error!(param.0.error(
                                 format!(
                                     "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
                                     name
-                                ))
-                            ),
+                                )))),
                             false,
                         )
                     })
@@ -285,12 +286,11 @@ impl Codegen<'_> for FunctionCall {
                     ty: param_ty.clone(),
                     ..ctx.to_nnf()
                 })
-                .expect(&parameter.0.error(
+                .unwrap_or_else(|| elle_error!(parameter.0.error(
                     format!(
                         "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
                         name
-                    ))
-                )
+                    ))))
             };
 
             let no_fmt = tmp_function
@@ -468,10 +468,10 @@ impl Codegen<'_> for FunctionCall {
                         ..ctx.clone()
                     },
                 )
-                .expect(
-                    &call_location
-                        .error("Unexpected error when trying to compile the Elle metadata struct"),
-                );
+                .unwrap_or_else(|| {
+                    elle_error!(call_location
+                        .error("Unexpected error when trying to compile the Elle metadata struct"))
+                });
 
             params.insert(0, (res, false));
         }
@@ -540,7 +540,7 @@ impl Codegen<'_> for FunctionCall {
                         param_len,
                         if tmp_function.arguments.is_empty() && type_method {
                             format!(
-                                "This function does't accept a `{} self` parameter.",
+                                "This function doesn't accept a `{} self` parameter.",
                                 first_param
                                     .expect("This function is a type method")
                                     .0

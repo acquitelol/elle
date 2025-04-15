@@ -4,15 +4,17 @@ use crate::{
         lib::convert::convert_to_type,
         qbe::{r#type::Type, value::Value},
     },
+    elle_error,
     parser::enums::Conversion,
 };
 
 impl Codegen<'_> for Conversion {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let (first, val) =
-            self.value.compile(gen, ctx).expect(&self.location.error(
+        let (first, val) = self.value.compile(gen, ctx).unwrap_or_else(|| {
+            elle_error!(self.location.error(
                 "Unexpected error when trying to compile the value of a conversion statement",
-            ));
+            ))
+        });
 
         Some(convert_to_type(
             gen,

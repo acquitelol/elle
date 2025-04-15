@@ -687,10 +687,12 @@ impl Type {
                     .types
                     .iter()
                     .find(|td| td.name == val.clone())
-                    .expect(&format!(
-                        "Unable to find aggregate type named '{}'.",
-                        self.display()
-                    ))
+                    .unwrap_or_else(|| {
+                        elle_error!(Location::base().internal_error(format!(
+                            "Unable to find aggregate type named '{}'.",
+                            self.display()
+                        )))
+                    })
                     .size(module) as u64;
 
                 size

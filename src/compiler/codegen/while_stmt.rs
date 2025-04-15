@@ -3,7 +3,7 @@ use crate::{
         compiler::{Codegen, CodegenContext, Compiler},
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
-    hashmap,
+    elle_error, hashmap,
     lexer::enums::TokenKind,
     parser::enums::{AstNode, Literal, WhileLoopStatement},
 };
@@ -21,11 +21,11 @@ impl Codegen<'_> for WhileLoopStatement {
         gen.loop_labels.push(format!("loop.{}", gen.tmp_counter));
         ctx.func.borrow_mut().add_block(cond_label.clone());
 
-        let (_, value) = self.condition.compile(gen, ctx).expect(
-            &self
+        let (_, value) = self.condition.compile(gen, ctx).unwrap_or_else(|| {
+            elle_error!(self
                 .location
-                .error("Unexpected error when trying to compile the condition of a while loop"),
-        );
+                .error("Unexpected error when trying to compile the condition of a while loop"))
+        });
 
         ctx.func
             .borrow_mut()

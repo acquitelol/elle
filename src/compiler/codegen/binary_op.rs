@@ -63,28 +63,28 @@ impl Codegen<'_> for BinaryOperation {
                         ..ctx.clone()
                     },
                 )
-                .expect(&self.location.error(
-                    "Unexpected error when trying to parse left side of an arithmetic operation",
-                ));
+                .unwrap_or_else(|| {
+                    elle_error!(self
+                        .location
+                        .error("Unexpected error when trying to parse a range expression",))
+                });
 
             return Some((ty, val));
         }
 
         let (mut left_ty, left_val_unparsed) =
-            self.left
-                .clone()
-                .compile(gen, ctx)
-                .expect(&self.location.error(
+            self.left.clone().compile(gen, ctx).unwrap_or_else(|| {
+                elle_error!(self.location.error(
                     "Unexpected error when trying to parse left side of an arithmetic operation",
-                ));
+                ))
+            });
 
         let (mut right_ty, right_val_unparsed) =
-            self.right
-                .clone()
-                .compile(gen, ctx)
-                .expect(&self.location.error(
+            self.right.clone().compile(gen, ctx).unwrap_or_else(|| {
+                elle_error!(self.location.error(
                     "Unexpected error when trying to parse right side of an arithmetic operation",
-                ));
+                ))
+            });
 
         let mut left_val = left_val_unparsed.clone();
         let mut right_val = right_val_unparsed.clone();
@@ -169,11 +169,11 @@ impl Codegen<'_> for BinaryOperation {
                 })
             }
 
-            let (ty, val) = node.compile(gen, ctx).expect(
-                &self
-                    .location
-                    .error("Unexpected error when trying to parse an equals arithmetic operation"),
-            );
+            let (ty, val) = node.compile(gen, ctx).unwrap_or_else(|| {
+                elle_error!(self.location.error(
+                    "Unexpected error when trying to parse an equality arithmetic operation",
+                ))
+            });
 
             return Some((ty, val));
         }
@@ -225,10 +225,11 @@ impl Codegen<'_> for BinaryOperation {
                         self.location.clone(),
                     );
 
-                    let res =
-                        meta.compile(gen, ctx).expect(&self.location.error(
+                    let res = meta.compile(gen, ctx).unwrap_or_else(|| {
+                        elle_error!(self.location.error(
                             "Unexpected error when trying to compile the Elle metadata struct",
-                        ));
+                        ))
+                    });
 
                     params.insert(0, (res, false));
                 }
