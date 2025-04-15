@@ -114,6 +114,7 @@ impl Codegen<'_> for FunctionCall {
             .functions
             .iter()
             .find(|function| function.name == name)
+            .filter(|function| !function.constant)
             .cloned();
         let mut is_callback = false;
 
