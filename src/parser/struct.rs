@@ -201,11 +201,13 @@ impl<'a> Struct<'a> {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("self".into()),
                             location: Rc::new(location.clone()),
+                            tagged: false,
                         })),
                         right: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String(member.name),
                             location: Rc::new(location.clone()),
+                            tagged: false,
                         })),
                         value: None,
                         location: Rc::new(location.clone()),
@@ -225,11 +227,13 @@ impl<'a> Struct<'a> {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("nesting".into()),
                                             location: Rc::new(location.clone()),
+                                            tagged: false,
                                         })),
                                         right: Box::new(AstNode::Literal(Literal {
                                             kind: TokenKind::IntegerLiteral,
                                             value: ValueKind::Number(1),
                                             location: Rc::new(location.clone()),
+                                            tagged: false,
                                         })),
                                         operator: TokenKind::Add,
                                         treat_as_string: false,
@@ -254,6 +258,7 @@ impl<'a> Struct<'a> {
                         kind: TokenKind::Identifier,
                         value: ValueKind::String("spacing".into()),
                         location: Rc::new(location.clone()),
+                        tagged: false,
                     }),
                 ),
             );
@@ -274,6 +279,7 @@ impl<'a> Struct<'a> {
                                 .join("\n")
                         )),
                         location: Rc::new(location.clone()),
+                        tagged: false,
                     }),
                 ),
             );
@@ -285,6 +291,7 @@ impl<'a> Struct<'a> {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String("spacing".into()),
                     location: Rc::new(location.clone()),
+                    tagged: false,
                 }),
             ));
 
@@ -339,6 +346,7 @@ impl<'a> Struct<'a> {
                                         kind: TokenKind::StringLiteral,
                                         value: ValueKind::String(" ".into()),
                                         location: Rc::new(location.clone()),
+                                        tagged: false,
                                     }),
                                 ),
                                 (
@@ -348,11 +356,13 @@ impl<'a> Struct<'a> {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("nesting".into()),
                                             location: Rc::new(location.clone()),
+                                            tagged: false,
                                         })),
                                         right: Box::new(AstNode::Literal(Literal {
                                             kind: TokenKind::IntegerLiteral,
                                             value: ValueKind::Number(4),
                                             location: Rc::new(location.clone()),
+                                            tagged: false,
                                         })),
                                         operator: TokenKind::Multiply,
                                         treat_as_string: false,

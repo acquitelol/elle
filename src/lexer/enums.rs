@@ -355,10 +355,19 @@ impl fmt::Display for ValueKind {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Position {
     pub row: usize,
     pub column: usize,
+}
+
+impl Position {
+    pub fn from_tuple(x: (usize, usize)) -> Self {
+        Position {
+            row: x.0,
+            column: x.1,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -381,6 +390,10 @@ impl Location {
         let mut owned = (*self).clone();
         owned.extra_info = Rc::from(extra_info.into());
         owned
+    }
+
+    pub fn contains(&self, pos: &Position) -> bool {
+        self.start <= *pos && *pos <= self.end
     }
 
     pub fn display(&self, is_warning: bool) -> String {
@@ -703,6 +716,7 @@ pub struct Token {
     pub kind: TokenKind,
     pub value: ValueKind,
     pub location: Rc<Location>,
+    pub tagged: bool,
 }
 
 #[derive(Debug, Clone)]

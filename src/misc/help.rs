@@ -141,12 +141,8 @@ pub fn print_help(program: String) {
             ],
         ),
         (
-            "Compilation Flags",
+            "LSP Flags",
             vec![
-                (
-                    "-c, --compile-only",
-                    "Compiles but does not link anything. Produces an object file.",
-                ),
                 (
                     "--lsp, --lsp-server",
                     "Starts an LSP server instead of compiling. Usefol for IDEs",
@@ -154,6 +150,19 @@ pub fn print_help(program: String) {
                 (
                     "-x, --diagnostic-only",
                     "Only prints diagnostics in an easily-parsable format.",
+                ),
+                (
+                    "-i, --info_pos \"<row>:<col>\"",
+                    "Print an expression's type with the position provided.",
+                ),
+            ],
+        ),
+        (
+            "Compilation Flags",
+            vec![
+                (
+                    "-c, --compile-only",
+                    "Compiles but does not link anything. Produces an object file.",
                 ),
                 (
                     "-z, --link-flag <flag>",

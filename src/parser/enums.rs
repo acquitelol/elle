@@ -41,6 +41,7 @@ pub struct Literal {
     pub kind: TokenKind,
     pub value: ValueKind,
     pub location: Rc<Location>,
+    pub tagged: bool, // whether this token should display introspective info
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -275,6 +276,7 @@ impl AstNode {
             kind: token.kind,
             value: token.value,
             location: token.location,
+            tagged: token.tagged,
         })
     }
 }

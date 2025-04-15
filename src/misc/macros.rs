@@ -249,17 +249,20 @@ macro_rules! token_to_node {
                 kind: TokenKind::BoolLiteral,
                 value: ValueKind::Number(1),
                 location: $token.location,
+                tagged: $token.tagged,
             }),
             TokenKind::FalseLiteral => AstNode::Literal(Literal {
                 kind: TokenKind::BoolLiteral,
                 value: ValueKind::Number(0),
                 location: $token.location,
+                tagged: $token.tagged,
             }),
             TokenKind::FloatingPoint => $self.parse_float($token),
             _ => AstNode::Literal(Literal {
                 kind: $token.kind,
                 value: $token.value,
                 location: $token.location,
+                tagged: $token.tagged,
             }),
         }
     };

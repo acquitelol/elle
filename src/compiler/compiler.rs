@@ -236,7 +236,7 @@ impl Compiler {
         func: Option<&RefCell<Function>>,
         module: Option<&RefCell<Module>>,
         location: Rc<Location>,
-        // (Ty, Val, Init)
+        // (ty, val)
     ) -> Option<(Type, Value)> {
         let var = self.get_variable(&name, func, module, VariableInfo::default());
 

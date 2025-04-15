@@ -1,6 +1,9 @@
 use std::rc::Rc;
 
-use crate::{elle_error, RESERVED_KEYWORDS};
+use crate::{
+    elle_error, misc::constants::get_INTROSPECTION_LOCATION, INTROSPECTION_LOCATION,
+    RESERVED_KEYWORDS,
+};
 
 use super::enums::{Location, ParseResult, Position, Token, TokenKind, ValueKind};
 
@@ -11,10 +14,11 @@ pub struct Lexer {
     row: usize,
     bol: usize,
     prev_token: Option<Token>,
+    has_tagged: bool, // whether a token was tagged for introspection yet
 }
 
 impl Lexer {
-    pub fn new(file: String, input: &str) -> Lexer {
+    pub fn new(file: String, input: &str, has_tagged: bool) -> Lexer {
         Lexer {
             file,
             input: input.chars().collect(),
@@ -22,6 +26,7 @@ impl Lexer {
             row: 0,
             bol: 0,
             prev_token: None,
+            has_tagged,
         }
     }
 
@@ -47,21 +52,45 @@ impl Lexer {
 
         if c.is_alphabetic() || c == '_' {
             let (kind, value) = self.consume_identifier(start_row, start_col);
+            let location = self.get_location(start_row, start_col);
+            let mut tagged =
+                location.contains(&Position::from_tuple(get_INTROSPECTION_LOCATION!()));
+
+            if tagged {
+                if self.has_tagged {
+                    tagged = false;
+                } else {
+                    self.has_tagged = true;
+                }
+            }
 
             return Some(Token {
                 kind,
                 value,
-                location: Rc::new(self.get_location(start_row, start_col)),
+                location: Rc::new(location),
+                tagged,
             });
         }
 
         if c.is_digit(10) {
             let (kind, value) = self.consume_number_literal(start_row, start_col);
+            let location = self.get_location(start_row, start_col);
+            // let mut tagged =
+            //     location.contains(&Position::from_tuple(get_INTROSPECTION_LOCATION!()));
+
+            // if tagged {
+            //     if self.has_tagged {
+            //         tagged = false;
+            //     } else {
+            //         self.has_tagged = true;
+            //     }
+            // }
 
             return Some(Token {
                 kind,
                 value,
-                location: Rc::new(self.get_location(start_row, start_col)),
+                location: Rc::new(location),
+                tagged: false,
             });
         }
 
@@ -425,10 +454,22 @@ impl Lexer {
             return None;
         }
 
+        let location = self.get_location(start_row, start_col);
+        // let mut tagged = location.contains(&Position::from_tuple(get_INTROSPECTION_LOCATION!()));
+
+        // if tagged {
+        //     if self.has_tagged {
+        //         tagged = false;
+        //     } else {
+        //         self.has_tagged = true;
+        //     }
+        // }
+
         return Some(Token {
             kind,
             value,
-            location: Rc::new(self.get_location(start_row, start_col)),
+            location: Rc::new(location),
+            tagged: true,
         });
     }
 

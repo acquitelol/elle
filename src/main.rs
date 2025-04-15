@@ -122,10 +122,11 @@ async fn main() -> ExitCode {
     let mut no_strings = false; // no string module
     let mut no_std = false; // no stdlib
     let mut no_alloc = false; // no arbitrary allocator
-    let mut no_gc = false; // no gc
+    let mut no_gc = false; // no gc uses arena by default instead, doesnt need --noalloc
     let mut no_fmt = false; // no primitive fmt methods
     let mut pedantic = false; // extra checks in type conversions
     let mut lsp = false; // LSP support for IDEs
+
     let mut object_files: Vec<String> = vec![];
 
     let mut linker_flags = vec![];
@@ -144,6 +145,28 @@ async fn main() -> ExitCode {
             "--asm" | "--emit-s" | "--emit-asm" => emit_asm = true,
             "--ast" | "--emit-ast" | "--emit-tree" => ast = true,
             "--lsp" | "--lsp-server" => lsp = true,
+            "-i" | "--info_pos" => {
+                macro_rules! loc_err {
+                    () => {
+                        elle_error!(Location::base()
+                            .basic_error("Expected a position in the format `row:col`"))
+                    };
+                }
+
+                let next = args.next().unwrap_or_else(|| loc_err!());
+                let parts = next.split(":").collect::<Vec<&str>>();
+
+                if parts.len() != 2 {
+                    loc_err!()
+                }
+
+                let row = parts[0].parse::<usize>().unwrap_or_else(|_| loc_err!());
+                let col = parts[1].parse::<usize>().unwrap_or_else(|_| loc_err!());
+
+                unsafe {
+                    INTROSPECTION_LOCATION = Some((row, col));
+                }
+            }
             "-x" | "--diagnostic-only" => unsafe { RAW_ERRORS = Some(true) },
             "-p" | "--pedantic" => pedantic = true,
             "-o" => output_path = args.next(),
@@ -484,6 +507,7 @@ async fn main() -> ExitCode {
                                 kind: TokenKind::IntegerLiteral,
                                 value: ValueKind::Number(0),
                                 location: loc.clone(),
+                                tagged: false,
                             })),
                             location: loc.clone(),
                         }))),
@@ -524,6 +548,7 @@ async fn main() -> ExitCode {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("stack_top".into()),
                                         location: loc.clone(),
+                                        tagged: false,
                                     })),
                                 ),
                             ],
@@ -538,6 +563,7 @@ async fn main() -> ExitCode {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("env".into()),
                                 location: loc.clone(),
+                                tagged: false,
                             })),
                             location: loc.clone(),
                         }))),
@@ -549,11 +575,13 @@ async fn main() -> ExitCode {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("env".into()),
                                 location: loc.clone(),
+                                tagged: false,
                             })),
                             right: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("default_allocator".into()),
                                 location: loc.clone(),
+                                tagged: false,
                             })),
                             value: None,
                             location: loc.clone(),
@@ -575,6 +603,7 @@ async fn main() -> ExitCode {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("argc".into()),
                                         location: loc.clone(),
+                                        tagged: false,
                                     }),
                                 )],
                                 type_method: false,
@@ -591,6 +620,7 @@ async fn main() -> ExitCode {
                                 kind: TokenKind::IntegerLiteral,
                                 value: ValueKind::Number(0),
                                 location: loc.clone(),
+                                tagged: false,
                             }))),
                             location: loc.clone(),
                             value_location: loc.clone(),
@@ -601,11 +631,13 @@ async fn main() -> ExitCode {
                                     kind: TokenKind::Identifier,
                                     value: ValueKind::String("i".into()),
                                     location: loc.clone(),
+                                    tagged: false,
                                 })),
                                 right: Box::new(AstNode::Literal(Literal {
                                     kind: TokenKind::Identifier,
                                     value: ValueKind::String("argc".into()),
                                     location: loc.clone(),
+                                    tagged: false,
                                 })),
                                 operator: TokenKind::LessThan,
                                 treat_as_string: false,
@@ -620,11 +652,13 @@ async fn main() -> ExitCode {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("i".into()),
                                         location: loc.clone(),
+                                        tagged: false,
                                     })),
                                     right: Box::new(AstNode::Literal(Literal {
                                         kind: TokenKind::IntegerLiteral,
                                         value: ValueKind::Number(1),
                                         location: loc.clone(),
+                                        tagged: false,
                                     })),
                                     operator: TokenKind::Add,
                                     treat_as_string: false,
@@ -644,6 +678,7 @@ async fn main() -> ExitCode {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("args".into()),
                                             location: loc.clone(),
+                                            tagged: false,
                                         }),
                                     ),
                                     (
@@ -653,11 +688,13 @@ async fn main() -> ExitCode {
                                                 kind: TokenKind::Identifier,
                                                 value: ValueKind::String("argv".into()),
                                                 location: loc.clone(),
+                                                tagged: false,
                                             })),
                                             right: Box::new(AstNode::Literal(Literal {
                                                 kind: TokenKind::Identifier,
                                                 value: ValueKind::String("i".into()),
                                                 location: loc.clone(),
+                                                tagged: false,
                                             })),
                                             value: None,
                                             left_location: loc.clone(),
@@ -691,6 +728,7 @@ async fn main() -> ExitCode {
                                         kind: TokenKind::Identifier,
                                         value: ValueKind::String("args".into()),
                                         location: loc.clone(),
+                                        tagged: false,
                                     }),
                                 )]
                             } else {
@@ -713,11 +751,13 @@ async fn main() -> ExitCode {
                                     kind: TokenKind::Identifier,
                                     value: ValueKind::String("env".into()),
                                     location: loc.clone(),
+                                    tagged: false,
                                 })),
                                 right: Box::new(AstNode::Literal(Literal {
                                     kind: TokenKind::Identifier,
                                     value: ValueKind::String("allocator".into()),
                                     location: loc.clone(),
+                                    tagged: false,
                                 })),
                                 value: None,
                                 location: loc.clone(),
@@ -732,6 +772,7 @@ async fn main() -> ExitCode {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("status".into()),
                             location: loc.clone(),
+                            tagged: false,
                         })),
                         location: loc.clone(),
                     }),

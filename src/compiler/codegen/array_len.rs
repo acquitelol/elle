@@ -27,6 +27,7 @@ impl Codegen<'_> for ArrayLength {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(Type::Word.size(ctx.module) as i128),
                 location: self.location.clone(),
+                tagged: false,
             })),
             operator: TokenKind::Subtract,
             treat_as_string: false,

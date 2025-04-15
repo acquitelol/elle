@@ -19,6 +19,7 @@ impl Codegen<'_> for Buffer {
                     kind: TokenKind::LongLiteral,
                     value: ValueKind::Number(ty.size(ctx.module) as i128),
                     location: self.location.clone(),
+                    tagged: false,
                 })),
                 operator: TokenKind::Multiply,
                 treat_as_string: false,
@@ -30,6 +31,7 @@ impl Codegen<'_> for Buffer {
                 kind: TokenKind::LongLiteral,
                 value: ValueKind::Number(0),
                 location: self.location.clone(),
+                tagged: false,
             })
         };
 

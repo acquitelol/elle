@@ -47,6 +47,7 @@ impl Codegen<'_> for BinaryOperation {
                                 0
                             }),
                             location: self.location.clone(),
+                            tagged: false,
                         }),
                     ),
                 ],

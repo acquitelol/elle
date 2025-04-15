@@ -110,6 +110,7 @@ pub fn generate_meta_struct(
                                         res.replace("\\", "\\\\").replace("\"", "\\\""),
                                     ),
                                     location: location.clone(),
+                                    tagged: false,
                                 }),
                             )
                         })
@@ -134,6 +135,7 @@ pub fn generate_meta_struct(
                                     kind: TokenKind::StringLiteral,
                                     value: ValueKind::String(inner),
                                     location: location.clone(),
+                                    tagged: false,
                                 }),
                             )
                         })
@@ -150,6 +152,7 @@ pub fn generate_meta_struct(
                     kind: TokenKind::IntegerLiteral,
                     value: ValueKind::Number(params.len() as i128),
                     location: location.clone(),
+                    tagged: false,
                 })),
             ),
             (
@@ -166,6 +169,7 @@ pub fn generate_meta_struct(
                         }
                     }),
                     location: location.clone(),
+                    tagged: false,
                 })),
             ),
             (
@@ -176,6 +180,7 @@ pub fn generate_meta_struct(
                         location.file.clone().split("/").last().unwrap().to_string(),
                     ),
                     location: location.clone(),
+                    tagged: false,
                 })),
             ),
             (
@@ -184,6 +189,7 @@ pub fn generate_meta_struct(
                     kind: TokenKind::IntegerLiteral,
                     value: ValueKind::Number((location.start.row + 1) as i128),
                     location: location.clone(),
+                    tagged: false,
                 })),
             ),
             (
@@ -192,6 +198,7 @@ pub fn generate_meta_struct(
                     kind: TokenKind::IntegerLiteral,
                     value: ValueKind::Number((location.start.column + 1) as i128),
                     location: location.clone(),
+                    tagged: false,
                 })),
             ),
         ],

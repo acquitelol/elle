@@ -113,7 +113,8 @@ pub fn lex_and_parse(
         file_is_empty_error!()
     }
 
-    let mut lexer = Lexer::new(input_path.clone(), content.as_str());
+    // `has_tagged = root only` ensures modules wont have any tagged tokens
+    let mut lexer = Lexer::new(input_path.clone(), content.as_str(), nesting != 0);
     let mut tokens = vec![];
 
     while let Some(mut token) = lexer.next_token() {
@@ -131,9 +132,6 @@ pub fn lex_and_parse(
             _ => tokens.push(token),
         }
     }
-
-    // dbg!(&tokens);
-    // exit(0);
 
     // File consists entirely of comments which is still effectively
     // an empty file, so we shouldn't bother parsing this
@@ -385,6 +383,7 @@ pub fn lex_and_parse(
                     kind: TokenKind::LongLiteral,
                     value: ValueKind::Number(0),
                     location: loc.clone(),
+                    tagged: false,
                 })),
                 location: loc.clone(),
             }),
@@ -416,6 +415,7 @@ pub fn lex_and_parse(
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("self".into()),
                             location: loc.clone(),
+                            tagged: false,
                         })),
                         location: loc.clone(),
                     })),

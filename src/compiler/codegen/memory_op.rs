@@ -155,6 +155,7 @@ impl Codegen<'_> for MemoryOperation {
                     kind: TokenKind::LongLiteral,
                     value: ValueKind::Number(inner.size(ctx.module) as i128),
                     location: self.right_location.clone(),
+                    tagged: false,
                 })),
                 right: if left_ty.is_pointer() {
                     self.right

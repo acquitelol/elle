@@ -228,6 +228,7 @@ impl<'a> Statement<'a> {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
                     location: Rc::new(location.clone()),
+                    tagged: false,
                 })
             }
             _ => res,
@@ -264,6 +265,7 @@ impl<'a> Statement<'a> {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
                     location: Rc::new(location.clone()),
+                    tagged: false,
                 })),
                 right: Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0),
                 operator: mapping,
@@ -298,11 +300,13 @@ impl<'a> Statement<'a> {
                 kind: TokenKind::FloatLiteral,
                 value: ValueKind::Number(original),
                 location: token.location.clone(),
+                tagged: false,
             })),
             right: Box::new(AstNode::Literal(Literal {
                 kind: TokenKind::FloatLiteral,
                 value: ValueKind::Number(10_i128.pow(exponent as u32)),
                 location: token.location.clone(),
+                tagged: false,
             })),
             operator: TokenKind::Divide,
             treat_as_string: false,
@@ -366,6 +370,7 @@ impl<'a> Statement<'a> {
                     kind: TokenKind::IntegerLiteral,
                     value: ValueKind::Number(0),
                     location: self.current_token().location.clone(),
+                    tagged: false,
                 })),
                 location: self.current_token().location,
             });
@@ -379,6 +384,7 @@ impl<'a> Statement<'a> {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(0),
                 location: self.current_token().location,
+                tagged: false,
             })
         };
 
@@ -390,6 +396,7 @@ impl<'a> Statement<'a> {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String(name),
                     location: self.current_token().location,
+                    tagged: false,
                 })
             }
             _ => res,
@@ -455,6 +462,7 @@ impl<'a> Statement<'a> {
                 kind: TokenKind::Identifier,
                 value: ValueKind::String(name),
                 location: Rc::new(location),
+                tagged: false,
             });
         } else {
             self.expect_tokens(vec![TokenKind::LeftParenthesis]);
@@ -1113,6 +1121,7 @@ impl<'a> Statement<'a> {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(0),
                 location: self.current_token().location,
+                tagged: false,
             })
         };
 
@@ -1134,6 +1143,7 @@ impl<'a> Statement<'a> {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(1),
                 location: self.current_token().location,
+                tagged: false,
             })
         };
 
@@ -1197,6 +1207,7 @@ impl<'a> Statement<'a> {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(1),
                 location: self.current_token().location,
+                tagged: false,
             })
         };
 
@@ -1274,12 +1285,14 @@ impl<'a> Statement<'a> {
             kind: TokenKind::Identifier,
             value: ValueKind::String(index.clone()),
             location: Rc::new(location.clone()),
+            tagged: false,
         });
 
         let iterator_node = AstNode::Literal(Literal {
             kind: TokenKind::Identifier,
             value: ValueKind::String(iter.clone()),
             location: Rc::new(location.clone()),
+            tagged: false,
         });
 
         let element_access = AstNode::MemoryOperation(MemoryOperation {
@@ -1325,6 +1338,7 @@ impl<'a> Statement<'a> {
                     kind: TokenKind::IntegerLiteral,
                     value: ValueKind::Number(1),
                     location: Rc::new(location.clone()),
+                    tagged: false,
                 })),
                 operator: TokenKind::Add,
                 treat_as_string: false,
@@ -1344,6 +1358,7 @@ impl<'a> Statement<'a> {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(0),
                 location: Rc::new(location.clone()),
+                tagged: false,
             }))),
             location: Rc::new(location.clone()),
             value_location: Rc::new(location.clone()),
@@ -2207,6 +2222,7 @@ impl<'a> Statement<'a> {
             kind: TokenKind::LongLiteral,
             value: ValueKind::Number(0),
             location: self.current_token().location,
+            tagged: false,
         }));
 
         left_location.end = self.current_token().location.end.clone();
@@ -2666,6 +2682,7 @@ impl<'a> Statement<'a> {
             kind: TokenKind::Identifier,
             value: ValueKind::String(format!(INTERNAL_IDX_FORMAT!(), name)),
             location: Rc::new(location.clone()),
+            tagged: false,
         });
 
         match self.current_token().kind {
@@ -2800,6 +2817,7 @@ impl<'a> Statement<'a> {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(1),
                 location: Rc::new(location.clone()),
+                tagged: false,
             })
         };
 
@@ -2822,6 +2840,7 @@ impl<'a> Statement<'a> {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("allocator".into()),
                                 location: Rc::new(location.clone()),
+                                tagged: false,
                             })),
                             value: None,
                             location: Rc::new(location.clone()),
@@ -2912,6 +2931,7 @@ impl<'a> Statement<'a> {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(1),
                 location: Rc::new(location.clone()),
+                tagged: false,
             })
         };
 
@@ -2934,6 +2954,7 @@ impl<'a> Statement<'a> {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("allocator".into()),
                                 location: Rc::new(location.clone()),
+                                tagged: false,
                             })),
                             value: None,
                             location: Rc::new(location.clone()),
@@ -3029,6 +3050,7 @@ impl<'a> Statement<'a> {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("allocator".into()),
                             location: Rc::new(location.clone()),
+                            tagged: false,
                         })),
                         value: None,
                         location: Rc::new(location.clone()),
@@ -3139,6 +3161,7 @@ impl<'a> Statement<'a> {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String("default_allocator".into()),
                     location: Rc::new(location.clone()),
+                    tagged: false,
                 })),
                 value: None,
                 location: Rc::new(location.clone()),

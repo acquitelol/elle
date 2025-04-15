@@ -70,6 +70,7 @@ impl Codegen<'_> for Declare {
                     kind: TokenKind::IntegerLiteral,
                     value: ValueKind::Number(0),
                     location: self.location.clone(),
+                    tagged: false,
                 })
             },
         ));

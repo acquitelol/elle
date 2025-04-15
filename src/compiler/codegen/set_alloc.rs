@@ -71,6 +71,7 @@ impl Codegen<'_> for SetAllocator {
                         format!("{ARBITRARY_ALLOCATOR_NAME}.noop")
                     }),
                     location: self.location.clone(),
+                    tagged: false
                 })
             }};
         }
@@ -83,6 +84,7 @@ impl Codegen<'_> for SetAllocator {
                     kind: TokenKind::StringLiteral,
                     value: ValueKind::String(allocator_name.clone()),
                     location: self.location.clone(),
+                    tagged: false,
                 }),
             ),
             ("alloc", method_or_noop!("alloc")),
@@ -102,11 +104,13 @@ impl Codegen<'_> for SetAllocator {
                         kind: TokenKind::Identifier,
                         value: ValueKind::String("allocator".into()),
                         location: self.location.clone(),
+                        tagged: false,
                     })),
                     right: Box::new(AstNode::Literal(Literal {
                         kind: TokenKind::Identifier,
                         value: ValueKind::String(field.into()),
                         location: self.location.clone(),
+                        tagged: false,
                     })),
                     value: None,
                     location: self.location.clone(),
