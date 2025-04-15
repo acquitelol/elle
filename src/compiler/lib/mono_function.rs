@@ -152,7 +152,7 @@ pub fn create_monomorphized_function(
                             }
                         }
                     } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
-                        println!(
+                        eprintln!(
                             "{}",
                             this.location.warning(format!(
                                 "Failed to deduce a generic type from {} and {}",
@@ -173,7 +173,7 @@ pub fn create_monomorphized_function(
                         if let Some(inner) = ty.clone().deduce_generic_type(other.clone()) {
                             known_generics.extend(inner)
                         } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
-                            println!(
+                            eprintln!(
                                 "{}",
                                 this.location.warning(format!(
                                     "Failed to deduce a generic type from {} and {}",
@@ -193,7 +193,7 @@ pub fn create_monomorphized_function(
                         if let Some(inner) = ty.clone().deduce_generic_type(other.clone()) {
                             known_generics.extend(inner)
                         } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
-                            println!(
+                            eprintln!(
                                 "{}",
                                 this.location.warning(format!(
                                     "Failed to deduce a generic type from {} and {}",

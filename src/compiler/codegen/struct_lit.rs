@@ -78,7 +78,7 @@ impl Codegen<'_> for StructLiteral {
 
         if gen.warnings.has_warning(Warning::StructFieldsMissing) {
             for member in diff.iter().cloned() {
-                println!(
+                eprintln!(
                     "{}",
                     self.location.warning(format!(
                         "Declaring struct '{}' without field '{}'",

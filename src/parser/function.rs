@@ -199,7 +199,7 @@ impl<'a> Function<'a> {
                     && self.parser.current_token().kind == TokenKind::RightParenthesis
                 {
                     if self.parser.warnings.has_warning(Warning::CStyleVoid) {
-                        println!(
+                        eprintln!(
                             "{}",
                             ty_loc.warning("Elle does not support C-style explicit function prototypes.\nPlease remove the 'void' type from this function's signature.\nThis is a warning, which means the compiler will ignore this.")
                         )
@@ -237,7 +237,7 @@ impl<'a> Function<'a> {
                 || arguments[0].r#type != Type::Struct(META_STRUCT_NAME.into()))
             && self.parser.warnings.has_warning(Warning::VariadicNoMeta)
         {
-            println!("{}", location.warning(
+            eprintln!("{}", location.warning(
                 format!(
                     "Generating a variadic function named '{}' without the ElleMeta struct.\nThis internal structure provides you with arity, it may be useful.\nAre you sure you want to create this function without it?",
                     name
@@ -279,7 +279,7 @@ impl<'a> Function<'a> {
                             name = alias;
                         } else {
                             if self.parser.warnings.has_warning(Warning::InvalidAlias) {
-                                println!(
+                                eprintln!(
                                     "{}",
                                     location.warning(format!(
                                         "Can't assign aliases to non-external functions\nSkipping alias '{}' for function '{}'",
