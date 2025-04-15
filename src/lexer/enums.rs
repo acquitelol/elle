@@ -364,6 +364,11 @@ pub struct Position {
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Location {
     pub file: Rc<str>,
+    // so we can report the import location instead
+    // of the real location for errors that weren't
+    // in the current file
+    pub alt_start: Position,
+    pub alt_end: Position,
     pub start: Position,
     pub end: Position,
     pub ctx: Rc<str>,
@@ -406,6 +411,21 @@ impl Location {
         );
     }
 
+    pub fn display_alt(&self, end: bool) -> String {
+        return format!(
+            "{}:{}:{}",
+            self.file,
+            (if end {
+                self.alt_end.row
+            } else {
+                self.alt_start.row
+            }) + 1,
+            (if end {
+                self.alt_end.column
+            } else {
+                self.alt_start.column
+            }) + 1
+        );
     }
 
     pub fn get_expr_lead(&self) -> String {
@@ -579,6 +599,8 @@ impl Location {
                 "warning\n{}\n{}\n{}\n{}\n{}\n",
                 self.display_plain(false),
                 self.display_plain(true),
+                self.display_alt(false),
+                self.display_alt(true),
                 message.into()
             );
         }
@@ -592,6 +614,8 @@ impl Location {
                 "error\n{}\n{}\n{}\n{}\n{}\n",
                 self.display_plain(false),
                 self.display_plain(true),
+                self.display_alt(false),
+                self.display_alt(true),
                 message.into()
             );
         }
@@ -605,6 +629,8 @@ impl Location {
                 "error\n{}\n{}\n{}\n{}\n{}\n",
                 self.display_plain(false),
                 self.display_plain(true),
+                self.display_alt(false),
+                self.display_alt(true),
                 message.into()
             );
         }
@@ -624,6 +650,8 @@ impl Location {
     pub fn default(file: String) -> Location {
         Location {
             file: Rc::from(file),
+            alt_start: Position { row: 0, column: 0 },
+            alt_end: Position { row: 0, column: 1 },
             start: Position { row: 0, column: 0 },
             end: Position { row: 0, column: 1 },
             ctx: Rc::from("_"),
@@ -635,6 +663,8 @@ impl Location {
     pub fn base() -> Location {
         Location {
             file: Rc::from("_"),
+            alt_start: Position { row: 0, column: 0 },
+            alt_end: Position { row: 0, column: 1 },
             start: Position { row: 0, column: 0 },
             end: Position { row: 0, column: 1 },
             ctx: Rc::from("_"),

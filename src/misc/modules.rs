@@ -42,7 +42,7 @@ pub fn lex_and_parse(
     debug_time: bool,
     object_output: bool,
     nesting: usize,
-    _import_location: Rc<Location>,
+    import_location: Rc<Location>,
     string_module_methods: &mut Vec<String>,
 ) -> Vec<Primitive> {
     let is_std_import;
@@ -72,7 +72,7 @@ pub fn lex_and_parse(
             Err(err) => {
                 eprintln!(
                     "{}",
-                    _import_location.basic_error(format!(
+                    import_location.basic_error(format!(
                         "Could not load module \"{RED}{}{RESET}\":\n{}",
                         input_path,
                         err,
@@ -94,7 +94,7 @@ pub fn lex_and_parse(
 
     macro_rules! file_is_empty_error {
         () => {
-            elle_error!(_import_location.basic_error(format!(
+            elle_error!(import_location.basic_error(format!(
                 "Could not load module \"{MAGENTA}{input_path}{RESET}\":\n{}\n\n{}{RESET}",
                 "Module is empty. To create an entry-point, write:",
                 format!(
@@ -116,7 +116,14 @@ pub fn lex_and_parse(
     let mut lexer = Lexer::new(input_path.clone(), content.as_str());
     let mut tokens = vec![];
 
-    while let Some(token) = lexer.next_token() {
+    while let Some(mut token) = lexer.next_token() {
+        // Give tokens an alt location so that this can be reported
+        // instead, if the error happened in another file
+        let mut location = (*token.location).clone();
+        location.alt_start = import_location.start.clone();
+        location.alt_end = import_location.end.clone();
+        token.location = Rc::new(location);
+
         // Even though the lexer does provide us with comments, we don't care about them
         // so we can just ignore them and not pass them the parser
         match token.kind {
@@ -249,7 +256,11 @@ pub fn lex_and_parse(
                     debug_time,
                     object_output,
                     nesting + 1,
-                    Rc::new(location.clone()),
+                    if nesting == 0 {
+                        Rc::new(location.clone())
+                    } else {
+                        import_location.clone()
+                    },
                     string_module_methods,
                 );
 

@@ -469,6 +469,8 @@ impl Lexer {
     fn get_location(&mut self, start_row: usize, start_col: usize) -> Location {
         Location {
             file: Rc::from(self.file.clone()),
+            alt_start: Position { row: 0, column: 0 },
+            alt_end: Position { row: 0, column: 1 },
             start: Position {
                 row: start_row,
                 column: start_col,
