@@ -214,31 +214,8 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::Equal]);
         self.advance();
 
-        // Parser skips the first token
-        let mut curly_nesting = (self.current_token().kind == TokenKind::LeftCurlyBrace) as i32;
-        let mut block_nesting = (self.current_token().kind == TokenKind::LeftBlockBrace) as i32;
-
-        let tokens = self.yield_tokens_with_condition(|token, _, _| {
-            if token.kind == TokenKind::LeftCurlyBrace {
-                curly_nesting += 1;
-            }
-
-            if token.kind == TokenKind::RightCurlyBrace {
-                curly_nesting -= 1;
-            }
-
-            if token.kind == TokenKind::LeftBlockBrace {
-                block_nesting += 1;
-            }
-
-            if token.kind == TokenKind::RightBlockBrace {
-                block_nesting -= 1;
-            }
-
-            token.kind == TokenKind::Semicolon && curly_nesting == 0 && block_nesting == 0
-        });
-
         let mut value_location = (*self.current_token().location).clone();
+        let tokens = self.yield_tokens_wrapped_with_semi();
         let res = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
         value_location.end = self.current_token().location.end.clone();
         location.end = self.current_token().location.end.clone();
@@ -273,8 +250,8 @@ impl<'a> Statement<'a> {
         let operation = self.current_token();
         self.advance();
 
-        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
         let mut value_location = (*self.current_token().location).clone();
+        let tokens = self.yield_tokens_wrapped_with_semi();
         let mapping = operation.kind.to_non_declarative();
         value_location.end = self.current_token().location.end.clone();
         location.end = self.current_token().location.end.clone();
@@ -394,7 +371,7 @@ impl<'a> Statement<'a> {
             });
         }
 
-        let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
+        let tokens = self.yield_tokens_wrapped_with_semi();
         let res = if tokens.len() > 0 {
             Statement::new(tokens, 0, &self.body, self.shared).parse().0
         } else {
@@ -1806,6 +1783,8 @@ impl<'a> Statement<'a> {
         } else {
             let mut nesting = 0;
             let mut block_nesting = 0;
+            let mut curly_nesting = 0;
+
             let tokens = self.yield_tokens_with_condition(|_, token, next_token| {
                 if token.kind == TokenKind::LeftParenthesis {
                     nesting += 1;
@@ -1831,9 +1810,22 @@ impl<'a> Statement<'a> {
                     }
                 }
 
+                if token.kind == TokenKind::LeftCurlyBrace {
+                    curly_nesting += 1;
+                }
+
+                if token.kind == TokenKind::RightCurlyBrace {
+                    if curly_nesting > 0 {
+                        curly_nesting -= 1;
+                    } else {
+                        return true;
+                    }
+                }
+
                 token.kind == TokenKind::Semicolon
                     || (nesting == 0
                         && block_nesting == 0
+                        && curly_nesting == 0
                         && (token.kind == TokenKind::Comma
                             || next_token
                                 .is_some_and(|next| next.kind == TokenKind::RightCurlyBrace)))
@@ -3040,6 +3032,22 @@ impl<'a> Statement<'a> {
             location: Rc::new(location.clone()),
         });
 
+        match self.current_token().kind {
+            TokenKind::Dot => {
+                expression = self.parse_field_access(Some((position, expression, location)))
+            }
+
+            TokenKind::LeftBlockBrace => {
+                expression = self.parse_offset_store(Some((position, expression, location)))
+            }
+
+            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
+            other if other.is_arithmetic() => {
+                self.position = position;
+                return self.parse_arithmetic();
+            }
+            _ => {}
+        }
 
         expression
     }
@@ -3080,6 +3088,22 @@ impl<'a> Statement<'a> {
             location: Rc::new(location.clone()),
         });
 
+        match self.current_token().kind {
+            TokenKind::Dot => {
+                expression = self.parse_field_access(Some((position, expression, location)))
+            }
+
+            TokenKind::LeftBlockBrace => {
+                expression = self.parse_offset_store(Some((position, expression, location)))
+            }
+
+            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
+            other if other.is_arithmetic() => {
+                self.position = position;
+                return self.parse_arithmetic();
+            }
+            _ => {}
+        }
 
         expression
     }
@@ -3113,6 +3137,22 @@ impl<'a> Statement<'a> {
             location: Rc::new(location.clone()),
         });
 
+        match self.current_token().kind {
+            TokenKind::Dot => {
+                expression = self.parse_field_access(Some((position, expression, location)))
+            }
+
+            TokenKind::LeftBlockBrace => {
+                expression = self.parse_offset_store(Some((position, expression, location)))
+            }
+
+            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
+            other if other.is_arithmetic() => {
+                self.position = position;
+                return self.parse_arithmetic();
+            }
+            _ => {}
+        }
 
         expression
     }
@@ -3194,6 +3234,31 @@ impl<'a> Statement<'a> {
         }
 
         return self.yield_tokens_with_condition(|token, _, _| delimiters.contains(&token.kind));
+    }
+
+    fn yield_tokens_wrapped_with_semi(&mut self) -> Vec<Token> {
+        let mut curly_nesting = (self.current_token().kind == TokenKind::LeftCurlyBrace) as i32;
+        let mut block_nesting = (self.current_token().kind == TokenKind::LeftBlockBrace) as i32;
+
+        self.yield_tokens_with_condition(|token, _, _| {
+            if token.kind == TokenKind::LeftCurlyBrace {
+                curly_nesting += 1;
+            }
+
+            if token.kind == TokenKind::RightCurlyBrace {
+                curly_nesting -= 1;
+            }
+
+            if token.kind == TokenKind::LeftBlockBrace {
+                block_nesting += 1;
+            }
+
+            if token.kind == TokenKind::RightBlockBrace {
+                block_nesting -= 1;
+            }
+
+            token.kind == TokenKind::Semicolon && curly_nesting == 0 && block_nesting == 0
+        })
     }
 
     fn yield_tokens_with_condition<F>(&mut self, mut condition: F) -> Vec<Token>
