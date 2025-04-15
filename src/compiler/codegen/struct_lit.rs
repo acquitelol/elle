@@ -15,7 +15,8 @@ use crate::{
 };
 
 impl Codegen<'_> for StructLiteral {
-    fn compile(mut self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+        let mut plain_name = self.name.value.get_string_inner().unwrap();
         let inner = ctx.ty.clone().unwrap_or(
             ctx.func
                 .borrow_mut()
@@ -26,23 +27,23 @@ impl Codegen<'_> for StructLiteral {
 
         if inner.is_struct()
             && is_generic!(inner.get_struct_inner().unwrap())
-            && !is_generic!(self.name)
+            && !is_generic!(plain_name)
         {
             let generic_name = Type::from_internal_id(inner.get_struct_inner().unwrap()).0;
 
-            if self.name == generic_name {
-                self.name = inner.get_struct_inner().unwrap();
+            if plain_name == generic_name {
+                plain_name = inner.get_struct_inner().unwrap();
             }
         }
 
-        if gen.struct_pool.get(&self.name).is_none() {
-            if is_generic!(self.name) {
-                create_monomorphized_struct(gen, ctx.module, self.name.clone())
+        if gen.struct_pool.get(&plain_name).is_none() {
+            if is_generic!(plain_name) {
+                create_monomorphized_struct(gen, ctx.module, plain_name.clone())
             } else {
                 elle_error!(
                     self.location.error(format!(
                         "Could not find struct named '{}'. Did you spell it correctly?\nThis struct may be generic but missing generic parameters.",
-                        Type::Struct(self.name).display()
+                        Type::Struct(plain_name).display()
                     ))
                 )
             }
@@ -54,22 +55,23 @@ impl Codegen<'_> for StructLiteral {
             .types
             .clone()
             .into_iter()
-            .find(|td| td.name == self.name)
+            .find(|td| td.name == plain_name)
             .unwrap_or_else(|| {
                 elle_error!(self
                     .location
-                    .error(format!("Unable to find struct named '{}'", self.name)))
+                    .error(format!("Unable to find struct named '{}'", plain_name)))
             });
 
         if !td.usable && !ctx.func.borrow_mut().imported {
             elle_error!(self.location.error(format!(
                 "Struct named '{}' was not imported and can't be used",
-                Type::Struct(self.name.clone()).display()
+                Type::Struct(plain_name.clone()).display()
             )))
         }
 
         let struct_pool = gen.struct_pool.clone();
-        let members = struct_pool.get(&self.name).unwrap().1.clone();
+        let struct_def = struct_pool.get(&plain_name).unwrap();
+        let members = struct_def.1.clone();
         let member_names = members
             .iter()
             .map(|member| member.name.clone())
@@ -86,22 +88,22 @@ impl Codegen<'_> for StructLiteral {
                     "{}",
                     self.location.warning(format!(
                         "Declaring struct '{}' without field '{}'",
-                        Type::Struct(self.name.clone()).display(),
+                        Type::Struct(plain_name.clone()).display(),
                         member
                     ))
                 );
             }
         }
 
-        let ty = Type::Struct(self.name.clone());
+        let ty = Type::Struct(plain_name.clone());
         let size = ty.size(ctx.module);
 
-        let alloc_tmp = gen.new_temporary(Some(&format!("struct.{}", self.name)), true);
+        let alloc_tmp = gen.new_temporary(Some(&format!("struct.{}", plain_name)), true);
 
         #[cfg(debug_assertions)]
         ctx.func
             .borrow_mut()
-            .add_instruction(Instruction::Comment(format!("size of :{}", self.name)));
+            .add_instruction(Instruction::Comment(format!("size of :{}", plain_name)));
 
         ctx.func.borrow_mut().assign_instruction_front(
             &alloc_tmp,
@@ -113,12 +115,12 @@ impl Codegen<'_> for StructLiteral {
             if !member_names.contains(&member_name) {
                 elle_error!(self.location.error(format!(
                     "Struct named '{}' has no field named '{}'. Did you spell it correctly?",
-                    self.name, member_name
+                    plain_name, member_name
                 )));
             }
 
             let (member_ty, offset) =
-                member_to_offset(gen, ctx.module, &self.name, &member_name).unwrap();
+                member_to_offset(gen, ctx.module, &plain_name, &member_name).unwrap();
 
             let (mut ty, mut val) =
                 value.compile(gen, &CodegenContext {
@@ -131,7 +133,7 @@ impl Codegen<'_> for StructLiteral {
                 })
                 .unwrap_or_else(||
                     elle_error!(self.location.error(
-                        format!("Unexpected error when trying to compile the value of a field '{}' in struct '{}'", member_name, self.name)
+                        format!("Unexpected error when trying to compile the value of a field '{}' in struct '{}'", member_name, plain_name)
                     )
                 ));
 
@@ -180,6 +182,22 @@ impl Codegen<'_> for StructLiteral {
             }
         }
 
-        Some((ty, alloc_tmp))
+        let res = (ty, alloc_tmp);
+
+        if self.name.tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\nstruct {} {{\n{}\n}};",
+                self.name.location.display_plain(false),
+                self.name.location.display_plain(true),
+                Type::Struct(plain_name).display(),
+                members
+                    .into_iter()
+                    .map(|x| format!("\t{} {};", x.r#type.display(), x.name))
+                    .collect::<Vec<String>>()
+                    .join("\n")
+            ));
+        }
+
+        Some(res)
     }
 }

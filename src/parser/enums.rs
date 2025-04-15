@@ -186,7 +186,7 @@ pub struct Size {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct StructLiteral {
-    pub name: String,
+    pub name: Token,
     pub values: Vec<(String, Box<AstNode>)>,
     pub location: Rc<Location>,
 }

@@ -2266,9 +2266,11 @@ impl<'a> Statement<'a> {
 
     fn parse_struct_init(&mut self) -> AstNode {
         let mut location = (*self.current_token().location).clone();
-        let name = self.get_identifier();
         self.expect_tokens(vec![TokenKind::Identifier]);
+        let name = self.current_token();
+        let plain_name = name.value.get_string_inner().unwrap();
 
+        if !(self.shared.struct_pool.borrow().contains_key(&plain_name)) {
             elle_error!(self.current_token().location.error(format!(
                 "Struct named '{}' could not be found. Are you sure you typed it correctly?",
                 plain_name
@@ -2668,12 +2670,10 @@ impl<'a> Statement<'a> {
         location.end = self.current_token().location.end.clone();
         self.advance();
 
-        let mut expression = AstNode::Literal(Literal {
-            kind: TokenKind::Identifier,
-            value: ValueKind::String(format!(INTERNAL_IDX_FORMAT!(), name)),
-            location: Rc::new(location.clone()),
-            tagged: false,
-        });
+        let mut fmt = name.clone();
+        fmt.value = ValueKind::String(format!(
+            INTERNAL_IDX_FORMAT!(),
+            name.value.get_string_inner().unwrap()
         ));
 
         let mut expression = token_to_node!(fmt.clone(), self);

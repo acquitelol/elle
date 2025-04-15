@@ -4,7 +4,7 @@ use crate::{
     advance,
     compiler::qbe::{function::Function, r#type::Type, value::Value},
     get_MAIN_ID,
-    lexer::enums::{Location, TokenKind, ValueKind},
+    lexer::enums::{Location, Token, TokenKind, ValueKind},
     parser::enums::{ArrayLiteral, AstNode, Literal, StructLiteral},
     MAIN_ID, META_STRUCT_NAME,
 };
@@ -16,7 +16,7 @@ pub fn generate_meta_struct(
     location: Rc<Location>,
 ) -> AstNode {
     let node = AstNode::StructLiteral(StructLiteral {
-        name: META_STRUCT_NAME.into(),
+        name: Token::from_ident(META_STRUCT_NAME),
         values: vec![
             (
                 "exprs".into(),
