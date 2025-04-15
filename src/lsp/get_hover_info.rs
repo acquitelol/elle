@@ -14,7 +14,14 @@ pub fn get_hover_info(output: &str) -> Option<Hover> {
         return None;
     }
 
-    let _ = parts[0];
+    let kind = parts[0];
+
+    if kind != "hover" {
+        eprintln!("Invalid hover kind");
+        dbg!(&parts, output);
+        return None;
+    }
+
     let start_location = get_location(parts[1])?;
     let end_location = get_location(parts[2])?;
     let res = parts[3].trim();
