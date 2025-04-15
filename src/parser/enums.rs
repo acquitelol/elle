@@ -13,7 +13,7 @@ use super::parser::StructPool;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Declare {
-    pub name: String,
+    pub name: Token,
     pub r#type: Option<Type>,
     pub value: Option<Box<AstNode>>,
     pub location: Rc<Location>,
@@ -56,7 +56,7 @@ pub struct FunctionCall {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Buffer {
-    pub name: String,
+    pub name: Token,
     pub r#type: Option<Type>,
     pub size: Box<AstNode>,
     pub location: Rc<Location>,
@@ -92,13 +92,13 @@ pub struct WhileLoopStatement {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct VariadicStart {
-    pub name: String,
+    pub name: Token,
     pub location: Rc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct VariadicArgument {
-    pub name: String,
+    pub name: Token,
     pub r#type: Option<Type>,
     pub location: Rc<Location>,
 }

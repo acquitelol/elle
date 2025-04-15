@@ -3,7 +3,7 @@ use std::rc::Rc;
 use crate::{
     compiler::qbe::r#type::Type,
     elle_error, hashmap,
-    lexer::enums::{Attribute, Location, TokenKind, ValueKind},
+    lexer::enums::{Attribute, Location, Token, TokenKind, ValueKind},
     misc::{colors::*, interleave_with},
     FORMAT_CONSTANT, GENERIC_END, GENERIC_IDENTIFIER, INTERNAL_FORMATTER,
 };
@@ -334,7 +334,7 @@ impl<'a> Struct<'a> {
                 r#return: Some(Type::Pointer(Box::new(Type::Char))),
                 body: vec![
                     AstNode::Declare(Declare {
-                        name: "spacing".into(),
+                        name: Token::from_ident("spacing"),
                         r#type: Some(Type::Pointer(Box::new(Type::Char))),
                         value: Some(Box::new(AstNode::FunctionCall(FunctionCall {
                             name: "string.repeat".into(),

@@ -5,15 +5,17 @@ use crate::{
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
     elle_error,
-    lexer::enums::{TokenKind, ValueKind},
+    lexer::enums::{Token, TokenKind, ValueKind},
     parser::enums::{AstNode, Declare, Literal, StructLiteral},
     GC_NOOP,
 };
 
 impl Codegen<'_> for Declare {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+        let plain_name = self.name.value.get_string_inner().unwrap();
+
         let existing = match gen.get_variable(
-            self.name.as_str(),
+            plain_name.as_str(),
             Some(ctx.func),
             Some(ctx.module),
             VariableInfo::default(),
@@ -25,7 +27,7 @@ impl Codegen<'_> for Declare {
         if self.r#type.is_none()
             && gen
                 .get_variable(
-                    self.name.as_str(),
+                    plain_name.as_str(),
                     Some(ctx.func),
                     Some(ctx.module),
                     VariableInfo::default(),
@@ -34,18 +36,18 @@ impl Codegen<'_> for Declare {
         {
             elle_error!(
                 self.location.error(
-                    format!("Variable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.", self.name)));
+                    format!("Variable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.", plain_name)));
         }
 
         if self.r#type.clone().is_some_and(|ty| ty == Type::Infer) && self.value.is_none() {
             elle_error!(self.location.error(format!(
                 "Failed to determine a type for '{}'.\nPlease give this variable a type or a value.",
-                self.name
+                plain_name
             )));
         }
 
         let res = gen.get_variable(
-            &format!("{}.addr", self.name),
+            &format!("{}.addr", plain_name),
             Some(ctx.func),
             Some(ctx.module),
             VariableInfo::default(),
@@ -55,13 +57,15 @@ impl Codegen<'_> for Declare {
         let mut temp = if local_ty == Type::Infer {
             None
         } else {
-            Some(gen.new_variable(&local_ty, &self.name, Some(ctx.func), true, false))
+            Some(gen.new_variable(&local_ty, &plain_name, Some(ctx.func), true, false))
         };
 
         let node = *self.value.unwrap_or(Box::new(
             if self.r#type.clone().is_some_and(|ty| ty.is_struct()) {
                 AstNode::StructLiteral(StructLiteral {
-                    name: self.r#type.clone().unwrap().get_struct_inner().unwrap(),
+                    name: Token::from_ident(
+                        &self.r#type.clone().unwrap().get_struct_inner().unwrap(),
+                    ),
                     values: vec![],
                     location: self.location.clone(),
                 })
@@ -92,11 +96,11 @@ impl Codegen<'_> for Declare {
             if local_ty == Type::Infer {
                 local_ty = ret_ty.clone();
 
-                temp = Some(gen.new_variable(&local_ty, &self.name, Some(ctx.func), true, false));
+                temp = Some(gen.new_variable(&local_ty, &plain_name, Some(ctx.func), true, false));
 
                 let scope = gen.scopes.last_mut().expect("Expected last scope to exist");
                 scope.insert(
-                    self.name.to_owned(),
+                    plain_name.clone(),
                     (local_ty.clone(), temp.clone().unwrap()),
                 );
             }
@@ -112,7 +116,7 @@ impl Codegen<'_> for Declare {
                 })
             {
                 local_ty = ret_ty.clone();
-                temp = Some(gen.new_variable(&local_ty, &self.name, Some(ctx.func), false, false))
+                temp = Some(gen.new_variable(&local_ty, &plain_name, Some(ctx.func), false, false))
             }
 
             let (final_ty, final_val) = if ret_ty != local_ty {
@@ -140,7 +144,7 @@ impl Codegen<'_> for Declare {
                 {
                     elle_error!(self.location.error(format!(
                         "Cannot redeclare '{}' which has type {} to type {}",
-                        self.name,
+                        plain_name,
                         addr_ty.display(),
                         final_ty.display()
                     )))
@@ -161,12 +165,24 @@ impl Codegen<'_> for Declare {
 
                 gen.address_pool
                     .insert(temp.unwrap().clone(), addr_val.clone());
-                return Some((addr_ty, final_val));
+
+                let res = (addr_ty, final_val);
+
+                if self.name.tagged {
+                    elle_error!(format!(
+                        "hover\n{}\n{}\nlet {plain_name}: {}",
+                        self.name.location.display_plain(false),
+                        self.name.location.display_plain(true),
+                        res.0.display()
+                    ));
+                }
+
+                return Some(res);
             }
 
             let addr_val = gen.new_variable(
                 &local_ty,
-                &format!("{}.addr", self.name),
+                &format!("{}.addr", plain_name),
                 Some(ctx.func),
                 true,
                 false,
@@ -201,14 +217,26 @@ impl Codegen<'_> for Declare {
 
             gen.address_pool
                 .insert(temp.clone().unwrap(), addr_val.clone());
-            return Some((final_ty, final_val));
+
+            let res = (final_ty, final_val);
+
+            if self.name.tagged {
+                elle_error!(format!(
+                    "hover\n{}\n{}\nlet {plain_name}: {}",
+                    self.name.location.display_plain(false),
+                    self.name.location.display_plain(true),
+                    res.0.display()
+                ));
+            }
+
+            return Some(res);
         } else {
             elle_error!(self
                 .location
                 .with_extra_info("This variable might be assigned to a statement")
                 .error(format!(
                     "Unexpected error when declaring variable named '{}'\nCould not generate a valid value for this variable.\nMaybe '{}' is being incorrectly assigned to a statement?",
-                    self.name, self.name
+                    plain_name, plain_name
                 )));
         }
     }

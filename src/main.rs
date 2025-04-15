@@ -14,7 +14,7 @@ mod misc;
 mod parser;
 
 use compiler::compiler::Compiler;
-use lexer::enums::{Location, TokenKind, ValueKind};
+use lexer::enums::{Location, Token, TokenKind, ValueKind};
 use lsp::lsp::Backend;
 use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex_and_parse};
 use parser::enums::{Argument, AstNode, Primitive};
@@ -500,7 +500,7 @@ async fn main() -> ExitCode {
             body: [
                 vec![
                     AstNode::Declare(Declare {
-                        name: "stack_top".into(),
+                        name: Token::from_ident("stack_top"),
                         r#type: Some(Type::Pointer(Box::new(Type::Void))),
                         value: Some(Box::new(AstNode::Address(Address {
                             value: Box::new(AstNode::Literal(Literal {
@@ -515,10 +515,10 @@ async fn main() -> ExitCode {
                         value_location: loc.clone(),
                     }),
                     AstNode::Declare(Declare {
-                        name: "env".into(),
+                        name: Token::from_ident("env"),
                         r#type: Some(Type::Infer),
                         value: Some(Box::new(AstNode::StructLiteral(StructLiteral {
-                            name: ENV_STRUCT_NAME.into(),
+                            name: Token::from_ident(ENV_STRUCT_NAME),
                             values: vec![
                                 (
                                     "allocator".into(),
@@ -592,7 +592,7 @@ async fn main() -> ExitCode {
                 if main_arg_len == 1 {
                     vec![
                         AstNode::Declare(Declare {
-                            name: "args".into(),
+                            name: Token::from_ident("args"),
                             r#type: Some(Type::Infer),
                             value: Some(Box::new(AstNode::FunctionCall(FunctionCall {
                                 name: "Array.with_capacity".into(),
@@ -614,7 +614,7 @@ async fn main() -> ExitCode {
                             value_location: loc.clone(),
                         }),
                         AstNode::Declare(Declare {
-                            name: "i".into(),
+                            name: Token::from_ident("i"),
                             r#type: Some(Type::Word),
                             value: Some(Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::IntegerLiteral,
@@ -645,7 +645,7 @@ async fn main() -> ExitCode {
                                 location: loc.clone(),
                             })),
                             step: Some(Box::new(AstNode::Declare(Declare {
-                                name: "i".into(),
+                                name: Token::from_ident("i"),
                                 r#type: None,
                                 value: Some(Box::new(AstNode::BinaryOperation(BinaryOperation {
                                     left: Box::new(AstNode::Literal(Literal {
@@ -716,7 +716,7 @@ async fn main() -> ExitCode {
                 },
                 vec![
                     AstNode::Declare(Declare {
-                        name: "status".into(),
+                        name: Token::from_ident("status"),
                         r#type: Some(Type::Word),
                         value: Some(Box::new(AstNode::FunctionCall(FunctionCall {
                             name: get_MAIN_ID!().into(),

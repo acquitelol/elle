@@ -11,7 +11,9 @@ use crate::{
 
 impl Codegen<'_> for Buffer {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+        let plain_name = self.name.value.get_string_inner().unwrap();
         let buf_ty = Type::Pointer(Box::new(self.r#type.clone().unwrap()));
+
         let node = if let Some(ref ty) = self.r#type {
             AstNode::BinaryOperation(BinaryOperation {
                 left: self.size,
@@ -38,11 +40,11 @@ impl Codegen<'_> for Buffer {
         let (ty, val) = node.compile(gen, &ctx.to_nnf()).unwrap_or_else(|| {
             elle_error!(self.location.error(format!(
                 "Unexpected error when trying to compile size for a buffer named '{}'",
-                self.name
+                plain_name
             )))
         });
 
-        let tmp = gen.new_variable(&buf_ty, &self.name, Some(ctx.func), true, false);
+        let tmp = gen.new_variable(&buf_ty, &plain_name, Some(ctx.func), true, false);
 
         let (_, converted_val) = convert_to_type(
             gen,
@@ -66,6 +68,17 @@ impl Codegen<'_> for Buffer {
             (buf_ty.get_pointer_inner().unwrap(), converted_val),
         );
 
-        Some((Type::Pointer(Box::new(buf_ty)), tmp))
+        let res = (buf_ty, tmp);
+
+        if self.name.tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\nlet {plain_name}[]: {}",
+                self.name.location.display_plain(false),
+                self.name.location.display_plain(true),
+                res.0.display()
+            ));
+        }
+
+        Some(res)
     }
 }

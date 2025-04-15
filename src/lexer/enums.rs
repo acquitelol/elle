@@ -711,7 +711,7 @@ impl fmt::Debug for Location {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
     pub value: ValueKind,
@@ -749,6 +749,15 @@ impl Token {
             "fmt" => Attribute::Format,
             _ => todo!("more attributes: {attribute}"),
         }
+    }
+
+    pub fn from_ident(ident: &str) -> Self {
+        return Token {
+            kind: TokenKind::Identifier,
+            value: ValueKind::String(ident.into()),
+            location: Rc::new(Location::base()),
+            tagged: false,
+        };
     }
 }
 

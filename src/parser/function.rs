@@ -167,7 +167,7 @@ impl<'a> Function<'a> {
                     self.parser.advance();
 
                     if self.parser.current_token().kind == TokenKind::Identifier {
-                        variadic_name = Some(self.parser.get_identifier());
+                        variadic_name = Some(self.parser.current_token());
                         self.parser.advance();
                     }
 

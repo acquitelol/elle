@@ -170,7 +170,8 @@ impl<'a> Statement<'a> {
                 .error("Expected identifier here but got EOF."));
         }
 
-        let name = self.get_identifier();
+        self.expect_tokens(vec![TokenKind::Identifier]);
+        let name = self.current_token();
 
         self.advance();
 
@@ -199,7 +200,7 @@ impl<'a> Statement<'a> {
                 elle_error!(
                     self.current_token()
                         .location
-                        .with_extra_info(format!("Remove this colon to declare \"{name}\" explicitly"))
+                        .with_extra_info(format!("Remove this colon to declare \"{name}\" explicitly", name = name.value.get_string_inner().unwrap()))
                         .error(format!(
                             "Cannot use \"{GREEN}:={RESET}\" to declare a variable with a non-inferred type.\nYou can remove the \"{GREEN}:{RESET}\" to declare a variable explicitly.",
                             GREEN = get_GREEN!(),
@@ -223,13 +224,7 @@ impl<'a> Statement<'a> {
         let parsed_res = match res.clone() {
             AstNode::Declare(Declare { name, .. }) => {
                 self.body.borrow_mut().push(res);
-
-                AstNode::Literal(Literal {
-                    kind: TokenKind::Identifier,
-                    value: ValueKind::String(name),
-                    location: Rc::new(location.clone()),
-                    tagged: false,
-                })
+                token_to_node!(name, self)
             }
             _ => res,
         };
@@ -245,7 +240,8 @@ impl<'a> Statement<'a> {
 
     fn parse_declarative_like(&mut self) -> AstNode {
         let mut location = (*self.current_token().location).clone();
-        let name = self.get_identifier();
+        self.expect_tokens(vec![TokenKind::Identifier]);
+        let name = self.current_token();
 
         self.advance();
         let operation = self.current_token();
@@ -261,12 +257,7 @@ impl<'a> Statement<'a> {
             name: name.clone(),
             r#type: None,
             value: Some(Box::new(AstNode::BinaryOperation(BinaryOperation {
-                left: Box::new(AstNode::Literal(Literal {
-                    kind: TokenKind::Identifier,
-                    value: ValueKind::String(name),
-                    location: Rc::new(location.clone()),
-                    tagged: false,
-                })),
+                left: Box::new(token_to_node!(name, self)),
                 right: Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0),
                 operator: mapping,
                 treat_as_string: true,
@@ -391,13 +382,7 @@ impl<'a> Statement<'a> {
         let parsed_res = match res.clone() {
             AstNode::Declare(Declare { name, .. }) => {
                 self.body.borrow_mut().push(res);
-
-                AstNode::Literal(Literal {
-                    kind: TokenKind::Identifier,
-                    value: ValueKind::String(name),
-                    location: self.current_token().location,
-                    tagged: false,
-                })
+                token_to_node!(name, self)
             }
             _ => res,
         };
@@ -758,7 +743,7 @@ impl<'a> Statement<'a> {
 
     fn parse_buffer(
         &mut self,
-        name: Option<String>,
+        name: Option<Token>,
         ty: Option<Type>,
         loc: Option<Location>,
     ) -> AstNode {
@@ -767,7 +752,8 @@ impl<'a> Statement<'a> {
         let name = if name.is_some() {
             name.unwrap()
         } else {
-            let tmp = self.get_identifier();
+            self.expect_tokens(vec![TokenKind::Identifier]);
+            let tmp = self.current_token();
             self.advance();
 
             tmp
@@ -776,7 +762,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::LeftBlockBrace]);
         self.advance();
 
-        let mut size = None;
+        let size;
 
         if self.current_token().kind != TokenKind::RightBlockBrace {
             let tokens = self.yield_tokens_with_condition(|token, _, _| {
@@ -788,6 +774,11 @@ impl<'a> Statement<'a> {
             });
 
             size = Some(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
+        } else {
+            elle_error!(self.current_token().location.error(format!(
+                "Expected an expression but got: {:?}",
+                self.current_token().kind
+            )))
         }
 
         self.expect_tokens(vec![TokenKind::RightBlockBrace]);
@@ -1097,7 +1088,8 @@ impl<'a> Statement<'a> {
                 .next_token()
                 .is_some_and(|token| token.kind == TokenKind::In)
             {
-                let name = self.get_identifier();
+                self.expect_tokens(vec![TokenKind::Identifier]);
+                let name = self.current_token();
                 self.advance();
 
                 return self.parse_foreach_statement(Type::Infer, name, location);
@@ -1106,7 +1098,8 @@ impl<'a> Statement<'a> {
             let ty = self.get_type(Some(&self.shared.generics));
             self.advance();
 
-            let name = self.get_identifier();
+            self.expect_tokens(vec![TokenKind::Identifier]);
+            let name = self.current_token();
             self.advance();
 
             return self.parse_foreach_statement(ty, name, location);
@@ -1239,7 +1232,7 @@ impl<'a> Statement<'a> {
     fn parse_foreach_statement(
         &mut self,
         ty: Type,
-        name: String,
+        name: Token,
         mut location: Location,
     ) -> AstNode {
         self.advance(); // in
@@ -1270,8 +1263,19 @@ impl<'a> Statement<'a> {
         new_shared.known_generics = &known_generics;
 
         let iterator = Statement::new(tokens, 0, &self.body, &new_shared).parse().0;
-        let index = format!(INTERNAL_IDX_FORMAT!(), name);
-        let iter = format!(INTERNAL_ITERATOR_FORMAT!(), name);
+        let mut index = name.clone();
+        index.value = ValueKind::String(format!(
+            INTERNAL_IDX_FORMAT!(),
+            name.value.get_string_inner().unwrap()
+        ));
+        index.tagged = false;
+
+        let mut iter = name.clone();
+        iter.value = ValueKind::String(format!(
+            INTERNAL_ITERATOR_FORMAT!(),
+            name.value.get_string_inner().unwrap()
+        ));
+        iter.tagged = false;
 
         self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
         location.end = self.current_token().location.end.clone();
@@ -1281,19 +1285,8 @@ impl<'a> Statement<'a> {
 
         self.position -= 1;
 
-        let index_node = AstNode::Literal(Literal {
-            kind: TokenKind::Identifier,
-            value: ValueKind::String(index.clone()),
-            location: Rc::new(location.clone()),
-            tagged: false,
-        });
-
-        let iterator_node = AstNode::Literal(Literal {
-            kind: TokenKind::Identifier,
-            value: ValueKind::String(iter.clone()),
-            location: Rc::new(location.clone()),
-            tagged: false,
-        });
+        let index_node = token_to_node!(index.clone(), self);
+        let iterator_node = token_to_node!(iter.clone(), self);
 
         let element_access = AstNode::MemoryOperation(MemoryOperation {
             left: Box::new(iterator_node.clone()),
@@ -1617,11 +1610,12 @@ impl<'a> Statement<'a> {
     fn parse_variadic(&mut self) -> AstNode {
         let mut location = (*self.current_token().location).clone();
         self.advance();
-        let name = self.get_identifier();
+        self.expect_tokens(vec![TokenKind::Identifier]);
+        let name = self.current_token();
 
+        self.advance();
         self.expect_tokens(vec![TokenKind::Semicolon]);
         location.end = self.current_token().location.end.clone();
-        self.advance();
 
         AstNode::VariadicStart(VariadicStart {
             name,
@@ -1632,7 +1626,8 @@ impl<'a> Statement<'a> {
     fn parse_yield_variadic(&mut self) -> AstNode {
         let mut location = (*self.current_token().location).clone();
         let position = self.position.clone();
-        let name = self.get_identifier();
+        self.expect_tokens(vec![TokenKind::Identifier]);
+        let name = self.current_token();
 
         self.advance();
         self.expect_tokens(vec![TokenKind::Dot]);
@@ -2272,11 +2267,11 @@ impl<'a> Statement<'a> {
     fn parse_struct_init(&mut self) -> AstNode {
         let mut location = (*self.current_token().location).clone();
         let name = self.get_identifier();
+        self.expect_tokens(vec![TokenKind::Identifier]);
 
-        if !(self.shared.struct_pool.borrow().contains_key(&name)) {
             elle_error!(self.current_token().location.error(format!(
                 "Struct named '{}' could not be found. Are you sure you typed it correctly?",
-                name
+                plain_name
             )))
         }
 
@@ -2665,7 +2660,8 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
         self.advance();
 
-        let name = self.get_identifier();
+        self.expect_tokens(vec![TokenKind::Identifier]);
+        let name = self.current_token();
 
         self.advance();
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
@@ -2678,6 +2674,9 @@ impl<'a> Statement<'a> {
             location: Rc::new(location.clone()),
             tagged: false,
         });
+        ));
+
+        let mut expression = token_to_node!(fmt.clone(), self);
 
         match self.current_token().kind {
             TokenKind::Equal => {
@@ -2686,7 +2685,7 @@ impl<'a> Statement<'a> {
                 location.end = self.current_token().location.end.clone();
 
                 expression = AstNode::Declare(Declare {
-                    name: format!(INTERNAL_IDX_FORMAT!(), name),
+                    name: fmt,
                     r#type: None,
                     value: Some(Box::new(
                         Statement::new(value_tokens, 0, &self.body, self.shared)
@@ -2699,7 +2698,7 @@ impl<'a> Statement<'a> {
             }
             other if other.is_declarative() => {
                 expression = AstNode::Declare(Declare {
-                    name: format!(INTERNAL_IDX_FORMAT!(), name),
+                    name: fmt,
                     r#type: None,
                     value: Some(Box::new(self.parse_declarative_node(expression))),
                     location: Rc::new(location.clone()),

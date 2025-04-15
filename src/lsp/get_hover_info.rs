@@ -4,7 +4,7 @@ use super::get_location::get_location;
 
 pub fn get_hover_info(output: &str) -> Option<Hover> {
     let parts = output
-        .split("\n")
+        .splitn(4, "\n")
         .filter(|x| !x.is_empty())
         .collect::<Vec<&str>>();
 
@@ -17,7 +17,7 @@ pub fn get_hover_info(output: &str) -> Option<Hover> {
     let _ = parts[0];
     let start_location = get_location(parts[1])?;
     let end_location = get_location(parts[2])?;
-    let res = parts[3];
+    let res = parts[3].trim();
 
     Some(Hover {
         contents: HoverContents::Scalar(MarkedString::String(format!("```elle\n{res}\n```"))),
