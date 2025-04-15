@@ -150,6 +150,7 @@ pub struct ArrayLength {
 pub struct Lambda {
     pub arguments: Vec<Argument>,
     pub value: Vec<AstNode>,
+    pub return_ty: Option<Type>,
     pub location: Rc<Location>,
 }
 

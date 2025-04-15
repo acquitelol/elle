@@ -39,7 +39,7 @@ impl Codegen<'_> for Lambda {
                 imported: false,
                 generics: vec![],
                 arguments: self.arguments,
-                r#return: None,
+                r#return: self.return_ty,
                 body: self.value,
                 location: self.location.clone(),
                 return_location: self.location,

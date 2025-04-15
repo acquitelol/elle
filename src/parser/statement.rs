@@ -1723,6 +1723,7 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let mut arguments = vec![];
+        let mut return_ty = None;
 
         while self.current_token().kind != TokenKind::RightParenthesis && !self.is_eof() {
             if self.current_token().kind == TokenKind::Ellipsis {
@@ -1766,6 +1767,12 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         self.advance();
 
+        if self.current_token().kind == TokenKind::RightArrow {
+            self.advance();
+            return_ty = Some(self.get_type(Some(self.shared.generics)));
+            self.advance();
+        }
+
         if self.current_token().kind == TokenKind::LeftCurlyBrace {
             self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
             self.advance();
@@ -1777,6 +1784,7 @@ impl<'a> Statement<'a> {
 
             AstNode::Lambda(Lambda {
                 arguments,
+                return_ty,
                 value: body,
                 location: Rc::new(location),
             })
@@ -1836,6 +1844,7 @@ impl<'a> Statement<'a> {
 
             AstNode::Lambda(Lambda {
                 arguments,
+                return_ty,
                 value: vec![AstNode::Return(Return {
                     value: Box::new(value),
                     location: Rc::new(location.clone()),
