@@ -60,6 +60,7 @@ pub fn process_field_access(
                 kind,
                 value,
                 location,
+                tagged,
             }) if kind == TokenKind::Identifier => {
                 let field = value.get_string_inner().unwrap();
 
@@ -105,9 +106,31 @@ pub fn process_field_access(
                         Instruction::Load(member_ty.clone().unwrap(), offset_tmp),
                     );
 
-                    return (member_ty.unwrap(), tmp);
+                    let res = (member_ty.unwrap(), tmp);
+
+                    if tagged {
+                        elle_error!(format!(
+                            "hover\n{}\n{}\n{struct_name}.{field}: {}",
+                            location.display_plain(false),
+                            location.display_plain(true),
+                            res.0.display()
+                        ));
+                    }
+
+                    return res;
                 } else {
-                    return (member_ty.unwrap(), offset_tmp);
+                    let res = (member_ty.unwrap(), offset_tmp);
+
+                    if tagged {
+                        elle_error!(format!(
+                            "hover\n{}\n{}\n{struct_name}.{field}: {}",
+                            location.display_plain(false),
+                            location.display_plain(true),
+                            res.0.display()
+                        ));
+                    }
+
+                    return res;
                 }
             }
             AstNode::FieldAccess(FieldAccess {
