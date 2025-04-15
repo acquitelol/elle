@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::path::Path;
+use std::{env::set_current_dir, path::Path};
 use tokio::process::Command;
 
 use crate::misc::constants::SHORT_EXTENSION;
@@ -11,6 +11,9 @@ pub async fn get_file_output(path: &Path) -> Result<String> {
     {
         return Err(anyhow::anyhow!("File must have the '.le' extension").into());
     }
+
+    set_current_dir(path.parent().unwrap())
+        .unwrap_or_else(|err| panic!("Failed to set the current dir: {}", err));
 
     let output = Command::new("ellec")
         .arg("-c")
