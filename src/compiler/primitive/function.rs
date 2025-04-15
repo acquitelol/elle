@@ -9,8 +9,7 @@ use crate::{
         },
     },
     elle_error, hashmap, is_generic,
-    lexer::enums::TokenKind,
-    parser::enums::{AstNode, FunctionSource, Literal},
+    parser::enums::FunctionSource,
 };
 
 pub fn generate_function(
@@ -86,17 +85,7 @@ pub fn generate_function(
             is_return: false,
         };
 
-        match statement {
-            AstNode::Literal(Literal { kind, .. }) => match kind {
-                TokenKind::Break | TokenKind::Continue => {
-                    statement.clone().compile(gen, &ctx);
-                }
-                _ => {}
-            },
-            _ => {
-                statement.clone().compile(gen, &ctx);
-            }
-        }
+        statement.clone().compile(gen, &ctx);
     }
 
     let mut first_ty: Option<Type> = None;

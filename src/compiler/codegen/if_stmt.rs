@@ -85,8 +85,8 @@ impl Codegen<'_> for IfStatement {
 
             ctx.func.borrow_mut().add_block(elif_true_label);
 
-            for stmt in elif_body {
-                stmt.compile(gen, ctx);
+            for statement in elif_body {
+                statement.compile(gen, ctx);
             }
 
             ensure_jumps!(ctx, end_label);

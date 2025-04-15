@@ -4,8 +4,7 @@ use crate::{
         qbe::{r#type::Type, value::Value},
     },
     hashmap,
-    lexer::enums::TokenKind,
-    parser::enums::{AstNode, BlockStatement, Literal},
+    parser::enums::BlockStatement,
 };
 
 impl Codegen<'_> for BlockStatement {
@@ -18,17 +17,7 @@ impl Codegen<'_> for BlockStatement {
         ctx.func.borrow_mut().add_block(body_label.clone());
 
         for statement in self.body.iter() {
-            match statement {
-                AstNode::Literal(Literal { kind, .. }) => match kind {
-                    TokenKind::Break | TokenKind::Continue => {
-                        statement.clone().compile(gen, ctx);
-                    }
-                    _ => {}
-                },
-                _ => {
-                    statement.clone().compile(gen, ctx);
-                }
-            }
+            statement.clone().compile(gen, ctx);
         }
 
         ctx.func.borrow_mut().add_block(end_label);
