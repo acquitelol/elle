@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     compiler::{
-        compiler::{Codegen, CodegenContext, Compiler},
+        compiler::{Codegen, CodegenContext, Compiler, VariableInfo},
         lib::{
             convert::convert_to_type, meta_struct::generate_meta_struct,
             mono_function::create_monomorphized_function,
@@ -121,11 +121,19 @@ impl Codegen<'_> for FunctionCall {
             func
         } else {
             // Function could be a callback pointer
-            let callback = gen.get_variable(name.as_str(), Some(ctx.func), Some(ctx.module));
+            let callback = gen.get_variable(
+                &name,
+                Some(ctx.func),
+                Some(ctx.module),
+                VariableInfo {
+                    dont_call_constants: true,
+                },
+            );
 
             let fallback = Function {
                 linkage: Linkage::public(),
                 name: name.clone(),
+                constant: false,
                 variadic: false,
                 external: false,
                 builtin: false,
@@ -572,7 +580,12 @@ impl Codegen<'_> for FunctionCall {
         let temp = gen.new_temporary(None, true);
         let val = if is_callback {
             let tmp = gen.new_temporary(None, true);
-            let res = gen.get_variable(&format!("{}.addr", name), Some(ctx.func), Some(ctx.module));
+            let res = gen.get_variable(
+                &format!("{}.addr", name),
+                Some(ctx.func),
+                Some(ctx.module),
+                VariableInfo::default(),
+            );
 
             if let Ok((_, addr_val)) = res {
                 ctx.func.borrow_mut().assign_instruction(
@@ -583,14 +596,26 @@ impl Codegen<'_> for FunctionCall {
 
                 tmp
             } else {
-                gen.get_variable(&name, Some(ctx.func), Some(ctx.module))
-                    .unwrap_or((Type::Long, Value::Global(name)))
-                    .1
-            }
-        } else {
-            gen.get_variable(&name, Some(ctx.func), Some(ctx.module))
+                gen.get_variable(
+                    &name,
+                    Some(ctx.func),
+                    Some(ctx.module),
+                    VariableInfo::default(),
+                )
                 .unwrap_or((Type::Long, Value::Global(name)))
                 .1
+            }
+        } else {
+            gen.get_variable(
+                &name,
+                Some(ctx.func),
+                Some(ctx.module),
+                VariableInfo {
+                    dont_call_constants: true,
+                },
+            )
+            .unwrap_or((Type::Long, Value::Global(name)))
+            .1
         };
 
         ctx.func.borrow_mut().assign_instruction(

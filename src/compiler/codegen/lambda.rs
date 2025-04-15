@@ -46,6 +46,7 @@ impl Codegen<'_> for Lambda {
             },
             gen,
             true,
+            false,
             hashmap![],
             ctx.module,
         );

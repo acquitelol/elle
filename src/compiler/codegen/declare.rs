@@ -1,6 +1,6 @@
 use crate::{
     compiler::{
-        compiler::{Codegen, CodegenContext, Compiler},
+        compiler::{Codegen, CodegenContext, Compiler, VariableInfo},
         lib::convert::convert_to_type,
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
@@ -12,15 +12,24 @@ use crate::{
 
 impl Codegen<'_> for Declare {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let existing = match gen.get_variable(self.name.as_str(), Some(ctx.func), Some(ctx.module))
-        {
+        let existing = match gen.get_variable(
+            self.name.as_str(),
+            Some(ctx.func),
+            Some(ctx.module),
+            VariableInfo::default(),
+        ) {
             Ok((ty, _)) => ty,
             Err(_) => Type::Word,
         };
 
         if self.r#type.is_none()
             && gen
-                .get_variable(self.name.as_str(), Some(ctx.func), Some(ctx.module))
+                .get_variable(
+                    self.name.as_str(),
+                    Some(ctx.func),
+                    Some(ctx.module),
+                    VariableInfo::default(),
+                )
                 .is_err()
         {
             elle_error!(
@@ -39,6 +48,7 @@ impl Codegen<'_> for Declare {
             &format!("{}.addr", self.name),
             Some(ctx.func),
             Some(ctx.module),
+            VariableInfo::default(),
         );
 
         let mut local_ty = self.r#type.clone().unwrap_or(existing);

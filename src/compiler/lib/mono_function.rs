@@ -318,6 +318,7 @@ pub fn create_monomorphized_function(
                     },
                     gen,
                     false,
+                    false,
                     known_generics.clone(),
                     &module,
                 );

@@ -53,6 +53,11 @@ pub trait Codegen<'a> {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'a>) -> Option<(Type, Value)>;
 }
 
+#[derive(Default)]
+pub struct VariableInfo {
+    pub dont_call_constants: bool,
+}
+
 pub struct Compiler {
     pub tmp_counter: u32,
     pub scopes: Vec<HashMap<String, (Type, Value)>>,
@@ -99,7 +104,7 @@ impl Compiler {
         let tmp = if new {
             self.new_temporary(Some(name), minify)
         } else {
-            let existing_var = self.get_variable(name, func, None);
+            let existing_var = self.get_variable(name, func, None, VariableInfo::default());
 
             match existing_var {
                 Ok((_, val)) => match val {
@@ -124,6 +129,7 @@ impl Compiler {
         name: &str,
         func: Option<&RefCell<Function>>,
         module: Option<&RefCell<Module>>,
+        state: VariableInfo,
     ) -> Result<(Type, Value), String> {
         let var = self
             .scopes
@@ -170,6 +176,10 @@ impl Compiler {
                                 .unwrap_or_else(|| {
                                     elle_error!(location.error("Constant does not exist"))
                                 });
+
+                            if state.dont_call_constants && !ty.clone().unwrap().is_function() {
+                                return Ok((ty.unwrap(), Value::Global(name.into())));
+                            }
 
                             let temp = self.new_temporary(Some("constant"), true);
 
@@ -228,11 +238,16 @@ impl Compiler {
         location: Rc<Location>,
         // (Ty, Val, Init)
     ) -> Option<(Type, Value)> {
-        let var = self.get_variable(&name, func, module);
+        let var = self.get_variable(&name, func, module, VariableInfo::default());
 
         match var {
             Ok((ty, val)) => {
-                let res = self.get_variable(&format!("{}.addr", name), func, module);
+                let res = self.get_variable(
+                    &format!("{}.addr", name),
+                    func,
+                    module,
+                    VariableInfo::default(),
+                );
 
                 if res.is_ok() && func.is_some() {
                     let (_, addr_val) = res.unwrap();
@@ -361,6 +376,7 @@ impl Compiler {
                         },
                         &mut gen,
                         false,
+                        true,
                         hashmap![],
                         &module_ref,
                     );
@@ -369,8 +385,14 @@ impl Compiler {
                 }
                 Primitive::Function(this) => {
                     if this.generics.is_empty() {
-                        let function =
-                            generate_function(this, &mut gen, false, hashmap![], &module_ref);
+                        let function = generate_function(
+                            this,
+                            &mut gen,
+                            false,
+                            false,
+                            hashmap![],
+                            &module_ref,
+                        );
 
                         module_ref.borrow_mut().add_function(function);
 

@@ -17,6 +17,7 @@ pub fn generate_function(
     this: FunctionSource,
     gen: &mut Compiler,
     lambda: bool,
+    constant: bool,
     known_generics: HashMap<String, Type>,
     module: &RefCell<Module>,
 ) -> Function {
@@ -38,6 +39,7 @@ pub fn generate_function(
             Linkage::private()
         },
         name: this.name.clone(),
+        constant,
         variadic: this.variadic,
         external: this.external,
         builtin: this.builtin,
