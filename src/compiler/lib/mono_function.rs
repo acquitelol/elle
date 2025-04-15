@@ -10,10 +10,10 @@ use crate::{
         primitive::{function::generate_function, r#struct::generate_struct},
         qbe::{function::Function, module::Module, r#type::Type},
     },
-    elle_error, get_BOLD, get_GREEN, get_RED, get_RESET, hashmap,
+    elle_error, get_GREEN, get_RED, get_RESET, hashmap,
     lexer::enums::Location,
     parser::enums::{modify_type_in_ast, Argument, AstNode, FunctionSource, Primitive},
-    BOLD, GENERIC_END, GENERIC_IDENTIFIER, GREEN, META_STRUCT_NAME, RED, RESET,
+    GENERIC_END, GENERIC_IDENTIFIER, GREEN, META_STRUCT_NAME, RED, RESET,
 };
 
 use super::can_convert::can_convert_to_type;
@@ -129,23 +129,6 @@ pub fn create_monomorphized_function(
                                         false,
                                     ) =>
                                 {
-                                    call_location.column -=
-                                        call_location.ctx.len() - call_location.ctx.trim().len();
-                                    call_location.ctx = Rc::from(call_location.ctx.trim());
-                                    call_location.above = Some(Rc::from(format!(
-                                        "In function:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
-                                        " ".repeat(
-                                            call_location.ctx.len()
-                                                - call_location.ctx.trim().len()
-                                                + format!("{}", call_location.row + 1).len()
-                                                + 8
-                                        ),
-                                        this.location.ctx,
-                                        GREEN = get_GREEN!(),
-                                        BOLD = get_BOLD!(),
-                                        RESET = get_RESET!()
-                                    )));
-
                                     elle_error!(
                                         call_location.with_extra_info(format!("{key} = `{}`, but got `{}`", existing_ty.display(), ty.display())).error(
                                             format!(
@@ -232,21 +215,6 @@ pub fn create_monomorphized_function(
                 let b: HashSet<_> = known_generics.keys().cloned().collect();
 
                 let diff: Vec<_> = a.difference(&b).cloned().collect();
-
-                call_location.column -= call_location.ctx.len() - call_location.ctx.trim().len();
-                call_location.ctx = Rc::from(call_location.ctx.trim());
-                call_location.above = Some(Rc::from(format!(
-                    "In function:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
-                    " ".repeat(
-                        call_location.ctx.len() - call_location.ctx.trim().len()
-                            + format!("{}", call_location.row + 1).len()
-                            + 8
-                    ),
-                    this.location.ctx,
-                    GREEN = get_GREEN!(),
-                    BOLD = get_BOLD!(),
-                    RESET = get_RESET!()
-                )));
 
                 elle_error!(
                     call_location.error(format!(

@@ -125,6 +125,9 @@ pub fn lex_and_parse(
         }
     }
 
+    // dbg!(&tokens);
+    // exit(0);
+
     // File consists entirely of comments which is still effectively
     // an empty file, so we shouldn't bother parsing this
     if tokens.is_empty() {
@@ -216,9 +219,7 @@ pub fn lex_and_parse(
                     );
                 }
 
-                let mut location = (*location).clone();
-                location.length = location.ctx.len();
-                location.column = location.ctx.len();
+                let location = (*location).clone();
                 let current = current_dir().unwrap();
 
                 if !is_std_import {

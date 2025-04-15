@@ -182,7 +182,7 @@ pub fn generate_meta_struct(
                 "line".into(),
                 Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::IntegerLiteral,
-                    value: ValueKind::Number((location.row + 1) as i128),
+                    value: ValueKind::Number((location.start.row + 1) as i128),
                     location: location.clone(),
                 })),
             ),
@@ -190,7 +190,7 @@ pub fn generate_meta_struct(
                 "column".into(),
                 Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::IntegerLiteral,
-                    value: ValueKind::Number((location.column + 1) as i128),
+                    value: ValueKind::Number((location.start.column + 1) as i128),
                     location: location.clone(),
                 })),
             ),

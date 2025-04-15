@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{elle_error, RESERVED_KEYWORDS};
 
-use super::enums::{Location, ParseResult, Token, TokenKind, ValueKind};
+use super::enums::{Location, ParseResult, Position, Token, TokenKind, ValueKind};
 
 pub struct Lexer {
     file: String,
@@ -11,8 +11,6 @@ pub struct Lexer {
     row: usize,
     bol: usize,
     prev_token: Option<Token>,
-    position_no_whitespace: usize,
-    prev_position_no_whitespace: usize,
 }
 
 impl Lexer {
@@ -24,14 +22,11 @@ impl Lexer {
             row: 0,
             bol: 0,
             prev_token: None,
-            position_no_whitespace: 0,
-            prev_position_no_whitespace: 0,
         }
     }
 
     pub fn next_token(&mut self) -> Option<Token> {
         // For calculating length of token
-        self.prev_position_no_whitespace = self.position_no_whitespace;
         let token = self.internal_next_token();
         self.prev_token = token.clone();
 
@@ -41,6 +36,9 @@ impl Lexer {
     fn internal_next_token(&mut self) -> Option<Token> {
         self.skip_whitespace();
 
+        let start_row = self.row;
+        let start_col = self.position - self.bol;
+
         if self.is_eof() {
             return None;
         }
@@ -48,22 +46,22 @@ impl Lexer {
         let c = self.current_char();
 
         if c.is_alphabetic() || c == '_' {
-            let (kind, value) = self.consume_identifier();
+            let (kind, value) = self.consume_identifier(start_row, start_col);
 
             return Some(Token {
                 kind,
                 value,
-                location: Rc::new(self.get_location()),
+                location: Rc::new(self.get_location(start_row, start_col)),
             });
         }
 
         if c.is_digit(10) {
-            let (kind, value) = self.consume_number_literal();
+            let (kind, value) = self.consume_number_literal(start_row, start_col);
 
             return Some(Token {
                 kind,
                 value,
-                location: Rc::new(self.get_location()),
+                location: Rc::new(self.get_location(start_row, start_col)),
             });
         }
 
@@ -155,7 +153,7 @@ impl Lexer {
                     self.advance();
 
                     elle_error!(
-                        self.get_location().error(
+                        self.get_location(start_row, start_col).error(
                             format!("Invalid token: Elle does not support '--' incrementing.\nPlease use '-= 1' for incrementing instead.")
                         )
                     )
@@ -228,7 +226,7 @@ impl Lexer {
                     self.advance();
 
                     elle_error!(
-                        self.get_location().error(
+                        self.get_location(start_row, start_col).error(
                             format!("Invalid token: Elle does not support '++' incrementing.\nPlease use '+= 1' for incrementing instead.")
                         )
                     )
@@ -298,7 +296,7 @@ impl Lexer {
             ),
             '\'' => (
                 TokenKind::CharLiteral,
-                ValueKind::Character(self.consume_char_literal()),
+                ValueKind::Character(self.consume_char_literal(start_row, start_col)),
             ),
             '>' => {
                 self.advance();
@@ -359,7 +357,7 @@ impl Lexer {
                     _ => (TokenKind::LessThan, ValueKind::Nil),
                 }
             }
-            '$' => self.consume_identifier(),
+            '$' => self.consume_identifier(start_row, start_col),
             '`' => (
                 TokenKind::ExactLiteral,
                 ValueKind::String(self.consume_exact_literal()),
@@ -392,7 +390,7 @@ impl Lexer {
                 match self.current_char() {
                     '[' => (TokenKind::Hashtag, ValueKind::Nil),
                     _ => {
-                        let (_, value) = self.consume_identifier();
+                        let (_, value) = self.consume_identifier(start_row, start_col);
 
                         match value {
                             ValueKind::String(val) => match val.as_str() {
@@ -407,7 +405,7 @@ impl Lexer {
                                 "reset_allocator" => (TokenKind::ResetAllocator, ValueKind::Nil),
                                 "cast" => (TokenKind::Cast, ValueKind::Nil),
                                 other => elle_error!(self
-                                    .get_location()
+                                    .get_location(start_row, start_col)
                                     .error(format!("Unimplemented directive: '{}'", other))),
                             },
                             _ => unreachable!(),
@@ -418,7 +416,7 @@ impl Lexer {
             _ => {
                 self.advance();
                 elle_error!(self
-                    .get_location()
+                    .get_location(start_row, start_col)
                     .error(format!("Unexpected character: '{}'", c)))
             }
         };
@@ -430,7 +428,7 @@ impl Lexer {
         return Some(Token {
             kind,
             value,
-            location: Rc::new(self.get_location()),
+            location: Rc::new(self.get_location(start_row, start_col)),
         });
     }
 
@@ -455,10 +453,6 @@ impl Lexer {
             let current = self.current_char();
             self.position += 1;
 
-            if !current.is_whitespace() {
-                self.position_no_whitespace += 1;
-            }
-
             if current == '\n' {
                 self.bol = self.position;
                 self.row += 1;
@@ -472,18 +466,23 @@ impl Lexer {
         }
     }
 
-    fn get_location(&mut self) -> Location {
+    fn get_location(&mut self, start_row: usize, start_col: usize) -> Location {
         Location {
             file: Rc::from(self.file.clone()),
-            row: self.row,
-            column: self.position - self.bol,
+            start: Position {
+                row: start_row,
+                column: start_col,
+            },
+            end: Position {
+                row: self.row,
+                column: self.position - self.bol,
+            },
             ctx: Rc::from(self.get_line(self.row).unwrap_or("".into())),
             above: if self.row == 0 {
                 None
             } else {
                 self.get_line(self.row - 1).map(Rc::from)
             },
-            length: self.position_no_whitespace - self.prev_position_no_whitespace,
             extra_info: Rc::from(""),
         }
     }
@@ -506,7 +505,7 @@ impl Lexer {
         }
     }
 
-    fn consume_identifier(&mut self) -> (TokenKind, ValueKind) {
+    fn consume_identifier(&mut self, start_row: usize, start_col: usize) -> (TokenKind, ValueKind) {
         let start = self.position;
 
         while !self.is_eof()
@@ -521,7 +520,7 @@ impl Lexer {
 
         if RESERVED_KEYWORDS.contains(&identifier.as_str()) {
             elle_error!(
-                self.get_location().error(format!(
+                self.get_location(start_row, start_col).error(format!(
                     "Use of the reserved keyword '{}' is disallowed.\nThis keyword is currently not in use, but it is reserved\nbecause it may be used in the language in the future.",
                     identifier
                 ))
@@ -582,7 +581,11 @@ impl Lexer {
         string
     }
 
-    fn consume_number_literal(&mut self) -> (TokenKind, ValueKind) {
+    fn consume_number_literal(
+        &mut self,
+        start_row: usize,
+        start_col: usize,
+    ) -> (TokenKind, ValueKind) {
         let start = self.position;
         let mut float = false;
         let mut scientific = false;
@@ -631,7 +634,7 @@ impl Lexer {
 
         if radix != 10 {
             if self.current_char().is_digit(10) {
-                elle_error!(self.get_location().error(format!(
+                elle_error!(self.get_location(start_row, start_col).error(format!(
                     "Character '{}' is not a valid digit of radix {}.",
                     self.current_char(),
                     radix
@@ -639,7 +642,7 @@ impl Lexer {
             }
 
             if float {
-                elle_error!(self.get_location().error(format!(
+                elle_error!(self.get_location(start_row, start_col).error(format!(
                     "Cannot have a floating point or scientific literal of a base other than 10."
                 )))
             }
@@ -759,7 +762,7 @@ impl Lexer {
         string
     }
 
-    fn consume_char_literal(&mut self) -> char {
+    fn consume_char_literal(&mut self, start_row: usize, start_col: usize) -> char {
         self.advance(); // First advance to get the character
 
         let mut character = self.current_char();
@@ -778,7 +781,7 @@ impl Lexer {
                 '0' => '\0',
                 '\'' => '\'',
                 _ => elle_error!(self
-                    .get_location()
+                    .get_location(start_row, start_col)
                     .error(format!("Invalid escape sequence: '{}'", character))),
             };
 
@@ -786,7 +789,7 @@ impl Lexer {
         }
 
         if self.current_char() != '\'' {
-            elle_error!(self.get_location().error(format!(
+            elle_error!(self.get_location(start_row, start_col).error(format!(
                 "Using single quotes is for single characters only.\nExpected the end of a character literal, got '{}'",
                 self.current_char()
             )));

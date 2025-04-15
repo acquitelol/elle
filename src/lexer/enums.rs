@@ -356,11 +356,16 @@ impl fmt::Display for ValueKind {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Location {
-    pub file: Rc<str>,
+pub struct Position {
     pub row: usize,
     pub column: usize,
-    pub length: usize,
+}
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Location {
+    pub file: Rc<str>,
+    pub start: Position,
+    pub end: Position,
     pub ctx: Rc<str>,
     pub above: Option<Rc<str>>,
     pub extra_info: Rc<str>,
@@ -377,8 +382,8 @@ impl Location {
         return format!(
             "{BOLD}{UNDERLINE}{GREEN}{}{RESET}:{UNDERLINE}{fmt}{}{RESET}:{UNDERLINE}{YELLOW}{}{RESET}",
             self.file,
-            self.row + 1,
-            self.column + 1,
+            self.start.row + 1,
+            self.start.column + 1,
             GREEN = get_GREEN!(),
             RESET = get_RESET!(),
             BOLD = get_BOLD!(),
@@ -388,15 +393,29 @@ impl Location {
         );
     }
 
-    pub fn display_plain(&self) -> String {
-        return format!("{}:{}:{}", self.file, self.row + 1, self.column + 1);
+    pub fn display_plain(&self, end: bool) -> String {
+        return format!(
+            "{}:{}:{}",
+            self.file,
+            (if end { self.end.row } else { self.start.row }) + 1,
+            (if end {
+                self.end.column
+            } else {
+                self.start.column
+            }) + 1
+        );
+    }
+
     }
 
     pub fn get_expr_lead(&self) -> String {
-        let ident = self.column - (self.ctx.len() - self.ctx.trim_start().len());
+        let ident = self
+            .start
+            .column
+            .saturating_sub(self.ctx.len() - self.ctx.trim_start().len());
 
-        let left = if ident >= self.length {
-            ident - self.length
+        let left = if ident >= self.end.column.saturating_sub(self.start.column) {
+            ident - self.end.column.saturating_sub(self.start.column)
         } else {
             ident
         };
@@ -465,15 +484,15 @@ impl Location {
         let upper_plain = format!(
             "{}[{}]{}",
             "-".repeat(20),
-            self.display_plain(),
+            self.display_plain(false),
             "-".repeat(20)
         );
 
         let padding = 2;
-        let ident = self.column - (self.ctx.len() - ctx.len());
+        let ident = self.start.column.saturating_sub(self.ctx.len() - ctx.len());
 
-        let left = if ident >= self.length {
-            ident - self.length
+        let left = if ident >= self.end.column.saturating_sub(self.start.column) {
+            ident - self.end.column.saturating_sub(self.start.column)
         } else {
             ident
         };
@@ -488,26 +507,26 @@ impl Location {
 
         let split_index = rhs
             .char_indices()
-            .nth(self.length)
+            .nth(self.end.column.saturating_sub(self.start.column))
             .map(|(i, _)| i)
             .unwrap_or_else(|| rhs.len());
 
         let issue = &rhs[..split_index];
         let rhs = &rhs[split_index..];
-        let line = format!("{} | ", self.row + 1);
+        let line = format!("{} | ", self.start.row + 1);
 
         return format!(
             "\n{upper}\n{user_message}\n\n{above}{line_number}{}{lhs}{BOLD}{fmt}{UNDERLINE}{issue}{RESET}{rhs}\n{}{}{BOLD}{GREEN}^{}{}{RESET}\n{fmt}{}{RESET}\n",
             " ".repeat(padding),
-            " ".repeat(padding + format!("{} | ", self.row + 1).len()),
+            " ".repeat(padding + format!("{} | ", self.start.row + 1).len()),
             " ".repeat(left),
-            "~".repeat(self.length.checked_sub(1).unwrap_or(0)),
+            "~".repeat(self.end.column.saturating_sub(self.start.column).checked_sub(1).unwrap_or(0)),
             if !self.extra_info.is_empty() { format!(" {}", self.extra_info) } else { "".into() },
             "―".repeat(upper_plain.len()),
             above = if !above.is_empty() {
                 format!(
                     "{:<2} | {}{}\n",
-                    self.row,
+                    self.start.row,
                     " ".repeat(padding),
                     above
                 )
@@ -542,9 +561,11 @@ impl Location {
     pub fn warning(&self, message: impl Into<String>) -> String {
         if get_RAW_ERRORS!() {
             return format!(
-                "warning\n{}\n{}\n{}",
-                self.display_plain(),
-                self.length,
+                "warning\n{}\n{}\n{}\n{}\n{}\n",
+                self.display_plain(false),
+                self.display_plain(true),
+                self.display_alt(false),
+                self.display_alt(true),
                 message.into()
             );
         }
@@ -555,9 +576,9 @@ impl Location {
     pub fn basic_warning(&self, message: impl Into<String>) -> String {
         if get_RAW_ERRORS!() {
             return format!(
-                "warning\n{}\n{}\n{}",
-                self.display_plain(),
-                self.length,
+                "warning\n{}\n{}\n{}\n{}\n{}\n",
+                self.display_plain(false),
+                self.display_plain(true),
                 message.into()
             );
         }
@@ -568,9 +589,9 @@ impl Location {
     pub fn error(&self, message: impl Into<String>) -> String {
         if get_RAW_ERRORS!() {
             return format!(
-                "error\n{}\n{}\n{}",
-                self.display_plain(),
-                self.length,
+                "error\n{}\n{}\n{}\n{}\n{}\n",
+                self.display_plain(false),
+                self.display_plain(true),
                 message.into()
             );
         }
@@ -581,9 +602,9 @@ impl Location {
     pub fn basic_error(&self, message: impl Into<String>) -> String {
         if get_RAW_ERRORS!() {
             return format!(
-                "error\n{}\n{}\n{}",
-                self.display_plain(),
-                self.length,
+                "error\n{}\n{}\n{}\n{}\n{}\n",
+                self.display_plain(false),
+                self.display_plain(true),
                 message.into()
             );
         }
@@ -603,11 +624,10 @@ impl Location {
     pub fn default(file: String) -> Location {
         Location {
             file: Rc::from(file),
-            row: 0,
-            column: 0,
+            start: Position { row: 0, column: 0 },
+            end: Position { row: 0, column: 1 },
             ctx: Rc::from("_"),
             above: None,
-            length: 1,
             extra_info: Rc::from(""),
         }
     }
@@ -615,11 +635,10 @@ impl Location {
     pub fn base() -> Location {
         Location {
             file: Rc::from("_"),
-            row: 0,
-            column: 0,
+            start: Position { row: 0, column: 0 },
+            end: Position { row: 0, column: 1 },
             ctx: Rc::from("_"),
             above: None,
-            length: 1,
             extra_info: Rc::from(""),
         }
     }
@@ -627,13 +646,25 @@ impl Location {
 
 impl fmt::Display for Location {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{}:{}", self.file, self.row + 1, self.column + 1)
+        write!(
+            f,
+            "{}:{}:{}",
+            self.file,
+            self.start.row + 1,
+            self.start.column + 1
+        )
     }
 }
 
 impl fmt::Debug for Location {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{}:{}", self.file, self.row + 1, self.column + 1)
+        write!(
+            f,
+            "{}:{}:{}",
+            self.file,
+            self.start.row + 1,
+            self.start.column + 1
+        )
     }
 }
 

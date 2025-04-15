@@ -1,8 +1,8 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, ops::Deref, rc::Rc};
 
 use crate::{
     elle_error,
-    lexer::enums::{Token, TokenKind},
+    lexer::enums::{Location, Token, TokenKind},
 };
 
 use super::{
@@ -50,7 +50,12 @@ impl<'a> Constant<'a> {
         tokens
     }
 
-    pub fn parse(&mut self, public: bool, should_parse: bool) -> Option<Primitive> {
+    pub fn parse(
+        &mut self,
+        public: bool,
+        should_parse: bool,
+        mut location: Location,
+    ) -> Option<Primitive> {
         self.parser.advance();
 
         if !should_parse {
@@ -96,7 +101,9 @@ impl<'a> Constant<'a> {
         self.parser.expect_tokens(vec![TokenKind::Equal]);
         self.parser.advance();
 
+        let mut value_location = self.parser.current_token().location.deref().clone();
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::Semicolon]);
+        value_location.end = self.parser.current_token().location.end.clone();
         self.parser.advance();
 
         let body: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
@@ -114,6 +121,8 @@ impl<'a> Constant<'a> {
         .parse()
         .0;
 
+        location.end = self.parser.current_token().location.end.clone();
+
         Some(Primitive::Constant(ConstantSource {
             name,
             public,
@@ -122,7 +131,7 @@ impl<'a> Constant<'a> {
                 AstNode::Conversion(Conversion {
                     r#type: Some(ty),
                     value: Box::new(value),
-                    location: self.parser.current_token().location,
+                    location: Rc::new(value_location),
                     explicit: false,
                 })
             } else {
@@ -130,7 +139,7 @@ impl<'a> Constant<'a> {
             }),
             usable: true,
             imported: false,
-            location: self.parser.current_token().location,
+            location: Rc::new(location),
         }))
     }
 }

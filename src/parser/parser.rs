@@ -44,17 +44,9 @@ pub fn create_generic_struct(
             .skip(known_generics.len())
             .collect::<Vec<String>>();
 
-        location.column -= location.ctx.len() - location.ctx.trim().len();
-        location.ctx = Rc::from(location.ctx.trim());
-        location.length = location.column;
-        location.column = 0;
         location.above = Some(Rc::from(format!(
             "In struct:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
-            " ".repeat(
-                location.ctx.len() - location.ctx.trim().len()
-                    + format!("{}", location.row + 1).len()
-                    + 8
-            ),
+            " ".repeat(location.ctx.len() - location.ctx.trim().len() + 8),
             struct_location.ctx,
             GREEN = get_GREEN!(),
             BOLD = get_BOLD!(),
@@ -118,29 +110,14 @@ macro_rules! get_type {
     ($self:expr, $generics:expr, $struct_pool:expr, $tree:expr) => {{
         let mut is_fn_pointer = false;
         let mut is_struct = false;
+        let mut tuple_imported = true;
         let name;
 
+        let location = (*$self.current_token().location).clone();
+
         let mut ty = if $self.current_token().kind == TokenKind::LeftParenthesis {
-            let mut location = (*$self.current_token().location).clone();
-
             if !$struct_pool.borrow().contains_key("Tuple") {
-                let import_text = "use std/collections/tuple;";
-
-                location.ctx = Rc::from(location.ctx.trim());
-                location.above = Some(Rc::from(format!(
-                    "Add this to your file:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
-                    " ".repeat(
-                        location.ctx.len() - location.ctx.trim().len()
-                            + format!("{}", location.row + 1).len()
-                            + 8
-                    ),
-                    import_text,
-                    GREEN = get_GREEN!(),
-                    BOLD = get_BOLD!(),
-                    RESET = get_RESET!()
-                )));
-
-                elle_error!(location.error("The tuple module is not imported. Please import it to use tuples."));
+                tuple_imported = false;
             }
 
             $self.advance(); // Skip left parenthesis
@@ -167,18 +144,34 @@ macro_rules! get_type {
                     .join(".")
             );
 
+            $self.expect_tokens(vec![TokenKind::RightParenthesis]);
+            let mut cloned_location = location.clone();
+            cloned_location.end = $self.current_token().location.end.clone();
+
+            if !tuple_imported {
+                let import_text = "use std/collections/tuple;";
+
+                elle_error!(
+                    cloned_location.error(
+                        format!(
+                            "The tuple module is not imported. Please import it to use tuples.\n\n`{}`",
+                            import_text
+                        )
+                    )
+                );
+            }
+
             if !$struct_pool.borrow().contains_key(&generic_name) {
                 create_generic_struct(
                     "Tuple".into(),
                     generic_name.clone(),
-                    location,
+                    cloned_location,
                     types,
                     &$struct_pool,
                     &$tree,
                 )
             }
 
-            $self.expect_tokens(vec![TokenKind::RightParenthesis]);
             Type::Pointer(Box::new(Type::Struct(generic_name)))
         } else {
             is_fn_pointer = $self.current_token().kind == TokenKind::Function;
@@ -225,26 +218,19 @@ macro_rules! get_type {
                         $self.advance();
                         $self.advance();
 
-                        let mut location = (*$self.current_token().location).clone();
-
                         if !$struct_pool.borrow().contains_key("Array") {
+                            let mut cloned_location = location.clone();
+                            cloned_location.end = $self.current_token().location.end.clone();
                             let import_text = "use std/collections/array;";
 
-                            location.ctx = Rc::from(location.ctx.trim());
-                            location.above = Some(Rc::from(format!(
-                                "Add this to your file:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
-                                " ".repeat(
-                                    location.ctx.len() - location.ctx.trim().len()
-                                        + format!("{}", location.row + 1).len()
-                                        + 8
-                                ),
-                                import_text,
-                                GREEN = get_GREEN!(),
-                                BOLD = get_BOLD!(),
-                                RESET = get_RESET!()
-                            )));
-
-                            elle_error!(location.error("The array module is not imported. Please import it to use dynamic arrays."));
+                            elle_error!(
+                                cloned_location.error(
+                                    format!(
+                                        "The array module is not imported. Please import it to use dynamic arrays.\n\n`{}`",
+                                        import_text
+                                    )
+                                )
+                            );
                         }
 
                         let generic_name = format!(
@@ -252,11 +238,14 @@ macro_rules! get_type {
                             ty.to_internal_id().to_string()
                         );
 
+                        let mut cloned_location = location.clone();
+                        cloned_location.end = $self.current_token().location.end.clone();
+
                         if !$struct_pool.borrow().contains_key(&generic_name) {
                             create_generic_struct(
                                 "Array".into(),
                                 generic_name.clone(),
-                                location,
+                                cloned_location,
                                 vec![ty],
                                 &$struct_pool,
                                 &$tree,
@@ -282,7 +271,8 @@ macro_rules! get_type {
                             }
                         }
 
-                        let location = (*$self.current_token().location).clone();
+                        let mut cloned_location = location.clone();
+                        cloned_location.end = $self.current_token().location.end.clone();
 
                         let generic_name = format!(
                             "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
@@ -297,7 +287,7 @@ macro_rules! get_type {
                             create_generic_struct(
                                 name.clone(),
                                 generic_name.clone(),
-                                location,
+                                cloned_location,
                                 known_generics,
                                 &$struct_pool,
                                 &$tree,
@@ -460,6 +450,7 @@ impl Parser {
         }
 
         self.position = 0;
+        let mut location = (*self.current_token().location).clone();
         let mut public = false;
         let mut local = false;
         let mut defined = false;
@@ -467,6 +458,7 @@ impl Parser {
 
         macro_rules! clean {
             () => {{
+                location = (*self.current_token().location).clone();
                 public = false;
                 local = false;
                 defined = false;
@@ -586,6 +578,7 @@ impl Parser {
                             global_external || external
                         },
                         do_only == &DoOnly::FunctionsAndConstants,
+                        location.clone(),
                     );
 
                     // Will only be Some(T) if do_only == &DoOnly::FunctionsAndConstants
@@ -616,6 +609,7 @@ impl Parser {
                             global_public || public
                         },
                         do_only == &DoOnly::FunctionsAndConstants,
+                        location.clone(),
                     );
 
                     if let Some(statement) = statement {
@@ -648,6 +642,7 @@ impl Parser {
                         },
                         false,
                         do_only == &DoOnly::Structs,
+                        location.clone(),
                     );
 
                     if let Some((statement, mut builtins)) = res {
@@ -663,7 +658,8 @@ impl Parser {
                     }
 
                     let mut r#struct = Struct::new(self);
-                    let res = r#struct.parse(false, true, do_only == &DoOnly::Structs);
+                    let res =
+                        r#struct.parse(false, true, do_only == &DoOnly::Structs, location.clone());
 
                     if let Some((statement, mut builtins)) = res {
                         self.tree.borrow_mut().push(statement);

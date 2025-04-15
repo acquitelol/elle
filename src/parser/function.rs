@@ -1,9 +1,9 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     compiler::qbe::r#type::Type,
     elle_error,
-    lexer::enums::{Attribute, TokenKind, ValueKind},
+    lexer::enums::{Attribute, Location, TokenKind, ValueKind},
     parser::{
         enums::{BlockStatement, FunctionSource, IfStatement, VariadicStart, WhileLoopStatement},
         statement::Shared,
@@ -26,7 +26,13 @@ impl<'a> Function<'a> {
         Function { parser }
     }
 
-    pub fn parse(&mut self, public: bool, external: bool, should_parse: bool) -> Option<Primitive> {
+    pub fn parse(
+        &mut self,
+        public: bool,
+        external: bool,
+        should_parse: bool,
+        mut location: Location,
+    ) -> Option<Primitive> {
         self.parser.advance();
 
         if !should_parse {
@@ -74,7 +80,6 @@ impl<'a> Function<'a> {
         }
 
         let mut name = self.parser.get_identifier();
-        let location = self.parser.current_token().location.clone();
 
         self.parser.advance();
 
@@ -318,6 +323,7 @@ impl<'a> Function<'a> {
 
         if external {
             self.parser.expect_tokens(vec![TokenKind::Semicolon]);
+            location.end = self.parser.current_token().location.end.clone();
             self.parser.advance();
 
             return Some(Primitive::Function(FunctionSource {
@@ -335,7 +341,7 @@ impl<'a> Function<'a> {
                 body: vec![],
                 usable: true,
                 imported: false,
-                location: location.clone(),
+                location: Rc::new(location),
                 return_location: return_location.clone(),
             }));
         }
@@ -474,6 +480,7 @@ impl<'a> Function<'a> {
         }
 
         insert_deferred_statements(&mut res, &deferred, true);
+        location.end = self.parser.current_token().location.end.clone();
 
         Some(Primitive::Function(FunctionSource {
             public,
@@ -490,7 +497,7 @@ impl<'a> Function<'a> {
             body: res,
             usable: true,
             imported: false,
-            location,
+            location: Rc::new(location),
             return_location,
         }))
     }

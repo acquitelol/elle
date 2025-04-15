@@ -30,6 +30,7 @@ impl<'a> Struct<'a> {
         public: bool,
         namespace: bool,
         should_parse: bool,
+        mut location: Location,
     ) -> Option<(Primitive, Vec<Primitive>)> {
         if !should_parse {
             if namespace {
@@ -59,18 +60,14 @@ impl<'a> Struct<'a> {
         self.parser.advance();
 
         let name = self.parser.get_identifier();
-        let location = self.parser.current_token().location.clone();
+        location.end = self.parser.current_token().location.end.clone();
         self.parser.advance();
 
         if namespace {
             match self.parser.current_token().kind {
                 TokenKind::LeftCurlyBrace => {
-                    let mut location = (*self.parser.current_token().location).clone();
-                    location.length = location.ctx.len() - location.column + 1;
-                    location.column += location.ctx.len() - location.column;
-
                     elle_error!(
-                        location.with_extra_info("Remove this part").error(format!(
+                        location.error(format!(
                             "Cannot declare members on a namespace.\nTo declare members, use the '{GREEN}struct{RESET}' keyword instead.",
                             GREEN = get_GREEN!(),
                             RESET = get_RESET!()
@@ -80,11 +77,12 @@ impl<'a> Struct<'a> {
                 _ => self.parser.expect_tokens(vec![TokenKind::Semicolon]),
             };
 
+            location.end = self.parser.current_token().location.end.clone();
             self.parser.advance();
             self.parser
                 .struct_pool
                 .borrow_mut()
-                .insert(name.clone(), (vec![], vec![], location.clone()));
+                .insert(name.clone(), (vec![], vec![], Rc::new(location.clone())));
 
             return Some((
                 Primitive::Struct(StructSource {
@@ -96,7 +94,7 @@ impl<'a> Struct<'a> {
                     known_generics: hashmap![],
                     members: vec![],
                     keyword_location,
-                    location,
+                    location: Rc::new(location.clone()),
                     ignore_empty: namespace,
                 }),
                 vec![],
@@ -155,7 +153,7 @@ impl<'a> Struct<'a> {
 
         self.parser.struct_pool.borrow_mut().insert(
             name.clone(),
-            (generics.clone(), members.clone(), location.clone()),
+            (generics.clone(), members.clone(), Rc::new(location.clone())),
         );
 
         loop {
@@ -179,16 +177,17 @@ impl<'a> Struct<'a> {
             })
         }
 
-        self.parser.struct_pool.borrow_mut().insert(
-            name.clone(),
-            (generics.clone(), members.clone(), location.clone()),
-        );
-
         self.parser.expect_tokens(vec![TokenKind::RightCurlyBrace]);
         self.parser.advance();
 
         self.parser.expect_tokens(vec![TokenKind::Semicolon]);
+        location.end = self.parser.current_token().location.end.clone();
         self.parser.advance();
+
+        self.parser.struct_pool.borrow_mut().insert(
+            name.clone(),
+            (generics.clone(), members.clone(), Rc::new(location.clone())),
+        );
 
         let mut builtins = vec![];
 
@@ -201,47 +200,47 @@ impl<'a> Struct<'a> {
                         left: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("self".into()),
-                            location: location.clone(),
+                            location: Rc::new(location.clone()),
                         })),
                         right: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String(member.name),
-                            location: location.clone(),
+                            location: Rc::new(location.clone()),
                         })),
                         value: None,
-                        location: location.clone(),
+                        location: Rc::new(location.clone()),
                     });
 
                     (
-                        location.clone(),
+                        Rc::new(location.clone()),
                         AstNode::FunctionCall(FunctionCall {
                             name: FORMAT_CONSTANT.into(),
                             generics: vec![],
                             parameters: vec![
-                                (location.clone(), field),
+                                (Rc::new(location.clone()), field),
                                 (
-                                    location.clone(),
+                                    Rc::new(location.clone()),
                                     AstNode::BinaryOperation(BinaryOperation {
                                         left: Box::new(AstNode::Literal(Literal {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("nesting".into()),
-                                            location: location.clone(),
+                                            location: Rc::new(location.clone()),
                                         })),
                                         right: Box::new(AstNode::Literal(Literal {
                                             kind: TokenKind::IntegerLiteral,
                                             value: ValueKind::Number(1),
-                                            location: location.clone(),
+                                            location: Rc::new(location.clone()),
                                         })),
                                         operator: TokenKind::Add,
                                         treat_as_string: false,
                                         dunder_methods: true,
-                                        location: location.clone(),
+                                        location: Rc::new(location.clone()),
                                     }),
                                 ),
                             ],
                             type_method: true,
                             ignore_no_def: false,
-                            location: location.clone(),
+                            location: Rc::new(location.clone()),
                         }),
                     )
                 })
@@ -250,11 +249,11 @@ impl<'a> Struct<'a> {
             let mut interleaved = interleave_with(
                 parameters,
                 (
-                    location.clone(),
+                    Rc::new(location.clone()),
                     AstNode::Literal(Literal {
                         kind: TokenKind::Identifier,
                         value: ValueKind::String("spacing".into()),
-                        location: location.clone(),
+                        location: Rc::new(location.clone()),
                     }),
                 ),
             );
@@ -262,7 +261,7 @@ impl<'a> Struct<'a> {
             interleaved.insert(
                 0,
                 (
-                    location.clone(),
+                    Rc::new(location.clone()),
                     AstNode::Literal(Literal {
                         kind: TokenKind::StringLiteral,
                         value: ValueKind::String(format!(
@@ -274,18 +273,18 @@ impl<'a> Struct<'a> {
                                 .collect::<Vec<String>>()
                                 .join("\n")
                         )),
-                        location: location.clone(),
+                        location: Rc::new(location.clone()),
                     }),
                 ),
             );
 
             // Spacing for the last curly brace
             interleaved.push((
-                location.clone(),
+                Rc::new(location.clone()),
                 AstNode::Literal(Literal {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String("spacing".into()),
-                    location: location.clone(),
+                    location: Rc::new(location.clone()),
                 }),
             ));
 
@@ -335,39 +334,39 @@ impl<'a> Struct<'a> {
                             generics: vec![],
                             parameters: vec![
                                 (
-                                    location.clone(),
+                                    Rc::new(location.clone()),
                                     AstNode::Literal(Literal {
                                         kind: TokenKind::StringLiteral,
                                         value: ValueKind::String(" ".into()),
-                                        location: location.clone(),
+                                        location: Rc::new(location.clone()),
                                     }),
                                 ),
                                 (
-                                    location.clone(),
+                                    Rc::new(location.clone()),
                                     AstNode::BinaryOperation(BinaryOperation {
                                         left: Box::new(AstNode::Literal(Literal {
                                             kind: TokenKind::Identifier,
                                             value: ValueKind::String("nesting".into()),
-                                            location: location.clone(),
+                                            location: Rc::new(location.clone()),
                                         })),
                                         right: Box::new(AstNode::Literal(Literal {
                                             kind: TokenKind::IntegerLiteral,
                                             value: ValueKind::Number(4),
-                                            location: location.clone(),
+                                            location: Rc::new(location.clone()),
                                         })),
                                         operator: TokenKind::Multiply,
                                         treat_as_string: false,
                                         dunder_methods: true,
-                                        location: location.clone(),
+                                        location: Rc::new(location.clone()),
                                     }),
                                 ),
                             ],
                             type_method: false,
                             ignore_no_def: false,
-                            location: location.clone(),
+                            location: Rc::new(location.clone()),
                         }))),
-                        location: location.clone(),
-                        value_location: location.clone(),
+                        location: Rc::new(location.clone()),
+                        value_location: Rc::new(location.clone()),
                     }),
                     AstNode::Return(Return {
                         value: Box::new(AstNode::FunctionCall(FunctionCall {
@@ -376,13 +375,13 @@ impl<'a> Struct<'a> {
                             parameters: interleaved,
                             type_method: false,
                             ignore_no_def: false,
-                            location: location.clone(),
+                            location: Rc::new(location.clone()),
                         })),
-                        location: location.clone(),
+                        location: Rc::new(location.clone()),
                     }),
                 ],
-                location: location.clone(),
-                return_location: location.clone(),
+                location: Rc::new(location.clone()),
+                return_location: Rc::new(location.clone()),
             }));
         }
 
@@ -396,7 +395,7 @@ impl<'a> Struct<'a> {
                 known_generics: hashmap![],
                 members,
                 keyword_location,
-                location: location.clone(),
+                location: Rc::new(location.clone()),
                 ignore_empty: namespace,
             }),
             builtins,

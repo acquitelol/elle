@@ -1,3 +1,5 @@
+use std::{ops::Deref, rc::Rc};
+
 use crate::{
     elle_error,
     lexer::enums::{TokenKind, ValueKind},
@@ -29,9 +31,9 @@ impl<'a> Use<'a> {
     }
 
     pub fn parse(&mut self) -> Primitive {
+        let mut location = self.parser.current_token().location.deref().clone();
         self.parser.advance();
         let mut module = String::new();
-        let location = self.parser.current_token().location;
         let valid = [
             TokenKind::Identifier,
             TokenKind::Divide,
@@ -82,9 +84,13 @@ impl<'a> Use<'a> {
             }
         }
 
+        location.end = self.parser.current_token().location.end.clone();
         self.parser.expect_tokens(vec![TokenKind::Semicolon]);
         self.parser.advance();
 
-        Primitive::Use(UseSource { module, location })
+        Primitive::Use(UseSource {
+            module,
+            location: Rc::from(location),
+        })
     }
 }
