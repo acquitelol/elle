@@ -34,7 +34,7 @@ impl Codegen<'_> for Literal {
                             .unwrap_or(false);
 
                         elle_error!(format!(
-                            "hover\n{}\n{}\n{} {name}: {};",
+                            "hover\n{}\n{}\n{} {name}: {}",
                             self.location.display_plain(false),
                             self.location.display_plain(true),
                             if is_constant { "const" } else { "let" },
