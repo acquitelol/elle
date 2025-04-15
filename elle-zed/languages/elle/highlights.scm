@@ -190,3 +190,5 @@
 ; Import statements
 (import_statement (module_path) @primary)
 (import_statement (module_path "/" @punctuation.delimiter))
+(import_statement (module_path "." @punctuation.delimiter))
+(import_statement (module_path ".." @punctuation.delimiter))
