@@ -139,10 +139,35 @@ impl Codegen<'_> for Literal {
                         ],
                     ));
 
-                    Some((Type::Pointer(Box::new(Type::Char)), Value::Global(name)))
+                    let res = (
+                        Type::Pointer(Box::new(Type::Char)),
+                        Value::Global(name.clone()),
+                    );
+
+                    if self.tagged {
+                        elle_error!(format!(
+                            "hover\n{}\n{}\n\"{val}\": {}",
+                            self.location.display_plain(false),
+                            self.location.display_plain(true),
+                            res.0.display()
+                        ));
+                    }
+
+                    Some(res)
                 }
                 ValueKind::Character(val) => {
-                    Some((Type::Char, Value::Const("".into(), val as i128)))
+                    let res = (Type::Char, Value::Const("".into(), val as i128));
+
+                    if self.tagged {
+                        elle_error!(format!(
+                            "hover\n{}\n{}\n'{val}': {}",
+                            self.location.display_plain(false),
+                            self.location.display_plain(true),
+                            res.0.display()
+                        ));
+                    }
+
+                    Some(res)
                 }
                 ValueKind::Nil => {
                     gen.tmp_counter += 1;

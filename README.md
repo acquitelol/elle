@@ -1731,8 +1731,8 @@ For more information on stdlib alises, directives and attributes, please read be
 
 The current existing directives are:
 
-- `#len(static_array_expr)` - Gives you the length of a static array
-- `#size(T)` - Gives you the size of type T in bytes
+- `#len(expr)` - Gives you the length of a static array
+- `#size(T | expr)` - Gives you the size of type `T` or expression `expr` in bytes
 - `#i(ident)` - Gives you the iterator in a foreach loop given the current element
 - `#env` - Gives you a `ElleEnv *` which is a global environment structure
 - `#alloc(T, size?)` - Allows you to allocate a specific type using the current allocator
