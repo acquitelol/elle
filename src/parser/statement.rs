@@ -1876,6 +1876,15 @@ impl<'a> Statement<'a> {
     fn parse_type_conversion(&mut self) -> AstNode {
         let mut location = (*self.current_token().location).clone();
         let position = self.position;
+
+        if self.current_token().tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n#cast(T, cast_expr) -> T\n",
+                self.current_token().location.display_plain(false),
+                self.current_token().location.display_plain(true),
+            ));
+        }
+
         self.advance();
 
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
@@ -1964,6 +1973,15 @@ impl<'a> Statement<'a> {
         let mut location = (*self.current_token().location).clone();
         let position = self.position;
         self.expect_tokens(vec![TokenKind::Size]);
+
+        if self.current_token().tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n#size(T | expr) -> i32\n",
+                self.current_token().location.display_plain(false),
+                self.current_token().location.display_plain(true),
+            ));
+        }
+
         self.advance();
 
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
@@ -2056,6 +2074,15 @@ impl<'a> Statement<'a> {
         let mut location = (*self.current_token().location).clone();
         let position = self.position;
         self.expect_tokens(vec![TokenKind::ArrayLength]);
+
+        if self.current_token().tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n#len(static_array_expr) -> i64\n",
+                self.current_token().location.display_plain(false),
+                self.current_token().location.display_plain(true),
+            ));
+        }
+
         self.advance();
 
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
@@ -2667,6 +2694,15 @@ impl<'a> Statement<'a> {
     fn parse_indexof(&mut self) -> AstNode {
         let mut location = (*self.current_token().location).clone();
         let position = self.position;
+
+        if self.current_token().tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n#i(identifier) -> i64\n",
+                self.current_token().location.display_plain(false),
+                self.current_token().location.display_plain(true),
+            ));
+        }
+
         self.advance();
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
         self.advance();
@@ -2730,6 +2766,15 @@ impl<'a> Statement<'a> {
     fn parse_env(&mut self) -> AstNode {
         let mut location = (*self.current_token().location).clone();
         let position = self.position;
+
+        if self.current_token().tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n#env: ElleEnv*\n",
+                self.current_token().location.display_plain(false),
+                self.current_token().location.display_plain(true),
+            ));
+        }
+
         self.advance();
 
         location.end = self.current_token().location.end.clone();
@@ -2784,6 +2829,15 @@ impl<'a> Statement<'a> {
     fn parse_alloc(&mut self) -> AstNode {
         let mut location = (*self.current_token().location).clone();
         let position = self.position;
+
+        if self.current_token().tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n#alloc(T, count_expr?) -> T*\n",
+                self.current_token().location.display_plain(false),
+                self.current_token().location.display_plain(true),
+            ));
+        }
+
         self.advance();
 
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
@@ -2894,6 +2948,15 @@ impl<'a> Statement<'a> {
     fn parse_realloc(&mut self) -> AstNode {
         let mut location = (*self.current_token().location).clone();
         let position = self.position;
+
+        if self.current_token().tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n#realloc(ptr_expr, T, count_expr?) -> T*\n",
+                self.current_token().location.display_plain(false),
+                self.current_token().location.display_plain(true),
+            ));
+        }
+
         self.advance();
 
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
@@ -3009,6 +3072,15 @@ impl<'a> Statement<'a> {
     fn parse_free(&mut self) -> AstNode {
         let mut location = (*self.current_token().location).clone();
         let position = self.position;
+
+        if self.current_token().tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n#free(ptr_expr) -> T*\n",
+                self.current_token().location.display_plain(false),
+                self.current_token().location.display_plain(true),
+            ));
+        }
+
         self.advance();
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
         self.advance();
@@ -3088,6 +3160,15 @@ impl<'a> Statement<'a> {
     fn parse_set_allocator(&mut self) -> AstNode {
         let mut location = (*self.current_token().location).clone();
         let position = self.position;
+
+        if self.current_token().tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n#set_allocator(allocator_expr)\n",
+                self.current_token().location.display_plain(false),
+                self.current_token().location.display_plain(true),
+            ));
+        }
+
         self.advance();
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
         self.advance();
@@ -3144,6 +3225,15 @@ impl<'a> Statement<'a> {
     fn parse_reset_allocator(&mut self) -> AstNode {
         let mut location = (*self.current_token().location).clone();
         let position = self.position;
+
+        if self.current_token().tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n#reset_allocator()\n",
+                self.current_token().location.display_plain(false),
+                self.current_token().location.display_plain(true),
+            ));
+        }
+
         self.advance();
 
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);

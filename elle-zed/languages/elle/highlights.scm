@@ -99,6 +99,7 @@
 (call_expression function: (exact_literal) @function)
 
 ; Directives and attributes
+(lsp_type_definition directive: (directive_expression name: _ @function))
 (directive_expression name: _ @function)
 (attribute (identifier) @keyword)
 
