@@ -2,6 +2,19 @@ use tower_lsp::lsp_types::{Hover, HoverContents, MarkedString, Position, Range};
 
 use super::get_location::get_location;
 
+pub fn find_hovers(output: &str) -> Option<Hover> {
+    let res = output
+        .split("\n\n")
+        .filter_map(|x| get_hover_info(x))
+        .collect::<Vec<Hover>>();
+
+    if !res.is_empty() {
+        Some(res[0].clone())
+    } else {
+        None
+    }
+}
+
 pub fn get_hover_info(output: &str) -> Option<Hover> {
     let parts = output
         .splitn(4, "\n")

@@ -2,8 +2,7 @@ use anyhow::Result;
 use tower_lsp::{jsonrpc::Error, lsp_types::*, Client, LanguageServer};
 
 use crate::lsp::{
-    get_diagnostics::get_diagnostics, get_file_output::get_file_output,
-    get_hover_info::get_hover_info,
+    get_diagnostics::get_diagnostics, get_file_output::get_file_output, get_hover_info::find_hovers,
 };
 
 pub struct Backend {
@@ -39,7 +38,7 @@ impl Backend {
         .await
         .ok()?;
 
-        let hover_info = get_hover_info(&output);
+        let hover_info = find_hovers(&output);
         dbg!(&hover_info);
 
         hover_info
