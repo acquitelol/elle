@@ -46,6 +46,8 @@ pub struct Literal {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FunctionCall {
+    pub namespace_token: Token,
+    pub name_token: Token,
     pub name: String,
     pub generics: Vec<Type>,
     pub parameters: Vec<(Rc<Location>, AstNode)>,

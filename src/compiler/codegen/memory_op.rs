@@ -6,7 +6,7 @@ use crate::{
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
     elle_error, is_generic,
-    lexer::enums::{TokenKind, ValueKind},
+    lexer::enums::{Token, TokenKind, ValueKind},
     parser::enums::{AstNode, BinaryOperation, FunctionCall, Literal, MemoryOperation},
     LOAD_CONSTANT, STORE_CONSTANT,
 };
@@ -84,13 +84,16 @@ impl Codegen<'_> for MemoryOperation {
                     parameters.push((self.value_location, *self.value.clone().unwrap()))
                 }
 
+                let constant = if self.value.is_some() {
+                    STORE_CONSTANT
+                } else {
+                    LOAD_CONSTANT
+                };
+
                 let node = AstNode::FunctionCall(FunctionCall {
-                    name: if self.value.is_some() {
-                        STORE_CONSTANT
-                    } else {
-                        LOAD_CONSTANT
-                    }
-                    .into(),
+                    namespace_token: Token::from_ident(""),
+                    name_token: Token::from_ident(constant),
+                    name: constant.into(),
                     generics: vec![],
                     parameters,
                     type_method: true,

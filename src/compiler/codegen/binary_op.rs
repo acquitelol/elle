@@ -8,7 +8,7 @@ use crate::{
         qbe::{comparison::Comparison, instruction::Instruction, r#type::Type, value::Value},
     },
     elle_error, get_BOLD, get_GREEN, get_RESET,
-    lexer::enums::{TokenKind, ValueKind},
+    lexer::enums::{Token, TokenKind, ValueKind},
     parser::enums::{AstNode, BinaryOperation, FunctionCall, Literal, LogicalNot},
     BOLD, EQUALS_CONSTANT, GREEN, RESET,
 };
@@ -32,6 +32,8 @@ impl Codegen<'_> for BinaryOperation {
 
         if matches!(self.operator, TokenKind::Range | TokenKind::RangeEqual) {
             let node = AstNode::FunctionCall(FunctionCall {
+                namespace_token: Token::from_ident("Array"),
+                name_token: Token::from_ident("range"),
                 name: "Array.range".into(),
                 generics: vec![],
                 parameters: vec![
@@ -152,6 +154,8 @@ impl Codegen<'_> for BinaryOperation {
             && self.dunder_methods
         {
             let mut node = AstNode::FunctionCall(FunctionCall {
+                namespace_token: Token::from_ident(""),
+                name_token: Token::from_ident(EQUALS_CONSTANT),
                 name: EQUALS_CONSTANT.into(),
                 generics: vec![],
                 parameters: vec![

@@ -250,6 +250,34 @@ macro_rules! bool_hover {
     };
 }
 
+#[macro_export]
+macro_rules! struct_hover {
+    ($token:expr, $is_namespace:expr, $members:expr) => {
+        if $token.tagged {
+            if $is_namespace {
+                elle_error!(format!(
+                    "hover\n{}\n{}\nnamespace {};",
+                    $token.location.display_plain(false),
+                    $token.location.display_plain(true),
+                    Type::Struct($token.value.get_string_inner().unwrap()).display(),
+                ));
+            }
+
+            elle_error!(format!(
+                "hover\n{}\n{}\nstruct {} {{\n{}\n}};",
+                $token.location.display_plain(false),
+                $token.location.display_plain(true),
+                Type::Struct($token.value.get_string_inner().unwrap()).display(),
+                $members
+                    .into_iter()
+                    .map(|x| format!("\t{} {};", x.r#type.display(), x.name))
+                    .collect::<Vec<String>>()
+                    .join("\n")
+            ));
+        }
+    };
+}
+
 /// Converts a token [`token`] into an AstNode
 ///
 /// This accounts for [`TrueLiteral`, `FalseLiteral`, `FloatingPoint`]

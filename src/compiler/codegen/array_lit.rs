@@ -6,6 +6,7 @@ use crate::{
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
     elle_error,
+    lexer::enums::Token,
     parser::enums::{ArrayLiteral, AstNode, Conversion, FunctionCall},
 };
 
@@ -54,6 +55,8 @@ impl Codegen<'_> for ArrayLiteral {
             };
 
             let node = AstNode::FunctionCall(FunctionCall {
+                namespace_token: Token::from_ident("Array"),
+                name_token: Token::from_ident("new"),
                 name: "Array.new".into(),
                 generics: if let Some(ref ty) = inner_ty {
                     vec![ty.clone()]

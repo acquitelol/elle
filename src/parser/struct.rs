@@ -218,6 +218,8 @@ impl<'a> Struct<'a> {
                     (
                         Rc::new(location.clone()),
                         AstNode::FunctionCall(FunctionCall {
+                            namespace_token: Token::from_ident(""),
+                            name_token: Token::from_ident(FORMAT_CONSTANT),
                             name: FORMAT_CONSTANT.into(),
                             generics: vec![],
                             parameters: vec![
@@ -341,6 +343,8 @@ impl<'a> Struct<'a> {
                         name: Token::from_ident("spacing"),
                         r#type: Some(Type::Pointer(Box::new(Type::Char))),
                         value: Some(Box::new(AstNode::FunctionCall(FunctionCall {
+                            namespace_token: Token::from_ident("string"),
+                            name_token: Token::from_ident("repeat"),
                             name: "string.repeat".into(),
                             generics: vec![],
                             parameters: vec![
@@ -384,6 +388,8 @@ impl<'a> Struct<'a> {
                     }),
                     AstNode::Return(Return {
                         value: Box::new(AstNode::FunctionCall(FunctionCall {
+                            namespace_token: Token::from_ident("string"),
+                            name_token: Token::from_ident(INTERNAL_FORMATTER),
                             name: format!("string.{}", INTERNAL_FORMATTER).into(),
                             generics: vec![],
                             parameters: interleaved,

@@ -406,22 +406,24 @@ impl<'a> Statement<'a> {
 
     fn parse_function(
         &mut self,
-        maybe_name: Option<(Location, String)>,
+        maybe_name: Option<(Location, Token, Token, String)>,
         maybe_params: Option<Vec<(Rc<Location>, AstNode)>>,
         maybe_generics: Option<Vec<Type>>,
         maybe_position: Option<usize>,
         type_method: bool,
     ) -> AstNode {
         let position = maybe_position.unwrap_or(self.position.clone());
-        let (mut location, name) = if let Some((location, name)) = maybe_name {
-            (location, name)
-        } else {
-            let tmp = self.get_identifier();
-            let location = (*self.current_token().location).clone();
-            self.advance();
+        let (mut location, namespace_token, name_token, name) =
+            if let Some((location, namespace_token, name_token, name)) = maybe_name {
+                (location, namespace_token, name_token, name)
+            } else {
+                let name_token = self.current_token();
+                let tmp = self.get_identifier();
+                let location = (*self.current_token().location).clone();
+                self.advance();
 
-            (location, tmp)
-        };
+                (location, Token::from_ident(""), name_token, tmp)
+            };
 
         let generics = if let Some(generics) = maybe_generics {
             generics
@@ -456,7 +458,7 @@ impl<'a> Statement<'a> {
                 kind: TokenKind::Identifier,
                 value: ValueKind::String(name),
                 location: Rc::new(location),
-                tagged: false,
+                tagged: name_token.tagged,
             });
         } else {
             self.expect_tokens(vec![TokenKind::LeftParenthesis]);
@@ -584,6 +586,8 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let mut expression = AstNode::FunctionCall(FunctionCall {
+            namespace_token,
+            name_token,
             name,
             generics,
             parameters,
@@ -1318,6 +1322,8 @@ impl<'a> Statement<'a> {
         let condition_node = AstNode::BinaryOperation(BinaryOperation {
             left: Box::new(index_node.clone()),
             right: Box::new(AstNode::FunctionCall(FunctionCall {
+                namespace_token: Token::from_ident(""),
+                name_token: Token::from_ident(LEN_CONSTANT),
                 name: LEN_CONSTANT.into(),
                 generics: vec![],
                 parameters: vec![(Rc::new(location.clone()), iterator_node)],
@@ -2442,6 +2448,7 @@ impl<'a> Statement<'a> {
 
         self.expect_tokens(vec![TokenKind::Identifier]);
 
+        let name_token = self.current_token();
         let name = self.get_identifier();
         let mut right = Box::new(AstNode::token_to_literal(self.current_token()));
 
@@ -2484,7 +2491,7 @@ impl<'a> Statement<'a> {
             location.end = self.current_token().location.end.clone();
 
             return self.parse_function(
-                Some((location.clone(), name)),
+                Some((location.clone(), Token::from_ident(""), name_token, name)),
                 Some(vec![(Rc::new(location), *left)]),
                 if !tmp.is_empty() { Some(tmp) } else { None },
                 Some(position),
@@ -2499,6 +2506,7 @@ impl<'a> Statement<'a> {
             self.expect_tokens(vec![TokenKind::Identifier]);
             let mut inner_location = (*self.current_token().location).clone();
 
+            let name_token = self.current_token();
             let name = self.get_identifier();
             let inner = Box::new(AstNode::token_to_literal(self.current_token()));
 
@@ -2538,7 +2546,7 @@ impl<'a> Statement<'a> {
                 location.end = self.current_token().location.end.clone();
 
                 return self.parse_function(
-                    Some((inner_location, name)),
+                    Some((inner_location, Token::from_ident(""), name_token, name)),
                     Some(vec![(
                         Rc::new(location.clone()),
                         AstNode::FieldAccess(FieldAccess {
@@ -2614,7 +2622,7 @@ impl<'a> Statement<'a> {
             // foo.a.meow() = meow(foo.a)
             TokenKind::LeftParenthesis => {
                 expression = self.parse_function(
-                    Some((location.clone(), name)),
+                    Some((location.clone(), Token::from_ident(""), name_token, name)),
                     Some(vec![(Rc::new(location.clone()), *left)]),
                     if !tmp.is_empty() { Some(tmp) } else { None },
                     Some(position),
@@ -2883,6 +2891,8 @@ impl<'a> Statement<'a> {
         let mut expression = AstNode::Conversion(Conversion {
             r#type: Some(Type::Pointer(Box::new(ty.clone()))),
             value: Box::new(AstNode::FunctionCall(FunctionCall {
+                namespace_token: Token::from_ident(""),
+                name_token: Token::from_ident("alloc"),
                 name: "alloc".into(),
                 generics: vec![],
                 parameters: vec![
@@ -3006,6 +3016,8 @@ impl<'a> Statement<'a> {
         let mut expression = AstNode::Conversion(Conversion {
             r#type: Some(Type::Pointer(Box::new(ty.clone()))),
             value: Box::new(AstNode::FunctionCall(FunctionCall {
+                namespace_token: Token::from_ident(""),
+                name_token: Token::from_ident("realloc"),
                 name: "realloc".into(),
                 generics: vec![],
                 parameters: vec![
@@ -3111,6 +3123,8 @@ impl<'a> Statement<'a> {
         let ptr = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
         let mut expression = AstNode::FunctionCall(FunctionCall {
+            namespace_token: Token::from_ident(""),
+            name_token: Token::from_ident("free"),
             name: "free".into(),
             generics: vec![],
             parameters: vec![
@@ -3783,6 +3797,8 @@ impl<'a> Statement<'a> {
                         self.parse_function(
                             Some((
                                 location,
+                                ty.clone(),
+                                method.clone(),
                                 format!(
                                     "{}.{}",
                                     ty.value.get_string_inner().unwrap(),

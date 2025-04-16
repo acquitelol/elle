@@ -11,7 +11,7 @@ use crate::{
         enums::{AstNode, ConstantSource, FunctionSource, Primitive, Return},
         parser::StructPool,
     },
-    Warnings, MAIN_ID,
+    struct_hover, Warnings, MAIN_ID,
 };
 
 use super::{
@@ -401,7 +401,7 @@ impl Compiler {
                         let namespace_token = this.namespace_token.clone();
 
                         let function = generate_function(
-                            this.clone(),
+                            this,
                             &mut gen,
                             false,
                             false,
@@ -409,30 +409,10 @@ impl Compiler {
                             &module_ref,
                         );
 
-                        if this.namespace_token.tagged {
+                        if namespace_token.tagged {
                             let plain_name = namespace_token.value.get_string_inner().unwrap();
                             let (_, members, _) = gen.struct_pool.get(&plain_name).unwrap();
-
-                            if members.is_empty() {
-                                elle_error!(format!(
-                                    "hover\n{}\n{}\nnamespace {};",
-                                    this.namespace_token.location.display_plain(false),
-                                    this.namespace_token.location.display_plain(true),
-                                    Type::Struct(plain_name).display(),
-                                ));
-                            }
-
-                            elle_error!(format!(
-                                "hover\n{}\n{}\nstruct {} {{\n{}\n}};",
-                                this.namespace_token.location.display_plain(false),
-                                this.namespace_token.location.display_plain(true),
-                                Type::Struct(plain_name).display(),
-                                members
-                                    .into_iter()
-                                    .map(|x| format!("\t{} {};", x.r#type.display(), x.name))
-                                    .collect::<Vec<String>>()
-                                    .join("\n")
-                            ));
+                            struct_hover!(namespace_token, members.is_empty(), members);
                         }
 
                         if name_token.tagged {
@@ -481,31 +461,7 @@ impl Compiler {
                 }
                 Primitive::Struct(this) => {
                     let td = generate_struct(this.clone(), &mut gen);
-
-                    if this.name_token.tagged {
-                        if this.ignore_empty {
-                            elle_error!(format!(
-                                "hover\n{}\n{}\nnamespace {};",
-                                this.name_token.location.display_plain(false),
-                                this.name_token.location.display_plain(true),
-                                Type::Struct(this.name_token.value.get_string_inner().unwrap())
-                                    .display(),
-                            ));
-                        }
-
-                        elle_error!(format!(
-                            "hover\n{}\n{}\nstruct {} {{\n{}\n}};",
-                            this.name_token.location.display_plain(false),
-                            this.name_token.location.display_plain(true),
-                            Type::Struct(this.name_token.value.get_string_inner().unwrap())
-                                .display(),
-                            this.members
-                                .into_iter()
-                                .map(|x| format!("\t{} {};", x.r#type.display(), x.name))
-                                .collect::<Vec<String>>()
-                                .join("\n")
-                        ));
-                    }
+                    struct_hover!(this.name_token, this.ignore_empty, this.members);
 
                     if module_ref
                         .borrow()

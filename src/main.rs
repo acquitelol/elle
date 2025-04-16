@@ -530,6 +530,10 @@ async fn main() -> ExitCode {
                                 (
                                     "allocator".into(),
                                     Box::new(AstNode::FunctionCall(FunctionCall {
+                                        namespace_token: Token::from_ident(
+                                            ARBITRARY_ALLOCATOR_NAME,
+                                        ),
+                                        name_token: Token::from_ident("new"),
                                         name: format!("{ARBITRARY_ALLOCATOR_NAME}.new"),
                                         generics: vec![],
                                         parameters: vec![],
@@ -541,6 +545,8 @@ async fn main() -> ExitCode {
                                 (
                                     "default_allocator".into(),
                                     Box::new(AstNode::FunctionCall(FunctionCall {
+                                        namespace_token: Token::from_ident(default_allocator),
+                                        name_token: Token::from_ident("new"),
                                         name: format!("{default_allocator}.new"),
                                         generics: vec![],
                                         parameters: vec![],
@@ -602,6 +608,8 @@ async fn main() -> ExitCode {
                             name: Token::from_ident("args"),
                             r#type: Some(Type::Infer),
                             value: Some(Box::new(AstNode::FunctionCall(FunctionCall {
+                                namespace_token: Token::from_ident("Array"),
+                                name_token: Token::from_ident("with_capacity"),
                                 name: "Array.with_capacity".into(),
                                 generics: vec![Type::Pointer(Box::new(Type::Char))],
                                 parameters: vec![(
@@ -676,6 +684,8 @@ async fn main() -> ExitCode {
                                 value_location: loc.clone(),
                             }))),
                             body: vec![AstNode::FunctionCall(FunctionCall {
+                                namespace_token: Token::from_ident(""),
+                                name_token: Token::from_ident("push"),
                                 name: "push".into(),
                                 generics: vec![],
                                 parameters: vec![
@@ -726,6 +736,8 @@ async fn main() -> ExitCode {
                         name: Token::from_ident("status"),
                         r#type: Some(Type::Word),
                         value: Some(Box::new(AstNode::FunctionCall(FunctionCall {
+                            namespace_token: Token::from_ident(""),
+                            name_token: Token::from_ident(get_MAIN_ID!()),
                             name: get_MAIN_ID!().into(),
                             generics: vec![],
                             parameters: if main_arg_len == 1 {
@@ -749,6 +761,8 @@ async fn main() -> ExitCode {
                         value_location: loc.clone(),
                     }),
                     AstNode::FunctionCall(FunctionCall {
+                        namespace_token: Token::from_ident(""),
+                        name_token: Token::from_ident("free_self"),
                         name: "free_self".into(),
                         generics: vec![],
                         parameters: vec![(

@@ -15,13 +15,15 @@ use crate::{
     elle_error, get_GREEN, get_POINTER_ID, get_RESET, hashmap, is_generic,
     lexer::enums::{TokenKind, ValueKind},
     parser::enums::{Address, AstNode, FunctionCall, Literal},
-    unknown_function, DUNDER_CONSTANTS, FORMAT_CONSTANT, GREEN, META_STRUCT_NAME, POINTER_ID,
-    PTR_PRIORITY_CONSTANTS, RESET, VOID_POINTER_ID,
+    struct_hover, unknown_function, DUNDER_CONSTANTS, FORMAT_CONSTANT, GREEN, META_STRUCT_NAME,
+    POINTER_ID, PTR_PRIORITY_CONSTANTS, RESET, VOID_POINTER_ID,
 };
 
 impl Codegen<'_> for FunctionCall {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let FunctionCall {
+            namespace_token,
+            name_token,
             mut name,
             // Generics passed by the caller
             // ie foo<i32>()
@@ -236,6 +238,21 @@ impl Codegen<'_> for FunctionCall {
                 &mut tmp_function,
                 ctx.ty.clone(),
             )
+        }
+
+        if namespace_token.tagged {
+            let plain_name = namespace_token.value.get_string_inner().unwrap();
+            let (_, members, _) = gen.struct_pool.get(&plain_name).unwrap();
+            struct_hover!(namespace_token, members.is_empty(), members);
+        }
+
+        if name_token.tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n{}",
+                name_token.location.display_plain(false),
+                name_token.location.display_plain(true),
+                Type::Function(Box::new(Some(tmp_function))).display()
+            ));
         }
 
         if type_method {
