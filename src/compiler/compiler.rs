@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, fs::File, io::Write, rc::Rc};
 
 use crate::{
     elle_error, get_MAIN_ID, hashmap,
-    lexer::enums::Location,
+    lexer::enums::{Location, Token},
     misc::{
         colors::*,
         constants::{get_RAW_ERRORS, RAW_ERRORS},
@@ -354,6 +354,8 @@ impl Compiler {
                 Primitive::Constant(this) => {
                     let function = generate_function(
                         FunctionSource {
+                            namespace_token: Token::from_ident(""),
+                            name_token: this.name_token.clone(),
                             name: this.name.clone(),
                             public: this.public,
                             variadic: false,
@@ -381,18 +383,66 @@ impl Compiler {
                         &module_ref,
                     );
 
+                    if this.name_token.tagged {
+                        elle_error!(format!(
+                            "hover\n{}\n{}\nconst {}: {}",
+                            this.name_token.location.display_plain(false),
+                            this.name_token.location.display_plain(true),
+                            this.name_token.value.get_string_inner().unwrap(),
+                            function.return_type.unwrap_or(Type::Word).display()
+                        ));
+                    }
+
                     module_ref.borrow_mut().add_function(function);
                 }
                 Primitive::Function(this) => {
                     if this.generics.is_empty() {
+                        let name_token = this.name_token.clone();
+                        let namespace_token = this.namespace_token.clone();
+
                         let function = generate_function(
-                            this,
+                            this.clone(),
                             &mut gen,
                             false,
                             false,
                             hashmap![],
                             &module_ref,
                         );
+
+                        if this.namespace_token.tagged {
+                            let plain_name = namespace_token.value.get_string_inner().unwrap();
+                            let (_, members, _) = gen.struct_pool.get(&plain_name).unwrap();
+
+                            if members.is_empty() {
+                                elle_error!(format!(
+                                    "hover\n{}\n{}\nnamespace {};",
+                                    this.namespace_token.location.display_plain(false),
+                                    this.namespace_token.location.display_plain(true),
+                                    Type::Struct(plain_name).display(),
+                                ));
+                            }
+
+                            elle_error!(format!(
+                                "hover\n{}\n{}\nstruct {} {{\n{}\n}};",
+                                this.namespace_token.location.display_plain(false),
+                                this.namespace_token.location.display_plain(true),
+                                Type::Struct(plain_name).display(),
+                                members
+                                    .into_iter()
+                                    .map(|x| format!("\t{} {};", x.r#type.display(), x.name))
+                                    .collect::<Vec<String>>()
+                                    .join("\n")
+                            ));
+                        }
+
+                        if name_token.tagged {
+                            elle_error!(format!(
+                                "hover\n{}\n{}\n{}",
+                                name_token.location.display_plain(false),
+                                name_token.location.display_plain(true),
+                                Type::Function(Box::new(Some(function))).display()
+                            ));
+                        }
 
                         module_ref.borrow_mut().add_function(function);
 
@@ -402,11 +452,60 @@ impl Compiler {
 
                         gen.deferred_functions.clear();
                     } else {
+                        if this.name_token.tagged {
+                            elle_error!(format!(
+                                "hover\n{}\n{}\nfn {}{}({}){}",
+                                this.name_token.location.display_plain(false),
+                                this.name_token.location.display_plain(true),
+                                this.name.replace(".", "::"),
+                                if !this.generics.is_empty() {
+                                    format!("<{}>", this.generics.join(", "))
+                                } else {
+                                    "".into()
+                                },
+                                this.arguments
+                                    .iter()
+                                    .map(|x| format!("{} {}", x.r#type.display(), x.name))
+                                    .collect::<Vec<String>>()
+                                    .join(", "),
+                                if let Some(ty) = this.r#return {
+                                    format!(" -> {}", ty.display())
+                                } else {
+                                    "".into()
+                                }
+                            ));
+                        }
+
                         gen.generic_functions.insert(this.name, primitive);
                     }
                 }
                 Primitive::Struct(this) => {
-                    let td = generate_struct(this, &mut gen);
+                    let td = generate_struct(this.clone(), &mut gen);
+
+                    if this.name_token.tagged {
+                        if this.ignore_empty {
+                            elle_error!(format!(
+                                "hover\n{}\n{}\nnamespace {};",
+                                this.name_token.location.display_plain(false),
+                                this.name_token.location.display_plain(true),
+                                Type::Struct(this.name_token.value.get_string_inner().unwrap())
+                                    .display(),
+                            ));
+                        }
+
+                        elle_error!(format!(
+                            "hover\n{}\n{}\nstruct {} {{\n{}\n}};",
+                            this.name_token.location.display_plain(false),
+                            this.name_token.location.display_plain(true),
+                            Type::Struct(this.name_token.value.get_string_inner().unwrap())
+                                .display(),
+                            this.members
+                                .into_iter()
+                                .map(|x| format!("\t{} {};", x.r#type.display(), x.name))
+                                .collect::<Vec<String>>()
+                                .join("\n")
+                        ));
+                    }
 
                     if module_ref
                         .borrow()

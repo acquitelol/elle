@@ -5,6 +5,7 @@ use crate::{
         qbe::{r#type::Type, value::Value},
     },
     hashmap,
+    lexer::enums::Token,
     parser::enums::{FunctionSource, Lambda},
 };
 
@@ -27,6 +28,8 @@ impl Codegen<'_> for Lambda {
 
         let lambda_func = generate_function(
             FunctionSource {
+                namespace_token: Token::from_ident(""),
+                name_token: Token::from_ident(&lambda_name),
                 name: lambda_name.clone(),
                 public: false,
                 variadic: false,

@@ -546,6 +546,7 @@ pub struct UseSource {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructSource {
+    pub name_token: Token,
     pub name: String,
     pub public: bool,
     pub usable: bool,
@@ -560,6 +561,8 @@ pub struct StructSource {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionSource {
+    pub namespace_token: Token,
+    pub name_token: Token,
     pub name: String,
     pub public: bool,
     pub usable: bool,
@@ -580,6 +583,7 @@ pub struct FunctionSource {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConstantSource {
+    pub name_token: Token,
     pub name: String,
     pub public: bool,
     pub usable: bool,

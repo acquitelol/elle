@@ -3,7 +3,7 @@ use std::{cell::RefCell, collections::HashMap, iter::Peekable, mem, num::ParseIn
 
 use crate::{
     elle_error, get_POINTER_ID, hashmap, is_generic, is_unknown,
-    lexer::enums::Location,
+    lexer::enums::{Location, Token},
     parser::{
         enums::{Argument, Primitive, StructSource},
         parser::StructPool,
@@ -81,11 +81,49 @@ impl Type {
             Self::Function(inner) => {
                 if let Some(inner) = *inner.to_owned() {
                     format!(
-                        "fn({}){}",
+                        "fn {}({}){}",
+                        {
+                            let namespaced = inner
+                                .name
+                                .split(".")
+                                .nth(1)
+                                .is_some_and(|x| x != GENERIC_IDENTIFIER);
+
+                            if is_generic!(inner.name) {
+                                let generic_name = if namespaced {
+                                    inner.name.replacen(".", "::", 1)
+                                } else {
+                                    inner.name
+                                };
+                                let (name, parts) = Type::from_internal_id(generic_name.clone());
+
+                                format!(
+                                    "{}<{}>",
+                                    name,
+                                    parts
+                                        .iter()
+                                        .map(|ty| ty.display())
+                                        .collect::<Vec<String>>()
+                                        .join(", ")
+                                )
+                            } else {
+                                inner.name.replace(".", "::")
+                            }
+                        },
                         inner
                             .arguments
                             .iter()
-                            .map(|arg| arg.0 .0.clone().display())
+                            .map(|arg| format!(
+                                "{} {}",
+                                arg.0 .0.clone().display(),
+                                arg.0
+                                     .1
+                                    .get_string_inner()
+                                    .replace("%", "")
+                                    .split(".")
+                                    .nth(0)
+                                    .unwrap()
+                            ))
                             .collect::<Vec<String>>()
                             .join(", "),
                         if let Some(ty) = inner.return_type {
@@ -396,6 +434,7 @@ impl Type {
                     tree.unwrap().borrow_mut().insert(
                         0,
                         Primitive::Struct(StructSource {
+                            name_token: Token::from_ident(&generic_name),
                             name: generic_name.clone(),
                             public: false,
                             usable: true,

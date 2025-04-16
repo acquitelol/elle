@@ -111,6 +111,7 @@ impl<'a> Constant<'a> {
         };
 
         let name = self.parser.get_identifier();
+        let name_token = self.parser.current_token();
         self.parser.advance();
 
         self.parser.expect_tokens(vec![TokenKind::Equal]);
@@ -139,6 +140,7 @@ impl<'a> Constant<'a> {
         location.end = self.parser.current_token().location.end.clone();
 
         Some(Primitive::Constant(ConstantSource {
+            name_token,
             name,
             public,
             r#type: ty.clone(),

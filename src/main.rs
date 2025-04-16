@@ -395,6 +395,7 @@ async fn main() -> ExitCode {
     tree.insert(
         0,
         Primitive::Struct(StructSource {
+            name_token: Token::from_ident(META_STRUCT_NAME),
             name: META_STRUCT_NAME.into(),
             public: false,
             usable: true,
@@ -411,6 +412,7 @@ async fn main() -> ExitCode {
     tree.insert(
         0,
         Primitive::Struct(StructSource {
+            name_token: Token::from_ident(ENV_STRUCT_NAME),
             name: ENV_STRUCT_NAME.into(),
             public: false,
             usable: true,
@@ -476,6 +478,8 @@ async fn main() -> ExitCode {
 
         // Define a custom main
         tree.push(Primitive::Function(FunctionSource {
+            namespace_token: Token::from_ident(""),
+            name_token: Token::from_ident("main"),
             name: "main".into(),
             public: true,
             usable: true,

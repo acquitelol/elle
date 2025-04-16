@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
     compiler::qbe::r#type::Type,
     elle_error,
-    lexer::enums::{Attribute, Location, TokenKind, ValueKind},
+    lexer::enums::{Attribute, Location, Token, TokenKind, ValueKind},
     parser::{
         enums::{BlockStatement, FunctionSource, IfStatement, VariadicStart, WhileLoopStatement},
         statement::Shared,
@@ -80,6 +80,8 @@ impl<'a> Function<'a> {
         }
 
         let mut name = self.parser.get_identifier();
+        let mut namespace_token = Token::from_ident("");
+        let mut name_token = self.parser.current_token();
 
         self.parser.advance();
 
@@ -110,6 +112,9 @@ impl<'a> Function<'a> {
 
             let identifier = self.parser.get_identifier();
             name = format!("{}.{}", name, identifier);
+
+            namespace_token = name_token;
+            name_token = self.parser.current_token();
             self.parser.advance();
         }
 
@@ -329,6 +334,8 @@ impl<'a> Function<'a> {
             return Some(Primitive::Function(FunctionSource {
                 public,
                 variadic,
+                name_token,
+                namespace_token,
                 name,
                 external,
                 builtin: false,
@@ -486,6 +493,8 @@ impl<'a> Function<'a> {
             public,
             variadic,
             name,
+            name_token,
+            namespace_token,
             external,
             builtin: false,
             volatile,

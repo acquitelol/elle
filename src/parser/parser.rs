@@ -87,6 +87,7 @@ pub fn create_generic_struct(
         .collect::<Vec<Argument>>();
 
     tree.borrow_mut().push(Primitive::Struct(StructSource {
+        name_token: Token::from_ident(&generic_name),
         name: generic_name.clone(),
         public: false,
         usable: true,

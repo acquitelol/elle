@@ -60,6 +60,7 @@ impl<'a> Struct<'a> {
         self.parser.advance();
 
         let name = self.parser.get_identifier();
+        let name_token = self.parser.current_token();
         location.end = self.parser.current_token().location.end.clone();
         self.parser.advance();
 
@@ -87,6 +88,7 @@ impl<'a> Struct<'a> {
             return Some((
                 Primitive::Struct(StructSource {
                     name,
+                    name_token,
                     public,
                     usable: true,
                     imported: false,
@@ -296,6 +298,8 @@ impl<'a> Struct<'a> {
             ));
 
             builtins.push(Primitive::Function(FunctionSource {
+                namespace_token: Token::from_ident(&name),
+                name_token: Token::from_ident(FORMAT_CONSTANT),
                 name: format!("{}.{FORMAT_CONSTANT}", name),
                 public,
                 usable: true,
@@ -398,6 +402,7 @@ impl<'a> Struct<'a> {
         Some((
             Primitive::Struct(StructSource {
                 name: name.clone(),
+                name_token,
                 public,
                 usable: true,
                 imported: false,

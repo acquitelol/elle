@@ -7,6 +7,7 @@ use std::time::Instant;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::compiler::qbe::r#type::Type;
+use crate::lexer::enums::Token;
 use crate::parser::enums::{
     ArrayLength, ConstantSource, FunctionSource, Literal, Return, StructSource, UseSource,
 };
@@ -379,6 +380,7 @@ pub fn lex_and_parse(
         tree.insert(
             0,
             Primitive::Constant(ConstantSource {
+                name_token: Token::from_ident("nil"),
                 name: "nil".into(),
                 public: false,
                 usable: true,
@@ -398,6 +400,8 @@ pub fn lex_and_parse(
         tree.insert(
             0,
             Primitive::Function(FunctionSource {
+                namespace_token: Token::from_ident(get_POINTER_ID!()),
+                name_token: Token::from_ident(LEN_CONSTANT),
                 name: format!("{}.{LEN_CONSTANT}", get_POINTER_ID!()).into(),
                 public: false,
                 usable: true,

@@ -24,6 +24,15 @@ impl Codegen<'_> for Literal {
                     );
 
                     if self.tagged {
+                        if res.clone().unwrap().0.is_function() {
+                            elle_error!(format!(
+                                "hover\n{}\n{}\n{}",
+                                self.location.display_plain(false),
+                                self.location.display_plain(true),
+                                res.unwrap().0.display()
+                            ));
+                        }
+
                         let is_constant = ctx
                             .module
                             .borrow()
