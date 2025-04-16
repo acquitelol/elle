@@ -1999,7 +1999,9 @@ impl<'a> Statement<'a> {
                 || self.current_token().value.is_base_type()
                 || self.current_token().kind == TokenKind::LeftParenthesis)
         {
-            Ok(self.get_type(Some(&self.shared.generics)))
+            let ty = self.get_type(Some(&self.shared.generics));
+            self.advance();
+            Ok(ty)
         } else {
             let mut tokens = vec![];
             let mut nesting = 0;
@@ -2046,7 +2048,6 @@ impl<'a> Statement<'a> {
             Err(value)
         };
 
-        self.advance();
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
         location.end = self.current_token().location.end.clone();
         self.advance();
@@ -3543,6 +3544,10 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_primary(&mut self) -> AstNode {
+        while self.current_token().kind == TokenKind::Semicolon {
+            self.advance();
+        }
+
         match self.current_token().kind {
             token if token.is_literal() => {
                 if let Some(next) = self.next_token() {
