@@ -97,7 +97,7 @@ impl Codegen<'_> for Literal {
                             .unwrap_or(final_ty);
                     }
 
-                    Some((
+                    let res = (
                         final_ty.clone(),
                         Value::Const(
                             if final_ty.clone() == Type::Double {
@@ -110,7 +110,19 @@ impl Codegen<'_> for Literal {
                             .into(),
                             val,
                         ),
-                    ))
+                    );
+
+                    if self.tagged {
+                        elle_error!(format!(
+                            "hover\n{}\n{}\n{}: {}",
+                            self.location.display_plain(false),
+                            self.location.display_plain(true),
+                            val,
+                            res.0.display()
+                        ));
+                    }
+
+                    Some(res)
                 }
                 ValueKind::String(val) => {
                     gen.tmp_counter += 1;

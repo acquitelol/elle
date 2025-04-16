@@ -75,22 +75,22 @@ impl Lexer {
         if c.is_digit(10) {
             let (kind, value) = self.consume_number_literal(start_row, start_col);
             let location = self.get_location(start_row, start_col);
-            // let mut tagged =
-            //     location.contains(&Position::from_tuple(get_INTROSPECTION_LOCATION!()));
+            let mut tagged =
+                location.contains(&Position::from_tuple(get_INTROSPECTION_LOCATION!()));
 
-            // if tagged {
-            //     if self.has_tagged {
-            //         tagged = false;
-            //     } else {
-            //         self.has_tagged = true;
-            //     }
-            // }
+            if tagged {
+                if self.has_tagged {
+                    tagged = false;
+                } else {
+                    self.has_tagged = true;
+                }
+            }
 
             return Some(Token {
                 kind,
                 value,
                 location: Rc::new(location),
-                tagged: false,
+                tagged,
             });
         }
 
@@ -469,7 +469,7 @@ impl Lexer {
             kind,
             value,
             location: Rc::new(location),
-            tagged: true,
+            tagged: false,
         });
     }
 

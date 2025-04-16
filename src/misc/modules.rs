@@ -41,6 +41,7 @@ pub fn lex_and_parse(
     no_fmt: bool,
     debug_time: bool,
     object_output: bool,
+    expect_info: bool,
     nesting: usize,
     import_location: Rc<Location>,
     string_module_methods: &mut Vec<String>,
@@ -114,7 +115,11 @@ pub fn lex_and_parse(
     }
 
     // `has_tagged = root only` ensures modules wont have any tagged tokens
-    let mut lexer = Lexer::new(input_path.clone(), content.as_str(), nesting != 0);
+    let mut lexer = Lexer::new(
+        input_path.clone(),
+        content.as_str(),
+        nesting != 0 || !expect_info,
+    );
     let mut tokens = vec![];
 
     while let Some(mut token) = lexer.next_token() {
@@ -253,6 +258,7 @@ pub fn lex_and_parse(
                     no_fmt,
                     debug_time,
                     object_output,
+                    expect_info,
                     nesting + 1,
                     if nesting == 0 {
                         Rc::new(location.clone())

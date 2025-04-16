@@ -236,6 +236,20 @@ macro_rules! unknown_function {
     }};
 }
 
+#[macro_export]
+macro_rules! bool_hover {
+    ($token:expr, $location:expr, $value:literal) => {
+        if $token.tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n{}: bool", // TODO: is there any way to unhardcode this?
+                $location.display_plain(false),
+                $location.display_plain(true),
+                $value
+            ));
+        }
+    };
+}
+
 /// Converts a token [`token`] into an AstNode
 ///
 /// This accounts for [`TrueLiteral`, `FalseLiteral`, `FloatingPoint`]
@@ -245,18 +259,26 @@ macro_rules! unknown_function {
 macro_rules! token_to_node {
     ($token:expr, $self:expr) => {
         match $token.kind {
-            TokenKind::TrueLiteral => AstNode::Literal(Literal {
-                kind: TokenKind::BoolLiteral,
-                value: ValueKind::Number(1),
-                location: $token.location,
-                tagged: $token.tagged,
-            }),
-            TokenKind::FalseLiteral => AstNode::Literal(Literal {
-                kind: TokenKind::BoolLiteral,
-                value: ValueKind::Number(0),
-                location: $token.location,
-                tagged: $token.tagged,
-            }),
+            TokenKind::TrueLiteral => {
+                crate::bool_hover!($token, $self.current_token().location, true);
+
+                AstNode::Literal(Literal {
+                    kind: TokenKind::BoolLiteral,
+                    value: ValueKind::Number(1),
+                    location: $token.location,
+                    tagged: $token.tagged,
+                })
+            }
+            TokenKind::FalseLiteral => {
+                crate::bool_hover!($token, $self.current_token().location, false);
+
+                AstNode::Literal(Literal {
+                    kind: TokenKind::BoolLiteral,
+                    value: ValueKind::Number(0),
+                    location: $token.location,
+                    tagged: $token.tagged,
+                })
+            }
             TokenKind::FloatingPoint => $self.parse_float($token),
             _ => AstNode::Literal(Literal {
                 kind: $token.kind,

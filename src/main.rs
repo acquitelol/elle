@@ -126,6 +126,7 @@ async fn main() -> ExitCode {
     let mut no_fmt = false; // no primitive fmt methods
     let mut pedantic = false; // extra checks in type conversions
     let mut lsp = false; // LSP support for IDEs
+    let mut expect_info = false;
 
     let mut object_files: Vec<String> = vec![];
 
@@ -162,6 +163,7 @@ async fn main() -> ExitCode {
 
                 let row = parts[0].parse::<usize>().unwrap_or_else(|_| loc_err!());
                 let col = parts[1].parse::<usize>().unwrap_or_else(|_| loc_err!());
+                expect_info = true;
 
                 unsafe {
                     INTROSPECTION_LOCATION = Some((row, col));
@@ -384,6 +386,7 @@ async fn main() -> ExitCode {
         no_fmt,
         debug_time,
         object_output,
+        expect_info,
         0,
         loc.clone(),
         &mut string_module_methods,

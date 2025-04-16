@@ -279,6 +279,15 @@ impl<'a> Statement<'a> {
             elle_error!(token.location.error("Invalid float literal provided"));
         }
 
+        if token.tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n{}: f32", // TODO: is there any way to unhardcode this?
+                self.current_token().location.display_plain(false),
+                self.current_token().location.display_plain(true),
+                value
+            ));
+        }
+
         let nodes: Vec<&str> = value.split('.').collect();
         let left = nodes[0];
         let right = nodes[1];
