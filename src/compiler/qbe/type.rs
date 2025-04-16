@@ -81,13 +81,18 @@ impl Type {
             Self::Function(inner) => {
                 if let Some(inner) = *inner.to_owned() {
                     format!(
-                        "fn({})",
+                        "fn({}){}",
                         inner
                             .arguments
                             .iter()
                             .map(|arg| arg.0 .0.clone().display())
                             .collect::<Vec<String>>()
-                            .join(", ")
+                            .join(", "),
+                        if let Some(ty) = inner.return_type {
+                            format!(" -> {}", ty.display())
+                        } else {
+                            "".into()
+                        }
                     )
                 } else {
                     "<unknown function>".into()
