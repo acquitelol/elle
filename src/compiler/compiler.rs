@@ -434,7 +434,7 @@ impl Compiler {
                     } else {
                         if this.name_token.tagged {
                             elle_error!(format!(
-                                "hover\n{}\n{}\nfn {}{}({}){}",
+                                "hover\n{}\n{}\nfn {}{}({}{}){}",
                                 this.name_token.location.display_plain(false),
                                 this.name_token.location.display_plain(true),
                                 this.name.replace(".", "::"),
@@ -448,6 +448,7 @@ impl Compiler {
                                     .map(|x| format!("{} {}", x.r#type.display(), x.name))
                                     .collect::<Vec<String>>()
                                     .join(", "),
+                                if this.variadic { ", ..." } else { "" },
                                 if let Some(ty) = this.r#return {
                                     format!(" -> {}", ty.display())
                                 } else {

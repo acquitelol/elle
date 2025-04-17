@@ -81,7 +81,7 @@ impl Type {
             Self::Function(inner) => {
                 if let Some(inner) = *inner.to_owned() {
                     format!(
-                        "fn {}({}){}",
+                        "fn {}({}{}){}",
                         {
                             let namespaced = inner
                                 .name
@@ -126,6 +126,7 @@ impl Type {
                             ))
                             .collect::<Vec<String>>()
                             .join(", "),
+                        if inner.variadic { ", ..." } else { "" },
                         if let Some(ty) = inner.return_type {
                             format!(" -> {}", ty.display())
                         } else {
