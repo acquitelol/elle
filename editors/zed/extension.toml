@@ -4,7 +4,7 @@ version = "0.2.4"
 schema_version = 1
 authors = ["Rosie <acquitefx@gmail.com>", "tnixc <tnixxc@gmail.com>"]
 description = "Elle support."
-repository = "https://github.com/acquitelol/elle/tree/rewrite/zed"
+repository = "https://github.com/acquitelol/elle/tree/rewrite/editors/zed"
 
 [language_servers.elle]
 name = "elle"
