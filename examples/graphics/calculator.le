@@ -1,0 +1,172 @@
+use std/collections/hashmap;
+use std/prelude;
+use std/raylib;
+
+const SCALING_FACTOR = 2;
+
+const SCREEN_WIDTH = 150 * SCALING_FACTOR;
+const SCREEN_HEIGHT = 185 * SCALING_FACTOR;
+const PADDING = 6 * SCALING_FACTOR;
+const FONT_SIZE = 20 * SCALING_FACTOR;
+const LINE_THICKNESS = 2 * SCALING_FACTOR;
+
+const BUTTON_UNHOVER = rl::get_color(0x777777FF);
+const BUTTON_HOVER = rl::get_color(0x555555FF);
+const BACKGROUND = rl::get_color(0x181818FF);
+
+struct State {
+    string input;
+    string op;
+    i32 lhs;
+    i32 rhs;
+};
+
+struct Button {
+    string kind;
+    void *cb;
+};
+
+fn Button::new(string kind, fn *cb) {
+    self := #alloc(Button);
+    self.kind = kind;
+    self.cb = cb;
+    return self;
+}
+
+fn Button::draw(Button *self, State *state, (i32, i32) offset) {
+    scale_ratio := 30 * SCALING_FACTOR;
+
+    button := Rectangle {
+        x = PADDING + (scale_ratio + PADDING) * offset.x,
+        y = PADDING + (scale_ratio + PADDING) * offset.y,
+        width = scale_ratio,
+        height = scale_ratio
+    };
+
+    hovering := rl::elle_check_collision_point_rec(rl::get_mouse_position(), button);
+    button_color := hovering ? BUTTON_HOVER : BUTTON_UNHOVER;
+
+    if hovering && rl::is_mouse_button_pressed(MOUSE_BUTTON_LEFT) {
+        fn *cb = self.cb;
+        cb(self, state);
+    }
+
+    rl::draw_rectangle_rec(button, button_color);
+    rl::draw_rectangle_lines_ex(button, LINE_THICKNESS, BLACK);
+
+    text_width := rl::measure_text(self.kind, FONT_SIZE);
+    text_x := button.x + (button.width - text_width) / 2;
+    text_y := button.y + (button.height - FONT_SIZE) / 2;
+
+    rl::draw_text(self.kind, text_x, text_y, FONT_SIZE, WHITE);
+}
+
+fn State::handle_operation(State *self, Button *btn) {
+    self.op = btn.kind;
+    self.lhs = i32::parse(self.input);
+    self.rhs = 0;
+    self.input = "";
+}
+
+fn State::perform_computation(State *self) {
+    mapping := HashMap::from_entries(
+        "+", fn(State *self) self.lhs + self.rhs,
+        "-", fn(State *self) self.lhs - self.rhs,
+        "*", fn(State *self) self.lhs * self.rhs,
+        "/", fn(State *self) self.lhs / self.rhs,
+    );
+
+    if self.rhs == 0 {
+        self.rhs = i32::parse(self.input);
+    }
+
+    fn *cb = mapping[self.op];
+    res := #cast(i32, cb(self));
+    self.lhs = res;
+    self.input = "{}".format(res);
+}
+
+fn State::draw_input(State *self) {
+    width := SCREEN_WIDTH - PADDING * 2;
+    height := 30 * SCALING_FACTOR;
+
+    button := Rectangle {
+        x = PADDING,
+        y = PADDING,
+        width = width,
+        height = height
+    };
+
+    rl::draw_rectangle_rec(button, BUTTON_HOVER);
+    rl::draw_rectangle_lines_ex(button, LINE_THICKNESS, BLACK);
+
+    text_x := button.x + PADDING;
+    text_y := button.y + (button.height - FONT_SIZE) / 2;
+
+    rl::draw_text(self.input, text_x, text_y, FONT_SIZE, WHITE);
+}
+
+fn State::clear(State *self) {
+    self.input = "";
+    self.op = "";
+    self.lhs = 0;
+    self.rhs = 0;
+}
+
+fn State::draw_buttons(State *self) {
+    button_map := [
+        [
+            Button::new("1", fn(Button *self, State *state) state.input <>= self.kind),
+            Button::new("2", fn(Button *self, State *state) state.input <>= self.kind),
+            Button::new("3", fn(Button *self, State *state) state.input <>= self.kind),
+            Button::new("+", fn(Button *self, State *state) state.handle_operation(self)),
+        ],
+        [
+            Button::new("4", fn(Button *self, State *state) state.input <>= self.kind),
+            Button::new("5", fn(Button *self, State *state) state.input <>= self.kind),
+            Button::new("6", fn(Button *self, State *state) state.input <>= self.kind),
+            Button::new("-", fn(Button *self, State *state) state.handle_operation(self)),
+        ],
+        [
+            Button::new("7", fn(Button *self, State *state) state.input <>= self.kind),
+            Button::new("8", fn(Button *self, State *state) state.input <>= self.kind),
+            Button::new("9", fn(Button *self, State *state) state.input <>= self.kind),
+            Button::new("*", fn(Button *self, State *state) state.handle_operation(self)),
+        ],
+        [
+            Button::new("x", fn(Button *self, State *state) state.clear()),
+            Button::new("0", fn(Button *self, State *state) state.input <>= self.kind),
+            Button::new("=", fn(Button *self, State *state) state.perform_computation()),
+            Button::new("/", fn(Button *self, State *state) state.handle_operation(self)),
+        ],
+    ];
+
+    for row in button_map {
+        for btn in row {
+            // always render 1 unit down to account for input
+            btn.draw(self, $(#i(btn), #i(row) + 1));
+        }
+    }
+}
+
+fn main() {
+    rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Calculator");
+    defer rl::close_window();
+
+    state := State {
+        input = "",
+        op = "",
+        lhs = 0,
+        rhs = 0
+    };
+
+    rl::set_target_fps(60);
+
+    while !rl::window_should_close() {
+        rl::begin_drawing();
+            rl::clear_background(BACKGROUND);
+            state.draw_input();
+            state.draw_buttons();
+        rl::end_drawing();
+    }
+}
