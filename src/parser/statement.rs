@@ -519,7 +519,6 @@ impl<'a> Statement<'a> {
                         // token list to be parsed
                         tokens.push(self.current_token());
                         self.advance();
-                        continue;
                     } else {
                         // Continue to the next parameter in the outer function
                         self.advance();
@@ -896,7 +895,6 @@ impl<'a> Statement<'a> {
                         // token list to be parsed
                         tmp_tokens.push(self.current_token());
                         self.advance();
-                        continue;
                     } else {
                         // Continue to the next parameter in the outer function
                         self.advance();
@@ -2371,7 +2369,6 @@ impl<'a> Statement<'a> {
                     if paren_nesting > 0 || block_nesting > 0 || curly_nesting > 0 {
                         tokens.push(self.current_token());
                         self.advance();
-                        continue;
                     } else {
                         self.advance();
                         break;
