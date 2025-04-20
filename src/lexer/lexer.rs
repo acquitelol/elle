@@ -21,10 +21,12 @@ pub struct Lexer<'a> {
 impl Lexer<'_> {
     pub fn new(file: String, input: &str, has_tagged: bool) -> Lexer {
         let mut line_starts = vec![0];
+        let mut char_index = 0;
 
-        for (i, c) in input.char_indices() {
+        for c in input.chars() {
+            char_index += 1;
             if c == '\n' {
-                line_starts.push(i + 1);
+                line_starts.push(char_index);
             }
         }
 
@@ -487,22 +489,22 @@ impl Lexer<'_> {
         self.position >= self.input.len()
     }
 
-    fn previous_char(&self) -> Option<char> {
-        self.input.chars().nth(self.position - 1)
-    }
-
     fn current_char(&self) -> char {
-        self.input.chars().nth(self.position).unwrap()
+        self.input[self.position..].chars().next().unwrap_or('\0')
     }
 
     fn next_char(&self) -> Option<char> {
-        self.input.chars().nth(self.position + 1)
+        self.input[self.position..].chars().nth(1)
+    }
+
+    fn previous_char(&self) -> Option<char> {
+        self.input[..self.position].chars().rev().next()
     }
 
     fn advance(&mut self) {
         if !self.is_eof() {
             let current = self.current_char();
-            self.position += 1;
+            self.position += current.len_utf8();
 
             if current == '\n' {
                 self.bol = self.position;
@@ -569,9 +571,9 @@ impl Lexer<'_> {
             self.advance();
         }
 
-        let identifier: String = self.input[start..self.position].chars().collect();
+        let identifier = &self.input[start..self.position];
 
-        if RESERVED_KEYWORDS.contains(&identifier.as_str()) {
+        if RESERVED_KEYWORDS.contains(&identifier) {
             elle_error!(
                 self.get_location(start_row, start_col).error(format!(
                     "Use of the reserved keyword '{}' is disallowed.\nThis keyword is currently not in use, but it is reserved\nbecause it may be used in the language in the future.",
@@ -580,7 +582,7 @@ impl Lexer<'_> {
             )
         }
 
-        let kind = match identifier.as_str() {
+        let kind = match identifier {
             "use" => TokenKind::Use,
             "pub" => TokenKind::Public,
             "fn" => TokenKind::Function,
@@ -610,7 +612,7 @@ impl Lexer<'_> {
             _ => TokenKind::Identifier,
         };
 
-        let val = ValueKind::String(identifier);
+        let val = ValueKind::String(identifier.into());
         (
             // if val.is_base_type() {
             //     TokenKind::Type
