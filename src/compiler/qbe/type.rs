@@ -641,6 +641,7 @@ impl Type {
     pub fn is_function(&self) -> bool {
         match self {
             Self::Function(inner) => inner.is_some(),
+            Self::Pointer(inner) => **inner == Type::Void,
             _ => false,
         }
     }

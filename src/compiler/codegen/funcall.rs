@@ -189,28 +189,26 @@ impl Codegen<'_> for FunctionCall {
                 blocks: vec![],
             };
 
-            if let Ok((ty, _)) = callback {
-                if (ty.is_pointer()
-                    && ty.get_pointer_inner().unwrap().is_unknown()
-                    && ty.get_pointer_inner().unwrap().get_unknown_inner().unwrap() == "fn")
-                    || ignore_no_def
-                    || gen.generic_functions.contains_key(&name)
-                {
+            match callback {
+                Ok((ty, _)) => {
+                    if (ty.is_pointer() && ty.is_function())
+                        || ignore_no_def
+                        || gen.generic_functions.contains_key(&name)
+                    {
+                        is_callback = true;
+                        fallback
+                    } else if ty.is_function() {
+                        is_callback = true;
+                        ty.get_function_inner().unwrap().unwrap()
+                    } else {
+                        unknown_function!(call_location, name, ctx.module)
+                    }
+                }
+                Err(_) if ignore_no_def => {
                     is_callback = true;
                     fallback
-                } else if ty.is_function() {
-                    is_callback = true;
-
-                    // We know the function exists
-                    ty.get_function_inner().unwrap().unwrap()
-                } else {
-                    unknown_function!(call_location, name, ctx.module)
                 }
-            } else if ignore_no_def {
-                is_callback = true;
-                fallback
-            } else {
-                unknown_function!(call_location, name, ctx.module)
+                _ => unknown_function!(call_location, name, ctx.module),
             }
         };
 
