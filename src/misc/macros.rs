@@ -150,7 +150,7 @@ macro_rules! not_valid_struct_or_type {
     ($self:expr $(,)?) => {{
         let name = $self.current_token().value.get_string_inner().unwrap();
 
-        elle_error!($self.current_token().location.error(format!(
+        elle_error!($self.current_token().location.borrow().error(format!(
             "Identifier '{}' isn't a struct or primitive type.\n{}",
             name.clone(),
             if let Some(map) = ValueKind::similar_mapping(name.clone()) {
@@ -191,7 +191,7 @@ macro_rules! unknown_field {
             }
         }
 
-        $location.error(format!(
+        $location.borrow().error(format!(
             "Could not find a field named '{}' for struct '{}'{}",
             $name.clone(),
             $struct_name.display(),
@@ -221,7 +221,7 @@ macro_rules! unknown_function {
             }
         }
 
-        elle_error!($location.error(format!(
+        elle_error!($location.borrow().error(format!(
             "Function named '{}' has an unknown interface.{}",
             $name.clone().replace(".", "::"),
             if let Some(similar) = similar_name {
@@ -242,8 +242,8 @@ macro_rules! bool_hover {
         if $token.tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\n{}: bool", // TODO: is there any way to unhardcode this?
-                $location.display_plain(false),
-                $location.display_plain(true),
+                $location.borrow().display_plain(false),
+                $location.borrow().display_plain(true),
                 $value
             ));
         }
@@ -257,16 +257,16 @@ macro_rules! struct_hover {
             if $is_namespace {
                 elle_error!(format!(
                     "hover\n{}\n{}\nnamespace {};",
-                    $token.location.display_plain(false),
-                    $token.location.display_plain(true),
+                    $token.location.borrow().display_plain(false),
+                    $token.location.borrow().display_plain(true),
                     Type::Struct($token.value.get_string_inner().unwrap()).display(),
                 ));
             }
 
             elle_error!(format!(
                 "hover\n{}\n{}\nstruct {} {{\n{}\n}};",
-                $token.location.display_plain(false),
-                $token.location.display_plain(true),
+                $token.location.borrow().display_plain(false),
+                $token.location.borrow().display_plain(true),
                 Type::Struct($token.value.get_string_inner().unwrap()).display(),
                 $members
                     .into_iter()
@@ -275,6 +275,15 @@ macro_rules! struct_hover {
                     .join("\n")
             ));
         }
+    };
+}
+
+/// Handy shorthand for setting the end of a location range
+#[macro_export]
+macro_rules! set_end {
+    ($location:expr, $self:expr) => {
+        let loc = $self.current_token().location.borrow().end.clone();
+        $location.borrow_mut().end = loc;
     };
 }
 
@@ -332,7 +341,7 @@ macro_rules! ensure_fn_pointer {
         if $is_fn_pointer && !$found_ptr {
             panic!(
                 "{}",
-                $self.current_token().location.error(
+                $self.current_token().location.borrow().error(
                     "Expected function pointer, got just 'fn'.\nTry 'fn *' instead of 'fn'."
                 )
             );

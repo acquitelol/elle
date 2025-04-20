@@ -69,6 +69,7 @@ impl Codegen<'_> for BinaryOperation {
                 .unwrap_or_else(|| {
                     elle_error!(self
                         .location
+                        .borrow()
                         .error("Unexpected error when trying to parse a range expression",))
                 });
 
@@ -77,14 +78,14 @@ impl Codegen<'_> for BinaryOperation {
 
         let (mut left_ty, left_val_unparsed) =
             self.left.clone().compile(gen, ctx).unwrap_or_else(|| {
-                elle_error!(self.location.error(
+                elle_error!(self.location.borrow().error(
                     "Unexpected error when trying to parse left side of an arithmetic operation",
                 ))
             });
 
         let (mut right_ty, right_val_unparsed) =
             self.right.clone().compile(gen, ctx).unwrap_or_else(|| {
-                elle_error!(self.location.error(
+                elle_error!(self.location.borrow().error(
                     "Unexpected error when trying to parse right side of an arithmetic operation",
                 ))
             });
@@ -175,7 +176,7 @@ impl Codegen<'_> for BinaryOperation {
             }
 
             let (ty, val) = node.compile(gen, ctx).unwrap_or_else(|| {
-                elle_error!(self.location.error(
+                elle_error!(self.location.borrow().error(
                     "Unexpected error when trying to parse an equality arithmetic operation",
                 ))
             });
@@ -207,7 +208,7 @@ impl Codegen<'_> for BinaryOperation {
                     .find(|func| func.name == func_name);
 
                 if tmp_function_option.is_none() {
-                    elle_error!(self.location.error(format!(
+                    elle_error!(self.location.borrow().error(format!(
                         "Cannot use the '{}' operator because the string module is not imported.\nPlease import it with {GREEN}{BOLD}use std/string;{RESET} at the top of this file.",
                         self.operator,
                         GREEN = get_GREEN!(),
@@ -231,7 +232,7 @@ impl Codegen<'_> for BinaryOperation {
                     );
 
                     let res = meta.compile(gen, ctx).unwrap_or_else(|| {
-                        elle_error!(self.location.error(
+                        elle_error!(self.location.borrow().error(
                             "Unexpected error when trying to compile the Elle metadata struct",
                         ))
                     });
@@ -260,7 +261,7 @@ impl Codegen<'_> for BinaryOperation {
         }
 
         if self.operator == TokenKind::Concat && self.treat_as_string {
-            elle_error!(self.location.error(format!(
+            elle_error!(self.location.borrow().error(format!(
                 "Cannot use the '<>' operator on non-string types {} and {}",
                 left_ty.display(),
                 right_ty.display()
@@ -278,7 +279,7 @@ impl Codegen<'_> for BinaryOperation {
             && (left_ty.is_float() || right_ty.is_float())
         {
             elle_error!(
-                self.location.error(format!(
+                self.location.borrow().error(format!(
                     "Cannot use the '{:?}' operator on non-integer type '{}'.\nYou can cast it to an integer if you need this functionality.",
                     self.operator,
                     if left_ty.is_float() {
@@ -324,6 +325,7 @@ impl Codegen<'_> for BinaryOperation {
             TokenKind::ShiftRight => Instruction::ArithmeticShiftRight(left_val, right_val),
             _ => elle_error!(self
                 .location
+                .borrow()
                 .error(format!("Invalid operator token: {:?}", self.operator))),
         };
 

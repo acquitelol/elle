@@ -29,12 +29,14 @@ impl Codegen<'_> for SetAllocator {
             .unwrap_or_else(|| {
                 elle_error!(self
                     .location
+                    .borrow()
                     .error("Unexpected error when compiling a `set allocator` expresssion"))
             });
 
         if !ty.is_struct() && !(ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct()) {
             elle_error!(self
                 .location
+                .borrow()
                 .with_extra_info(format!("This has the type {}", ty.display()))
                 .error("Cannot set an allocator to a non-allocator expression"))
         }
@@ -57,7 +59,7 @@ impl Codegen<'_> for SetAllocator {
                         if gen.warnings.has_warning(Warning::AllocatorMethodsMissing) {
                             eprintln!(
                                 "{}",
-                                self.location.basic_warning(format!(
+                                self.location.borrow().basic_warning(format!(
                                     "The allocator '{GREEN}{}{RESET}' has no method named '{GREEN}{}{RESET}'.\nIt will be set to a function which returns {RED}nil{RESET} instead.",
                                     allocator_name,
                                     method_name.replace(".", "::"),
@@ -122,6 +124,7 @@ impl Codegen<'_> for SetAllocator {
             node.compile(gen, ctx).unwrap_or_else(|| {
                 elle_error!(self
                     .location
+                    .borrow()
                     .error("Unexpected error when compiling a `set allocator` expression"))
             });
         }

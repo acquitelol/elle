@@ -1,6 +1,6 @@
-use std::{fmt, rc::Rc};
+use std::fmt;
 
-use crate::lexer::enums::Location;
+use crate::lexer::enums::{Location, MutRc};
 
 use super::{comparison::Comparison, r#type::Type, value::Value};
 
@@ -19,7 +19,7 @@ pub enum Instruction {
     Compare(Type, Comparison, Value, Value),
     Copy(Value),
     // Location in AST for reporting inconsistent return types
-    Return(Option<(Type, Value, Rc<Location>)>),
+    Return(Option<(Type, Value, MutRc<Location>)>),
     JumpNonZero(Value, String, String),
     Jump(String),
     Call(Value, Vec<(Type, Value)>),

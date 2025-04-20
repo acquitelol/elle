@@ -1,8 +1,8 @@
-use std::{cell::RefCell, collections::HashMap, fs::File, io::Write, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fs::File, io::Write};
 
 use crate::{
     elle_error, get_MAIN_ID, hashmap,
-    lexer::enums::{Location, Token},
+    lexer::enums::{Location, MutRc, Token},
     misc::{
         colors::*,
         constants::{get_RAW_ERRORS, RAW_ERRORS},
@@ -160,7 +160,7 @@ impl Compiler {
                     }) => {
                         if name == const_name && func.is_some() && module.is_some() {
                             if !usable && !func.unwrap().borrow_mut().imported {
-                                elle_error!(location.error(format!(
+                                elle_error!(location.borrow().error(format!(
                                     "Constant named '{}' was not imported and can't be used",
                                     name
                                 )))
@@ -174,7 +174,7 @@ impl Compiler {
                                 .find(|f| f.name == const_name)
                                 .map(|f| f.return_type.clone())
                                 .unwrap_or_else(|| {
-                                    elle_error!(location.error("Constant does not exist"))
+                                    elle_error!(location.borrow().error("Constant does not exist"))
                                 });
 
                             if state.dont_call_constants && !ty.clone().unwrap().is_function() {
@@ -201,7 +201,7 @@ impl Compiler {
                     }) => {
                         if name == op_name {
                             if !usable && !func.unwrap().borrow_mut().imported && !builtin {
-                                elle_error!(location.error(format!(
+                                elle_error!(location.borrow().error(format!(
                                     "Function named '{}' was not imported and can't be used",
                                     name.replace(".", "::")
                                 )))
@@ -235,7 +235,7 @@ impl Compiler {
         name: &String,
         func: Option<&RefCell<Function>>,
         module: Option<&RefCell<Module>>,
-        location: Rc<Location>,
+        location: MutRc<Location>,
         // (ty, val)
     ) -> Option<(Type, Value)> {
         let var = self.get_variable(&name, func, module, VariableInfo::default());
@@ -266,7 +266,7 @@ impl Compiler {
             Err(msg) => {
                 macro_rules! undefined_error {
                     () => {
-                        elle_error!(location.error(format!(
+                        elle_error!(location.borrow().error(format!(
                             "Unexpected error when trying to get a variable called '{}': {}",
                             name, msg
                         )))
@@ -386,8 +386,8 @@ impl Compiler {
                     if this.name_token.tagged {
                         elle_error!(format!(
                             "hover\n{}\n{}\nconst {}: {}",
-                            this.name_token.location.display_plain(false),
-                            this.name_token.location.display_plain(true),
+                            this.name_token.location.borrow().display_plain(false),
+                            this.name_token.location.borrow().display_plain(true),
                             this.name_token.value.get_string_inner().unwrap(),
                             function.return_type.unwrap_or(Type::Word).display()
                         ));
@@ -418,8 +418,8 @@ impl Compiler {
                         if name_token.tagged {
                             elle_error!(format!(
                                 "hover\n{}\n{}\n{}",
-                                name_token.location.display_plain(false),
-                                name_token.location.display_plain(true),
+                                name_token.location.borrow().display_plain(false),
+                                name_token.location.borrow().display_plain(true),
                                 Type::Function(Box::new(Some(function))).display()
                             ));
                         }
@@ -435,8 +435,8 @@ impl Compiler {
                         if this.name_token.tagged {
                             elle_error!(format!(
                                 "hover\n{}\n{}\nfn {}{}({}{}){}",
-                                this.name_token.location.display_plain(false),
-                                this.name_token.location.display_plain(true),
+                                this.name_token.location.borrow().display_plain(false),
+                                this.name_token.location.borrow().display_plain(true),
                                 this.name.replace(".", "::"),
                                 if !this.generics.is_empty() {
                                     format!("<{}>", this.generics.join(", "))

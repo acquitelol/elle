@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     elle_error, misc::constants::get_INTROSPECTION_LOCATION, INTROSPECTION_LOCATION,
@@ -67,7 +67,7 @@ impl Lexer {
             return Some(Token {
                 kind,
                 value,
-                location: Rc::new(location),
+                location: Rc::new(RefCell::new(location)),
                 tagged,
             });
         }
@@ -89,7 +89,7 @@ impl Lexer {
             return Some(Token {
                 kind,
                 value,
-                location: Rc::new(location),
+                location: Rc::new(RefCell::new(location)),
                 tagged,
             });
         }
@@ -468,7 +468,7 @@ impl Lexer {
         return Some(Token {
             kind,
             value,
-            location: Rc::new(location),
+            location: Rc::new(RefCell::new(location)),
             tagged,
         });
     }
@@ -510,16 +510,16 @@ impl Lexer {
     fn get_location(&mut self, start_row: usize, start_col: usize) -> Location {
         Location {
             file: Rc::from(self.file.clone()),
-            alt_start: Position { row: 0, column: 0 },
-            alt_end: Position { row: 0, column: 1 },
-            start: Position {
+            alt_start: Rc::new(Position { row: 0, column: 0 }),
+            alt_end: Rc::new(Position { row: 0, column: 1 }),
+            start: Rc::new(Position {
                 row: start_row,
                 column: start_col,
-            },
-            end: Position {
+            }),
+            end: Rc::new(Position {
                 row: self.row,
                 column: self.position - self.bol,
-            },
+            }),
             ctx: Rc::from(self.get_line(self.row).unwrap_or("".into())),
             above: if self.row == 0 {
                 None

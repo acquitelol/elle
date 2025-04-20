@@ -1,8 +1,7 @@
-use std::{ops::Deref, rc::Rc};
-
 use crate::{
     elle_error,
     lexer::enums::{TokenKind, ValueKind},
+    set_end,
 };
 
 use super::{
@@ -26,12 +25,13 @@ impl<'a> Use<'a> {
                 .parser
                 .current_token()
                 .location
+                .borrow()
                 .error("Token is not a string")),
         }
     }
 
     pub fn parse(&mut self) -> Primitive {
-        let mut location = self.parser.current_token().location.deref().clone();
+        let location = self.parser.current_token().location;
         self.parser.advance();
         let mut module = String::new();
         let valid = [
@@ -84,13 +84,10 @@ impl<'a> Use<'a> {
             }
         }
 
-        location.end = self.parser.current_token().location.end.clone();
+        set_end!(location, self.parser);
         self.parser.expect_tokens(vec![TokenKind::Semicolon]);
         self.parser.advance();
 
-        Primitive::Use(UseSource {
-            module,
-            location: Rc::from(location),
-        })
+        Primitive::Use(UseSource { module, location })
     }
 }

@@ -81,7 +81,7 @@ pub fn create_monomorphized_struct(
         (
             vec![],
             parsed_members,
-            Rc::new(Location::default(gen.output_path.clone())),
+            Rc::new(RefCell::new(Location::default(gen.output_path.clone()))),
         ),
     );
 }

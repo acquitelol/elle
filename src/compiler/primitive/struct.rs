@@ -11,6 +11,7 @@ pub fn generate_struct(this: StructSource, gen: &mut Compiler) -> TypeDef {
     if this.members.is_empty() && !this.ignore_empty {
         elle_error!(
             this.keyword_location
+                .borrow()
                 .with_extra_info("Replace this with 'namespace'")
                 .error(format!(
                     "Cannot declare an empty struct (with no members).\nIf you intended to make a namespace, use the '{GREEN}namespace{RESET}' keyword instead.",

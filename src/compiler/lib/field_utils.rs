@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::cell::RefCell;
 
 use crate::{
     compiler::{
@@ -9,7 +9,7 @@ use crate::{
         },
     },
     elle_error,
-    lexer::enums::{Location, TokenKind},
+    lexer::enums::{Location, MutRc, TokenKind},
     parser::enums::{AstNode, FieldAccess, Literal},
     unknown_field,
 };
@@ -52,7 +52,7 @@ pub fn process_field_access(
     mut left: Value,
     mut right: AstNode,
     load: bool,
-    location: &Rc<Location>,
+    location: &MutRc<Location>,
 ) -> (Type, Value) {
     loop {
         match right.clone() {
@@ -69,7 +69,7 @@ pub fn process_field_access(
                     if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct() {
                         ty = ty.get_pointer_inner().unwrap();
                     } else {
-                        elle_error!(&location.error(format!(
+                        elle_error!(&location.borrow().error(format!(
                             "Cannot access fields on a non-struct type '{}' (field '{}')",
                             ty.display(),
                             field
@@ -111,8 +111,8 @@ pub fn process_field_access(
                     if tagged {
                         elle_error!(format!(
                             "hover\n{}\n{}\n{struct_name}.{field}: {}",
-                            location.display_plain(false),
-                            location.display_plain(true),
+                            location.borrow().display_plain(false),
+                            location.borrow().display_plain(true),
                             res.0.display()
                         ));
                     }
@@ -124,8 +124,8 @@ pub fn process_field_access(
                     if tagged {
                         elle_error!(format!(
                             "hover\n{}\n{}\n{struct_name}.{field}: {}",
-                            location.display_plain(false),
-                            location.display_plain(true),
+                            location.borrow().display_plain(false),
+                            location.borrow().display_plain(true),
                             res.0.display()
                         ));
                     }
@@ -145,7 +145,7 @@ pub fn process_field_access(
                 left = nested_left_value;
                 right = *nested_right;
             }
-            _ => elle_error!(location.error(format!(
+            _ => elle_error!(location.borrow().error(format!(
                 "Unexpected AST node type for field access: {:?}",
                 right
             ))),

@@ -19,7 +19,7 @@ impl Codegen<'_> for VariadicArgument {
                 self.location.clone(),
             )
             .unwrap_or_else(|| {
-                elle_error!(self.location.error(format!(
+                elle_error!(self.location.borrow().error(format!(
                     "Unexpected error when trying to get a variable named '{}'",
                     plain_name
                 )))
@@ -40,8 +40,8 @@ impl Codegen<'_> for VariadicArgument {
         if self.name.tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\nlet {plain_name}: {}",
-                self.name.location.display_plain(false),
-                self.name.location.display_plain(true),
+                self.name.location.borrow().display_plain(false),
+                self.name.location.borrow().display_plain(true),
                 // This is the vararg object
                 // NOT the value itself
                 Type::Pointer(Box::new(Type::Void)).display()

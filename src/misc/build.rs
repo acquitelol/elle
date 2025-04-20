@@ -36,11 +36,7 @@ pub fn build(
     }
 
     if emit_asm {
-        fs::rename(
-            path_string.clone(),
-            Path::new(&output_path).with_extension("s"),
-        )
-        .expect(&format!(
+        fs::rename(&path_string, Path::new(&output_path).with_extension("s")).expect(&format!(
             "{}Failed to rename {path_string} to {output_path}{}",
             get_RED!(),
             get_RESET!()

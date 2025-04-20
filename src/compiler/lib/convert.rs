@@ -6,7 +6,7 @@ use crate::{
         qbe::{function::Function, instruction::Instruction, r#type::Type, value::Value},
     },
     elle_error,
-    lexer::enums::Location,
+    lexer::enums::{Location, MutRc},
 };
 
 pub fn convert_to_type(
@@ -15,8 +15,8 @@ pub fn convert_to_type(
     first: Type,
     second: Type,
     val: Value,
-    left_location: &Location,
-    right_location: &Location,
+    left_location: &MutRc<Location>,
+    right_location: &MutRc<Location>,
     explicit: bool,
 ) -> (Type, Value) {
     // TODO: ADD A VARIANT TO `can_convert_to_type` WHEN ADDING A VARIANT HERE
@@ -49,7 +49,7 @@ pub fn convert_to_type(
         }
 
         elle_error!(left_location
-            .clone()
+            .borrow()
             .with_extra_info(format!("This has the type '{}'", first.display()))
             .error(format!(
                 "Cannot convert from the type '{}' to the type '{}'.",
@@ -61,7 +61,7 @@ pub fn convert_to_type(
     macro_rules! implicit_conversion_error {
         () => {
             elle_error!(
-                right_location.clone().with_extra_info(format!(
+                right_location.borrow().with_extra_info(format!(
                     "This has the type '{}'",
                     first.display()
                 )).error(format!(

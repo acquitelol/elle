@@ -1,14 +1,14 @@
-use std::{cell::RefCell, rc::Rc};
+use std::cell::RefCell;
 
 use crate::{
     compiler::qbe::r#type::Type,
     elle_error,
-    lexer::enums::{Attribute, Location, Token, TokenKind, ValueKind},
+    lexer::enums::{Attribute, Location, MutRc, Token, TokenKind, ValueKind},
     parser::{
         enums::{BlockStatement, FunctionSource, IfStatement, VariadicStart, WhileLoopStatement},
         statement::Shared,
     },
-    Warning, META_STRUCT_NAME,
+    set_end, Warning, META_STRUCT_NAME,
 };
 
 use super::{
@@ -31,7 +31,7 @@ impl<'a> Function<'a> {
         public: bool,
         external: bool,
         should_parse: bool,
-        mut location: Location,
+        location: MutRc<Location>,
     ) -> Option<Primitive> {
         self.parser.advance();
 
@@ -86,7 +86,7 @@ impl<'a> Function<'a> {
         self.parser.advance();
 
         if self.parser.current_token().kind == TokenKind::Dot {
-            elle_error!(self.parser.current_token().location.error(format!(
+            elle_error!(self.parser.current_token().location.borrow().error(format!(
                 "Cannot create a method for '{}' using '.'\nPlease use '::' instead.",
                 name
             )))
@@ -97,7 +97,7 @@ impl<'a> Function<'a> {
                 || ValueKind::String(name.clone()).is_base_type())
             {
                 elle_error!(
-                    location.error(format!(
+                    location.borrow().error(format!(
                         "Cannot create a method for '{}' because it isn't a struct or primitive type.\n{}",
                         name.clone(), if let Some(map) = ValueKind::similar_mapping(name.clone()) {
                             format!("A similar type exists which might be what you need: '{}'", map)
@@ -206,7 +206,7 @@ impl<'a> Function<'a> {
                     if self.parser.warnings.has_warning(Warning::CStyleVoid) {
                         eprintln!(
                             "{}",
-                            ty_loc.warning("Elle does not support C-style explicit function prototypes.\nPlease remove the 'void' type from this function's signature.\nThis is a warning, which means the compiler will ignore this.")
+                            ty_loc.borrow().warning("Elle does not support C-style explicit function prototypes.\nPlease remove the 'void' type from this function's signature.\nThis is a warning, which means the compiler will ignore this.")
                         )
                     }
 
@@ -219,6 +219,7 @@ impl<'a> Function<'a> {
                         .parser
                         .current_token()
                         .location
+                        .borrow()
                         .error(format!("Invalid token type: {:?}", other))),
                 };
 
@@ -242,7 +243,7 @@ impl<'a> Function<'a> {
                 || arguments[0].r#type != Type::Struct(META_STRUCT_NAME.into()))
             && self.parser.warnings.has_warning(Warning::VariadicNoMeta)
         {
-            eprintln!("{}", location.warning(
+            eprintln!("{}", location.borrow().warning(
                 format!(
                     "Generating a variadic function named '{}' without the ElleMeta struct.\nThis internal structure provides you with arity, it may be useful.\nAre you sure you want to create this function without it?",
                     name
@@ -286,7 +287,7 @@ impl<'a> Function<'a> {
                             if self.parser.warnings.has_warning(Warning::InvalidAlias) {
                                 eprintln!(
                                     "{}",
-                                    location.warning(format!(
+                                    location.borrow().warning(format!(
                                         "Can't assign aliases to non-external functions\nSkipping alias '{}' for function '{}'",
                                         alias, name.replace(".", "::")
                                     ))
@@ -306,7 +307,7 @@ impl<'a> Function<'a> {
                         format = true;
                         self.parser.advance();
                     }
-                    _ => elle_error!(self.parser.current_token().location.error(format!(
+                    _ => elle_error!(self.parser.current_token().location.borrow().error(format!(
                         "Unknown attribute for function '{}'",
                         self.parser
                             .current_token()
@@ -328,7 +329,7 @@ impl<'a> Function<'a> {
 
         if external {
             self.parser.expect_tokens(vec![TokenKind::Semicolon]);
-            location.end = self.parser.current_token().location.end.clone();
+            set_end!(location, self.parser);
             self.parser.advance();
 
             return Some(Primitive::Function(FunctionSource {
@@ -348,7 +349,7 @@ impl<'a> Function<'a> {
                 body: vec![],
                 usable: true,
                 imported: false,
-                location: Rc::new(location),
+                location,
                 return_location: return_location.clone(),
             }));
         }
@@ -487,7 +488,7 @@ impl<'a> Function<'a> {
         }
 
         insert_deferred_statements(&mut res, &deferred, true);
-        location.end = self.parser.current_token().location.end.clone();
+        set_end!(location, self.parser);
 
         Some(Primitive::Function(FunctionSource {
             public,
@@ -506,7 +507,7 @@ impl<'a> Function<'a> {
             body: res,
             usable: true,
             imported: false,
-            location: Rc::new(location),
+            location,
             return_location,
         }))
     }

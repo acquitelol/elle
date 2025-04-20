@@ -35,12 +35,12 @@ impl Codegen<'_> for Declare {
                 .is_err()
         {
             elle_error!(
-                self.location.error(
+                self.location.borrow().error(
                     format!("Variable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.", plain_name)));
         }
 
         if self.r#type.clone().is_some_and(|ty| ty == Type::Infer) && self.value.is_none() {
-            elle_error!(self.location.error(format!(
+            elle_error!(self.location.borrow().error(format!(
                 "Failed to determine a type for '{}'.\nPlease give this variable a type or a value.",
                 plain_name
             )));
@@ -142,7 +142,7 @@ impl Codegen<'_> for Declare {
                         && final_ty.is_pointer()
                         && final_ty.get_pointer_inner().unwrap().is_void())
                 {
-                    elle_error!(self.location.error(format!(
+                    elle_error!(self.location.borrow().error(format!(
                         "Cannot redeclare '{}' which has type {} to type {}",
                         plain_name,
                         addr_ty.display(),
@@ -171,8 +171,8 @@ impl Codegen<'_> for Declare {
                 if self.name.tagged {
                     elle_error!(format!(
                         "hover\n{}\n{}\nlet {plain_name}: {}",
-                        self.name.location.display_plain(false),
-                        self.name.location.display_plain(true),
+                        self.name.location.borrow().display_plain(false),
+                        self.name.location.borrow().display_plain(true),
                         res.0.display()
                     ));
                 }
@@ -223,8 +223,8 @@ impl Codegen<'_> for Declare {
             if self.name.tagged {
                 elle_error!(format!(
                     "hover\n{}\n{}\nlet {plain_name}: {}",
-                    self.name.location.display_plain(false),
-                    self.name.location.display_plain(true),
+                    self.name.location.borrow().display_plain(false),
+                    self.name.location.borrow().display_plain(true),
                     res.0.display()
                 ));
             }
@@ -233,6 +233,7 @@ impl Codegen<'_> for Declare {
         } else {
             elle_error!(self
                 .location
+                .borrow()
                 .with_extra_info("This variable might be assigned to a statement")
                 .error(format!(
                     "Unexpected error when declaring variable named '{}'\nCould not generate a valid value for this variable.\nMaybe '{}' is being incorrectly assigned to a statement?",

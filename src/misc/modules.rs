@@ -7,7 +7,7 @@ use std::time::Instant;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::compiler::qbe::r#type::Type;
-use crate::lexer::enums::Token;
+use crate::lexer::enums::{MutRc, Token};
 use crate::parser::enums::{
     ArrayLength, ConstantSource, FunctionSource, Literal, Return, StructSource, UseSource,
 };
@@ -44,7 +44,7 @@ pub fn lex_and_parse(
     object_output: bool,
     expect_info: bool,
     nesting: usize,
-    import_location: Rc<Location>,
+    import_location: MutRc<Location>,
     string_module_methods: &mut Vec<String>,
 ) -> Vec<Primitive> {
     let is_std_import;
@@ -69,12 +69,12 @@ pub fn lex_and_parse(
             relative_path.to_path_buf()
         };
 
-        let content = match fs::read_to_string(final_path.clone()) {
+        let content = match fs::read_to_string(&final_path) {
             Ok(content) => content,
             Err(err) => {
                 eprintln!(
                     "{}",
-                    import_location.basic_error(format!(
+                    import_location.borrow().basic_error(format!(
                         "Could not load module \"{RED}{}{RESET}\":\n{}",
                         input_path,
                         err,
@@ -96,7 +96,7 @@ pub fn lex_and_parse(
 
     macro_rules! file_is_empty_error {
         () => {
-            elle_error!(import_location.basic_error(format!(
+            elle_error!(import_location.borrow().basic_error(format!(
                 "Could not load module \"{MAGENTA}{input_path}{RESET}\":\n{}\n\n{}{RESET}",
                 "Module is empty. To create an entry-point, write:",
                 format!(
@@ -123,13 +123,11 @@ pub fn lex_and_parse(
     );
     let mut tokens = vec![];
 
-    while let Some(mut token) = lexer.next_token() {
+    while let Some(token) = lexer.next_token() {
         // Give tokens an alt location so that this can be reported
         // instead, if the error happened in another file
-        let mut location = (*token.location).clone();
-        location.alt_start = import_location.start.clone();
-        location.alt_end = import_location.end.clone();
-        token.location = Rc::new(location);
+        token.location.borrow_mut().alt_start = import_location.borrow().start.clone();
+        token.location.borrow_mut().alt_end = import_location.borrow().end.clone();
 
         // Even though the lexer does provide us with comments, we don't care about them
         // so we can just ignore them and not pass them the parser
@@ -160,7 +158,7 @@ pub fn lex_and_parse(
 
     let (mut imports, new_struct_pool, ..) = parser.parse(&DoOnly::Imports, None);
     struct_pool.replace_with(|_| new_struct_pool);
-    let loc = Rc::new(Location::default(input_path.clone()));
+    let loc = Rc::new(RefCell::new(Location::default(input_path.clone())));
 
     if nesting == 0 && !no_fmt {
         imports.insert(
@@ -230,18 +228,17 @@ pub fn lex_and_parse(
                     );
                 }
 
-                let location = (*location).clone();
                 let current = current_dir().unwrap();
 
                 if !is_std_import {
                     // Set the path to where the current file is so that imports are relative in that regard
                     set_current_dir(Path::new(final_path.parent().unwrap_or_else(|| {
-                        elle_error!(location.basic_error(format!(
+                        elle_error!(location.borrow().basic_error(format!(
                             "Failed to get the parent directory of {final_path:#?}"
                         )))
                     })))
                     .unwrap_or_else(|err| {
-                        elle_error!(location.basic_error(format!(
+                        elle_error!(location.borrow().basic_error(format!(
                             "Failed to set the current directory of {final_path:#?}\n{err}"
                         )))
                     });
@@ -262,7 +259,7 @@ pub fn lex_and_parse(
                     expect_info,
                     nesting + 1,
                     if nesting == 0 {
-                        Rc::new(location.clone())
+                        location.clone()
                     } else {
                         import_location.clone()
                     },
@@ -272,7 +269,7 @@ pub fn lex_and_parse(
                 if !is_std_import {
                     // Set the path back
                     set_current_dir(current.clone()).unwrap_or_else(|err| {
-                        elle_error!(location.basic_error(format!(
+                        elle_error!(location.borrow().basic_error(format!(
                             "Failed to set the current directory to {current:#?}\n{err}"
                         )))
                     });

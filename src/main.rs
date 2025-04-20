@@ -358,7 +358,7 @@ async fn main() -> ExitCode {
         return ExitCode::FAILURE;
     };
 
-    let loc = Rc::new(Location::default(input_path.clone()));
+    let loc = Rc::new(RefCell::new(Location::default(input_path.clone())));
 
     pool.insert(
         META_STRUCT_NAME.into(),
@@ -444,7 +444,7 @@ async fn main() -> ExitCode {
                     if main_arg_len > 1 {
                         panic!(
                             "{}",
-                            location.error(format!(
+                            location.borrow().error(format!(
                                 "You cannot expect more than 1 argument ({RED}{main_arg_len}{RESET}) in the main function.\nOnly a single argument is supplied of type \"{GREEN}string[]{RESET}\".",
                                 RED = get_RED!(),
                                 GREEN = get_GREEN!(),
@@ -462,7 +462,7 @@ async fn main() -> ExitCode {
                     {
                         panic!(
                             "{}",
-                            location.error(
+                            location.borrow().error(
                                 format!(
                                     "Mismatched type for argument in main function.\nExpected type \"{GREEN}string[]{RESET}\" but got \"{GREEN}{}{RESET}\".",
                                     arguments[0].r#type.display(),

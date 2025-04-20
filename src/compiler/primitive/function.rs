@@ -20,17 +20,6 @@ pub fn generate_function(
     known_generics: HashMap<String, Type>,
     module: &RefCell<Module>,
 ) -> Function {
-    gen.scopes.push(hashmap![]);
-
-    let mut args = vec![];
-
-    for argument in this.arguments {
-        let ty = argument.r#type.clone();
-        let tmp = gen.new_variable(&ty, &argument.name, None, false, false);
-
-        args.push(((ty.into_abi(), tmp), argument.no_fmt));
-    }
-
     let mut func = Function {
         linkage: if this.public || &this.name == "main" {
             Linkage::public()
@@ -50,16 +39,32 @@ pub fn generate_function(
         imported: this.imported,
         generics: this.generics,
         known_generics,
-        arguments: args,
+        arguments: this
+            .arguments
+            .clone()
+            .into_iter()
+            .map(|x| ((x.r#type.into_abi(), Value::Temporary(x.name)), false))
+            .collect(),
         return_type: this.r#return,
         blocks: vec![],
     };
 
     if this.external {
-        gen.scopes.pop();
         return func;
     }
 
+    gen.scopes.push(hashmap![]);
+
+    let mut args = vec![];
+
+    for argument in this.arguments {
+        let ty = argument.r#type.clone();
+        let tmp = gen.new_variable(&ty, &argument.name, None, false, false);
+
+        args.push(((ty.into_abi(), tmp), argument.no_fmt));
+    }
+
+    func.arguments = args;
     func.add_block("start");
 
     let func_ref = RefCell::new(func.clone());
@@ -161,7 +166,7 @@ pub fn generate_function(
                             ty_err_message!(
                                 $return_type.display(),
                                 $first_type.display(),
-                                $location.with_extra_info(format!(
+                                $location.borrow().with_extra_info(format!(
                                     "This has the type '{}'",
                                     $first_type.display()
                                 )),
@@ -178,7 +183,7 @@ pub fn generate_function(
                         ty_err_message!(
                             $return_type.display(),
                             $first_type.display(),
-                            $location.with_extra_info(format!(
+                            $location.borrow().with_extra_info(format!(
                                 "This has the type '{}'",
                                 $first_type.display()
                             )),
@@ -228,7 +233,7 @@ pub fn generate_function(
                                         ty_err_message!(
                                             return_type.display(),
                                             first_type.display(),
-                                            location.with_extra_info(format!(
+                                            location.borrow().with_extra_info(format!(
                                                 "This has the type '{}'",
                                                 return_type.display()
                                             )),
@@ -244,7 +249,7 @@ pub fn generate_function(
                                     ty_err_message!(
                                         ty.display(),
                                         first_ty.unwrap().display(),
-                                        location,
+                                        location.borrow(),
                                         Some(format!("This error was caused because you returned '{}' elsewhere, but not here.", first_type.display()))
                                     )
                                 )

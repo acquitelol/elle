@@ -1,7 +1,6 @@
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
-    rc::Rc,
 };
 
 use crate::{
@@ -11,7 +10,7 @@ use crate::{
         qbe::{function::Function, module::Module, r#type::Type},
     },
     elle_error, get_GREEN, get_RED, get_RESET, hashmap,
-    lexer::enums::Location,
+    lexer::enums::{Location, MutRc},
     parser::enums::{modify_type_in_ast, Argument, AstNode, FunctionSource, Primitive},
     GENERIC_END, GENERIC_IDENTIFIER, GREEN, META_STRUCT_NAME, RED, RESET,
 };
@@ -24,10 +23,10 @@ pub fn create_monomorphized_function(
     add_meta: &mut bool,
     base_known_generics: Vec<Type>,
     known_generics: &mut HashMap<String, Type>,
-    parameters: Vec<(Rc<Location>, AstNode)>,
+    parameters: Vec<(MutRc<Location>, AstNode)>,
     module: &RefCell<Module>,
     func: &RefCell<Function>,
-    call_location: &mut Location,
+    call_location: &mut MutRc<Location>,
     tmp_function: &mut Function,
     ty: Option<Type>,
 ) {
@@ -98,7 +97,7 @@ pub fn create_monomorphized_function(
                             is_return: false
                         }
                     )
-                    .unwrap_or_else(|| elle_error!(parameter.0.error(
+                    .unwrap_or_else(|| elle_error!(parameter.0.borrow().error(
                         format!(
                             "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
                             name
@@ -129,7 +128,7 @@ pub fn create_monomorphized_function(
                                     ) =>
                                 {
                                     elle_error!(
-                                        call_location.with_extra_info(format!("{key} = `{}`, but got `{}`", existing_ty.display(), ty.display())).error(
+                                        call_location.borrow().with_extra_info(format!("{key} = `{}`, but got `{}`", existing_ty.display(), ty.display())).error(
                                             format!(
                                                 "Mismatched type for generic {key} in {}<{}>({}):\n{key} is defined with both type \"{GREEN}{}{RESET}\" and \"{RED}{}{RESET}\"",
                                                 name.replace(".", "::"),
@@ -153,7 +152,7 @@ pub fn create_monomorphized_function(
                     } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
                         eprintln!(
                             "{}",
-                            this.location.warning(format!(
+                            this.location.borrow().warning(format!(
                                 "Failed to deduce a generic type from {} and {}",
                                 ty.display(),
                                 other.display()
@@ -174,7 +173,7 @@ pub fn create_monomorphized_function(
                         } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
                             eprintln!(
                                 "{}",
-                                this.location.warning(format!(
+                                this.location.borrow().warning(format!(
                                     "Failed to deduce a generic type from {} and {}",
                                     ty.display(),
                                     other.display()
@@ -194,7 +193,7 @@ pub fn create_monomorphized_function(
                         } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
                             eprintln!(
                                 "{}",
-                                this.location.warning(format!(
+                                this.location.borrow().warning(format!(
                                     "Failed to deduce a generic type from {} and {}",
                                     ty.display(),
                                     other.display()
@@ -216,7 +215,7 @@ pub fn create_monomorphized_function(
                 let diff: Vec<_> = a.difference(&b).cloned().collect();
 
                 elle_error!(
-                    call_location.error(format!(
+                    call_location.borrow().error(format!(
                         "Mismatched number of generics in function {}<{}>({}).\nCould not find generic{} {} where the function specifies <{}>.",
                         name.replace(".", "::"),
                         this.generics.join(", "),

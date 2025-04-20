@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
@@ -5,6 +6,8 @@ use crate::compiler::qbe::r#type::Type;
 use crate::misc::colors::*;
 use crate::misc::constants::{get_RAW_ERRORS, RAW_ERRORS};
 use crate::{elle_error, ISSUE_URL};
+
+pub type MutRc<T> = Rc<RefCell<T>>;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum TokenKind {
@@ -376,10 +379,10 @@ pub struct Location {
     // so we can report the import location instead
     // of the real location for errors that weren't
     // in the current file
-    pub alt_start: Position,
-    pub alt_end: Position,
-    pub start: Position,
-    pub end: Position,
+    pub alt_start: Rc<Position>,
+    pub alt_end: Rc<Position>,
+    pub start: Rc<Position>,
+    pub end: Rc<Position>,
     pub ctx: Rc<str>,
     pub above: Option<Rc<str>>,
     pub extra_info: Rc<str>,
@@ -393,7 +396,7 @@ impl Location {
     }
 
     pub fn contains(&self, pos: &Position) -> bool {
-        self.start <= *pos && *pos <= self.end
+        *self.start <= *pos && *pos <= *self.end
     }
 
     pub fn display(&self, is_warning: bool) -> String {
@@ -663,10 +666,10 @@ impl Location {
     pub fn default(file: String) -> Location {
         Location {
             file: Rc::from(file),
-            alt_start: Position { row: 0, column: 0 },
-            alt_end: Position { row: 0, column: 1 },
-            start: Position { row: 0, column: 0 },
-            end: Position { row: 0, column: 1 },
+            alt_start: Rc::new(Position { row: 0, column: 0 }),
+            alt_end: Rc::new(Position { row: 0, column: 1 }),
+            start: Rc::new(Position { row: 0, column: 0 }),
+            end: Rc::new(Position { row: 0, column: 1 }),
             ctx: Rc::from("_"),
             above: None,
             extra_info: Rc::from(""),
@@ -676,10 +679,10 @@ impl Location {
     pub fn base() -> Location {
         Location {
             file: Rc::from("_"),
-            alt_start: Position { row: 0, column: 0 },
-            alt_end: Position { row: 0, column: 1 },
-            start: Position { row: 0, column: 0 },
-            end: Position { row: 0, column: 1 },
+            alt_start: Rc::new(Position { row: 0, column: 0 }),
+            alt_end: Rc::new(Position { row: 0, column: 1 }),
+            start: Rc::new(Position { row: 0, column: 0 }),
+            end: Rc::new(Position { row: 0, column: 1 }),
             ctx: Rc::from("_"),
             above: None,
             extra_info: Rc::from(""),
@@ -715,7 +718,7 @@ impl fmt::Debug for Location {
 pub struct Token {
     pub kind: TokenKind,
     pub value: ValueKind,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
     pub tagged: bool,
 }
 
@@ -737,6 +740,7 @@ impl Token {
         if self.kind != TokenKind::Identifier {
             elle_error!(self
                 .location
+                .borrow()
                 .error("Tried to parse an attribute on a non-identifier token"));
         }
 
@@ -755,7 +759,7 @@ impl Token {
         return Token {
             kind: TokenKind::Identifier,
             value: ValueKind::String(ident.into()),
-            location: Rc::new(Location::base()),
+            location: Rc::new(RefCell::new(Location::base())),
             tagged: false,
         };
     }

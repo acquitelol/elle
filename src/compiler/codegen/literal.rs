@@ -27,8 +27,8 @@ impl Codegen<'_> for Literal {
                         if res.clone().unwrap().0.is_function() {
                             elle_error!(format!(
                                 "hover\n{}\n{}\n{}",
-                                self.location.display_plain(false),
-                                self.location.display_plain(true),
+                                self.location.borrow().display_plain(false),
+                                self.location.borrow().display_plain(true),
                                 res.unwrap().0.display()
                             ));
                         }
@@ -44,8 +44,8 @@ impl Codegen<'_> for Literal {
 
                         elle_error!(format!(
                             "hover\n{}\n{}\n{} {name}: {}",
-                            self.location.display_plain(false),
-                            self.location.display_plain(true),
+                            self.location.borrow().display_plain(false),
+                            self.location.borrow().display_plain(true),
                             if is_constant { "const" } else { "let" },
                             res.unwrap().0.display()
                         ));
@@ -61,7 +61,10 @@ impl Codegen<'_> for Literal {
                         .borrow_mut()
                         .add_instruction(Instruction::Jump(format!("{}.end", label)));
                 } else {
-                    elle_error!(self.location.error("Break can only be used in a loop"));
+                    elle_error!(self
+                        .location
+                        .borrow()
+                        .error("Break can only be used in a loop"));
                 }
 
                 None
@@ -72,7 +75,10 @@ impl Codegen<'_> for Literal {
                         .borrow_mut()
                         .add_instruction(Instruction::Jump(format!("{}.step", label)));
                 } else {
-                    elle_error!(self.location.error("Continue can only be used in a loop"));
+                    elle_error!(self
+                        .location
+                        .borrow()
+                        .error("Continue can only be used in a loop"));
                 }
 
                 None
@@ -124,8 +130,8 @@ impl Codegen<'_> for Literal {
                     if self.tagged {
                         elle_error!(format!(
                             "hover\n{}\n{}\n{}: {}",
-                            self.location.display_plain(false),
-                            self.location.display_plain(true),
+                            self.location.borrow().display_plain(false),
+                            self.location.borrow().display_plain(true),
                             val,
                             res.0.display()
                         ));
@@ -156,8 +162,8 @@ impl Codegen<'_> for Literal {
                     if self.tagged {
                         elle_error!(format!(
                             "hover\n{}\n{}\n\"{val}\": {}",
-                            self.location.display_plain(false),
-                            self.location.display_plain(true),
+                            self.location.borrow().display_plain(false),
+                            self.location.borrow().display_plain(true),
                             res.0.display()
                         ));
                     }
@@ -170,8 +176,8 @@ impl Codegen<'_> for Literal {
                     if self.tagged {
                         elle_error!(format!(
                             "hover\n{}\n{}\n'{val}': {}",
-                            self.location.display_plain(false),
-                            self.location.display_plain(true),
+                            self.location.borrow().display_plain(false),
+                            self.location.borrow().display_plain(true),
                             res.0.display()
                         ));
                     }

@@ -10,7 +10,7 @@ use crate::{
 impl Codegen<'_> for Address {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let (ty, val) = self.value.compile(gen, ctx).unwrap_or_else(|| {
-            elle_error!(self.location.error(
+            elle_error!(self.location.borrow().error(
                 "Unexpected error when trying to compile the value of an address expression",
             ))
         });

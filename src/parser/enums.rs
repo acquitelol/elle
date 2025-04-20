@@ -1,12 +1,12 @@
 use codegen::Codegen;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap};
 
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         qbe::{r#type::Type, value::Value},
     },
-    lexer::enums::{Location, Token, TokenKind, ValueKind},
+    lexer::enums::{Location, MutRc, Token, TokenKind, ValueKind},
 };
 
 use super::parser::StructPool;
@@ -16,14 +16,14 @@ pub struct Declare {
     pub name: Token,
     pub r#type: Option<Type>,
     pub value: Option<Box<AstNode>>,
-    pub location: Rc<Location>,
-    pub value_location: Rc<Location>,
+    pub location: MutRc<Location>,
+    pub value_location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Return {
     pub value: Box<AstNode>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -33,14 +33,14 @@ pub struct BinaryOperation {
     pub operator: TokenKind,
     pub treat_as_string: bool,
     pub dunder_methods: bool,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Literal {
     pub kind: TokenKind,
     pub value: ValueKind,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
     pub tagged: bool, // whether this token should display introspective info
 }
 
@@ -50,10 +50,10 @@ pub struct FunctionCall {
     pub name_token: Token,
     pub name: String,
     pub generics: Vec<Type>,
-    pub parameters: Vec<(Rc<Location>, AstNode)>,
+    pub parameters: Vec<(MutRc<Location>, AstNode)>,
     pub type_method: bool,
     pub ignore_no_def: bool,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -61,7 +61,7 @@ pub struct Buffer {
     pub name: Token,
     pub r#type: Option<Type>,
     pub size: Box<AstNode>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -69,9 +69,9 @@ pub struct MemoryOperation {
     pub left: Box<AstNode>,
     pub right: Box<AstNode>,
     pub value: Option<Box<AstNode>>,
-    pub left_location: Rc<Location>,
-    pub right_location: Rc<Location>,
-    pub value_location: Rc<Location>,
+    pub left_location: MutRc<Location>,
+    pub right_location: MutRc<Location>,
+    pub value_location: MutRc<Location>,
     pub is_deref: bool,
 }
 
@@ -81,7 +81,7 @@ pub struct IfStatement {
     pub body: Vec<AstNode>,
     pub elifs: Vec<(Box<AstNode>, Vec<AstNode>)>,
     pub else_body: Vec<AstNode>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -89,64 +89,64 @@ pub struct WhileLoopStatement {
     pub condition: Box<AstNode>,
     pub step: Option<Box<AstNode>>,
     pub body: Vec<AstNode>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct VariadicStart {
     pub name: Token,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct VariadicArgument {
     pub name: Token,
     pub r#type: Option<Type>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Environment {
     pub value: Option<Box<AstNode>>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SetAllocator {
     pub value: Box<AstNode>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct BlockStatement {
     pub body: Vec<AstNode>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Conversion {
     pub r#type: Option<Type>,
     pub value: Box<AstNode>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
     pub explicit: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct BitwiseNot {
     pub value: Box<AstNode>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LogicalNot {
     pub value: Box<AstNode>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ArrayLength {
     pub value: Box<AstNode>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -154,22 +154,22 @@ pub struct Lambda {
     pub arguments: Vec<Argument>,
     pub value: Vec<AstNode>,
     pub return_ty: Option<Type>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ArrayLiteral {
     pub explicit_inner: Option<Type>,
     pub known_generics: Vec<Type>,
-    pub values: Vec<(Rc<Location>, AstNode)>,
-    pub location: Rc<Location>,
+    pub values: Vec<(MutRc<Location>, AstNode)>,
+    pub location: MutRc<Location>,
     pub dynamic: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Address {
     pub value: Box<AstNode>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -177,20 +177,20 @@ pub struct Ternary {
     pub condition: Box<AstNode>,
     pub if_true: Box<AstNode>,
     pub if_false: Box<AstNode>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Size {
     pub value: Result<Type, Box<AstNode>>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct StructLiteral {
     pub name: Token,
     pub values: Vec<(String, Box<AstNode>)>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -198,7 +198,7 @@ pub struct FieldAccess {
     pub left: Box<AstNode>,
     pub right: Box<AstNode>,
     pub value: Option<Box<AstNode>>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Codegen)]
@@ -210,7 +210,7 @@ pub enum AstNode {
     /// which is reinterpreted into a return at the end of the function at parse time.
     DeferStatement {
         value: Box<AstNode>,
-        location: Rc<Location>,
+        location: MutRc<Location>,
     },
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
@@ -543,7 +543,7 @@ fn modify_type(
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UseSource {
     pub module: String,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -556,8 +556,8 @@ pub struct StructSource {
     pub generics: Vec<String>,
     pub known_generics: HashMap<String, Type>,
     pub members: Vec<Argument>,
-    pub keyword_location: Rc<Location>,
-    pub location: Rc<Location>,
+    pub keyword_location: MutRc<Location>,
+    pub location: MutRc<Location>,
     pub ignore_empty: bool,
 }
 
@@ -579,8 +579,8 @@ pub struct FunctionSource {
     pub arguments: Vec<Argument>,
     pub r#return: Option<Type>,
     pub body: Vec<AstNode>,
-    pub location: Rc<Location>,
-    pub return_location: Rc<Location>,
+    pub location: MutRc<Location>,
+    pub return_location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -592,7 +592,7 @@ pub struct ConstantSource {
     pub imported: bool,
     pub r#type: Option<Type>,
     pub value: Box<AstNode>,
-    pub location: Rc<Location>,
+    pub location: MutRc<Location>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

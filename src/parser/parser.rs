@@ -3,7 +3,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use crate::{
     compiler::qbe::r#type::Type,
     elle_error, ensure_fn_pointer,
-    lexer::enums::{Location, Token, TokenKind, ValueKind},
+    lexer::enums::{Location, MutRc, Token, TokenKind, ValueKind},
     misc::colors::*,
     parser::{constant::Constant, function::Function, r#struct::Struct},
     Warnings, GENERIC_END, GENERIC_IDENTIFIER,
@@ -21,12 +21,12 @@ pub enum DoOnly {
     Structs,
 }
 
-pub type StructPool = HashMap<String, (Vec<String>, Vec<Argument>, Rc<Location>)>;
+pub type StructPool = HashMap<String, (Vec<String>, Vec<Argument>, MutRc<Location>)>;
 
 pub fn create_generic_struct(
     name: String,
     generic_name: String,
-    mut location: Location,
+    location: MutRc<Location>,
     known_generics: Vec<Type>,
     struct_pool: &RefCell<StructPool>,
     tree: &RefCell<Vec<Primitive>>,
@@ -44,17 +44,17 @@ pub fn create_generic_struct(
             .skip(known_generics.len())
             .collect::<Vec<String>>();
 
-        location.above = Some(Rc::from(format!(
+        location.borrow_mut().above = Some(Rc::from(format!(
             "In struct:\n{GREEN}{BOLD}{}{}{RESET}\n\n",
-            " ".repeat(location.ctx.len() - location.ctx.trim().len() + 8),
-            struct_location.ctx,
+            " ".repeat(location.borrow().ctx.len() - location.borrow().ctx.trim().len() + 8),
+            struct_location.borrow().ctx,
             GREEN = get_GREEN!(),
             BOLD = get_BOLD!(),
             RESET = get_RESET!()
         )));
 
         elle_error!(
-            location.error(format!(
+            location.borrow().error(format!(
                 "Mismatched number of generics in struct {}<{}>.\nCould not find generic{} {} where the function specifies <{}>.",
                 name.replace(".", "::"),
                 generics.join(", "),
@@ -95,15 +95,14 @@ pub fn create_generic_struct(
         generics: vec![],
         known_generics: parsed_generics,
         members: parsed_members.clone(),
-        keyword_location: Rc::new(location.clone()),
-        location: Rc::new(location.clone()),
+        keyword_location: location.clone(),
+        location: location.clone(),
         ignore_empty: false,
     }));
 
-    struct_pool.borrow_mut().insert(
-        generic_name.clone(),
-        (vec![], parsed_members, Rc::new(location)),
-    );
+    struct_pool
+        .borrow_mut()
+        .insert(generic_name.clone(), (vec![], parsed_members, location));
 }
 
 #[macro_export]
@@ -114,7 +113,7 @@ macro_rules! get_type {
         let mut tuple_imported = true;
         let name;
 
-        let location = (*$self.current_token().location).clone();
+        let location = $self.current_token().location;
 
         let mut ty = if $self.current_token().kind == TokenKind::LeftParenthesis {
             if !$struct_pool.borrow().contains_key("Tuple") {
@@ -146,14 +145,13 @@ macro_rules! get_type {
             );
 
             $self.expect_tokens(vec![TokenKind::RightParenthesis]);
-            let mut cloned_location = location.clone();
-            cloned_location.end = $self.current_token().location.end.clone();
+            crate::set_end!(location, $self);
 
             if !tuple_imported {
                 let import_text = "use std/collections/tuple;";
 
                 elle_error!(
-                    cloned_location.error(
+                    location.borrow().error(
                         format!(
                             "The tuple module is not imported. Please import it to use tuples.\n\n`{}`",
                             import_text
@@ -166,7 +164,7 @@ macro_rules! get_type {
                 create_generic_struct(
                     "Tuple".into(),
                     generic_name.clone(),
-                    cloned_location,
+                    location.clone(),
                     types,
                     &$struct_pool,
                     &$tree,
@@ -191,7 +189,7 @@ macro_rules! get_type {
 
             if !is_valid {
                 elle_error!(
-                    $self.current_token().location.error(format!(
+                    $self.current_token().location.borrow().error(format!(
                         "Type or struct named '{}' could not be found. Are you sure you spelt it correctly?",
                         name
                     ))
@@ -220,12 +218,11 @@ macro_rules! get_type {
                         $self.advance();
 
                         if !$struct_pool.borrow().contains_key("Array") {
-                            let mut cloned_location = location.clone();
-                            cloned_location.end = $self.current_token().location.end.clone();
+                            crate::set_end!(location, $self);
                             let import_text = "use std/collections/array;";
 
                             elle_error!(
-                                cloned_location.error(
+                                location.borrow().error(
                                     format!(
                                         "The array module is not imported. Please import it to use dynamic arrays.\n\n`{}`",
                                         import_text
@@ -239,14 +236,13 @@ macro_rules! get_type {
                             ty.to_internal_id().to_string()
                         );
 
-                        let mut cloned_location = location.clone();
-                        cloned_location.end = $self.current_token().location.end.clone();
+                        crate::set_end!(location, $self);
 
                         if !$struct_pool.borrow().contains_key(&generic_name) {
                             create_generic_struct(
                                 "Array".into(),
                                 generic_name.clone(),
-                                cloned_location,
+                                location.clone(),
                                 vec![ty],
                                 &$struct_pool,
                                 &$tree,
@@ -272,8 +268,7 @@ macro_rules! get_type {
                             }
                         }
 
-                        let mut cloned_location = location.clone();
-                        cloned_location.end = $self.current_token().location.end.clone();
+                        crate::set_end!(location, $self);
 
                         let generic_name = format!(
                             "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
@@ -288,7 +283,7 @@ macro_rules! get_type {
                             create_generic_struct(
                                 name.clone(),
                                 generic_name.clone(),
-                                cloned_location,
+                                location.clone(),
                                 known_generics,
                                 &$struct_pool,
                                 &$tree,
@@ -372,7 +367,7 @@ impl Parser {
 
     pub fn expect_tokens(&self, expected: Vec<TokenKind>) {
         if !expected.contains(&self.current_token().kind) {
-            elle_error!(self.current_token().location.error(format!(
+            elle_error!(self.current_token().location.borrow().error(format!(
                 "Expected one of [{}], got {:?}.",
                 expected
                     .iter()
@@ -397,7 +392,7 @@ impl Parser {
         let token = self.current_token();
 
         if !found {
-            elle_error!(token.location.error(format!(
+            elle_error!(token.location.borrow().error(format!(
                 "Expected one of {:?} but got {:?}",
                 expected, token.kind
             )))
@@ -410,7 +405,7 @@ impl Parser {
         {
             identifier.clone()
         } else {
-            elle_error!(token.location.error(format!(
+            elle_error!(token.location.borrow().error(format!(
                 "Expected one of {:?} for function name, got {:?}",
                 expected.clone(),
                 self.current_token()
@@ -442,7 +437,7 @@ impl Parser {
         }
 
         self.position = 0;
-        let mut location = (*self.current_token().location).clone();
+        let mut location = self.current_token().location;
         let mut public = false;
         let mut local = false;
         let mut defined = false;
@@ -450,7 +445,7 @@ impl Parser {
 
         macro_rules! clean {
             () => {{
-                location = (*self.current_token().location).clone();
+                location = self.current_token().location;
                 public = false;
                 local = false;
                 defined = false;
@@ -477,13 +472,15 @@ impl Parser {
                                 TokenKind::External => {
                                     global_external = true;
                                 }
-                                _ => elle_error!(self.current_token().location.error(format!(
-                                    "Invalid global identifier named '{}'",
-                                    self.current_token()
-                                        .value
-                                        .get_string_inner()
-                                        .unwrap_or(self.current_token().kind.to_string())
-                                ))),
+                                _ => elle_error!(self.current_token().location.borrow().error(
+                                    format!(
+                                        "Invalid global identifier named '{}'",
+                                        self.current_token()
+                                            .value
+                                            .get_string_inner()
+                                            .unwrap_or(self.current_token().kind.to_string())
+                                    )
+                                )),
                             }
 
                             self.advance();
@@ -511,7 +508,7 @@ impl Parser {
                         TokenKind::External => {
                             defined = true;
                         }
-                        _ => elle_error!(self.current_token().location.error(format!(
+                        _ => elle_error!(self.current_token().location.borrow().error(format!(
                             "Invalid local specifier named '{}'",
                             self.current_token()
                                 .value
@@ -545,6 +542,7 @@ impl Parser {
                         elle_error!(self
                             .current_token()
                             .location
+                            .borrow()
                             .error("Cannot specify a function as both private and public"));
                     }
 
@@ -582,13 +580,14 @@ impl Parser {
                 }
                 TokenKind::Constant => {
                     if external {
-                        elle_error!(self.current_token().location.error("Cannot have an external constant. Please remove the `external` keyword."))
+                        elle_error!(self.current_token().location.borrow().error("Cannot have an external constant. Please remove the `external` keyword."))
                     }
 
                     if local && public {
                         elle_error!(self
                             .current_token()
                             .location
+                            .borrow()
                             .error("Cannot specify a constant as both private and public"));
                     }
 
@@ -612,7 +611,7 @@ impl Parser {
                 }
                 TokenKind::Struct => {
                     if external {
-                        elle_error!(self.current_token().location.error(
+                        elle_error!(self.current_token().location.borrow().error(
                             "Cannot have an external struct. Please remove the `external` keyword."
                         ))
                     }
@@ -621,6 +620,7 @@ impl Parser {
                         elle_error!(self
                             .current_token()
                             .location
+                            .borrow()
                             .error("Cannot specify a struct as both private and public"));
                     }
 
@@ -646,7 +646,7 @@ impl Parser {
                 }
                 TokenKind::Namespace => {
                     if external {
-                        elle_error!(self.current_token().location.error("Cannot have an external namespace. Please remove the `external` keyword."))
+                        elle_error!(self.current_token().location.borrow().error("Cannot have an external namespace. Please remove the `external` keyword."))
                     }
 
                     let mut r#struct = Struct::new(self);
@@ -660,7 +660,7 @@ impl Parser {
                         clean!()
                     }
                 }
-                _ => elle_error!(self.current_token().location.error(format!(
+                _ => elle_error!(self.current_token().location.borrow().error(format!(
                     "Unexpected token found while parsing: {:?}",
                     self.current_token().kind
                 ))),

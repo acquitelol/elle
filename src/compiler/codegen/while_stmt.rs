@@ -23,6 +23,7 @@ impl Codegen<'_> for WhileLoopStatement {
         let (_, value) = self.condition.compile(gen, ctx).unwrap_or_else(|| {
             elle_error!(self
                 .location
+                .borrow()
                 .error("Unexpected error when trying to compile the condition of a while loop"))
         });
 

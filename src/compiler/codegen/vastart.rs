@@ -29,8 +29,8 @@ impl Codegen<'_> for VariadicStart {
         if self.name.tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\nlet {plain_name}: {}",
-                self.name.location.display_plain(false),
-                self.name.location.display_plain(true),
+                self.name.location.borrow().display_plain(false),
+                self.name.location.borrow().display_plain(true),
                 res.0.display()
             ));
         }

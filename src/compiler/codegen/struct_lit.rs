@@ -41,7 +41,7 @@ impl Codegen<'_> for StructLiteral {
                 create_monomorphized_struct(gen, ctx.module, plain_name.clone())
             } else {
                 elle_error!(
-                    self.location.error(format!(
+                    self.location.borrow().error(format!(
                         "Could not find struct named '{}'. Did you spell it correctly?\nThis struct may be generic but missing generic parameters.",
                         Type::Struct(plain_name).display()
                     ))
@@ -59,11 +59,12 @@ impl Codegen<'_> for StructLiteral {
             .unwrap_or_else(|| {
                 elle_error!(self
                     .location
+                    .borrow()
                     .error(format!("Unable to find struct named '{}'", plain_name)))
             });
 
         if !td.usable && !ctx.func.borrow_mut().imported {
-            elle_error!(self.location.error(format!(
+            elle_error!(self.location.borrow().error(format!(
                 "Struct named '{}' was not imported and can't be used",
                 Type::Struct(plain_name.clone()).display()
             )))
@@ -86,7 +87,7 @@ impl Codegen<'_> for StructLiteral {
             for member in diff.iter().cloned() {
                 eprintln!(
                     "{}",
-                    self.location.warning(format!(
+                    self.location.borrow().warning(format!(
                         "Declaring struct '{}' without field '{}'",
                         Type::Struct(plain_name.clone()).display(),
                         member
@@ -113,7 +114,7 @@ impl Codegen<'_> for StructLiteral {
 
         for (member_name, value) in self.values.iter().cloned() {
             if !member_names.contains(&member_name) {
-                elle_error!(self.location.error(format!(
+                elle_error!(self.location.borrow().error(format!(
                     "Struct named '{}' has no field named '{}'. Did you spell it correctly?",
                     plain_name, member_name
                 )));
@@ -132,7 +133,7 @@ impl Codegen<'_> for StructLiteral {
                     ..ctx.clone()
                 })
                 .unwrap_or_else(||
-                    elle_error!(self.location.error(
+                    elle_error!(self.location.borrow().error(
                         format!("Unexpected error when trying to compile the value of a field '{}' in struct '{}'", member_name, plain_name)
                     )
                 ));
@@ -187,8 +188,8 @@ impl Codegen<'_> for StructLiteral {
         if self.name.tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\nstruct {} {{\n{}\n}};",
-                self.name.location.display_plain(false),
-                self.name.location.display_plain(true),
+                self.name.location.borrow().display_plain(false),
+                self.name.location.borrow().display_plain(true),
                 Type::Struct(plain_name).display(),
                 members
                     .into_iter()

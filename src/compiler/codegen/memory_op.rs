@@ -27,7 +27,7 @@ impl Codegen<'_> for MemoryOperation {
                 },
             )
             .unwrap_or_else(|| {
-                elle_error!(self.left_location.error(format!(
+                elle_error!(self.left_location.borrow().error(format!(
                     "Unexpected error when trying to compile the left side of a {} statement",
                     if self.value.is_some() {
                         "store"
@@ -106,7 +106,7 @@ impl Codegen<'_> for MemoryOperation {
         }
 
         let (left_ty, _) = self.left.clone().compile(gen, ctx).unwrap_or_else(|| {
-            elle_error!(self.left_location.error(format!(
+            elle_error!(self.left_location.borrow().error(format!(
                 "Unexpected error when trying to compile the left side of a {} statement",
                 if self.value.is_some() {
                     "store"
@@ -117,7 +117,7 @@ impl Codegen<'_> for MemoryOperation {
         });
 
         let (right_ty, _) = self.right.clone().compile(gen, ctx).unwrap_or_else(|| {
-            elle_error!(self.right_location.error(format!(
+            elle_error!(self.right_location.borrow().error(format!(
                 "Unexpected error when trying to compile the right side of a {} statement",
                 if self.value.is_some() {
                     "store"
@@ -128,7 +128,7 @@ impl Codegen<'_> for MemoryOperation {
         });
 
         if !(matches!(left_ty, Type::Pointer(_)) || matches!(right_ty, Type::Pointer(_))) {
-            elle_error!(self.left_location.error(format!(
+            elle_error!(self.left_location.borrow().error(format!(
                 "Cannot {} data {} non-pointer types ({} and {})",
                 if self.value.is_some() {
                     "store"
@@ -177,7 +177,7 @@ impl Codegen<'_> for MemoryOperation {
         });
 
         let (_, compiled_location) = node.compile(gen, &ctx.to_nnf()).unwrap_or_else(|| {
-            elle_error!(self.right_location.error(format!(
+            elle_error!(self.right_location.borrow().error(format!(
                 "Unexpected error when trying to compile the offset of a {} statement",
                 if self.value.is_some() {
                     "store"
@@ -198,7 +198,7 @@ impl Codegen<'_> for MemoryOperation {
                     },
                 )
                 .unwrap_or_else(|| {
-                    elle_error!(self.value_location.error(format!(
+                    elle_error!(self.value_location.borrow().error(format!(
                         "Unexpected error when trying to compile the value of a {} statement",
                         if self.value.is_some() {
                             "store"

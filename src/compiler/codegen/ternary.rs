@@ -15,14 +15,14 @@ impl Codegen<'_> for Ternary {
         let false_label = format!("iff.{}", gen.tmp_counter);
         let end_label = format!("end.{}", gen.tmp_counter);
 
-        let (_, condition_val) = self
-            .condition
-            .compile(gen, &ctx.to_nnf())
-            .unwrap_or_else(|| {
-                elle_error!(self
-                    .location
-                    .error("Unexpected error when trying to compile the `condition` of a ternary"))
-            });
+        let (_, condition_val) =
+            self.condition
+                .compile(gen, &ctx.to_nnf())
+                .unwrap_or_else(|| {
+                    elle_error!(self.location.borrow().error(
+                        "Unexpected error when trying to compile the `condition` of a ternary"
+                    ))
+                });
 
         ctx.func
             .borrow_mut()
@@ -37,6 +37,7 @@ impl Codegen<'_> for Ternary {
         let (if_true_ty, if_true_val) = self.if_true.compile(gen, ctx).unwrap_or_else(|| {
             elle_error!(self
                 .location
+                .borrow()
                 .error("Unexpected error when trying to compile the `true` path of a ternary"))
         });
 
@@ -55,6 +56,7 @@ impl Codegen<'_> for Ternary {
         let (if_false_ty, if_false_val) = self.if_false.compile(gen, ctx).unwrap_or_else(|| {
             elle_error!(self
                 .location
+                .borrow()
                 .error("Unexpected error when trying to compile the `false` path of a ternary"))
         });
 

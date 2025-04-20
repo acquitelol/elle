@@ -11,9 +11,11 @@ use super::enums::{
 
 use super::parser::{create_generic_struct, StructPool};
 use crate::compiler::qbe::r#type::Type;
-use crate::lexer::enums::Attribute;
+use crate::lexer::enums::{Attribute, MutRc};
 use crate::parser::enums::{BlockStatement, WhileLoopStatement};
-use crate::{elle_error, get_type, INTERNAL_IDX_FORMAT, INTERNAL_ITERATOR_FORMAT, LEN_CONSTANT};
+use crate::{
+    elle_error, get_type, set_end, INTERNAL_IDX_FORMAT, INTERNAL_ITERATOR_FORMAT, LEN_CONSTANT,
+};
 use crate::{
     ensure_fn_pointer,
     lexer::enums::{Location, Token, TokenKind, ValueKind},
@@ -91,7 +93,7 @@ impl<'a> Statement<'a> {
 
     fn expect_tokens_with_message(&self, expected: Vec<TokenKind>, message: Option<&str>) {
         if !expected.contains(&self.current_token().kind) {
-            elle_error!(self.current_token().location.error(format!(
+            elle_error!(self.current_token().location.borrow().error(format!(
                 "Expected one of [{}], got {:?}. {}",
                 expected
                     .iter()
@@ -121,7 +123,7 @@ impl<'a> Statement<'a> {
         let token = self.current_token();
 
         if !found {
-            elle_error!(token.location.error(format!(
+            elle_error!(token.location.borrow().error(format!(
                 "Expected one of {:?} but got {:?}",
                 expected, token.kind
             )))
@@ -134,7 +136,7 @@ impl<'a> Statement<'a> {
         {
             identifier.clone()
         } else {
-            token.location.error(format!(
+            token.location.borrow().error(format!(
                 "Expected one of {:?} but got {:?}",
                 expected, token.kind
             ))
@@ -152,7 +154,7 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_declare(&mut self, ty: Option<Option<Type>>) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
 
         let r#type = if let Some(ty) = ty {
             ty.clone()
@@ -167,6 +169,7 @@ impl<'a> Statement<'a> {
             elle_error!(self
                 .current_token()
                 .location
+                .borrow()
                 .error("Expected identifier here but got EOF."));
         }
 
@@ -177,21 +180,23 @@ impl<'a> Statement<'a> {
 
         if self.current_token().kind == TokenKind::LeftBlockBrace {
             if r#type.as_ref().is_some_and(|x| x == &Type::Infer) {
-                elle_error!(location.error("Cannot declare a buffer with an inferred inner type."));
+                elle_error!(location
+                    .borrow()
+                    .error("Cannot declare a buffer with an inferred inner type."));
             }
 
             return self.parse_buffer(Some(name), r#type, Some(location));
         }
 
         if self.is_eof() || self.current_token().kind == TokenKind::Semicolon {
-            location.end = self.current_token().location.end.clone();
+            set_end!(location, self);
 
             return AstNode::Declare(Declare {
                 name,
                 r#type: r#type.clone(),
                 value: None,
-                location: Rc::new(location.clone()),
-                value_location: Rc::new(location),
+                location: location.clone(),
+                value_location: location,
             });
         }
 
@@ -200,6 +205,7 @@ impl<'a> Statement<'a> {
                 elle_error!(
                     self.current_token()
                         .location
+                        .borrow()
                         .with_extra_info(format!("Remove this colon to declare \"{name}\" explicitly", name = name.value.get_string_inner().unwrap()))
                         .error(format!(
                             "Cannot use \"{GREEN}:={RESET}\" to declare a variable with a non-inferred type.\nYou can remove the \"{GREEN}:{RESET}\" to declare a variable explicitly.",
@@ -215,11 +221,12 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::Equal]);
         self.advance();
 
-        let mut value_location = (*self.current_token().location).clone();
+        let value_location = self.current_token().location;
         let tokens = self.yield_tokens_wrapped_with_semi();
         let res = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
-        value_location.end = self.current_token().location.end.clone();
-        location.end = self.current_token().location.end.clone();
+
+        set_end!(value_location, self);
+        set_end!(location, self);
 
         let parsed_res = match res.clone() {
             AstNode::Declare(Declare { name, .. }) => {
@@ -233,13 +240,13 @@ impl<'a> Statement<'a> {
             name,
             r#type,
             value: Some(Box::new(parsed_res)),
-            location: Rc::new(location),
-            value_location: Rc::new(value_location),
+            location,
+            value_location,
         })
     }
 
     fn parse_declarative_like(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         self.expect_tokens(vec![TokenKind::Identifier]);
         let name = self.current_token();
 
@@ -247,11 +254,12 @@ impl<'a> Statement<'a> {
         let operation = self.current_token();
         self.advance();
 
-        let mut value_location = (*self.current_token().location).clone();
+        let value_location = self.current_token().location;
         let tokens = self.yield_tokens_wrapped_with_semi();
         let mapping = operation.kind.to_non_declarative();
-        value_location.end = self.current_token().location.end.clone();
-        location.end = self.current_token().location.end.clone();
+
+        set_end!(value_location, self);
+        set_end!(location, self);
 
         AstNode::Declare(Declare {
             name: name.clone(),
@@ -262,10 +270,10 @@ impl<'a> Statement<'a> {
                 operator: mapping,
                 treat_as_string: true,
                 dunder_methods: true,
-                location: Rc::new(location.clone()),
+                location: location.clone(),
             }))),
-            location: Rc::new(location.clone()),
-            value_location: Rc::new(value_location),
+            location,
+            value_location,
         })
     }
 
@@ -276,14 +284,17 @@ impl<'a> Statement<'a> {
         };
 
         if !value.contains(".") {
-            elle_error!(token.location.error("Invalid float literal provided"));
+            elle_error!(token
+                .location
+                .borrow()
+                .error("Invalid float literal provided"));
         }
 
         if token.tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\n{}: f32", // TODO: is there any way to unhardcode this?
-                self.current_token().location.display_plain(false),
-                self.current_token().location.display_plain(true),
+                self.current_token().location.borrow().display_plain(false),
+                self.current_token().location.borrow().display_plain(true),
                 value
             ));
         }
@@ -317,7 +328,7 @@ impl<'a> Statement<'a> {
 
     fn parse_literal(&mut self) -> AstNode {
         let position = self.position.clone();
-        let location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
 
         if self.is_eof() {
             let current = self.current_token();
@@ -361,7 +372,7 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_return(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         self.advance();
 
         if self.current_token().kind == TokenKind::Semicolon {
@@ -396,30 +407,30 @@ impl<'a> Statement<'a> {
             _ => res,
         };
 
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         AstNode::Return(Return {
             value: Box::new(parsed_res),
-            location: Rc::new(location),
+            location,
         })
     }
 
     fn parse_function(
         &mut self,
-        maybe_name: Option<(Location, Token, Token, String)>,
-        maybe_params: Option<Vec<(Rc<Location>, AstNode)>>,
+        maybe_name: Option<(MutRc<Location>, Token, Token, String)>,
+        maybe_params: Option<Vec<(MutRc<Location>, AstNode)>>,
         maybe_generics: Option<Vec<Type>>,
         maybe_position: Option<usize>,
         type_method: bool,
     ) -> AstNode {
         let position = maybe_position.unwrap_or(self.position.clone());
-        let (mut location, namespace_token, name_token, name) =
+        let (location, namespace_token, name_token, name) =
             if let Some((location, namespace_token, name_token, name)) = maybe_name {
                 (location, namespace_token, name_token, name)
             } else {
                 let name_token = self.current_token();
                 let tmp = self.get_identifier();
-                let location = (*self.current_token().location).clone();
+                let location = self.current_token().location;
                 self.advance();
 
                 (location, Token::from_ident(""), name_token, tmp)
@@ -452,12 +463,12 @@ impl<'a> Statement<'a> {
         };
 
         if self.current_token().kind == TokenKind::Semicolon || self.is_eof() {
-            location.end = self.current_token().location.end.clone();
+            set_end!(location, self);
 
             return AstNode::Literal(Literal {
                 kind: TokenKind::Identifier,
                 value: ValueKind::String(name),
-                location: Rc::new(location),
+                location,
                 tagged: name_token.tagged,
             });
         } else {
@@ -469,7 +480,7 @@ impl<'a> Statement<'a> {
         let mut parameters = maybe_params.unwrap_or(vec![]);
 
         while self.current_token().kind != TokenKind::RightParenthesis && !self.is_eof() {
-            let mut item_location = (*self.current_token().location).clone();
+            let item_location = self.current_token().location;
             let mut tokens = vec![];
             let mut paren_nesting = 0;
             let mut block_nesting = 0;
@@ -541,6 +552,7 @@ impl<'a> Statement<'a> {
                         elle_error!(self
                             .current_token()
                             .location
+                            .borrow()
                             .error("Invalid balance of block braces"))
                     }
                 }
@@ -552,6 +564,7 @@ impl<'a> Statement<'a> {
                         elle_error!(self
                             .current_token()
                             .location
+                            .borrow()
                             .error("Invalid balance of curly braces"))
                     }
                 }
@@ -567,10 +580,10 @@ impl<'a> Statement<'a> {
                 }
             }
 
-            item_location.end = self.current_token().location.end.clone();
+            set_end!(item_location, self);
 
             parameters.push((
-                Rc::new(item_location),
+                item_location,
                 Statement::new(tokens.clone(), 0, &self.body, self.shared)
                     .parse()
                     .0,
@@ -581,7 +594,7 @@ impl<'a> Statement<'a> {
             vec![TokenKind::RightParenthesis],
             Some("Perhaps you forgot to close a nested expression?"),
         );
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
         self.advance();
 
         let mut expression = AstNode::FunctionCall(FunctionCall {
@@ -592,7 +605,7 @@ impl<'a> Statement<'a> {
             parameters,
             type_method,
             ignore_no_def: false,
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         match self.current_token().kind {
@@ -678,7 +691,7 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_arithmetic(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let position = self.find_lowest_precedence();
         let operator = self.tokens[position].clone().kind;
 
@@ -708,7 +721,7 @@ impl<'a> Statement<'a> {
 
         // Shift the position across the size of the expression
         self.position += left.len() + right_end_index;
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         let node = AstNode::BinaryOperation(BinaryOperation {
             left: Box::new(Statement::new(left, 0, &self.body, self.shared).parse().0),
@@ -716,7 +729,7 @@ impl<'a> Statement<'a> {
             operator,
             treat_as_string: true,
             dunder_methods: true,
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         if self
@@ -731,6 +744,7 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_expression(&mut self) -> AstNode {
+        let location = self.current_token().location;
         let mut node = self.parse_primary();
 
         while self.current_token().kind.is_arithmetic() && !self.is_eof() {
@@ -740,13 +754,15 @@ impl<'a> Statement<'a> {
 
             let right = self.parse_primary();
 
+            set_end!(location, self);
+
             node = AstNode::BinaryOperation(BinaryOperation {
                 left: Box::new(node),
                 right: Box::new(right),
                 operator,
                 treat_as_string: true,
                 dunder_methods: true,
-                location: self.current_token().location,
+                location: location.clone(),
             });
         }
 
@@ -757,9 +773,9 @@ impl<'a> Statement<'a> {
         &mut self,
         name: Option<Token>,
         ty: Option<Type>,
-        loc: Option<Location>,
+        loc: Option<MutRc<Location>>,
     ) -> AstNode {
-        let mut location = loc.unwrap_or((*self.current_token().location).clone());
+        let location = loc.unwrap_or(self.current_token().location);
 
         let name = if name.is_some() {
             name.unwrap()
@@ -787,7 +803,7 @@ impl<'a> Statement<'a> {
 
             size = Some(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
         } else {
-            elle_error!(self.current_token().location.error(format!(
+            elle_error!(self.current_token().location.borrow().error(format!(
                 "Expected an expression but got: {:?}",
                 self.current_token().kind
             )))
@@ -796,18 +812,18 @@ impl<'a> Statement<'a> {
         self.expect_tokens(vec![TokenKind::RightBlockBrace]);
         self.advance();
         self.expect_tokens(vec![TokenKind::Semicolon]);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         AstNode::Buffer(Buffer {
             name,
             r#type: Some(ty.unwrap_or(Type::Byte)),
             size: Box::new(size.unwrap()),
-            location: Rc::new(location),
+            location,
         })
     }
 
     fn parse_array(&mut self, dynamic: bool) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let position = self.position.clone();
         self.expect_tokens(vec![TokenKind::LeftBlockBrace]);
         self.advance();
@@ -846,7 +862,7 @@ impl<'a> Statement<'a> {
                 }
             }
 
-            let mut item_location = (*self.current_token().location).clone();
+            let item_location = self.current_token().location;
             let mut tmp_tokens = vec![];
             let mut paren_nesting = 0;
             let mut block_nesting = 0;
@@ -909,6 +925,7 @@ impl<'a> Statement<'a> {
                         elle_error!(self
                             .current_token()
                             .location
+                            .borrow()
                             .error("Invalid balance of parenthesis"))
                     }
                 }
@@ -928,6 +945,7 @@ impl<'a> Statement<'a> {
                         elle_error!(self
                             .current_token()
                             .location
+                            .borrow()
                             .error("Invalid balance of curly braces"))
                     }
                 }
@@ -943,13 +961,13 @@ impl<'a> Statement<'a> {
                 }
             }
 
-            item_location.end = self.current_token().location.end.clone();
+            set_end!(item_location, self);
             if self.current_token().kind == TokenKind::Comma {
                 self.advance();
             }
 
             values.push((
-                Rc::new(item_location),
+                item_location,
                 Statement::new(tmp_tokens.clone(), 0, &self.body, self.shared)
                     .parse()
                     .0,
@@ -957,14 +975,14 @@ impl<'a> Statement<'a> {
         }
 
         self.expect_tokens(vec![TokenKind::RightBlockBrace]);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
         self.advance();
 
         let mut expression = AstNode::ArrayLiteral(ArrayLiteral {
             values,
             explicit_inner: inner_ty.or(self.shared.known_generics.get(0).cloned()),
             known_generics: self.shared.known_generics.clone(),
-            location: Rc::new(location.clone()),
+            location: location.clone(),
             dynamic,
         });
 
@@ -989,7 +1007,7 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_if_statement(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         self.advance();
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::LeftCurlyBrace]);
@@ -1027,19 +1045,19 @@ impl<'a> Statement<'a> {
         }
 
         self.position -= 1;
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         AstNode::IfStatement(IfStatement {
             condition: Box::new(expression),
             body,
             elifs,
             else_body,
-            location: Rc::new(location),
+            location,
         })
     }
 
     fn parse_while_statement(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         self.advance();
 
         let tokens = self.yield_tokens_with_delimiters(vec![TokenKind::LeftCurlyBrace]);
@@ -1051,18 +1069,18 @@ impl<'a> Statement<'a> {
         let body = self.yield_block(false); // While loops are statements
 
         self.position -= 1;
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         AstNode::WhileLoopStatement(WhileLoopStatement {
             condition: Box::new(expression),
             step: None,
             body,
-            location: Rc::new(location),
+            location,
         })
     }
 
     fn parse_for_statement(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         self.advance();
 
         let mut wrapped = false;
@@ -1224,18 +1242,18 @@ impl<'a> Statement<'a> {
             statements.push(declare);
         }
 
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         statements.push(AstNode::WhileLoopStatement(WhileLoopStatement {
             condition: Box::new(condition),
             step: Some(Box::new(step)),
             body,
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         }));
 
         AstNode::BlockStatement(BlockStatement {
             body: statements,
-            location: Rc::new(location),
+            location,
         })
     }
 
@@ -1244,7 +1262,7 @@ impl<'a> Statement<'a> {
         &mut self,
         ty: Type,
         name: Token,
-        mut location: Location,
+        location: MutRc<Location>,
     ) -> AstNode {
         self.advance(); // in
 
@@ -1289,7 +1307,7 @@ impl<'a> Statement<'a> {
         iter.tagged = false;
 
         self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
         self.advance();
 
         let mut body = self.yield_block(false); // Foreach is a statement
@@ -1303,9 +1321,9 @@ impl<'a> Statement<'a> {
             left: Box::new(iterator_node.clone()),
             right: Box::new(index_node.clone()),
             value: None,
-            left_location: Rc::new(location.clone()),
-            right_location: Rc::new(location.clone()),
-            value_location: Rc::new(location.clone()),
+            left_location: location.clone(),
+            right_location: location.clone(),
+            value_location: location.clone(),
             is_deref: false,
         });
 
@@ -1313,8 +1331,8 @@ impl<'a> Statement<'a> {
             name,
             r#type: Some(ty),
             value: Some(Box::new(element_access)),
-            location: Rc::new(location.clone()),
-            value_location: Rc::new(location.clone()),
+            location: location.clone(),
+            value_location: location.clone(),
         });
 
         let condition_node = AstNode::BinaryOperation(BinaryOperation {
@@ -1324,15 +1342,15 @@ impl<'a> Statement<'a> {
                 name_token: Token::from_ident(LEN_CONSTANT),
                 name: LEN_CONSTANT.into(),
                 generics: vec![],
-                parameters: vec![(Rc::new(location.clone()), iterator_node)],
+                parameters: vec![(location.clone(), iterator_node)],
                 type_method: true,
                 ignore_no_def: false,
-                location: Rc::new(location.clone()),
+                location: location.clone(),
             })),
             operator: TokenKind::LessThan,
             treat_as_string: false,
             dunder_methods: true,
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         let step_node = AstNode::Declare(Declare {
@@ -1343,16 +1361,16 @@ impl<'a> Statement<'a> {
                 right: Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::IntegerLiteral,
                     value: ValueKind::Number(1),
-                    location: Rc::new(location.clone()),
+                    location: location.clone(),
                     tagged: false,
                 })),
                 operator: TokenKind::Add,
                 treat_as_string: false,
                 dunder_methods: true,
-                location: Rc::new(location.clone()),
+                location: location.clone(),
             }))),
-            location: Rc::new(location.clone()),
-            value_location: Rc::new(location.clone()),
+            location: location.clone(),
+            value_location: location.clone(),
         });
 
         let mut statements = vec![];
@@ -1363,19 +1381,19 @@ impl<'a> Statement<'a> {
             value: Some(Box::new(AstNode::Literal(Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(0),
-                location: Rc::new(location.clone()),
+                location: location.clone(),
                 tagged: false,
             }))),
-            location: Rc::new(location.clone()),
-            value_location: Rc::new(location.clone()),
+            location: location.clone(),
+            value_location: location.clone(),
         }));
 
         statements.push(AstNode::Declare(Declare {
             name: iter,
             r#type: Some(Type::Infer),
             value: Some(Box::new(iterator)),
-            location: Rc::new(location.clone()),
-            value_location: Rc::new(location.clone()),
+            location: location.clone(),
+            value_location: location.clone(),
         }));
 
         body.insert(0, element_node);
@@ -1384,17 +1402,17 @@ impl<'a> Statement<'a> {
             condition: Box::new(condition_node),
             step: Some(Box::new(step_node)),
             body,
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         }));
 
         AstNode::BlockStatement(BlockStatement {
             body: statements,
-            location: Rc::new(location),
+            location,
         })
     }
 
     fn parse_wrapped_statement(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let mut nesting = 0;
         let mut index = 0;
         let position = self.position.clone();
@@ -1465,7 +1483,7 @@ impl<'a> Statement<'a> {
         let mut expression = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
         self.advance();
 
         match self.current_token().kind {
@@ -1482,23 +1500,23 @@ impl<'a> Statement<'a> {
         expression
     }
 
-    fn parse_offset_store(&mut self, lhs: Option<(usize, AstNode, Location)>) -> AstNode {
+    fn parse_offset_store(&mut self, lhs: Option<(usize, AstNode, MutRc<Location>)>) -> AstNode {
         let position = if lhs.is_some() {
             lhs.clone().unwrap().0
         } else {
             self.position.clone()
         };
 
-        let mut location = if lhs.is_some() {
+        let location = if lhs.is_some() {
             lhs.clone().unwrap().2
         } else {
-            (*self.current_token().location).clone()
+            self.current_token().location
         };
 
-        let mut left_location = if lhs.is_some() {
-            (*self.tokens[lhs.clone().unwrap().0].location).clone()
+        let left_location = if lhs.is_some() {
+            self.tokens[lhs.clone().unwrap().0].location.clone()
         } else {
-            (*self.current_token().location).clone()
+            self.current_token().location
         };
 
         let value;
@@ -1518,10 +1536,10 @@ impl<'a> Statement<'a> {
         });
 
         self.expect_tokens(vec![TokenKind::LeftBlockBrace]);
-        left_location.end = self.current_token().location.end.clone();
+        set_end!(left_location, self);
         self.advance();
 
-        let mut right_location = (*self.current_token().location).clone();
+        let right_location = self.current_token().location;
         let mut nesting = 0;
         let right_tokens = self.yield_tokens_with_condition(|token, _, _| {
             if token.kind == TokenKind::LeftBlockBrace {
@@ -1546,19 +1564,19 @@ impl<'a> Statement<'a> {
         );
 
         self.expect_tokens(vec![TokenKind::RightBlockBrace]);
-        right_location.end = self.current_token().location.end.clone();
-        location.end = self.current_token().location.end.clone();
+        set_end!(right_location, self);
+        set_end!(location, self);
         self.advance();
 
-        let mut value_location = (*self.current_token().location).clone();
+        let value_location = self.current_token().location;
 
         let mut expression = AstNode::MemoryOperation(MemoryOperation {
             left: left.clone(),
             right: right.clone(),
             value: None,
-            left_location: Rc::new(left_location.clone()),
-            right_location: Rc::new(right_location.clone()),
-            value_location: Rc::new(value_location.clone()),
+            left_location: left_location.clone(),
+            right_location: right_location.clone(),
+            value_location: value_location.clone(),
             is_deref: false,
         });
 
@@ -1573,31 +1591,31 @@ impl<'a> Statement<'a> {
                         .0,
                 ));
 
-                value_location.end = self.current_token().location.end.clone();
-                location.end = self.current_token().location.end.clone();
+                set_end!(value_location, self);
+                set_end!(location, self);
 
                 expression = AstNode::MemoryOperation(MemoryOperation {
                     left: left.clone(),
                     right: right.clone(),
                     value,
-                    left_location: Rc::new(left_location),
-                    right_location: Rc::new(right_location),
-                    value_location: Rc::new(value_location),
+                    left_location,
+                    right_location,
+                    value_location,
                     is_deref: false,
                 });
             }
             other if other.is_declarative() => {
                 value = Some(Box::new(self.parse_declarative_node(expression.clone())));
-                value_location.end = self.current_token().location.end.clone();
-                location.end = self.current_token().location.end.clone();
+                set_end!(value_location, self);
+                set_end!(location, self);
 
                 expression = AstNode::MemoryOperation(MemoryOperation {
                     left: left.clone(),
                     right: right.clone(),
                     value,
-                    left_location: Rc::new(left_location),
-                    right_location: Rc::new(right_location),
-                    value_location: Rc::new(value_location),
+                    left_location,
+                    right_location,
+                    value_location,
                     is_deref: false,
                 });
             }
@@ -1621,23 +1639,20 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_variadic(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         self.advance();
         self.expect_tokens(vec![TokenKind::Identifier]);
         let name = self.current_token();
 
         self.advance();
         self.expect_tokens(vec![TokenKind::Semicolon]);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
-        AstNode::VariadicStart(VariadicStart {
-            name,
-            location: Rc::new(location),
-        })
+        AstNode::VariadicStart(VariadicStart { name, location })
     }
 
     fn parse_yield_variadic(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let position = self.position.clone();
         self.expect_tokens(vec![TokenKind::Identifier]);
         let name = self.current_token();
@@ -1654,13 +1669,13 @@ impl<'a> Statement<'a> {
         self.advance();
 
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
         self.advance();
 
         let mut expression = AstNode::VariadicArgument(VariadicArgument {
             name,
             r#type: Some(r#type),
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         match self.current_token().kind {
@@ -1682,7 +1697,7 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_defer(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         self.advance();
 
         let mut tokens = vec![];
@@ -1728,16 +1743,13 @@ impl<'a> Statement<'a> {
         }
 
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
-        AstNode::DeferStatement {
-            value,
-            location: Rc::new(location),
-        }
+        AstNode::DeferStatement { value, location }
     }
 
     fn parse_lambda(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
 
         self.expect_tokens(vec![TokenKind::Function]);
         self.advance();
@@ -1753,6 +1765,7 @@ impl<'a> Statement<'a> {
                 elle_error!(self
                     .current_token()
                     .location
+                    .borrow()
                     .error("Cannot create a variadic lambda function..."))
             }
 
@@ -1803,13 +1816,13 @@ impl<'a> Statement<'a> {
             let body = self.yield_block(true); // Lambdas are expressions
             self.position -= 1;
 
-            location.end = self.current_token().location.end.clone();
+            set_end!(location, self);
 
             AstNode::Lambda(Lambda {
                 arguments,
                 return_ty,
                 value: body,
-                location: Rc::new(location),
+                location,
             })
         } else {
             let mut nesting = 0;
@@ -1863,29 +1876,29 @@ impl<'a> Statement<'a> {
             });
 
             let value = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
-            location.end = self.current_token().location.end.clone();
+            set_end!(location, self);
 
             AstNode::Lambda(Lambda {
                 arguments,
                 return_ty,
                 value: vec![AstNode::Return(Return {
                     value: Box::new(value),
-                    location: Rc::new(location.clone()),
+                    location: location.clone(),
                 })],
-                location: Rc::new(location),
+                location,
             })
         }
     }
 
     fn parse_type_conversion(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let position = self.position;
 
         if self.current_token().tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\n#cast(T, cast_expr) -> T\n",
-                self.current_token().location.display_plain(false),
-                self.current_token().location.display_plain(true),
+                self.current_token().location.borrow().display_plain(false),
+                self.current_token().location.borrow().display_plain(true),
             ));
         }
 
@@ -1929,14 +1942,14 @@ impl<'a> Statement<'a> {
         }
 
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
         self.advance();
 
         let stmt = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
         let mut expression = AstNode::Conversion(Conversion {
             r#type: Some(r#type),
             value: Box::new(stmt),
-            location: Rc::new(location.clone()),
+            location: location.clone(),
             explicit: true,
         });
 
@@ -1959,30 +1972,27 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_block(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         self.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
         self.advance();
 
         let body = self.yield_block(false); // Blocks are statements
         self.position -= 1;
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
-        AstNode::BlockStatement(BlockStatement {
-            body,
-            location: Rc::new(location),
-        })
+        AstNode::BlockStatement(BlockStatement { body, location })
     }
 
     fn parse_size(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let position = self.position;
         self.expect_tokens(vec![TokenKind::Size]);
 
         if self.current_token().tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\n#size(T | expr) -> i32\n",
-                self.current_token().location.display_plain(false),
-                self.current_token().location.display_plain(true),
+                self.current_token().location.borrow().display_plain(false),
+                self.current_token().location.borrow().display_plain(true),
             ));
         }
 
@@ -2014,6 +2024,7 @@ impl<'a> Statement<'a> {
                 elle_error!(self
                     .current_token()
                     .location
+                    .borrow()
                     .error("Expected size directive but got empty passthrough"))
             }
 
@@ -2053,12 +2064,12 @@ impl<'a> Statement<'a> {
         };
 
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
         self.advance();
 
         let mut expression = AstNode::Size(Size {
             value,
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         match self.current_token().kind {
@@ -2076,15 +2087,15 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_array_length(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let position = self.position;
         self.expect_tokens(vec![TokenKind::ArrayLength]);
 
         if self.current_token().tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\n#len(static_array_expr) -> i64\n",
-                self.current_token().location.display_plain(false),
-                self.current_token().location.display_plain(true),
+                self.current_token().location.borrow().display_plain(false),
+                self.current_token().location.borrow().display_plain(true),
             ));
         }
 
@@ -2100,6 +2111,7 @@ impl<'a> Statement<'a> {
             elle_error!(self
                 .current_token()
                 .location
+                .borrow()
                 .error("Expected array length directive but got empty passthrough"))
         }
 
@@ -2138,12 +2150,12 @@ impl<'a> Statement<'a> {
         self.advance();
 
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
         self.advance();
 
         let mut expression = AstNode::ArrayLength(ArrayLength {
             value,
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         match self.current_token().kind {
@@ -2162,12 +2174,12 @@ impl<'a> Statement<'a> {
 
     fn parse_unary(&mut self) -> AstNode {
         let token = self.current_token();
-        let mut location = (*token.location).clone();
+        let location = token.location.clone();
         self.advance();
 
         let tokens = self.yield_tokens_for_unary();
         let parsed = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         let node = AstNode::BinaryOperation(BinaryOperation {
             left: parsed,
@@ -2175,7 +2187,7 @@ impl<'a> Statement<'a> {
             operator: TokenKind::Multiply,
             treat_as_string: false,
             dunder_methods: true,
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         if self.current_token().kind.is_ternary_start() {
@@ -2186,16 +2198,16 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_not(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         self.advance();
 
         let tokens = self.yield_tokens_for_unary();
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         let node = AstNode::LogicalNot(LogicalNot {
             value,
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         if self.current_token().kind.is_ternary_start() {
@@ -2206,16 +2218,16 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_bitwise_not(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         self.advance();
 
         let tokens = self.yield_tokens_for_unary();
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         let node = AstNode::BitwiseNot(BitwiseNot {
             value,
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         if self.current_token().kind.is_ternary_start() {
@@ -2226,16 +2238,16 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_address(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         self.advance();
 
         let tokens = self.yield_tokens_for_unary();
         let value = Box::new(Statement::new(tokens, 0, &self.body, self.shared).parse().0);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         let node = AstNode::Address(Address {
             value,
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         if self.current_token().kind.is_ternary_start() {
@@ -2246,7 +2258,7 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_deref(&mut self) -> AstNode {
-        let mut left_location = (*self.current_token().location).clone();
+        let left_location = self.current_token().location;
         self.advance();
         let mut value = None;
 
@@ -2261,14 +2273,14 @@ impl<'a> Statement<'a> {
             tagged: false,
         }));
 
-        left_location.end = self.current_token().location.end.clone();
-        let mut value_location = (*self.current_token().location).clone();
+        set_end!(left_location, self);
+        let value_location = self.current_token().location;
 
         match self.current_token().kind {
             TokenKind::Equal => {
                 self.advance();
-                value_location.end = self.current_token().location.end.clone();
-                left_location.end = self.current_token().location.end.clone();
+                set_end!(value_location, self);
+                set_end!(left_location, self);
                 let value_tokens = self.yield_tokens_wrapped_with_semi();
 
                 value = Some(Box::new(
@@ -2284,9 +2296,9 @@ impl<'a> Statement<'a> {
                         left: left.clone(),
                         right: right.clone(),
                         value,
-                        left_location: Rc::new(left_location.clone()),
+                        left_location: left_location.clone(),
                         right_location: right_location.clone(),
-                        value_location: Rc::new(value_location.clone()),
+                        value_location: value_location.clone(),
                         is_deref: true,
                     }),
                 )));
@@ -2298,21 +2310,21 @@ impl<'a> Statement<'a> {
             left,
             right,
             value,
-            left_location: Rc::new(left_location),
+            left_location,
             right_location,
-            value_location: Rc::new(value_location),
+            value_location,
             is_deref: true,
         })
     }
 
     fn parse_struct_init(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         self.expect_tokens(vec![TokenKind::Identifier]);
         let name = self.current_token();
         let plain_name = name.value.get_string_inner().unwrap();
 
         if !(self.shared.struct_pool.borrow().contains_key(&plain_name)) {
-            elle_error!(self.current_token().location.error(format!(
+            elle_error!(self.current_token().location.borrow().error(format!(
                 "Struct named '{}' could not be found. Are you sure you typed it correctly?",
                 plain_name
             )))
@@ -2402,20 +2414,20 @@ impl<'a> Statement<'a> {
             values.push((name, value));
         }
 
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         AstNode::StructLiteral(StructLiteral {
             name,
             values,
-            location: Rc::new(location),
+            location,
         })
     }
 
-    fn parse_field_access(&mut self, lhs: Option<(usize, AstNode, Location)>) -> AstNode {
-        let mut location = if lhs.is_some() {
+    fn parse_field_access(&mut self, lhs: Option<(usize, AstNode, MutRc<Location>)>) -> AstNode {
+        let location = if lhs.is_some() {
             lhs.clone().unwrap().2
         } else {
-            (*self.current_token().location).clone()
+            self.current_token().location
         };
 
         let valid_tokens = vec![TokenKind::Dot];
@@ -2485,11 +2497,11 @@ impl<'a> Statement<'a> {
         }
 
         if self.current_token().kind == TokenKind::LeftParenthesis {
-            location.end = self.current_token().location.end.clone();
+            set_end!(location, self);
 
             return self.parse_function(
                 Some((location.clone(), Token::from_ident(""), name_token, name)),
-                Some(vec![(Rc::new(location), *left)]),
+                Some(vec![(location, *left)]),
                 if !tmp.is_empty() { Some(tmp) } else { None },
                 Some(position),
                 true,
@@ -2501,7 +2513,7 @@ impl<'a> Statement<'a> {
             self.advance(); // Ignore the TokenKind::Dot
 
             self.expect_tokens(vec![TokenKind::Identifier]);
-            let mut inner_location = (*self.current_token().location).clone();
+            let inner_location = self.current_token().location;
 
             let name_token = self.current_token();
             let name = self.get_identifier();
@@ -2539,18 +2551,18 @@ impl<'a> Statement<'a> {
             }
 
             if self.current_token().kind == TokenKind::LeftParenthesis {
-                inner_location.end = self.current_token().location.end.clone();
-                location.end = self.current_token().location.end.clone();
+                set_end!(inner_location, self);
+                set_end!(location, self);
 
                 return self.parse_function(
                     Some((inner_location, Token::from_ident(""), name_token, name)),
                     Some(vec![(
-                        Rc::new(location.clone()),
+                        location.clone(),
                         AstNode::FieldAccess(FieldAccess {
                             left,
                             right,
                             value,
-                            location: Rc::new(location),
+                            location,
                         }),
                     )]),
                     if !tmp.is_empty() { Some(tmp) } else { None },
@@ -2559,7 +2571,7 @@ impl<'a> Statement<'a> {
                 );
             }
 
-            location.end = self.current_token().location.end.clone();
+            set_end!(location, self);
 
             if let AstNode::FieldAccess(FieldAccess {
                 left,
@@ -2584,18 +2596,18 @@ impl<'a> Statement<'a> {
                     left: right,
                     right: inner,
                     value: None, // Only the root may have a value
-                    location: Rc::new(location.clone()),
+                    location: location.clone(),
                 }));
             }
         }
 
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         let mut expression = AstNode::FieldAccess(FieldAccess {
             left: left.clone(),
             right: right.clone(),
             value: value.clone(),
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         match self.current_token().kind {
@@ -2613,14 +2625,14 @@ impl<'a> Statement<'a> {
                     left,
                     right,
                     value,
-                    location: Rc::new(location),
+                    location,
                 });
             }
             // foo.a.meow() = meow(foo.a)
             TokenKind::LeftParenthesis => {
                 expression = self.parse_function(
                     Some((location.clone(), Token::from_ident(""), name_token, name)),
-                    Some(vec![(Rc::new(location.clone()), *left)]),
+                    Some(vec![(location, *left)]),
                     if !tmp.is_empty() { Some(tmp) } else { None },
                     Some(position),
                     true,
@@ -2636,7 +2648,7 @@ impl<'a> Statement<'a> {
                     left,
                     right,
                     value,
-                    location: Rc::new(location),
+                    location,
                 });
             }
             other if other.is_ternary_start() => {
@@ -2652,7 +2664,7 @@ impl<'a> Statement<'a> {
         expression
     }
 
-    fn parse_ternary_node(&mut self, condition: AstNode, mut location: Location) -> AstNode {
+    fn parse_ternary_node(&mut self, condition: AstNode, location: MutRc<Location>) -> AstNode {
         self.expect_tokens(vec![TokenKind::Question]);
         self.advance();
 
@@ -2687,25 +2699,25 @@ impl<'a> Statement<'a> {
             Statement::new(tokens, 0, &self.body, self.shared).parse().0
         });
 
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         AstNode::Ternary(Ternary {
             condition: Box::new(condition),
             if_true,
             if_false,
-            location: Rc::new(location.clone()),
+            location,
         })
     }
 
     fn parse_indexof(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let position = self.position;
 
         if self.current_token().tagged {
             elle_error!(format!(
-                "hover\n{}\n{}\n#i(identifier) -> i64\n",
-                self.current_token().location.display_plain(false),
-                self.current_token().location.display_plain(true),
+                "hover\n{}\n{}\n#i(identifier) -> i32\n",
+                self.current_token().location.borrow().display_plain(false),
+                self.current_token().location.borrow().display_plain(true),
             ));
         }
 
@@ -2718,7 +2730,7 @@ impl<'a> Statement<'a> {
 
         self.advance();
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
         self.advance();
 
         let mut fmt = name.clone();
@@ -2733,7 +2745,7 @@ impl<'a> Statement<'a> {
             TokenKind::Equal => {
                 self.advance();
                 let value_tokens = self.yield_tokens_wrapped_with_semi();
-                location.end = self.current_token().location.end.clone();
+                set_end!(location, self);
 
                 expression = AstNode::Declare(Declare {
                     name: fmt,
@@ -2743,8 +2755,8 @@ impl<'a> Statement<'a> {
                             .parse()
                             .0,
                     )),
-                    location: Rc::new(location.clone()),
-                    value_location: Rc::new(location.clone()),
+                    location: location.clone(),
+                    value_location: location,
                 })
             }
             other if other.is_declarative() => {
@@ -2752,8 +2764,8 @@ impl<'a> Statement<'a> {
                     name: fmt,
                     r#type: None,
                     value: Some(Box::new(self.parse_declarative_node(expression))),
-                    location: Rc::new(location.clone()),
-                    value_location: Rc::new(location.clone()),
+                    location: location.clone(),
+                    value_location: location,
                 })
             }
             other if other.is_ternary_start() => {
@@ -2770,24 +2782,23 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_env(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let position = self.position;
 
         if self.current_token().tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\n#env: ElleEnv*\n",
-                self.current_token().location.display_plain(false),
-                self.current_token().location.display_plain(true),
+                self.current_token().location.borrow().display_plain(false),
+                self.current_token().location.borrow().display_plain(true),
             ));
         }
 
         self.advance();
-
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         let mut expression = AstNode::Environment(Environment {
             value: None,
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         match self.current_token().kind {
@@ -2801,14 +2812,14 @@ impl<'a> Statement<'a> {
                             .parse()
                             .0,
                     )),
-                    location: Rc::new(location.clone()),
+                    location,
                 })
             }
 
             other if other.is_declarative() => {
                 expression = AstNode::Environment(Environment {
                     value: Some(Box::new(self.parse_declarative_node(expression))),
-                    location: Rc::new(location.clone()),
+                    location,
                 })
             }
 
@@ -2818,11 +2829,11 @@ impl<'a> Statement<'a> {
             }
 
             TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location.clone())))
+                expression = self.parse_field_access(Some((position, expression, location)))
             }
 
             TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location.clone())))
+                expression = self.parse_offset_store(Some((position, expression, location)))
             }
 
             TokenKind::Question => expression = self.parse_ternary_node(expression, location),
@@ -2833,14 +2844,14 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_alloc(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let position = self.position;
 
         if self.current_token().tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\n#alloc(T, count_expr?) -> T*\n",
-                self.current_token().location.display_plain(false),
-                self.current_token().location.display_plain(true),
+                self.current_token().location.borrow().display_plain(false),
+                self.current_token().location.borrow().display_plain(true),
             ));
         }
 
@@ -2878,12 +2889,12 @@ impl<'a> Statement<'a> {
             AstNode::Literal(Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(1),
-                location: Rc::new(location.clone()),
+                location: location.clone(),
                 tagged: false,
             })
         };
 
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         let mut expression = AstNode::Conversion(Conversion {
             r#type: Some(Type::Pointer(Box::new(ty.clone()))),
@@ -2894,42 +2905,42 @@ impl<'a> Statement<'a> {
                 generics: vec![],
                 parameters: vec![
                     (
-                        Rc::new(location.clone()),
+                        location.clone(),
                         AstNode::FieldAccess(FieldAccess {
                             left: Box::new(AstNode::Environment(Environment {
                                 value: None,
-                                location: Rc::new(location.clone()),
+                                location: location.clone(),
                             })),
                             right: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("allocator".into()),
-                                location: Rc::new(location.clone()),
+                                location: location.clone(),
                                 tagged: false,
                             })),
                             value: None,
-                            location: Rc::new(location.clone()),
+                            location: location.clone(),
                         }),
                     ),
                     (
-                        Rc::new(location.clone()),
+                        location.clone(),
                         AstNode::BinaryOperation(BinaryOperation {
                             left: Box::new(AstNode::Size(Size {
                                 value: Ok(ty),
-                                location: Rc::new(location.clone()),
+                                location: location.clone(),
                             })),
                             right: Box::new(count),
                             operator: TokenKind::Multiply,
                             treat_as_string: false,
                             dunder_methods: true,
-                            location: Rc::new(location.clone()),
+                            location: location.clone(),
                         }),
                     ),
                 ],
                 type_method: true,
                 ignore_no_def: false,
-                location: Rc::new(location.clone()),
+                location: location.clone(),
             })),
-            location: Rc::new(location.clone()),
+            location: location.clone(),
             explicit: true,
         });
 
@@ -2954,19 +2965,18 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_realloc(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let position = self.position;
 
         if self.current_token().tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\n#realloc(ptr_expr, T, count_expr?) -> T*\n",
-                self.current_token().location.display_plain(false),
-                self.current_token().location.display_plain(true),
+                self.current_token().location.borrow().display_plain(false),
+                self.current_token().location.borrow().display_plain(true),
             ));
         }
 
         self.advance();
-
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
         self.advance();
 
@@ -3003,12 +3013,12 @@ impl<'a> Statement<'a> {
             AstNode::Literal(Literal {
                 kind: TokenKind::IntegerLiteral,
                 value: ValueKind::Number(1),
-                location: Rc::new(location.clone()),
+                location: location.clone(),
                 tagged: false,
             })
         };
 
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
 
         let mut expression = AstNode::Conversion(Conversion {
             r#type: Some(Type::Pointer(Box::new(ty.clone()))),
@@ -3019,43 +3029,43 @@ impl<'a> Statement<'a> {
                 generics: vec![],
                 parameters: vec![
                     (
-                        Rc::new(location.clone()),
+                        location.clone(),
                         AstNode::FieldAccess(FieldAccess {
                             left: Box::new(AstNode::Environment(Environment {
                                 value: None,
-                                location: Rc::new(location.clone()),
+                                location: location.clone(),
                             })),
                             right: Box::new(AstNode::Literal(Literal {
                                 kind: TokenKind::Identifier,
                                 value: ValueKind::String("allocator".into()),
-                                location: Rc::new(location.clone()),
+                                location: location.clone(),
                                 tagged: false,
                             })),
                             value: None,
-                            location: Rc::new(location.clone()),
+                            location: location.clone(),
                         }),
                     ),
-                    (Rc::new(location.clone()), ptr),
+                    (location.clone(), ptr),
                     (
-                        Rc::new(location.clone()),
+                        location.clone(),
                         AstNode::BinaryOperation(BinaryOperation {
                             left: Box::new(AstNode::Size(Size {
                                 value: Ok(ty),
-                                location: Rc::new(location.clone()),
+                                location: location.clone(),
                             })),
                             right: Box::new(count),
                             operator: TokenKind::Multiply,
                             treat_as_string: false,
                             dunder_methods: true,
-                            location: Rc::new(location.clone()),
+                            location: location.clone(),
                         }),
                     ),
                 ],
                 type_method: true,
                 ignore_no_def: false,
-                location: Rc::new(location.clone()),
+                location: location.clone(),
             })),
-            location: Rc::new(location.clone()),
+            location: location.clone(),
             explicit: true,
         });
 
@@ -3080,14 +3090,14 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_free(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let position = self.position;
 
         if self.current_token().tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\n#free(ptr_expr) -> T*\n",
-                self.current_token().location.display_plain(false),
-                self.current_token().location.display_plain(true),
+                self.current_token().location.borrow().display_plain(false),
+                self.current_token().location.borrow().display_plain(true),
             ));
         }
 
@@ -3115,7 +3125,7 @@ impl<'a> Statement<'a> {
             }
         }
 
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
         self.advance();
         let ptr = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
@@ -3126,27 +3136,27 @@ impl<'a> Statement<'a> {
             generics: vec![],
             parameters: vec![
                 (
-                    Rc::new(location.clone()),
+                    location.clone(),
                     AstNode::FieldAccess(FieldAccess {
                         left: Box::new(AstNode::Environment(Environment {
                             value: None,
-                            location: Rc::new(location.clone()),
+                            location: location.clone(),
                         })),
                         right: Box::new(AstNode::Literal(Literal {
                             kind: TokenKind::Identifier,
                             value: ValueKind::String("allocator".into()),
-                            location: Rc::new(location.clone()),
+                            location: location.clone(),
                             tagged: false,
                         })),
                         value: None,
-                        location: Rc::new(location.clone()),
+                        location: location.clone(),
                     }),
                 ),
-                (Rc::new(location.clone()), ptr),
+                (location.clone(), ptr),
             ],
             type_method: true,
             ignore_no_def: false,
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         match self.current_token().kind {
@@ -3170,14 +3180,14 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_set_allocator(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let position = self.position;
 
         if self.current_token().tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\n#set_allocator(allocator_expr)\n",
-                self.current_token().location.display_plain(false),
-                self.current_token().location.display_plain(true),
+                self.current_token().location.borrow().display_plain(false),
+                self.current_token().location.borrow().display_plain(true),
             ));
         }
 
@@ -3205,13 +3215,13 @@ impl<'a> Statement<'a> {
             }
         }
 
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
         self.advance();
         let allocator = Statement::new(tokens, 0, &self.body, self.shared).parse().0;
 
         let mut expression = AstNode::SetAllocator(SetAllocator {
             value: Box::new(allocator),
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         match self.current_token().kind {
@@ -3235,42 +3245,41 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_reset_allocator(&mut self) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let position = self.position;
 
         if self.current_token().tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\n#reset_allocator()\n",
-                self.current_token().location.display_plain(false),
-                self.current_token().location.display_plain(true),
+                self.current_token().location.borrow().display_plain(false),
+                self.current_token().location.borrow().display_plain(true),
             ));
         }
 
         self.advance();
-
         self.expect_tokens(vec![TokenKind::LeftParenthesis]);
         self.advance();
 
         self.expect_tokens(vec![TokenKind::RightParenthesis]);
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
         self.advance();
 
         let mut expression = AstNode::SetAllocator(SetAllocator {
             value: Box::new(AstNode::FieldAccess(FieldAccess {
                 left: Box::new(AstNode::Environment(Environment {
                     value: None,
-                    location: Rc::new(location.clone()),
+                    location: location.clone(),
                 })),
                 right: Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::Identifier,
                     value: ValueKind::String("default_allocator".into()),
-                    location: Rc::new(location.clone()),
+                    location: location.clone(),
                     tagged: false,
                 })),
                 value: None,
-                location: Rc::new(location.clone()),
+                location: location.clone(),
             })),
-            location: Rc::new(location.clone()),
+            location: location.clone(),
         });
 
         match self.current_token().kind {
@@ -3294,12 +3303,12 @@ impl<'a> Statement<'a> {
     }
 
     fn parse_declarative_node(&mut self, node: AstNode) -> AstNode {
-        let mut location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
         let operation = self.current_token();
         self.advance();
 
         let tokens = self.yield_tokens_wrapped_with_semi();
-        location.end = self.current_token().location.end.clone();
+        set_end!(location, self);
         let mapping = operation.kind.to_non_declarative();
 
         AstNode::BinaryOperation(BinaryOperation {
@@ -3308,7 +3317,7 @@ impl<'a> Statement<'a> {
             operator: mapping,
             treat_as_string: true,
             dunder_methods: true,
-            location: Rc::new(location),
+            location,
         })
     }
 
@@ -3363,7 +3372,7 @@ impl<'a> Statement<'a> {
 
     fn yield_tokens_with_delimiters(&mut self, delimiters: Vec<TokenKind>) -> Vec<Token> {
         if delimiters.contains(&self.current_token().kind) {
-            elle_error!(self.current_token().location.error(format!(
+            elle_error!(self.current_token().location.borrow().error(format!(
                 "Expected expression but got {:?}",
                 self.current_token().kind
             )));
@@ -3596,7 +3605,7 @@ impl<'a> Statement<'a> {
 
                 match self.current_token().kind {
                     TokenKind::LeftBlockBrace => self.parse_array(false),
-                    _ => elle_error!(self.current_token().location.error(format!(
+                    _ => elle_error!(self.current_token().location.borrow().error(format!(
                         "Expected left block brace or identifier, got {:?}",
                         self.current_token().kind
                     ))),
@@ -3616,6 +3625,7 @@ impl<'a> Statement<'a> {
                         elle_error!(self
                             .current_token()
                             .location
+                            .borrow()
                             .error("Unexpected EOF when parsing an identifier"))
                     });
 
@@ -3629,7 +3639,7 @@ impl<'a> Statement<'a> {
                         let current = self.current_token();
                         let name = current.value.get_string_inner().unwrap();
                         let unexpected_error = |token: Token, msg: String| {
-                            token.location.error(format!(
+                            token.location.borrow().error(format!(
                                 "Expected a field access ({}.foo) but got {}",
                                 name, msg
                             ))
@@ -3653,7 +3663,7 @@ impl<'a> Statement<'a> {
                         {
                             self.parse_declare(Some(Some(Type::Infer)))
                         } else {
-                            elle_error!(next.location.error(
+                            elle_error!(next.location.borrow().error(
                                 "Cannot use a colon in this context. What were you trying to do?"
                             ))
                         }
@@ -3680,20 +3690,20 @@ impl<'a> Statement<'a> {
                     } else if next.kind.is_ternary_start() {
                         let condition = AstNode::token_to_literal(self.current_token());
                         self.advance();
-                        self.parse_ternary_node(condition, (*self.current_token().location).clone())
+                        self.parse_ternary_node(condition, self.current_token().location)
                     } else if next.kind == TokenKind::Identifier {
                         not_valid_struct_or_type!(self)
                     } else if next.kind == TokenKind::DoubleColon {
                         not_valid_struct_or_type!(self)
                     } else {
-                        elle_error!(next.location.error(format!(
+                        elle_error!(next.location.borrow().error(format!(
                             "Expected left parenthesis or arithmetic, got {:?}",
                             next.kind
                         )))
                     }
                 }
             }
-            _ => elle_error!(self.current_token().location.error(format!(
+            _ => elle_error!(self.current_token().location.borrow().error(format!(
                 "Expected expression, got {:?}\nMaybe you forgot a semicolon nearby?",
                 self.current_token().kind
             ))),
@@ -3711,12 +3721,13 @@ impl<'a> Statement<'a> {
                 || kind == TokenKind::Semicolon)
             {
                 let token = self.tokens.get(self.position - 2).unwrap_or(&prev);
-                let mut location = (*token.location).clone();
+                let location = token.location.clone();
 
-                location.ctx = Rc::from(format!("{} ", location.ctx));
-                elle_error!(
-                    location.error(format!("Expected semicolon here, but got {:?}", token.kind))
-                )
+                location.borrow_mut().ctx = Rc::from(format!("{} ", location.borrow().ctx));
+
+                elle_error!(location
+                    .borrow()
+                    .error(format!("Expected semicolon here, but got {:?}", token.kind)))
             }
         }
 
@@ -3727,7 +3738,7 @@ impl<'a> Statement<'a> {
             .unwrap_or("".into());
 
         let position = self.position.clone();
-        let location = (*self.current_token().location).clone();
+        let location = self.current_token().location;
 
         let node = match self.current_token().kind {
             TokenKind::Variadic => self.parse_variadic(),
@@ -3761,7 +3772,7 @@ impl<'a> Statement<'a> {
                         self.parse_struct_init()
                     } else if token.kind == TokenKind::Dot {
                         elle_error!(
-                            token.location.error(format!(
+                            token.location.borrow().error(format!(
                                 "Cannot access methods on a struct or type '{}' using '.'\nPlease use '::' for non-instance method access.",
                                 self.current_token().value.get_string_inner().unwrap()
                             ))
@@ -3769,14 +3780,14 @@ impl<'a> Statement<'a> {
                     } else if token.kind == TokenKind::DoubleColon {
                         let ty = self.current_token().clone();
                         let method = self.next_token_seek(2).unwrap_or_else(|| {
-                            elle_error!(self.current_token().location.error(format!(
+                            elle_error!(self.current_token().location.borrow().error(format!(
                                 "Expected method name after '{}::'",
                                 ty.value.get_string_inner().unwrap()
                             )))
                         });
 
                         if method.kind != TokenKind::Identifier {
-                            elle_error!(method.location.error(format!(
+                            elle_error!(method.location.borrow().error(format!(
                                 "Expected method name in '{}::{}', but got '{:?}' instead.",
                                 ty.value.get_string_inner().unwrap(),
                                 method

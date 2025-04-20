@@ -38,7 +38,7 @@ impl Codegen<'_> for Buffer {
         };
 
         let (ty, val) = node.compile(gen, &ctx.to_nnf()).unwrap_or_else(|| {
-            elle_error!(self.location.error(format!(
+            elle_error!(self.location.borrow().error(format!(
                 "Unexpected error when trying to compile size for a buffer named '{}'",
                 plain_name
             )))
@@ -73,8 +73,8 @@ impl Codegen<'_> for Buffer {
         if self.name.tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\nlet {plain_name}[]: {}",
-                self.name.location.display_plain(false),
-                self.name.location.display_plain(true),
+                self.name.location.borrow().display_plain(false),
+                self.name.location.borrow().display_plain(true),
                 res.0.display()
             ));
         }

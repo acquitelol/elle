@@ -34,6 +34,7 @@ impl Codegen<'_> for IfStatement {
         let (_, if_value) = self.condition.compile(gen, ctx).unwrap_or_else(|| {
             elle_error!(self
                 .location
+                .borrow()
                 .error("Unexpected error when trying to compile the condition of an if statement"))
         });
 
@@ -68,6 +69,7 @@ impl Codegen<'_> for IfStatement {
             let (_, cond_val) = elif_cond.compile(gen, ctx).unwrap_or_else(|| {
                 elle_error!(self
                     .location
+                    .borrow()
                     .error("Unexpected error when compiling else if condition"))
             });
 

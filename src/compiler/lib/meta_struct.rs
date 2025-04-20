@@ -1,10 +1,10 @@
-use std::{cell::RefCell, rc::Rc};
+use std::cell::RefCell;
 
 use crate::{
     advance,
     compiler::qbe::{function::Function, r#type::Type, value::Value},
     get_MAIN_ID,
-    lexer::enums::{Location, Token, TokenKind, ValueKind},
+    lexer::enums::{Location, MutRc, Token, TokenKind, ValueKind},
     parser::enums::{ArrayLiteral, AstNode, Literal, StructLiteral},
     MAIN_ID, META_STRUCT_NAME,
 };
@@ -12,8 +12,8 @@ use crate::{
 pub fn generate_meta_struct(
     func: &RefCell<Function>,
     params: &Vec<((Type, Value), bool)>,
-    parameters: Vec<(Rc<Location>, AstNode)>,
-    location: Rc<Location>,
+    parameters: Vec<(MutRc<Location>, AstNode)>,
+    location: MutRc<Location>,
 ) -> AstNode {
     let node = AstNode::StructLiteral(StructLiteral {
         name: Token::from_ident(META_STRUCT_NAME),
@@ -26,7 +26,7 @@ pub fn generate_meta_struct(
                         .enumerate()
                         .map(|(i, _)| {
                             let location = parameters.get(i).unwrap().0.clone();
-                            let ctx = format!("{},", location.get_expr_lead());
+                            let ctx = format!("{},", location.borrow().get_expr_lead());
                             let mut res = String::new();
 
                             let mut paren_nesting = 0;
@@ -177,7 +177,15 @@ pub fn generate_meta_struct(
                 Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::StringLiteral,
                     value: ValueKind::String(
-                        location.file.clone().split("/").last().unwrap().to_string(),
+                        location
+                            .clone()
+                            .borrow()
+                            .file
+                            .clone()
+                            .split("/")
+                            .last()
+                            .unwrap()
+                            .to_string(),
                     ),
                     location: location.clone(),
                     tagged: false,
@@ -187,7 +195,7 @@ pub fn generate_meta_struct(
                 "line".into(),
                 Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::IntegerLiteral,
-                    value: ValueKind::Number((location.start.row + 1) as i128),
+                    value: ValueKind::Number((location.clone().borrow().start.row + 1) as i128),
                     location: location.clone(),
                     tagged: false,
                 })),
@@ -196,7 +204,7 @@ pub fn generate_meta_struct(
                 "column".into(),
                 Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::IntegerLiteral,
-                    value: ValueKind::Number((location.start.column + 1) as i128),
+                    value: ValueKind::Number((location.clone().borrow().start.column + 1) as i128),
                     location: location.clone(),
                     tagged: false,
                 })),

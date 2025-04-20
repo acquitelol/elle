@@ -34,7 +34,7 @@ impl Codegen<'_> for ArrayLiteral {
                         },
                     )
                     .unwrap_or_else(|| {
-                        elle_error!(self.location.error(format!(
+                        elle_error!(self.location.borrow().error(format!(
                             "Unexpected error when trying to compile the first item in an array"
                         )))
                     });
@@ -87,7 +87,7 @@ impl Codegen<'_> for ArrayLiteral {
             });
 
             let (ty, val) = node.compile(gen, ctx).unwrap_or_else(|| {
-                elle_error!(self.location.error(format!(
+                elle_error!(self.location.borrow().error(format!(
                     "Unexpected error when trying to compile a dynamic array"
                 )))
             });
@@ -102,7 +102,7 @@ impl Codegen<'_> for ArrayLiteral {
         // arrays that aren't assigned to a variable
         if ctx.value.is_some() && ctx.ty.is_some() && !ctx.ty.clone().unwrap().is_pointer() {
             elle_error!(
-                self.location.error(
+                self.location.borrow().error(
                     format!("The type of array '{:?}' must be a pointer to the inner type of the array (it is {})",
                         self.values, ctx.ty.clone().unwrap().display()
                     )
@@ -125,7 +125,7 @@ impl Codegen<'_> for ArrayLiteral {
                     },
                 )
                 .unwrap_or_else(|| {
-                    elle_error!(location.error(format!(
+                    elle_error!(location.borrow().error(format!(
                         "Unexpected error when trying to compile an item in an array with index {}",
                         i
                     )))
@@ -135,7 +135,7 @@ impl Codegen<'_> for ArrayLiteral {
 
             if let Some(first_type) = first_type.clone() {
                 if ty != first_type {
-                    elle_error!(location.error(format!(
+                    elle_error!(location.borrow().error(format!(
                         "Inconsistent array types '{}' and '{}' (possibly more)",
                         first_type.display(),
                         ty.display()
@@ -143,7 +143,7 @@ impl Codegen<'_> for ArrayLiteral {
                 }
 
                 if inner_ty.is_some() && inner_ty.clone().unwrap() != first_type {
-                    elle_error!(location.error(format!(
+                    elle_error!(location.borrow().error(format!(
                         "Invalid type of element in array '{}' when the array type is '{}'",
                         ty.display(),
                         inner_ty.unwrap().display(),
@@ -151,7 +151,7 @@ impl Codegen<'_> for ArrayLiteral {
                 }
             } else {
                 if inner_ty.is_some() && inner_ty.clone().unwrap() != ty {
-                    elle_error!(location.error(format!(
+                    elle_error!(location.borrow().error(format!(
                         "Invalid type of element in array '{}' when the array type is '{}'",
                         ty.display(),
                         inner_ty.unwrap().display(),

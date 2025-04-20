@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::cell::RefCell;
 
 use crate::{
     compiler::{
@@ -9,7 +9,7 @@ use crate::{
         },
     },
     elle_error,
-    lexer::enums::{Location, TokenKind},
+    lexer::enums::{Location, MutRc, TokenKind},
     parser::enums::AstNode,
 };
 
@@ -21,7 +21,7 @@ pub fn handle_short_circuiting_operation(
     module: &RefCell<Module>,
     ty: Option<Type>,
     is_return: bool,
-    location: Rc<Location>,
+    location: MutRc<Location>,
     kind: TokenKind,
 ) -> (Type, Value) {
     gen.tmp_counter += 1;
@@ -46,7 +46,7 @@ pub fn handle_short_circuiting_operation(
             },
         )
         .unwrap_or_else(|| {
-            elle_error!(location.error(
+            elle_error!(location.borrow().error(
                 "Unexpected error when trying to parse left side of an arithmetic operation",
             ))
         });
@@ -97,7 +97,7 @@ pub fn handle_short_circuiting_operation(
                 left_matches_label.clone(),
             ));
         }
-        other => elle_error!(location.error(format!(
+        other => elle_error!(location.borrow().error(format!(
             "Invalid operator token for conditional short circuiting '{}'",
             other
         ))),
@@ -117,7 +117,7 @@ pub fn handle_short_circuiting_operation(
             },
         )
         .unwrap_or_else(|| {
-            elle_error!(location.error(
+            elle_error!(location.borrow().error(
                 "Unexpected error when trying to parse right side of an arithmetic operation",
             ))
         });

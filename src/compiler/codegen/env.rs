@@ -31,6 +31,7 @@ impl Codegen<'_> for Environment {
             let (ty, val) = value.compile(gen, ctx).unwrap_or_else(|| {
                 elle_error!(&self
                     .location
+                    .borrow()
                     .error("Unexpected error when compiling the value to assign to environment"))
             });
 

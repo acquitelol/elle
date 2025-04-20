@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::cell::RefCell;
 
 use crate::{
     compiler::{
@@ -32,10 +32,9 @@ impl Codegen<'_> for FunctionCall {
             parameters,
             type_method,
             ignore_no_def,
-            location: call_location,
+            location: mut call_location,
         } = self;
 
-        let mut call_location = (*call_location).clone();
         let declarative_ty = ctx.ty.clone().unwrap_or(Type::Void);
         let mut should_get_address = false; // Gets address if first arg's ty is the same as ty predicate
         let mut first_param = None;
@@ -44,6 +43,7 @@ impl Codegen<'_> for FunctionCall {
         if type_method {
             let parameter = parameters.get(0).unwrap_or_else(|| {
                 elle_error!(call_location
+                    .borrow()
                     .error("Tried to get the 0th parameter to parse struct call but failed"))
             });
 
@@ -51,6 +51,7 @@ impl Codegen<'_> for FunctionCall {
                 .unwrap_or_else(|| {
                     elle_error!(parameter
                         .0
+                        .borrow()
                         .error(format!(
                             "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
                             name
@@ -162,7 +163,7 @@ impl Codegen<'_> for FunctionCall {
                                     func: &RefCell::new(tmp_func),
                                     ..ctx.clone()
                                 },
-                            ).unwrap_or_else(|| elle_error!(param.0.error(
+                            ).unwrap_or_else(|| elle_error!(param.0.borrow().error(
                                 format!(
                                     "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
                                     name
@@ -205,7 +206,7 @@ impl Codegen<'_> for FunctionCall {
         };
 
         if !tmp_function.usable && !ctx.func.borrow_mut().imported && !ignore_no_def {
-            elle_error!(call_location.error(format!(
+            elle_error!(call_location.borrow().error(format!(
                 "Function named '{}' was not imported and can't be used",
                 name
             )))
@@ -249,8 +250,8 @@ impl Codegen<'_> for FunctionCall {
         if name_token.tagged {
             elle_error!(format!(
                 "hover\n{}\n{}\n{}",
-                name_token.location.display_plain(false),
-                name_token.location.display_plain(true),
+                name_token.location.borrow().display_plain(false),
+                name_token.location.borrow().display_plain(true),
                 Type::Function(Box::new(Some(tmp_function))).display()
             ));
         }
@@ -300,7 +301,7 @@ impl Codegen<'_> for FunctionCall {
 
                     parameter.1 = AstNode::Address(Address {
                         value: Box::new(parameter.1),
-                        location: Rc::new(call_location.clone()),
+                        location: call_location.clone(),
                     })
                 }
             }
@@ -312,7 +313,7 @@ impl Codegen<'_> for FunctionCall {
                     ty: param_ty.clone(),
                     ..ctx.to_nnf()
                 })
-                .unwrap_or_else(|| elle_error!(parameter.0.error(
+                .unwrap_or_else(|| elle_error!(parameter.0.borrow().error(
                     format!(
                         "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
                         name
@@ -344,12 +345,8 @@ impl Codegen<'_> for FunctionCall {
             });
         }
 
-        let meta_struct = generate_meta_struct(
-            ctx.func,
-            &params,
-            parameters.clone(),
-            Rc::new(call_location.clone()),
-        );
+        let meta_struct =
+            generate_meta_struct(ctx.func, &params, parameters.clone(), call_location.clone());
 
         if tmp_function.format {
             for (i, ((ty, val), no_fmt)) in params.iter_mut().enumerate() {
@@ -391,11 +388,11 @@ impl Codegen<'_> for FunctionCall {
                                 vec![
                                     parameters[i].clone(),
                                     (
-                                        Rc::new(call_location.clone()),
+                                        call_location.clone(),
                                         AstNode::Literal(Literal {
                                             kind: TokenKind::IntegerLiteral,
                                             value: ValueKind::Number(0),
-                                            location: Rc::new(call_location.clone()),
+                                            location: call_location.clone(),
                                             tagged: false,
                                         }),
                                     ),
@@ -432,11 +429,11 @@ impl Codegen<'_> for FunctionCall {
                             vec![
                                 parameters[i].clone(),
                                 (
-                                    Rc::new(call_location.clone()),
+                                    call_location.clone(),
                                     AstNode::Literal(Literal {
                                         kind: TokenKind::IntegerLiteral,
                                         value: ValueKind::Number(0),
-                                        location: Rc::new(call_location.clone()),
+                                        location: call_location.clone(),
                                         tagged: false,
                                     }),
                                 ),
@@ -456,7 +453,7 @@ impl Codegen<'_> for FunctionCall {
                     .is_none_or(|ty| !ty.is_string())
                 {
                     elle_error!(
-                        call_location.error(format!(
+                        call_location.borrow().error(format!(
                             "The method \"{}\" returns {}{RESET} but it should return {GREEN}string{RESET}.\nThis method's implementation must be changed to return {GREEN}string{RESET}.",
                             func_name,
                             tmp_function.return_type.unwrap_or(Type::Unknown("_".into())).display(),
@@ -498,6 +495,7 @@ impl Codegen<'_> for FunctionCall {
                 )
                 .unwrap_or_else(|| {
                     elle_error!(call_location
+                        .borrow()
                         .error("Unexpected error when trying to compile the Elle metadata struct"))
                 });
 
@@ -549,6 +547,7 @@ impl Codegen<'_> for FunctionCall {
                 let param_len = params.len().saturating_sub(add_meta as usize);
 
                 elle_error!(call_location
+                    .borrow()
                     .with_extra_info(if tmp_function.arguments.is_empty() && type_method {
                         format!(
                             "Use `{}({})` instead here",

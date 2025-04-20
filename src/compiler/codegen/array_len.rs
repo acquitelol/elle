@@ -36,7 +36,7 @@ impl Codegen<'_> for ArrayLength {
         });
 
         let (_, val) = node.compile(gen, ctx).unwrap_or_else(|| {
-            elle_error!(self.location.error(
+            elle_error!(self.location.borrow().error(
                 "Unexpected error when trying to compile the formula for getting the array length",
             ))
         });
