@@ -7,25 +7,35 @@ use crate::{
 
 use super::enums::{Location, ParseResult, Position, Token, TokenKind, ValueKind};
 
-pub struct Lexer {
+pub struct Lexer<'a> {
     file: String,
-    input: Vec<char>,
+    input: &'a str,
     position: usize,
     row: usize,
     bol: usize,
     prev_token: Option<Token>,
+    line_starts: Vec<usize>,
     has_tagged: bool, // whether a token was tagged for introspection yet
 }
 
-impl Lexer {
+impl Lexer<'_> {
     pub fn new(file: String, input: &str, has_tagged: bool) -> Lexer {
+        let mut line_starts = vec![0];
+
+        for (i, c) in input.char_indices() {
+            if c == '\n' {
+                line_starts.push(i + 1);
+            }
+        }
+
         Lexer {
             file,
-            input: input.chars().collect(),
+            input,
             position: 0,
             row: 0,
             bol: 0,
             prev_token: None,
+            line_starts,
             has_tagged,
         }
     }
@@ -478,15 +488,15 @@ impl Lexer {
     }
 
     fn previous_char(&self) -> Option<char> {
-        self.input.get(self.position - 1).map(|x| x.to_owned())
+        self.input.chars().nth(self.position - 1)
     }
 
     fn current_char(&self) -> char {
-        self.input[self.position]
+        self.input.chars().nth(self.position).unwrap()
     }
 
     fn next_char(&self) -> Option<char> {
-        self.input.get(self.position + 1).map(|x| x.to_owned())
+        self.input.chars().nth(self.position + 1)
     }
 
     fn advance(&mut self) {
@@ -530,14 +540,14 @@ impl Lexer {
         }
     }
 
-    fn get_line(&self, at: usize) -> Option<String> {
-        self.input
-            .iter()
-            .collect::<String>()
-            .lines()
-            .enumerate()
-            .find(|l| l.0 == at)
-            .map(|i| i.1.to_string())
+    fn get_line(&self, at: usize) -> Option<&str> {
+        let start = self.line_starts[at];
+        let end = self
+            .line_starts
+            .get(at + 1)
+            .copied()
+            .unwrap_or(self.input.len());
+        self.input.get(start..end)
     }
 
     fn is_unary_context(&self) -> bool {
@@ -559,7 +569,7 @@ impl Lexer {
             self.advance();
         }
 
-        let identifier: String = self.input[start..self.position].iter().collect();
+        let identifier: String = self.input[start..self.position].chars().collect();
 
         if RESERVED_KEYWORDS.contains(&identifier.as_str()) {
             elle_error!(
@@ -672,7 +682,7 @@ impl Lexer {
             self.advance();
         }
 
-        let unparsed_literal: String = self.input[start..self.position].iter().collect();
+        let unparsed_literal: String = self.input[start..self.position].chars().collect();
         let mut literal = unparsed_literal.replace("_", "");
 
         if radix != 10 {
