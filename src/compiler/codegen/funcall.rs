@@ -125,14 +125,27 @@ impl Codegen<'_> for FunctionCall {
             func
         } else {
             // Function could be a callback pointer
-            let callback = gen.get_variable(
-                &name,
-                Some(ctx.func),
-                Some(ctx.module),
-                VariableInfo {
-                    dont_call_constants: true,
-                },
-            );
+            let callback = gen
+                .get_variable(
+                    &name,
+                    Some(ctx.func),
+                    Some(ctx.module),
+                    VariableInfo {
+                        dont_call_constants: true,
+                    },
+                )
+                .map(|(ty, val)| {
+                    let ty = match ty {
+                        Type::Function(inner) if inner.is_some() => {
+                            let mut dup = inner.clone().unwrap();
+                            dup.name = name.clone();
+                            Type::Function(Box::new(Some(dup)))
+                        }
+                        other => other,
+                    };
+
+                    (ty, val)
+                });
 
             let fallback = Function {
                 linkage: Linkage::public(),
