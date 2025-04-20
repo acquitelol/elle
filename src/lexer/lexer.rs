@@ -543,13 +543,17 @@ impl Lexer<'_> {
     }
 
     fn get_line(&self, at: usize) -> Option<&str> {
-        let start = self.line_starts[at];
-        let end = self
-            .line_starts
-            .get(at + 1)
-            .copied()
-            .unwrap_or(self.input.len());
-        self.input.get(start..end)
+        let start = *self.line_starts.get(at)?;
+        let end = *self.line_starts.get(at + 1).unwrap_or(&self.input.len());
+
+        let line = self.input.get(start..end)?;
+
+        Some(
+            line.strip_suffix("\r\n")
+                .or_else(|| line.strip_suffix('\n'))
+                .or_else(|| line.strip_suffix('\r'))
+                .unwrap_or(line),
+        )
     }
 
     fn is_unary_context(&self) -> bool {

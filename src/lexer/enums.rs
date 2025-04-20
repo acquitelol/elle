@@ -310,6 +310,8 @@ impl ValueKind {
                 "bool" => Some(Type::Boolean),
                 // Arbitrary because it will be turned into `long` anyway when used as void*`
                 "void" => Some(Type::Void),
+                // Treat fn as void* so it becomes printable in structs
+                "fn" => Some(Type::Void),
                 other => Some(if is_struct {
                     Type::Struct(other.into())
                 } else {
@@ -444,26 +446,31 @@ impl Location {
         );
     }
 
+    /// This function can be slightly confusing in its usecase.
+    /// I'll write some basic documentation here because I keep
+    /// refactoring and then forgetting how this function works
+    /// and it ends up breaking ElleMeta exprs formatting
+    ///
+    /// Its primary purpose is to get a new string based on
+    /// `self.ctx` starting at `self.start.column`, where:
+    ///
+    /// For an expression such as `a(b($dbg(foo)))` if the parameter
+    /// to search is `foo` inside of $dbg(), the returned expression
+    /// is `foo)))`.
+    ///
+    /// This can then be properly parsed later.
     pub fn get_expr_lead(&self) -> String {
-        let ident = self
-            .start
-            .column
-            .saturating_sub(self.ctx.len() - self.ctx.trim_start().len());
+        let trimmed = self.ctx.trim_start();
+        let trimmed_chars = self.ctx.chars().count() - trimmed.chars().count();
+        let start_col = self.start.column.saturating_sub(trimmed_chars);
 
-        let left = if ident >= self.end.column.saturating_sub(self.start.column) {
-            ident - self.end.column.saturating_sub(self.start.column)
-        } else {
-            ident
-        };
-
-        let ctx = self.ctx.trim_start();
-        let mut split_index = 0;
-
-        for (i, c) in ctx.char_indices().take(left) {
-            split_index = i + c.len_utf8();
+        let mut byte_offset = 0;
+        for (i, c) in trimmed.char_indices().take(start_col) {
+            byte_offset = i + c.len_utf8();
         }
 
-        ctx.split_at(split_index).1.into()
+        // return everything from `byte_offset` to the end
+        trimmed.get(byte_offset..).unwrap_or("").to_string()
     }
 
     fn trim_indentation(&self, ctx: Rc<str>, above: Rc<str>) -> (String, String) {
