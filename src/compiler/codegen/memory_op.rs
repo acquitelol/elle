@@ -71,6 +71,11 @@ impl Codegen<'_> for MemoryOperation {
                                     )
                                 })
                                 .is_some())
+                        || gen
+                            .generic_functions
+                            .keys()
+                            .find(|f| **f == format!("{struct_name}.{}", $constant))
+                            .is_some() // The struct isn't generic but the function is
                 };
             }
 
