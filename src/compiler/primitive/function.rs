@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
     compiler::{
@@ -9,7 +9,8 @@ use crate::{
         },
     },
     elle_error, hashmap, is_generic,
-    parser::enums::FunctionSource,
+    lexer::enums::{Location, Token, TokenKind, ValueKind},
+    parser::enums::{AstNode, Declare, FunctionSource, Literal},
 };
 
 pub fn generate_function(
@@ -57,7 +58,7 @@ pub fn generate_function(
 
     let mut args = vec![];
 
-    for argument in this.arguments {
+    for argument in this.arguments.iter() {
         let ty = argument.r#type.clone();
         let tmp = gen.new_variable(&ty, &argument.name, None, false, false);
 
@@ -79,17 +80,33 @@ pub fn generate_function(
         module.borrow_mut().add_function(func.clone());
     }
 
-    for statement in this.body.iter() {
-        // Ignore plain literals that aren't assigned to anything
-        // exact literals should not be ignored
-        let ctx = CodegenContext {
-            func: &func_ref,
-            module,
-            ty: None,
-            value: None,
-            is_return: false,
-        };
+    let loc = Rc::new(RefCell::new(Location::base()));
+    let ctx = CodegenContext {
+        func: &func_ref,
+        module,
+        ty: None,
+        value: None,
+        is_return: false,
+    };
 
+    for argument in this.arguments {
+        let stmt = AstNode::Declare(Declare {
+            name: Token::from_ident(&argument.name),
+            r#type: Some(Type::Infer),
+            value: Some(Box::new(AstNode::Literal(Literal {
+                kind: TokenKind::Identifier,
+                value: ValueKind::String(argument.name),
+                location: loc.clone(),
+                tagged: false,
+            }))),
+            location: loc.clone(),
+            value_location: loc.clone(),
+        });
+
+        stmt.compile(gen, &ctx);
+    }
+
+    for statement in this.body.iter() {
         statement.clone().compile(gen, &ctx);
     }
 
