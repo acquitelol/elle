@@ -55,31 +55,11 @@ pub fn generate_function(
     }
 
     gen.scopes.push(hashmap![]);
-
-    let mut args = vec![];
-
-    for argument in this.arguments.iter() {
-        let ty = argument.r#type.clone();
-        let tmp = gen.new_variable(&ty, &argument.name, None, false, false);
-
-        args.push(((ty.into_abi(), tmp), argument.no_fmt));
-    }
-
-    func.arguments = args;
     func.add_block("start");
 
     let func_ref = RefCell::new(func.clone());
 
-    // Could be a tail call recursion
-    //
-    // The compiler is single pass which means that
-    // we need to forward-declare the function with an empty body
-    //
-    // TODO: Forward declare *all* functions without their bodies
-    if !func_ref.borrow().lambda {
-        module.borrow_mut().add_function(func.clone());
-    }
-
+    let mut args = vec![];
     let loc = Rc::new(RefCell::new(Location::base()));
     let ctx = CodegenContext {
         func: &func_ref,
@@ -89,13 +69,16 @@ pub fn generate_function(
         is_return: false,
     };
 
-    for argument in this.arguments {
+    for argument in this.arguments.iter() {
+        let ty = argument.r#type.clone();
+        let tmp = gen.new_variable(&ty, &argument.name, None, false, false);
+
         let stmt = AstNode::Declare(Declare {
             name: Token::from_ident(&argument.name),
             r#type: Some(Type::Infer),
             value: Some(Box::new(AstNode::Literal(Literal {
                 kind: TokenKind::Identifier,
-                value: ValueKind::String(argument.name),
+                value: ValueKind::String(argument.name.clone()),
                 location: loc.clone(),
                 tagged: false,
             }))),
@@ -104,6 +87,19 @@ pub fn generate_function(
         });
 
         stmt.compile(gen, &ctx);
+        args.push(((ty.into_abi(), tmp), argument.no_fmt));
+    }
+
+    func_ref.borrow_mut().arguments = args;
+
+    // Could be a recursive function
+    //
+    // The compiler is single pass which means that
+    // we need to forward-declare the function with an empty body
+    //
+    // TODO: Forward declare *all* functions without their bodies
+    if !func_ref.borrow().lambda {
+        module.borrow_mut().add_function(func.clone());
     }
 
     for statement in this.body.iter() {
