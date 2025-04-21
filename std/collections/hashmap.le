@@ -67,13 +67,14 @@ fn HashMap::__fmt__<T, U>(HashMap<T, U> self, i32 nesting) {
             continue;
         }
 
-        res.extend(" ".repeat(4));
-        res.extend(key.__fmt__(0));
+        res.extend(" ".repeat(4 * (nesting + 1)));
+        res.extend(key.__fmt__(nesting + 1));
         res.extend(" => ");
-        res.extend(value.__fmt__(0));
+        res.extend(value.__fmt__(nesting + 1));
         res.push('\n');
     }
 
+    res.extend(" ".repeat(4 * nesting));
     res.push('}');
     return res;
 }
