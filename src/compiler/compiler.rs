@@ -8,7 +8,7 @@ use crate::{
         constants::{get_RAW_ERRORS, RAW_ERRORS},
     },
     parser::{
-        enums::{AstNode, ConstantSource, FunctionSource, Primitive, Return},
+        enums::{AstNode, FunctionSource, Primitive, Return},
         parser::StructPool,
     },
     struct_hover, Warnings, MAIN_ID,
@@ -150,79 +150,51 @@ impl Compiler {
             });
 
         if var.is_err() {
-            for item in self.tree.iter().cloned() {
-                match item {
-                    Primitive::Constant(ConstantSource {
-                        name: const_name,
-                        location,
-                        usable,
-                        ..
-                    }) => {
-                        if name == const_name && func.is_some() && module.is_some() {
-                            if !usable && !func.unwrap().borrow_mut().imported {
-                                elle_error!(location.borrow().error(format!(
-                                    "Constant named '{}' was not imported and can't be used",
-                                    name
-                                )))
-                            }
+            if let Some(module) = module {
+                if let Some(val) = module.borrow().functions.get(name) {
+                    let is_constant = val.constant;
 
-                            let ty = module
-                                .unwrap()
-                                .borrow()
-                                .functions
-                                .iter()
-                                .find(|f| f.name == const_name)
-                                .map(|f| f.return_type.clone())
-                                .unwrap_or_else(|| {
-                                    elle_error!(location.borrow().error("Constant does not exist"))
-                                });
-
-                            if state.dont_call_constants && !ty.clone().unwrap().is_function() {
-                                return Ok((ty.unwrap(), Value::Global(name.into())));
-                            }
-
-                            let temp = self.new_temporary(Some("constant"), true);
-
-                            func.unwrap().borrow_mut().assign_instruction(
-                                &temp,
-                                &ty.clone().unwrap(),
-                                Instruction::Call(Value::Global(name.into()), vec![]),
-                            );
-
-                            return Ok((ty.unwrap(), temp));
-                        }
+                    if !val.usable && !val.imported {
+                        // TODO: Take call location here
+                        elle_error!(Location::base().basic_error(format!(
+                            "{} named '{}' was not imported and can't be used",
+                            if is_constant { "Constant" } else { "Function" },
+                            name.replace(".", "::")
+                        )))
                     }
-                    Primitive::Function(FunctionSource {
-                        name: op_name,
-                        usable,
-                        location,
-                        builtin,
-                        ..
-                    }) => {
-                        if name == op_name {
-                            if !usable && !func.unwrap().borrow_mut().imported && !builtin {
-                                elle_error!(location.borrow().error(format!(
-                                    "Function named '{}' was not imported and can't be used",
-                                    name.replace(".", "::")
-                                )))
-                            }
 
-                            return Ok((
-                                Type::Function(Box::new(if let Some(module) = module {
-                                    module
-                                        .borrow()
-                                        .functions
-                                        .iter()
-                                        .find(|func| func.name == name)
-                                        .cloned()
-                                } else {
-                                    None
-                                })),
-                                Value::Global(name.into()),
-                            ));
+                    let ty = val.return_type.clone();
+
+                    if is_constant {
+                        if state.dont_call_constants && !ty.clone().unwrap().is_function() {
+                            return Ok((ty.unwrap(), Value::Global(name.into())));
                         }
+
+                        let temp = self.new_temporary(Some("constant"), true);
+
+                        func.unwrap().borrow_mut().assign_instruction(
+                            &temp,
+                            &ty.clone().unwrap(),
+                            Instruction::Call(Value::Global(name.into()), vec![]),
+                        );
+
+                        return Ok((ty.unwrap(), temp));
+                    } else {
+                        return Ok((
+                            Type::Function(Box::new(Some(val.to_owned()))),
+                            Value::Global(name.into()),
+                        ));
+                    };
+                } else if let Some(Primitive::Function(val)) = self.generic_functions.get(name) {
+                    if !val.usable && !val.imported {
+                        // TODO: Take call location here
+                        elle_error!(Location::base().basic_error(format!(
+                            "Function named '{}' was not imported and can't be used",
+                            name.replace(".", "::")
+                        )))
                     }
-                    _ => {}
+
+                    return Ok((Type::Function(Box::new(None)), Value::Global(name.into())));
                 }
             }
         }
@@ -497,7 +469,7 @@ impl Compiler {
             module_ref
                 .borrow_mut()
                 .functions
-                .retain(|f| !string_module_methods.contains(&f.name))
+                .retain(|_, f| !string_module_methods.contains(&f.name))
         }
 
         // assuming RAW_ERRORS is lsp-mode

@@ -53,7 +53,7 @@ impl Codegen<'_> for SetAllocator {
 
                 AstNode::Literal(Literal {
                     kind: TokenKind::Identifier,
-                    value: ValueKind::String(if ctx.module.borrow().functions.iter().find(|f| f.name == method_name).is_some() {
+                    value: ValueKind::String(if ctx.module.borrow().functions.get(&method_name).is_some() {
                         method_name
                     } else {
                         if gen.warnings.has_warning(Warning::AllocatorMethodsMissing) {

@@ -201,11 +201,7 @@ impl Codegen<'_> for BinaryOperation {
                 // same for any struct, define a .equals method to allow it to be ran with == directly
                 let func_name = format!("string.{kind}");
                 let module_ref = ctx.module.borrow();
-
-                let tmp_function_option = module_ref
-                    .functions
-                    .iter()
-                    .find(|func| func.name == func_name);
+                let tmp_function_option = module_ref.functions.get(&func_name);
 
                 if tmp_function_option.is_none() {
                     elle_error!(self.location.borrow().error(format!(

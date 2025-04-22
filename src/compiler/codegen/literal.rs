@@ -37,8 +37,7 @@ impl Codegen<'_> for Literal {
                             .module
                             .borrow()
                             .functions
-                            .iter()
-                            .find(|function| function.name == name)
+                            .get(&name)
                             .map(|function| function.constant)
                             .unwrap_or(false);
 

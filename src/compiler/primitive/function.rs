@@ -329,7 +329,7 @@ pub fn generate_function(
         module
             .borrow_mut()
             .functions
-            .retain(|func| func.name != this.name);
+            .retain(|_, func| func.name != this.name);
     }
 
     owned_func

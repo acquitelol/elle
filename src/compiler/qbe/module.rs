@@ -1,11 +1,14 @@
-use std::{collections::HashSet, fmt};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+};
 
 use super::{data::Data, function::Function, r#type::Type, statement::Statement, typedef::TypeDef};
-use crate::{get_MAIN_ID, DEAD_CODE_ELIMINATION_PASSES, MAIN_ID};
+use crate::{get_MAIN_ID, hashmap, DEAD_CODE_ELIMINATION_PASSES, MAIN_ID};
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Module {
-    pub functions: Vec<Function>,
+    pub functions: HashMap<String, Function>,
     pub types: Vec<TypeDef>,
     pub data: Vec<Data>,
 }
@@ -13,25 +16,22 @@ pub struct Module {
 impl Module {
     pub fn new() -> Module {
         Module {
-            functions: vec![],
+            functions: hashmap![],
             types: vec![],
             data: vec![],
         }
     }
 
-    pub fn add_function(&mut self, function: Function) -> &mut Function {
-        self.functions.push(function);
-        return self.functions.last_mut().unwrap();
+    pub fn add_function(&mut self, function: Function) {
+        self.functions.insert(function.name.clone(), function);
     }
 
-    pub fn add_type(&mut self, def: TypeDef) -> &mut TypeDef {
+    pub fn add_type(&mut self, def: TypeDef) {
         self.types.push(def);
-        self.types.last_mut().unwrap()
     }
 
-    pub fn add_data(&mut self, data: Data) -> &mut Data {
+    pub fn add_data(&mut self, data: Data) {
         self.data.push(data);
-        self.data.last_mut().unwrap()
     }
 
     pub fn remove_unused_functions(&mut self, object_output: bool) {
@@ -42,12 +42,12 @@ impl Module {
 
             let mut used_functions: HashSet<String> = HashSet::new();
 
-            for func in self.functions.iter() {
+            for (_, func) in self.functions.iter() {
                 for block in func.blocks.iter() {
                     for statement in block.statements.iter() {
                         match statement {
                             Statement::Assign(_, _, instr) | Statement::Volatile(instr) => {
-                                for other in self.functions.iter() {
+                                for (_, other) in self.functions.iter() {
                                     if instr.is_global_used(&other.name) {
                                         used_functions.insert(other.name.clone());
                                     }
@@ -61,7 +61,7 @@ impl Module {
             used_functions.insert("main".into());
             used_functions.insert(get_MAIN_ID!().into());
 
-            self.functions.retain(|func| {
+            self.functions.retain(|_, func| {
                 used_functions.contains(&func.name) || func.volatile || object_output
             });
         }
@@ -71,7 +71,7 @@ impl Module {
     pub fn remove_unused_data(&mut self) {
         let mut used_data_sections: HashSet<String> = HashSet::new();
 
-        for func in self.functions.iter() {
+        for (_, func) in self.functions.iter() {
             for block in func.blocks.iter() {
                 for statement in block.statements.iter() {
                     match statement {
@@ -120,7 +120,7 @@ impl fmt::Display for Module {
             writeln!(f, "{}", data)?;
         }
 
-        for func in self.functions.iter() {
+        for (_, func) in self.functions.iter() {
             // ensure we retain external functions until this point
             // because some data sections may rely on these functions
             // if we remove them the data sections will also be removed

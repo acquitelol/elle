@@ -56,25 +56,20 @@ impl Codegen<'_> for MemoryOperation {
                     ctx.module
                         .borrow()
                         .functions
-                        .iter()
-                        .find(|f| f.name == format!("{struct_name}.{}", $constant))
+                        .get(&format!("{struct_name}.{}", $constant))
                         .is_some()
                         || (is_generic!(struct_name)
                             && gen
                                 .generic_functions
-                                .keys()
-                                .find(|f| {
-                                    **f == format!(
-                                        "{}.{}",
-                                        Type::from_internal_id(struct_name.clone()).0,
-                                        $constant
-                                    )
-                                })
+                                .get(&format!(
+                                    "{}.{}",
+                                    Type::from_internal_id(struct_name.clone()).0,
+                                    $constant
+                                ))
                                 .is_some())
                         || gen
                             .generic_functions
-                            .keys()
-                            .find(|f| **f == format!("{struct_name}.{}", $constant))
+                            .get(&format!("{struct_name}.{}", $constant))
                             .is_some() // The struct isn't generic but the function is
                 };
             }

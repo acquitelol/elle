@@ -242,13 +242,7 @@ pub fn create_monomorphized_function(
                     .join(".")
             );
 
-            let existing = module
-                .borrow()
-                .functions
-                .iter()
-                .find(|function| function.name == generic_name)
-                .cloned();
-
+            let existing = module.borrow().functions.get(&generic_name).cloned();
             *name = generic_name.clone();
 
             if existing.is_none() {
@@ -308,7 +302,7 @@ pub fn create_monomorphized_function(
 
                 let function = generate_function(
                     FunctionSource {
-                        name: generic_name,
+                        name: generic_name.clone(),
                         generics: vec![],
                         arguments: parsed_arguments.clone(),
                         r#return: parsed_return,

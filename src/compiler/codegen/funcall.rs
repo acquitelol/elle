@@ -115,8 +115,7 @@ impl Codegen<'_> for FunctionCall {
             .module
             .borrow()
             .functions
-            .iter()
-            .find(|function| function.name == name)
+            .get(&name)
             .filter(|function| !function.constant)
             .cloned();
         let mut is_callback = false;
@@ -380,8 +379,7 @@ impl Codegen<'_> for FunctionCall {
                         .module
                         .borrow()
                         .functions
-                        .iter()
-                        .find(|func| func.name == func_name)
+                        .get(&func_name)
                         .cloned()
                         .unwrap_or(Function::default());
 
@@ -425,8 +423,7 @@ impl Codegen<'_> for FunctionCall {
                         .module
                         .borrow()
                         .functions
-                        .iter()
-                        .find(|func| func.name == func_name)
+                        .get(&func_name)
                         .cloned()
                         .unwrap_or(Function::default());
 

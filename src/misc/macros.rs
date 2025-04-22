@@ -210,7 +210,7 @@ macro_rules! unknown_function {
         let mut similar_name = None;
         let mut lowest_distance = usize::max_value();
 
-        for func in $module.borrow_mut().functions.iter().filter(|func| {
+        for (_, func) in $module.borrow_mut().functions.iter().filter(|(_, func)| {
             func.name != "nil" && func.name != "main" && (func.usable || func.imported)
         }) {
             let distance = levenshtein::levenshtein($name.as_str(), func.name.clone().as_str());
