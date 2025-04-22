@@ -1,5 +1,5 @@
 use codegen::Codegen;
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
     compiler::{
@@ -542,7 +542,7 @@ fn modify_type(
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UseSource {
-    pub module: String,
+    pub module: Rc<String>,
     pub location: MutRc<Location>,
 }
 

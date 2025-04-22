@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     elle_error,
     lexer::enums::{TokenKind, ValueKind},
@@ -88,6 +90,9 @@ impl<'a> Use<'a> {
         self.parser.expect_tokens(vec![TokenKind::Semicolon]);
         self.parser.advance();
 
-        Primitive::Use(UseSource { module, location })
+        Primitive::Use(UseSource {
+            module: Rc::new(module),
+            location,
+        })
     }
 }

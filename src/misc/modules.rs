@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::env::{current_dir, set_current_dir};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::time::Instant;
 use std::{cell::RefCell, rc::Rc};
@@ -34,7 +34,7 @@ pub fn lex_and_parse(
     input_path: &String,
     existing_tree: Option<&mut Vec<Primitive>>,
     struct_pool: &RefCell<StructPool>,
-    parsed_modules: &RefCell<HashSet<String>>,
+    parsed_modules: &RefCell<HashSet<(Rc<String>, Rc<Option<PathBuf>>)>>,
     warnings: &Warnings,
     no_strings: bool,
     no_alloc: bool,
@@ -164,7 +164,7 @@ pub fn lex_and_parse(
         imports.insert(
             0,
             Primitive::Use(UseSource {
-                module: "std/fmt".into(),
+                module: Rc::new("std/fmt".into()),
                 location: loc.clone(),
             }),
         );
@@ -174,7 +174,7 @@ pub fn lex_and_parse(
         imports.insert(
             0,
             Primitive::Use(UseSource {
-                module: "std/string".into(),
+                module: Rc::new("std/string".into()),
                 location: loc.clone(),
             }),
         );
@@ -184,12 +184,14 @@ pub fn lex_and_parse(
         imports.insert(
             0,
             Primitive::Use(UseSource {
-                module: if no_gc {
-                    BACKUP_ALLOCATOR_MODULE
-                } else {
-                    PRIMARY_ALLOCATOR_MODULE
-                }
-                .into(),
+                module: Rc::new(
+                    if no_gc {
+                        BACKUP_ALLOCATOR_MODULE
+                    } else {
+                        PRIMARY_ALLOCATOR_MODULE
+                    }
+                    .into(),
+                ),
                 location: loc.clone(),
             }),
         );
@@ -197,17 +199,26 @@ pub fn lex_and_parse(
         imports.insert(
             0,
             Primitive::Use(UseSource {
-                module: ARBITRARY_ALLOCATOR_MODULE.into(),
+                module: Rc::new(ARBITRARY_ALLOCATOR_MODULE.into()),
                 location: loc.clone(),
             }),
         );
     }
 
+    let resolved_path = Rc::new(if is_std_import {
+        None
+    } else {
+        Some(final_path.clone())
+    });
+
     for import in imports.iter().cloned() {
         match import {
             Primitive::Use(UseSource {
                 module, location, ..
-            }) if !parsed_modules.borrow().contains(&module) => {
+            }) if !parsed_modules
+                .borrow()
+                .contains(&(module.clone(), resolved_path.clone())) =>
+            {
                 let now = if debug_time {
                     Some(Instant::now())
                 } else {
@@ -322,7 +333,7 @@ pub fn lex_and_parse(
                         }
                     }
 
-                    if module == "std/string" {
+                    if *module == "std/string" {
                         *string_module_methods = tree
                             .iter()
                             .filter(|primitive| matches!(primitive, Primitive::Function { .. }))
@@ -350,7 +361,9 @@ pub fn lex_and_parse(
                     );
                 }
 
-                parsed_modules.borrow_mut().insert(module);
+                parsed_modules
+                    .borrow_mut()
+                    .insert((module.clone(), resolved_path.clone()));
             }
             _ => {}
         }
