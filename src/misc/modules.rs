@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::env::{current_dir, set_current_dir};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::exit;
 use std::time::Instant;
 use std::{cell::RefCell, rc::Rc};
@@ -34,7 +34,7 @@ pub fn lex_and_parse(
     input_path: &String,
     existing_tree: Option<&mut Vec<Primitive>>,
     struct_pool: &RefCell<StructPool>,
-    parsed_modules: &RefCell<HashSet<(String, Rc<PathBuf>)>>,
+    parsed_modules: &RefCell<HashSet<String>>,
     warnings: &Warnings,
     no_strings: bool,
     no_alloc: bool,
@@ -203,21 +203,11 @@ pub fn lex_and_parse(
         );
     }
 
-    // current dir before it was setted to accurately get the right place for importing
-    let presetted_current_dir = Rc::new(if is_std_import {
-        current_dir().unwrap()
-    } else {
-        final_path.clone()
-    });
-
     for import in imports.iter().cloned() {
         match import {
             Primitive::Use(UseSource {
                 module, location, ..
-            }) if !parsed_modules
-                .borrow()
-                .contains(&(module.clone(), presetted_current_dir.clone())) =>
-            {
+            }) if !parsed_modules.borrow().contains(&module) => {
                 let now = if debug_time {
                     Some(Instant::now())
                 } else {
@@ -360,9 +350,7 @@ pub fn lex_and_parse(
                     );
                 }
 
-                parsed_modules
-                    .borrow_mut()
-                    .insert((module.clone(), presetted_current_dir.clone()));
+                parsed_modules.borrow_mut().insert(module);
             }
             _ => {}
         }
