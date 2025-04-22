@@ -127,6 +127,7 @@ async fn main() -> ExitCode {
     let mut pedantic = false; // extra checks in type conversions
     let mut lsp = false; // LSP support for IDEs
     let mut expect_info = false;
+    let mut release_mode = false; // enables dead code elimation
 
     let mut object_files: Vec<String> = vec![];
 
@@ -146,6 +147,7 @@ async fn main() -> ExitCode {
             "--asm" | "--emit-s" | "--emit-asm" => emit_asm = true,
             "--ast" | "--emit-ast" | "--emit-tree" => ast = true,
             "--lsp" | "--lsp-server" => lsp = true,
+            "-r" | "--release" => release_mode = true,
             "-i" | "--info_pos" => {
                 macro_rules! loc_err {
                     () => {
@@ -856,6 +858,7 @@ async fn main() -> ExitCode {
         warnings,
         object_output,
         pedantic,
+        release_mode,
         no_gc,
         string_module_methods,
     );

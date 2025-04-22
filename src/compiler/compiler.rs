@@ -272,6 +272,7 @@ impl Compiler {
         warnings: Warnings,
         object_output: bool,
         pedantic: bool,
+        release_mode: bool,
         no_gc: bool,
         string_module_methods: Vec<String>,
     ) {
@@ -454,11 +455,14 @@ impl Compiler {
             module_ref.borrow_mut().add_data(data);
         }
 
-        module_ref
-            .borrow_mut()
-            .remove_unused_functions(object_output);
+        if release_mode {
+            module_ref
+                .borrow_mut()
+                .remove_unused_functions(object_output);
 
-        module_ref.borrow_mut().remove_unused_data();
+            module_ref.borrow_mut().remove_unused_data();
+        }
+
         module_ref.borrow_mut().remove_generics();
         module_ref.borrow_mut().remove_empty_structs();
 

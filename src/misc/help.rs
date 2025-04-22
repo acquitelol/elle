@@ -58,6 +58,10 @@ pub fn print_help(program: String) {
                     "-p, --pedantic",
                     "Enables extra validations/checks when performing type conversions",
                 ),
+                (
+                    "-r, --release",
+                    "Enables extra optimizations, but has longer compilation times",
+                ),
             ],
         ),
         (
