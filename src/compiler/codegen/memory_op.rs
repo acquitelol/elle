@@ -231,10 +231,10 @@ impl Codegen<'_> for MemoryOperation {
             ctx.func.borrow_mut().add_instruction(Instruction::Store(
                 inner.clone(),
                 compiled_location.clone(),
-                compiled,
+                compiled.clone(),
             ));
 
-            return Some((inner, compiled_location));
+            return Some((inner, compiled));
         }
 
         let temp = if inner.is_struct() {
