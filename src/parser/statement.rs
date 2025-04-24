@@ -3097,10 +3097,12 @@ impl<'a> Statement<'a> {
         let position = self.position;
 
         let name = self.get_identifier();
+        let name_token = self.current_token();
         self.advance();
         self.expect_tokens(vec![TokenKind::DoubleColon]);
         self.advance();
         let variant = self.get_identifier();
+        let variant_token = self.current_token();
         set_end!(location, self);
         self.advance();
 
@@ -3111,7 +3113,10 @@ impl<'a> Statement<'a> {
             .get(&name)
             .cloned()
             .unwrap_or_else(|| {
-                elle_error!(location.borrow().error(format!("Unknown enum '{}'", name)))
+                elle_error!(name_token
+                    .location
+                    .borrow()
+                    .error(format!("Unknown enum '{}'", name)))
             });
 
         let mut expression = AstNode::Conversion(Conversion {
@@ -3123,10 +3128,10 @@ impl<'a> Statement<'a> {
                     .find(|x| x.0 == variant)
                     .map(|x| x.2.clone())
                     .unwrap_or_else(|| {
-                        elle_error!(format!(
+                        elle_error!(variant_token.location.borrow().error(format!(
                             "Could not find a variant '{}' for enum '{}'",
                             variant, name
-                        ))
+                        )))
                     }),
             ),
             location: location.clone(),
@@ -3860,7 +3865,11 @@ impl<'a> Statement<'a> {
                             )));
                         }
 
-                        if self.shared.enum_pool.borrow().contains_key(&namespace) {
+                        if self.shared.enum_pool.borrow().contains_key(&namespace)
+                            && self
+                                .next_token_seek(3)
+                                .is_none_or(|token| token.kind != TokenKind::LeftParenthesis)
+                        {
                             self.parse_enum_literal()
                         } else {
                             self.advance(); // Skip namespace
