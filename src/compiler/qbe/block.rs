@@ -57,17 +57,6 @@ impl fmt::Display for Block {
             "{}",
             self.statements
                 .iter()
-                .map(
-                    |instr| if let Statement::Assign(val, ty, ins) = instr.clone() {
-                        if matches!(ins, Instruction::Copy(_) | Instruction::Load(_, _)) {
-                            Statement::Assign(val, ty.into_base(), ins)
-                        } else {
-                            instr.clone()
-                        }
-                    } else {
-                        instr.clone()
-                    }
-                )
                 .map(|instr| format!("\t{}", instr))
                 .collect::<Vec<String>>()
                 .join("\n")

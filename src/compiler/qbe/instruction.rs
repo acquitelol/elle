@@ -191,10 +191,10 @@ impl fmt::Display for Instruction {
                 write!(
                     formatter,
                     "store{} {}, {}",
-                    if r#type.clone() != Type::Char {
-                        r#type.clone().into_base()
+                    if r#type.is_unsigned() {
+                        r#type.clone().into_signed()
                     } else {
-                        r#type.clone()
+                        r#type.clone().into_base()
                     },
                     value,
                     dest
@@ -207,8 +207,10 @@ impl fmt::Display for Instruction {
                     if !r#type.is_unsigned() && r#type.is_map_to_int() {
                         format!("s{}", r#type.clone())
                     } else {
-                        if r#type.is_struct() || r#type.is_unsigned() {
+                        if r#type.is_struct() {
                             r#type.clone().into_base()
+                        } else if r#type.is_unsigned() && !r#type.is_map_to_int() {
+                            r#type.clone().into_signed()
                         } else {
                             r#type.clone()
                         }

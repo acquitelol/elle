@@ -96,7 +96,7 @@ impl fmt::Display for Function {
         let mut arguments_clone = self
             .arguments
             .iter()
-            .map(|((r#type, temp), _)| format!("{} {}", r#type, temp))
+            .map(|((r#type, temp), _)| format!("{} {}", r#type.clone().into_abi(), temp))
             .collect::<Vec<String>>()
             .clone();
 

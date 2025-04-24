@@ -29,11 +29,9 @@ impl Codegen<'_> for VariadicArgument {
         let ty = self.r#type.unwrap_or(Type::Pointer(Box::new(Type::Void)));
         let tmp = gen.new_temporary(Some("next"), true);
 
-        ctx.func.borrow_mut().assign_instruction(
-            &tmp,
-            &ty.clone().into_base(),
-            Instruction::VAArg(ptr),
-        );
+        ctx.func
+            .borrow_mut()
+            .assign_instruction(&tmp, &ty, Instruction::VAArg(ptr));
 
         let res = (ty, tmp);
 
