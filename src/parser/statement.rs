@@ -3092,6 +3092,67 @@ impl<'a> Statement<'a> {
         expression
     }
 
+    fn parse_enum_literal(&mut self) -> AstNode {
+        let location = self.current_token().location;
+        let position = self.position;
+
+        let name = self.get_identifier();
+        self.advance();
+        self.expect_tokens(vec![TokenKind::DoubleColon]);
+        self.advance();
+        let variant = self.get_identifier();
+        set_end!(location, self);
+        self.advance();
+
+        let enum_def = self
+            .shared
+            .enum_pool
+            .borrow()
+            .get(&name)
+            .cloned()
+            .unwrap_or_else(|| {
+                elle_error!(location.borrow().error(format!("Unknown enum '{}'", name)))
+            });
+
+        let mut expression = AstNode::Conversion(Conversion {
+            r#type: Some(Type::Enum(name.clone(), Box::new(enum_def.1))),
+            value: Box::new(
+                enum_def
+                    .0
+                    .iter()
+                    .find(|x| x.0 == variant)
+                    .map(|x| x.2.clone())
+                    .unwrap_or_else(|| {
+                        elle_error!(format!(
+                            "Could not find a variant '{}' for enum '{}'",
+                            variant, name
+                        ))
+                    }),
+            ),
+            location: location.clone(),
+            explicit: true,
+        });
+
+        match self.current_token().kind {
+            TokenKind::Dot => {
+                expression = self.parse_field_access(Some((position, expression, location)))
+            }
+
+            TokenKind::LeftBlockBrace => {
+                expression = self.parse_offset_store(Some((position, expression, location)))
+            }
+
+            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
+            other if other.is_arithmetic() => {
+                self.position = position;
+                return self.parse_arithmetic();
+            }
+            _ => {}
+        }
+
+        expression
+    }
+
     fn parse_free(&mut self) -> AstNode {
         let location = self.current_token().location;
         let position = self.position;
