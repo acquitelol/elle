@@ -16,26 +16,21 @@ impl Codegen<'_> for MemoryOperation {
         let mut tmp_func = ctx.func.borrow().clone().to_owned();
         tmp_func.add_block("start");
 
-        let (left_ty, _) = self
-            .left
-            .clone()
-            .compile(
-                gen,
-                &CodegenContext {
-                    func: &RefCell::new(tmp_func.clone()),
-                    ..ctx.clone()
-                },
-            )
-            .unwrap_or_else(|| {
-                elle_error!(self.left_location.borrow().error(format!(
-                    "Unexpected error when trying to compile the left side of a {} statement",
-                    if self.value.is_some() {
-                        "store"
-                    } else {
-                        "load"
-                    }
-                )))
-            });
+        let tmp_ctx = CodegenContext {
+            func: &RefCell::new(tmp_func.clone()),
+            ..ctx.clone()
+        };
+
+        let (left_ty, _) = self.left.clone().compile(gen, &tmp_ctx).unwrap_or_else(|| {
+            elle_error!(self.left_location.borrow().error(format!(
+                "Unexpected error when trying to compile the left side of a {} statement",
+                if self.value.is_some() {
+                    "store"
+                } else {
+                    "load"
+                }
+            )))
+        });
 
         if !self.is_deref
             && (left_ty.is_struct()
@@ -105,37 +100,10 @@ impl Codegen<'_> for MemoryOperation {
             }
         }
 
-        let (left_ty, _) = self
-            .left
-            .clone()
-            .compile(
-                gen,
-                &CodegenContext {
-                    func: &RefCell::new(tmp_func.clone()),
-                    ..ctx.clone()
-                },
-            )
-            .unwrap_or_else(|| {
-                elle_error!(self.left_location.borrow().error(format!(
-                    "Unexpected error when trying to compile the left side of a {} statement",
-                    if self.value.is_some() {
-                        "store"
-                    } else {
-                        "load"
-                    }
-                )))
-            });
-
         let (right_ty, _) = self
             .right
             .clone()
-            .compile(
-                gen,
-                &CodegenContext {
-                    func: &RefCell::new(tmp_func.clone()),
-                    ..ctx.clone()
-                },
-            )
+            .compile(gen, &tmp_ctx)
             .unwrap_or_else(|| {
                 elle_error!(self.right_location.borrow().error(format!(
                     "Unexpected error when trying to compile the right side of a {} statement",
