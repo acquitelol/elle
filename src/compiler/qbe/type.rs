@@ -188,24 +188,29 @@ impl Type {
     }
 
     pub fn to_internal_id(&self) -> String {
-        let num: u8 = match self {
-            Type::UnsignedByte => 4,
-            Type::UnsignedHalfword => 5,
-            Type::UnsignedWord => 6,
-            Type::UnsignedLong => 7,
-            Type::Byte => 8,
-            Type::Halfword => 9,
-            Type::Boolean => 10,
-            Type::Word => 11,
-            Type::Long => 12,
-            Type::Single => 13,
-            Type::Double => 14,
-            Type::Char => 15,
-            Type::Void => 16,
-            Type::Null => 17,
-            Type::Function(_) => 18,
-            _ => 100, // Invalid
-        };
+        fn ty_to_num(ty: Type) -> u8 {
+            match ty {
+                Type::UnsignedByte => 4,
+                Type::UnsignedHalfword => 5,
+                Type::UnsignedWord => 6,
+                Type::UnsignedLong => 7,
+                Type::Byte => 8,
+                Type::Halfword => 9,
+                Type::Boolean => 10,
+                Type::Word => 11,
+                Type::Long => 12,
+                Type::Single => 13,
+                Type::Double => 14,
+                Type::Char => 15,
+                Type::Void => 16,
+                Type::Null => 17,
+                Type::Enum(_, inner) => ty_to_num(inner.unwrap_or(Type::Word)),
+                Type::Function(_) => 18,
+                _ => 100, // Invalid
+            }
+        }
+
+        let num: u8 = ty_to_num(self.clone());
 
         match self {
             Type::Pointer(inner) => format!("{GENERIC_POINTER}.{}", inner.to_internal_id()),
@@ -532,6 +537,13 @@ impl Type {
         }
     }
 
+    pub fn get_enum_inner(&self) -> Option<String> {
+        match self.clone() {
+            Self::Enum(val, ..) => Some(val),
+            _ => None,
+        }
+    }
+
     pub fn get_unknown_inner(&self) -> Option<String> {
         match self.clone() {
             Self::Unknown(val) => Some(val),
@@ -555,6 +567,7 @@ impl Type {
             | Self::UnsignedHalfword
             | Self::UnsignedWord => Self::Word,
             Self::UnsignedLong => Self::Long,
+            Self::Enum(_, inner) => inner.map(|x| x.into_abi()).unwrap_or(Type::Word),
             other => other,
         }
     }
@@ -569,6 +582,7 @@ impl Type {
             | Self::UnsignedWord => Self::Word,
             Self::UnsignedLong => Self::Long,
             Self::Struct(..) => Self::Long,
+            Self::Enum(_, inner) => inner.map(|x| x.into_base()).unwrap_or(Type::Word),
             other => other,
         }
     }
@@ -599,7 +613,11 @@ impl Type {
     }
 
     pub fn is_strictly_number(&self) -> bool {
-        !self.is_string() && !self.is_void_pointer() && !self.is_struct() && !self.is_function()
+        !self.is_string()
+            && !self.is_void_pointer()
+            && !self.is_struct()
+            && !self.is_function()
+            && !self.is_enum()
     }
 
     pub fn is_struct(&self) -> bool {
@@ -645,6 +663,13 @@ impl Type {
         }
     }
 
+    pub fn is_enum(&self) -> bool {
+        match self {
+            Self::Enum(_, _) => true,
+            _ => false,
+        }
+    }
+
     pub fn is_pointer_like(&self) -> bool {
         match self {
             Self::Pointer(_) | Self::Long => true,
@@ -670,6 +695,7 @@ impl Type {
             | Self::UnsignedWord
             | Self::Boolean
             | Self::Char => true,
+            Self::Enum(_, inner) => inner.clone().map(|x| x.is_map_to_int()).unwrap_or(false),
             _ => false,
         }
     }
@@ -680,7 +706,19 @@ impl Type {
             | Self::UnsignedHalfword
             | Self::UnsignedWord
             | Self::UnsignedLong => true,
+            Self::Enum(_, inner) => inner.clone().map(|x| x.is_unsigned()).unwrap_or(false),
             _ => false,
+        }
+    }
+
+    pub fn into_signed(self) -> Type {
+        match self {
+            Self::UnsignedByte => Self::Byte,
+            Self::UnsignedHalfword => Self::Halfword,
+            Self::UnsignedWord => Self::Word,
+            Self::UnsignedLong => Self::Long,
+            Self::Enum(_, inner) => inner.clone().map(|x| x.into_signed()).unwrap_or(Type::Word),
+            other => other,
         }
     }
 
@@ -694,6 +732,7 @@ impl Type {
             | Self::Pointer(..)
             | Self::Function(..) => 2,
             Self::Word => 1,
+            Self::Enum(_, inner) => inner.clone().unwrap_or(Type::Word).weight(),
             other if other.is_map_to_int() => 1,
             _ => 0,
         }
@@ -704,6 +743,7 @@ impl Type {
             Self::UnsignedByte | Self::Byte | Self::Char => 1,
             Self::UnsignedHalfword | Self::Halfword => 2,
             Self::Boolean | Self::UnsignedWord | Self::Word | Self::Single => 4,
+            Self::Enum(_, inner) => inner.clone().unwrap_or(Type::Word).size_base(),
             Self::Double => 8,
             // Returns 4 on 32-bit and 8 on 64-bit
             // Functions are just pointers to the start of them
@@ -761,6 +801,7 @@ impl fmt::Display for Type {
             Self::Null => write!(formatter, ""),
             Self::Struct(td) => write!(formatter, ":{}", td),
             Self::Function(_) => write!(formatter, "l"),
+            Self::Enum(_, inner) => write!(formatter, "{}", inner.clone().unwrap_or(Type::Word)),
             Self::Unknown(name) => elle_error!(Location::base()
                 .internal_error(format!("Tried to compile with a generic type {name}"))),
             x => elle_error!(Location::base()
