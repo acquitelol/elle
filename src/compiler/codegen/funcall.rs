@@ -81,6 +81,9 @@ impl Codegen<'_> for FunctionCall {
             // struct access
             if ty.is_struct() {
                 name = format!("{}.{}", ty.get_struct_inner().unwrap(), name)
+            // enum access
+            } else if ty.is_enum() {
+                name = format!("{}.{}", ty.get_enum_inner().unwrap(), name)
             // string access
             } else if ty.is_string() {
                 name = format!("string.{}", name)
@@ -101,6 +104,13 @@ impl Codegen<'_> for FunctionCall {
                 name = format!(
                     "{}.{}",
                     ty.get_pointer_inner().unwrap().get_struct_inner().unwrap(),
+                    name
+                )
+            // enum* access
+            } else if ty.is_pointer() && ty.get_pointer_inner().unwrap().is_enum() {
+                name = format!(
+                    "{}.{}",
+                    ty.get_pointer_inner().unwrap().get_enum_inner().unwrap(),
                     name
                 )
             // dunder access
