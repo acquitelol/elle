@@ -383,6 +383,7 @@ impl<'a> Function<'a> {
                         &body,
                         &Shared {
                             struct_pool: &self.parser.struct_pool,
+                            enum_pool: &self.parser.enum_pool,
                             tree: &self.parser.tree,
                             generics: &generics,
                             known_generics: &vec![],

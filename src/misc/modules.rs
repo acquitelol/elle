@@ -9,8 +9,10 @@ use std::{cell::RefCell, rc::Rc};
 use crate::compiler::qbe::r#type::Type;
 use crate::lexer::enums::{MutRc, Token};
 use crate::parser::enums::{
-    ArrayLength, ConstantSource, FunctionSource, Literal, Return, StructSource, UseSource,
+    ArrayLength, ConstantSource, EnumSource, FunctionSource, Literal, Return, StructSource,
+    UseSource,
 };
+use crate::parser::parser::EnumPool;
 use crate::{
     elapsed_with_color,
     lexer::{
@@ -34,6 +36,7 @@ pub fn lex_and_parse(
     input_path: &String,
     existing_tree: Option<&mut Vec<Primitive>>,
     struct_pool: &RefCell<StructPool>,
+    enum_pool: &RefCell<EnumPool>,
     parsed_modules: &RefCell<HashSet<(Rc<String>, Rc<Option<PathBuf>>)>>,
     warnings: &Warnings,
     no_strings: bool,
@@ -150,14 +153,17 @@ pub fn lex_and_parse(
     let mut parser = Parser::new(
         tokens.clone(),
         struct_pool.borrow().to_owned(),
+        enum_pool.borrow().to_owned(),
         warnings.clone(),
     );
 
     let mut fallback = vec![];
     let mut tree = existing_tree.unwrap_or(&mut fallback);
 
-    let (mut imports, new_struct_pool, ..) = parser.parse(&DoOnly::Imports, None);
+    let (mut imports, new_struct_pool, new_enum_pool, ..) =
+        parser.parse(&DoOnly::Imports, None, None);
     struct_pool.replace_with(|_| new_struct_pool);
+    enum_pool.replace_with(|_| new_enum_pool);
     let loc = Rc::new(RefCell::new(Location::default(input_path.clone())));
 
     if nesting == 0 && !no_fmt {
@@ -259,6 +265,7 @@ pub fn lex_and_parse(
                     &module,
                     Some(tree),
                     struct_pool,
+                    enum_pool,
                     parsed_modules,
                     warnings,
                     no_strings,
@@ -292,6 +299,15 @@ pub fn lex_and_parse(
                         Primitive::Constant(ConstantSource { name, public, .. }) => {
                             override_and_add_node!(
                                 Primitive::Constant,
+                                &mut tree,
+                                &name,
+                                symbol,
+                                public
+                            );
+                        }
+                        Primitive::Enum(EnumSource { name, public, .. }) => {
+                            override_and_add_node!(
+                                Primitive::Enum,
                                 &mut tree,
                                 &name,
                                 symbol,
@@ -370,17 +386,23 @@ pub fn lex_and_parse(
     }
 
     // Structs
-    let (structs, new_struct_pool, ..) =
-        parser.parse(&DoOnly::Structs, Some(struct_pool.borrow().to_owned()));
+    let (structs, new_struct_pool, new_enum_pool, ..) = parser.parse(
+        &DoOnly::StructsAndEnums,
+        Some(struct_pool.borrow().to_owned()),
+        Some(enum_pool.borrow().to_owned()),
+    );
     struct_pool.replace_with(|_| new_struct_pool);
+    enum_pool.replace_with(|_| new_enum_pool);
     tree.extend(structs);
 
-    let (others, new_struct_pool, ..) = parser.parse(
+    let (others, new_struct_pool, new_enum_pool, ..) = parser.parse(
         &DoOnly::FunctionsAndConstants,
         Some(struct_pool.borrow().to_owned()),
+        Some(enum_pool.borrow().to_owned()),
     );
 
     struct_pool.replace_with(|_| new_struct_pool);
+    enum_pool.replace_with(|_| new_enum_pool);
     tree.extend(others);
 
     // Add global constants
@@ -456,5 +478,6 @@ pub fn existing_definition(tree: &mut Vec<Primitive>, node_name: &str) -> Option
         Primitive::Constant(ConstantSource { name, .. }) => name == &node_name,
         Primitive::Function(FunctionSource { name, .. }) => name == &node_name,
         Primitive::Struct(StructSource { name, .. }) => name == &node_name,
+        Primitive::Enum(EnumSource { name, .. }) => name == &node_name,
     })
 }

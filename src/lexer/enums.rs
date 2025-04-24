@@ -291,7 +291,12 @@ pub enum ValueKind {
 }
 
 impl ValueKind {
-    pub fn to_type_string(&self, is_struct: bool) -> Option<Type> {
+    pub fn to_type_string(
+        &self,
+        is_struct: bool,
+        is_enum: bool,
+        inner: Option<Type>,
+    ) -> Option<Type> {
         match self.clone() {
             ValueKind::String(val) => match val.as_str() {
                 "string" => Some(Type::Pointer(Box::new(Type::Char))),
@@ -314,6 +319,8 @@ impl ValueKind {
                 "fn" => Some(Type::Void),
                 other => Some(if is_struct {
                     Type::Struct(other.into())
+                } else if is_enum {
+                    Type::Enum(other.into(), Box::new(inner))
                 } else {
                     Type::Unknown(other.into())
                 }),
@@ -334,8 +341,8 @@ impl ValueKind {
     }
 
     pub fn is_base_type(&self) -> bool {
-        self.to_type_string(false).is_some()
-            && match self.to_type_string(false).unwrap() {
+        self.to_type_string(false, false, None).is_some()
+            && match self.to_type_string(false, false, None).unwrap() {
                 Type::Unknown(_) | Type::Struct(_) => false,
                 _ => true,
             }

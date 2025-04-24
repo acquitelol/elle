@@ -287,6 +287,21 @@ macro_rules! set_end {
     };
 }
 
+#[macro_export]
+macro_rules! is_type {
+    ($token:expr, $pools:expr, $generics:expr) => {{
+        let ty_name = $token.value.get_string_inner().unwrap_or("".into());
+
+        $token.kind == TokenKind::Identifier
+            && ($token.value.is_base_type()
+                || $pools.struct_pool.borrow().contains_key(&ty_name)
+                || $pools.enum_pool.borrow().contains_key(&ty_name)
+                || $generics.contains(&ty_name)
+                || $token.kind == TokenKind::LeftParenthesis)
+            || $token.kind == TokenKind::Function
+    }};
+}
+
 /// Converts a token [`token`] into an AstNode
 ///
 /// This accounts for [`TrueLiteral`, `FalseLiteral`, `FloatingPoint`]

@@ -272,7 +272,7 @@ async fn main() -> ExitCode {
     } else {
         None
     };
-    let mut pool = HashMap::new();
+    let mut struct_pool = HashMap::new();
     let default_allocator = if no_gc {
         BACKUP_ALLOCATOR_NAME
     } else {

@@ -14,7 +14,8 @@ use crate::compiler::qbe::r#type::Type;
 use crate::lexer::enums::{Attribute, MutRc};
 use crate::parser::enums::{BlockStatement, WhileLoopStatement};
 use crate::{
-    elle_error, get_type, set_end, INTERNAL_IDX_FORMAT, INTERNAL_ITERATOR_FORMAT, LEN_CONSTANT,
+    elle_error, get_type, is_type, set_end, INTERNAL_IDX_FORMAT, INTERNAL_ITERATOR_FORMAT,
+    LEN_CONSTANT,
 };
 use crate::{
     ensure_fn_pointer,
@@ -26,6 +27,7 @@ use crate::{
 #[derive(Clone, Copy)]
 pub struct Shared<'a> {
     pub struct_pool: &'a RefCell<StructPool>,
+    pub enum_pool: &'a RefCell<EnumPool>,
     #[allow(unused)]
     pub tree: &'a RefCell<Vec<Primitive>>,
     pub generics: &'a Vec<String>,

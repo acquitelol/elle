@@ -18,10 +18,14 @@ use super::{
 pub enum DoOnly {
     FunctionsAndConstants,
     Imports,
-    Structs,
+    StructsAndEnums,
 }
 
+// Struct name -> (Generics, Fields, Def location)
 pub type StructPool = HashMap<String, (Vec<String>, Vec<Argument>, MutRc<Location>)>;
+
+// Enum name -> (Ordered variants (name, loc, offset value), Optional repr type)
+pub type EnumPool = HashMap<String, (Vec<(String, Token, AstNode)>, Option<Type>)>;
 
 pub fn create_generic_struct(
     name: String,
@@ -107,7 +111,7 @@ pub fn create_generic_struct(
 
 #[macro_export]
 macro_rules! get_type {
-    ($self:expr, $generics:expr, $struct_pool:expr, $tree:expr) => {{
+    ($self:expr, $generics:expr, $struct_pool:expr, $enum_pool:expr, $tree:expr) => {{
         let mut is_fn_pointer = false;
         let mut is_struct = false;
         let mut tuple_imported = true;
@@ -182,22 +186,24 @@ macro_rules! get_type {
             };
 
             is_struct = $struct_pool.borrow().contains_key(&name);
+            let is_enum = $enum_pool.borrow().contains_key(&name);
             let is_valid = is_fn_pointer
                 || is_struct
+                || is_enum
                 || $generics.unwrap_or(&vec![]).contains(&name)
                 || ValueKind::String(name.clone()).is_base_type();
 
             if !is_valid {
                 elle_error!(
                     $self.current_token().location.borrow().error(format!(
-                        "Type or struct named '{}' could not be found. Are you sure you spelt it correctly?",
+                        "Type, struct or enum named '{}' could not be found. Are you sure you spelt it correctly?",
                         name
                     ))
                 )
             }
 
             ValueKind::String(name.clone())
-                .to_type_string($struct_pool.borrow().contains_key(&name))
+                .to_type_string(is_struct, is_enum, $enum_pool.borrow().get(&name).map(|x| x.1.clone()).unwrap_or(None))
                 .unwrap()
         };
 
@@ -313,18 +319,25 @@ pub struct Parser {
     pub tree: RefCell<Vec<Primitive>>,
     // Map of struct name to members and generics
     pub struct_pool: RefCell<StructPool>,
+    pub enum_pool: RefCell<EnumPool>,
     pub global_public: bool,
     pub global_external: bool,
     pub warnings: Warnings,
 }
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>, struct_pool: StructPool, warnings: Warnings) -> Self {
+    pub fn new(
+        tokens: Vec<Token>,
+        struct_pool: StructPool,
+        enum_pool: EnumPool,
+        warnings: Warnings,
+    ) -> Self {
         Parser {
             tokens,
             position: 0,
             tree: RefCell::new(vec![]),
             struct_pool: RefCell::new(struct_pool),
+            enum_pool: RefCell::new(enum_pool),
             global_public: false,
             global_external: false,
             warnings,
@@ -420,7 +433,6 @@ impl Parser {
     }
 
     pub fn get_type(&mut self, generics: Option<&Vec<String>>) -> Type {
-        get_type!(self, generics, self.struct_pool, self.tree)
     }
 
     // 0 - functions, constants, etc
@@ -431,9 +443,14 @@ impl Parser {
         &mut self,
         do_only: &DoOnly,
         new_struct_pool: Option<StructPool>,
-    ) -> (Vec<Primitive>, StructPool) {
-        if new_struct_pool.is_some() {
-            self.struct_pool = RefCell::new(new_struct_pool.unwrap());
+        new_enum_pool: Option<EnumPool>,
+    ) -> (Vec<Primitive>, StructPool, EnumPool) {
+        if let Some(pool) = new_struct_pool {
+            self.struct_pool = RefCell::new(pool);
+        }
+
+        if let Some(pool) = new_enum_pool {
+            self.enum_pool = RefCell::new(pool);
         }
 
         self.position = 0;
@@ -633,7 +650,7 @@ impl Parser {
                             global_public || public
                         },
                         false,
-                        do_only == &DoOnly::Structs,
+                        do_only == &DoOnly::StructsAndEnums,
                         location.clone(),
                     );
 
@@ -672,6 +689,7 @@ impl Parser {
         return (
             self.tree.borrow_mut().to_owned(),
             self.struct_pool.borrow_mut().to_owned(),
+            self.enum_pool.borrow_mut().to_owned(),
         );
     }
 }
