@@ -1919,16 +1919,18 @@ For more information on stdlib alises, directives and attributes, please read be
 
 The current existing directives are:
 
-- `#len(expr)` - Gives you the length of a static array
-- `#size(T | expr)` - Gives you the size of type `T` or expression `expr` in bytes
-- `#i(ident)` - Gives you the iterator in a foreach loop given the current element
-- `#env` - Gives you a `ElleEnv *` which is a global environment structure
-- `#alloc(T, size?)` - Allows you to allocate a specific type using the current allocator
-- `#realloc(ptr_expr, T, size?)` - Allows you to reallocate a pointer with a specific type using the current allocator
-- `#free(ptr_expr)` - Frees a pointer using the current allocator. If the allocator didn't define a `free` method, this does nothing.
-- `#set_allocator(allocator_expr)` - Sets the current allocator to the one specified by `allocator_expr`
-- `#reset_allocator()` - Sets the current allocator back to `#env.default_allocator`. **Does not call `#env.allocator.free_self`.**
-- `#cast(T, cast_expr)` - Uses a set of rules to convert `cast_expr` to type `T`. If it fails, it will throw a compile-time error.
+| Name                | Description                                                                                                     | Usage                      |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| Static array length | Gives you the length of a static array allocated using `#[1, 2, 3]` syntax                                      | `#len(expr)`               |
+| Size expression     | Gives you the size of type `T` or expression `expr` in bytes                                                    | `#size(T or expr)`         |
+| Index in foreach    | Gives you the iterator in a foreach loop given the current element being iterated                               | `#i(ident)`                |
+| Elle Environment    | Gives you a `ElleEnv *` which is a global environment structure                                                 | `#env`                     |
+| Allocate memory     | Allows you to allocate a specific type using the current allocator                                              | `#alloc(T, size?)`         |
+| Reallocate memory   | Allows you to reallocate a pointer with a specific type using the current allocator                             | `#realloc(expr, T, size?)` |
+| Free memory         | Frees a pointer using the current allocator. If the allocator didn't define a `free` method, this does nothing. | `#free(ptr_expr)`          |
+| Set allocator       | Sets the current allocator to the one specified by `expr`                                                       | `#set_allocator(expr)`     |
+| Reset allocator     | Sets the current allocator back to `#env.default_allocator`. **Does not call `#env.allocator.free_self`.**      | `#reset_allocator()`       |
+| Type conversion     | Uses a set of rules to convert `cast_expr` to type `T`. If it fails, it will throw a compile-time error.        | `#cast(T, cast_expr)`      |
 
 <hr />
 
