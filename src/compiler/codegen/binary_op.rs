@@ -150,7 +150,9 @@ impl Codegen<'_> for BinaryOperation {
             left_val = val;
         }
 
-        if (!left_ty.is_primitive() || !right_ty.is_primitive())
+        if ((!left_ty.is_primitive() || !right_ty.is_primitive())
+            || left_ty.is_enum()
+            || right_ty.is_enum())
             && [TokenKind::EqualTo, TokenKind::NotEqualTo].contains(&self.operator)
             && self.dunder_methods
         {
