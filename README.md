@@ -1938,15 +1938,13 @@ The current existing directives are:
 
 The current existing attributes are:
 
-- Alias - Allows you to specify an alias for external functions `@alias(name) || @alias(namespace::name)`
-- Volatile - Allows you to specify that Elle should not discard this function if it is unused. `@volatile`
-- Format - Puts every argument through its formatter before passing it to the function `@fmt`
-- NoFormat - Specifies that a struct should not have a format function automatically generated for it `@nofmt`
-- Manual - Will prevent including an automatic "dummy" jump at the end of functions that do not return `@manual`
-
-<br />
-
-The `@manual` attribute is useful for functions written in pure IR, where you are returning from the interface of the IR not the language itself.
+| Name     | Description                                                                                         | Applied on                         | Usage                                       |
+| -------- | --------------------------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------- |
+| Alias    | Allows you to specify a custom alias for a symbol, at compile-time                                  | External functions                 | `@alias(name)` or `@alias(namespace::name)` |
+| Volatile | Specifies that Elle should not discard this symbol during dead code elimination                     | Functions                          | `@volatile`                                 |
+| Format   | Puts every argument through its formatter before passing it to the function                         | Functions                          | `@fmt`                                      |
+| NoFormat | If on an argument, doesn't run it through its formatter, else doesn't generate an `__fmt__` method. | Structs, Enums, Function Arguments | `@nofmt`                                    |
+| Repr     | Uses a different type for the representation of this structure. Can be optional.                    | Enums                              | `@repr(T)`                                  |
 
 <hr />
 
@@ -1963,6 +1961,12 @@ fn add(i32 x, i32 y) @alias(foo) @volatile -> i32 {
 // The volatile attribute will be purposefully ignored
 // because external functions do not generate IR
 external fn printf(string formatter, ...) @alias(formatted_print) @volatile;
+
+enum Foo @repr(u8) {
+    A,
+    B,
+    C
+}
 ```
 
 If you specify an alias attribute on a non-external function, you will only be warned, an error will **not** be thrown. Keep in mind that external functions do not generate IR, so the @volatile attribute will have no effect on them.
