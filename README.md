@@ -1581,6 +1581,194 @@ In the case of a method that takes in a `self` _pointer_, the equivalent express
 
 <hr />
 
+### ♡ **Enumerations** (enums)
+
+Enums are types which can hold variants. In Elle, these are defined using the `enum` keyword.
+
+Example:
+
+```rs
+enum Animal {
+    Cat,
+    Dog,
+    Bird
+};
+
+fn main() {
+    my_animal := Animal::Cat;
+}
+```
+
+Enumerations in Elle are dictinct aliases to the type they represent. By default, every enum uses an underlying type of `i32` to represent its variants.
+
+You can change this with the `@repr(T)` attribute. Here's an example:
+
+```rs
+enum Foo @repr(u8) {
+    A,
+    B,
+    C
+};
+
+fn main() {
+    x := Foo::A; // x's memory representation is u8 internally
+}
+```
+
+By default, when printed enums will print their variant name as a string. You can override this to print their raw value instead:
+
+```rs
+enum Foo @repr(u64) @nofmt {
+    A,
+    B,
+    C
+};
+
+fn Foo::__fmt__(Foo *self, i32 nesting) {
+    // replace `u64` with the repr type of your enum
+    // NOTE: explicit repr types are optional. it will default to `i32`.
+    return "{}".format(#cast(u64, self));
+}
+```
+
+or just cast them to their repr type:
+
+```rs
+enum Foo @repr(u64) {
+    A,
+    B,
+    C
+};
+
+fn main() {
+    x := #cast(u64, Foo::B); // 1
+}
+```
+
+You can also set the enum variants to specific values. This is quite restrictive, as it only allows:
+
+- String literals
+- Integer literals (including hex, binary, etc.)
+- Character literals
+
+> [!IMPORTANT]
+> If you set one of the variants to a string, every other variant must also be set to a string.
+
+> [!TIP]
+> Integer and character literals will automatically continue from their offset for unset variants.
+
+Here's an example using string literals:
+
+```rs
+// Note: the repr type is automatically set to String
+// for enums which use string literals in their variants
+enum Languages {
+    Js = "JavaScript",
+    Py = "Python",
+    Elle = "Elle"
+};
+
+fn main() {
+    $assert(Languages::Js != Languages::Elle, nil);
+}
+```
+
+Here is an example using integer literals:
+
+```rs
+enum Foo {
+    A = 13,
+    B, // = 14
+    C, // = 15
+    D  // = 16
+};
+
+enum Bar {
+    A = 4,
+    B, // 5
+    C, // 6
+    D = 1,
+    E, // 2
+    F  // 3
+};
+```
+
+Here is an example using character literals:
+
+```rs
+enum Char @repr(char) {
+    A = 'a',
+    B, // = 'b'
+    C, // = 'c'
+    D, // = 'd'
+    E  // = 'e'
+};
+
+enum Misc @repr(char) {
+    LeftParen = '(',
+    RightParen, // = ')'
+    Snowflake,  // = '*'
+    Zero = '0',
+    One,        // = '1'
+    Two,        // = '2'
+    Three,      // = '3'
+    Four        // = '4'
+};
+```
+
+> [!IMPORTANT]
+> Structs with character literals do not automatically have their repr set, just like normal integer enums. This is because you may want to use a different repr type like `u8` or `i8` instead of `char`.
+
+You can also define methods on enums. These methods may take in `self`, or may not. Here's an example:
+
+```rs
+use std/prelude;
+
+enum Foo {
+    Bar,
+    Baz
+};
+
+fn Foo::from(i32 x) {
+    return #cast(Foo, x);
+}
+
+fn Foo::is_baz(Foo self) {
+    return self == Foo::Baz;
+}
+
+fn main() {
+    foo := Foo::from(1);
+    $dbg(foo.is_baz());
+
+    $dbg(Foo::Bar.is_baz());
+}
+```
+
+> [!IMPORTANT]
+> Enums and **only** enums have a quirk: if there exists an enum with a variant and method that have the same name and you try to get the function pointer of the method, you will be unable to. The variant will always take priority. Observe:
+
+```rs
+enum Foo {
+    x
+};
+
+fn Foo::x() {
+    return 42;
+}
+
+fn main() {
+    x := Foo::x;   // This will NEVER be the function `Foo::x()`
+    x := Foo::x(); // Calling it, however, will call the function `Foo::x()`
+}
+```
+
+Implementation details:
+
+Enumerations are completely compile-time syntax sugar. Their variant values are directly inlined, though there is extra semantic information in their types, which disallows implicit conversions from their repr type to their defined type. Due to them being essentially a distinct existing type, their memory representation is just that of a primitive (pointer/char/int) in any case it is always an integer.
+
+<hr />
+
 ### ♡ **Generics**
 
 - Elle allows you to create generic structs and functions which may hold any inner type.
