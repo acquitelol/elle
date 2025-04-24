@@ -441,8 +441,9 @@ fn string::push(string *self, char c) {
     *self = result;
 }
 
-fn __internal_to_string<T, U>(i64 args, string fmt) {
+fn __internal_to_string<T, U>(i64 args, string fmt, fn *cb) {
     T arg = args.yield(U);
+    cb && cb(&arg);
 
     let length = io::snprintf(nil, 0, fmt, arg);
     let res = #alloc(char, length);
@@ -456,7 +457,7 @@ fn __internal_to_string<T, U>(i64 args, string fmt) {
 // please use string::as_string or string::as_string_wrapped
 fn __to_string(string ty, i64 args, bool wrap) {
     if ty.contains("*") {
-        return __internal_to_string<i64, i64>(args, "%p");
+        return __internal_to_string<i64, i64>(args, "%p", nil);
     }
 
     if ty.starts_with("string") {
@@ -470,51 +471,51 @@ fn __to_string(string ty, i64 args, bool wrap) {
     }
 
     if ty.starts_with("i8") {
-        return __internal_to_string<i8, i8>(args, "%d");
+        return __internal_to_string<i8, i8>(args, "%d", fn(i8 *self) self & 0xFF);
     }
 
     if ty.starts_with("i16") {
-        return __internal_to_string<i16, i16>(args, "%d");
+        return __internal_to_string<i16, i16>(args, "%d", fn(i16 *self) self & 0xFFFF);
     }
 
     if ty.starts_with("i32") {
-        return __internal_to_string<i32, i32>(args, "%d");
+        return __internal_to_string<i32, i32>(args, "%d", nil);
     }
 
     if ty.starts_with("i64") {
-        return __internal_to_string<i64, i64>(args, "%ld");
+        return __internal_to_string<i64, i64>(args, "%ld", nil);
     }
 
     if ty.starts_with("u8") {
-        return __internal_to_string<i32, u8>(args, "%u");
+        return __internal_to_string<u8, u8>(args, "%u", fn(u8 *self) self & 0xFF);
     }
 
     if ty.starts_with("u16") {
-        return __internal_to_string<i32, u16>(args, "%u");
+        return __internal_to_string<i32, u16>(args, "%u", fn(u16 *self) self & 0xFFFF);
     }
 
     if ty.starts_with("u32") {
-        return __internal_to_string<i32, u32>(args, "%u");
+        return __internal_to_string<i32, u32>(args, "%u", nil);
     }
 
     if ty.starts_with("u64") {
-        return __internal_to_string<i64, u64>(args, "%lu");
+        return __internal_to_string<i64, u64>(args, "%lu", nil);
     }
 
     if ty.starts_with("f32") {
-        return __internal_to_string<f64, f32>(args, "%f");
+        return __internal_to_string<f64, f32>(args, "%f", nil);
     }
 
     if ty.starts_with("f64") {
-        return __internal_to_string<f64, f64>(args, "%f");
+        return __internal_to_string<f64, f64>(args, "%f", nil);
     }
 
     if ty.starts_with("char") {
-        return __internal_to_string<char, char>(args, wrap ? "'%c'" : "%c");
+        return __internal_to_string<char, char>(args, wrap ? "'%c'" : "%c", nil);
     }
 
     if ty.starts_with("bool") {
-        return (args.yield(bool) ? "true" : "false");
+        return args.yield(bool) ? "true" : "false";
     }
 
     let arg = args.yield(i64);
