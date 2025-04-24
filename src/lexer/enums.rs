@@ -761,6 +761,8 @@ pub enum Attribute {
     NoFormat,
     // Automatically runs the formatter on every parameter of a function marked by this
     Format,
+    // Representation of the inner type in an enum
+    Repr,
 }
 
 impl Token {
@@ -780,6 +782,7 @@ impl Token {
             "volatile" => Attribute::Volatile,
             "nofmt" => Attribute::NoFormat,
             "fmt" => Attribute::Format,
+            "repr" => Attribute::Repr,
             _ => todo!("more attributes: {attribute}"),
         }
     }

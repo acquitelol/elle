@@ -47,6 +47,40 @@ impl<'a> Enum<'a> {
         self.parser.advance();
 
         let mut ty = None;
+        let mut should_add_fmt_builtin = true;
+
+        if self.parser.match_token(TokenKind::Attribute, false) {
+            while self.parser.current_token().kind == TokenKind::Attribute && !self.parser.is_eof()
+            {
+                self.parser.advance();
+                let attribute = self.parser.current_token().parse_attribute();
+
+                match attribute {
+                    Attribute::NoFormat => {
+                        should_add_fmt_builtin = false;
+                        self.parser.advance();
+                    }
+                    Attribute::Repr => {
+                        self.parser.advance();
+                        self.parser.expect_tokens(vec![TokenKind::LeftParenthesis]);
+                        self.parser.advance();
+                        ty = Some(self.parser.get_type(None));
+                        self.parser.advance();
+                        self.parser.expect_tokens(vec![TokenKind::RightParenthesis]);
+                        self.parser.advance();
+                    }
+                    _ => elle_error!(self.parser.current_token().location.borrow().error(format!(
+                        "Unknown attribute for enum '{}'",
+                        self.parser
+                            .current_token()
+                            .value
+                            .get_string_inner()
+                            .unwrap()
+                    ))),
+                }
+            }
+        }
+
         self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
         self.parser.advance();
 
@@ -190,6 +224,7 @@ impl<'a> Enum<'a> {
             return_location: location.clone(),
         }));
 
+        if should_add_fmt_builtin {
             builtins.push(Primitive::Function(FunctionSource {
                 namespace_token: Token::from_ident(&name),
                 name_token: Token::from_ident(FORMAT_CONSTANT),
@@ -242,6 +277,7 @@ impl<'a> Enum<'a> {
                 location: location.clone(),
                 return_location: location.clone(),
             }));
+        }
 
         self.parser
             .enum_pool
