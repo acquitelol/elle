@@ -105,27 +105,47 @@ impl Codegen<'_> for MemoryOperation {
             }
         }
 
-        let (left_ty, _) = self.left.clone().compile(gen, ctx).unwrap_or_else(|| {
-            elle_error!(self.left_location.borrow().error(format!(
-                "Unexpected error when trying to compile the left side of a {} statement",
-                if self.value.is_some() {
-                    "store"
-                } else {
-                    "load"
-                }
-            )))
-        });
+        let (left_ty, _) = self
+            .left
+            .clone()
+            .compile(
+                gen,
+                &CodegenContext {
+                    func: &RefCell::new(tmp_func.clone()),
+                    ..ctx.clone()
+                },
+            )
+            .unwrap_or_else(|| {
+                elle_error!(self.left_location.borrow().error(format!(
+                    "Unexpected error when trying to compile the left side of a {} statement",
+                    if self.value.is_some() {
+                        "store"
+                    } else {
+                        "load"
+                    }
+                )))
+            });
 
-        let (right_ty, _) = self.right.clone().compile(gen, ctx).unwrap_or_else(|| {
-            elle_error!(self.right_location.borrow().error(format!(
-                "Unexpected error when trying to compile the right side of a {} statement",
-                if self.value.is_some() {
-                    "store"
-                } else {
-                    "load"
-                }
-            )))
-        });
+        let (right_ty, _) = self
+            .right
+            .clone()
+            .compile(
+                gen,
+                &CodegenContext {
+                    func: &RefCell::new(tmp_func.clone()),
+                    ..ctx.clone()
+                },
+            )
+            .unwrap_or_else(|| {
+                elle_error!(self.right_location.borrow().error(format!(
+                    "Unexpected error when trying to compile the right side of a {} statement",
+                    if self.value.is_some() {
+                        "store"
+                    } else {
+                        "load"
+                    }
+                )))
+            });
 
         if !(matches!(left_ty, Type::Pointer(_)) || matches!(right_ty, Type::Pointer(_))) {
             elle_error!(self.left_location.borrow().error(format!(
