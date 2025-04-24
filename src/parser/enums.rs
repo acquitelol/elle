@@ -596,11 +596,23 @@ pub struct ConstantSource {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnumSource {
+    pub name_token: Token,
+    pub name: String,
+    pub public: bool,
+    pub imported: bool,
+    pub usable: bool,
+    pub variants: Vec<(String, Token, AstNode)>,
+    pub location: MutRc<Location>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Primitive {
     Use(UseSource),
     Struct(StructSource),
     Function(FunctionSource),
     Constant(ConstantSource),
+    Enum(EnumSource),
 }
 
 #[derive(Debug, Clone)]

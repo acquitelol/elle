@@ -362,17 +362,18 @@ async fn main() -> ExitCode {
 
     let loc = Rc::new(RefCell::new(Location::default(input_path.clone())));
 
-    pool.insert(
+    struct_pool.insert(
         META_STRUCT_NAME.into(),
         (vec![], meta_members.clone(), loc.clone()),
     );
 
-    pool.insert(
+    struct_pool.insert(
         ENV_STRUCT_NAME.into(),
         (vec![], env_members.clone(), loc.clone()),
     );
 
-    let struct_pool = RefCell::new(pool);
+    let struct_pool = RefCell::new(struct_pool);
+    let enum_pool = RefCell::new(HashMap::new());
     let parsed_modules = RefCell::new(HashSet::new());
     let mut string_module_methods = vec![];
 
@@ -380,6 +381,7 @@ async fn main() -> ExitCode {
         &input_path,
         None,
         &struct_pool,
+        &enum_pool,
         &parsed_modules,
         &warnings,
         no_strings,

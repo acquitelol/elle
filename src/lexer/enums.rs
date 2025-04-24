@@ -113,6 +113,7 @@ pub enum TokenKind {
     SetAllocator,
     ResetAllocator,
     Cast,
+    Enum,
 }
 
 impl TokenKind {
@@ -351,6 +352,20 @@ impl ValueKind {
     pub fn get_string_inner(&self) -> Option<String> {
         match self.clone() {
             Self::String(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    pub fn get_number_inner(&self) -> Option<i128> {
+        match self.clone() {
+            Self::Number(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    pub fn get_char_inner(&self) -> Option<char> {
+        match self.clone() {
+            Self::Character(val) => Some(val),
             _ => None,
         }
     }

@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use crate::{
     compiler::qbe::r#type::Type,
-    elle_error,
+    elle_error, is_type,
     lexer::enums::{Attribute, Location, MutRc, Token, TokenKind, ValueKind},
     parser::{
         enums::{BlockStatement, FunctionSource, IfStatement, VariadicStart, WhileLoopStatement},
@@ -94,6 +94,7 @@ impl<'a> Function<'a> {
 
         if self.parser.current_token().kind == TokenKind::DoubleColon {
             if !(self.parser.struct_pool.borrow().contains_key(&name)
+                || self.parser.enum_pool.borrow().contains_key(&name)
                 || ValueKind::String(name.clone()).is_base_type())
             {
                 elle_error!(
@@ -143,26 +144,8 @@ impl<'a> Function<'a> {
         let mut variadic = false;
         let mut variadic_name = None;
 
-        let ty_name = self
-            .parser
-            .current_token()
-            .value
-            .get_string_inner()
-            .unwrap_or("".into());
-
-        if self.parser.current_token().kind == TokenKind::Identifier
-            && (self.parser.current_token().value.is_base_type()
-                || generics.contains(
-                    &self
-                        .parser
-                        .current_token()
-                        .value
-                        .get_string_inner()
-                        .unwrap(),
-                )
-                || self.parser.struct_pool.borrow().contains_key(&ty_name))
+        if is_type!(self.parser.current_token(), self.parser, generics)
             // TODO: Fix this (start of a tuple type, BIGGGG hack)
-            || self.parser.current_token().kind == TokenKind::LeftParenthesis
             || self.parser.current_token().kind == TokenKind::Attribute
             || self.parser.current_token().kind == TokenKind::Ellipsis
             || self.parser.current_token().kind == TokenKind::Function

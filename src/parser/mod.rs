@@ -1,4 +1,5 @@
 pub mod constant;
+pub mod r#enum;
 pub mod enums;
 pub mod function;
 pub mod parser;

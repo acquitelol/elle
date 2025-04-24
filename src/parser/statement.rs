@@ -9,7 +9,7 @@ use super::enums::{
     VariadicArgument, VariadicStart,
 };
 
-use super::parser::{create_generic_struct, StructPool};
+use super::parser::{create_generic_struct, EnumPool, StructPool};
 use crate::compiler::qbe::r#type::Type;
 use crate::lexer::enums::{Attribute, MutRc};
 use crate::parser::enums::{BlockStatement, WhileLoopStatement};
@@ -152,7 +152,13 @@ impl<'a> Statement<'a> {
     }
 
     pub fn get_type(&mut self, generics: Option<&Vec<String>>) -> Type {
-        get_type!(self, generics, self.shared.struct_pool, self.shared.tree)
+        get_type!(
+            self,
+            generics,
+            self.shared.struct_pool,
+            self.shared.enum_pool,
+            self.shared.tree
+        )
     }
 
     fn parse_declare(&mut self, ty: Option<Option<Type>>) -> AstNode {
@@ -507,14 +513,9 @@ impl<'a> Statement<'a> {
 
                 // Generic of a funcall
                 if self.current_token().kind == TokenKind::LessThan
-                    && self.next_token().is_some_and(|token| {
-                        let ty_name = token.value.get_string_inner().unwrap_or("".into());
-
-                        token.value.is_base_type()
-                            || self.shared.struct_pool.borrow().contains_key(&ty_name)
-                            || self.shared.generics.contains(&ty_name)
-                            || token.kind == TokenKind::LeftParenthesis
-                    })
+                    && self
+                        .next_token()
+                        .is_some_and(|token| is_type!(token, self.shared, self.shared.generics))
                 {
                     generic_nesting += 1;
                 }
@@ -3733,12 +3734,6 @@ impl<'a> Statement<'a> {
             }
         }
 
-        let ty_name = self
-            .current_token()
-            .value
-            .get_string_inner()
-            .unwrap_or("".into());
-
         let position = self.position.clone();
         let location = self.current_token().location;
 
@@ -3761,14 +3756,7 @@ impl<'a> Statement<'a> {
             {
                 self.parse_lambda()
             }
-            other
-                if other == TokenKind::Identifier
-                    && (self.shared.struct_pool.borrow().contains_key(&ty_name)
-                        || self.shared.generics.contains(&ty_name)
-                        || self.current_token().value.is_base_type()
-                        || self.current_token().kind == TokenKind::LeftParenthesis)
-                    || self.current_token().kind == TokenKind::Function =>
-            {
+            _ if is_type!(self.current_token(), self.shared, self.shared.generics) => {
                 if let Some(token) = self.next_token() {
                     if token.kind == TokenKind::LeftCurlyBrace {
                         self.parse_struct_init()
@@ -3781,17 +3769,28 @@ impl<'a> Statement<'a> {
                         )
                     } else if token.kind == TokenKind::DoubleColon {
                         let ty = self.current_token().clone();
+                        let namespace = ty.value.get_string_inner().unwrap();
                         let method = self.next_token_seek(2).unwrap_or_else(|| {
                             elle_error!(self.current_token().location.borrow().error(format!(
-                                "Expected method name after '{}::'",
-                                ty.value.get_string_inner().unwrap()
+                                "Expected {} name after '{}::'",
+                                if self.shared.struct_pool.borrow().contains_key(&namespace) {
+                                    "method"
+                                } else {
+                                    "variant"
+                                },
+                                namespace
                             )))
                         });
 
                         if method.kind != TokenKind::Identifier {
                             elle_error!(method.location.borrow().error(format!(
-                                "Expected method name in '{}::{}', but got '{:?}' instead.",
-                                ty.value.get_string_inner().unwrap(),
+                                "Expected {} name in '{}::{}', but got '{:?}' instead.",
+                                if self.shared.struct_pool.borrow().contains_key(&namespace) {
+                                    "method"
+                                } else {
+                                    "variant"
+                                },
+                                namespace,
                                 method
                                     .value
                                     .get_string_inner()
@@ -3800,26 +3799,30 @@ impl<'a> Statement<'a> {
                             )));
                         }
 
-                        self.advance(); // Skip type
-                        self.advance(); // Skip dot
-                        self.advance(); // Skip func name
+                        if self.shared.enum_pool.borrow().contains_key(&namespace) {
+                            self.parse_enum_literal()
+                        } else {
+                            self.advance(); // Skip namespace
+                            self.advance(); // Skip double colon
+                            self.advance(); // Skip func name
 
-                        self.parse_function(
-                            Some((
-                                location,
-                                ty.clone(),
-                                method.clone(),
-                                format!(
-                                    "{}.{}",
-                                    ty.value.get_string_inner().unwrap(),
-                                    method.value.get_string_inner().unwrap()
-                                ),
-                            )),
-                            None,
-                            None,
-                            Some(position),
-                            false,
-                        )
+                            self.parse_function(
+                                Some((
+                                    location,
+                                    ty.clone(),
+                                    method.clone(),
+                                    format!(
+                                        "{}.{}",
+                                        ty.value.get_string_inner().unwrap(),
+                                        method.value.get_string_inner().unwrap()
+                                    ),
+                                )),
+                                None,
+                                None,
+                                Some(position),
+                                false,
+                            )
+                        }
                     } else {
                         self.parse_declare(None)
                     }

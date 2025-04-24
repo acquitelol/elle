@@ -611,6 +611,7 @@ impl Lexer<'_> {
             "namespace" => TokenKind::Namespace,
             "in" => TokenKind::In,
             "let" => TokenKind::Let,
+            "enum" => TokenKind::Enum,
             // WHEN ADDING A KEYWORD HERE DON'T FORGET TO
             // POTENTIALLY UPDATE THE RESERVED KEYWORD LIST
             _ => TokenKind::Identifier,

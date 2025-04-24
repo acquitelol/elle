@@ -388,7 +388,7 @@ impl<'a> Struct<'a> {
                         value: Box::new(AstNode::FunctionCall(FunctionCall {
                             namespace_token: Token::from_ident("string"),
                             name_token: Token::from_ident(INTERNAL_FORMATTER),
-                            name: format!("string.{}", INTERNAL_FORMATTER).into(),
+                            name: format!("string.{INTERNAL_FORMATTER}"),
                             generics: vec![],
                             parameters: interleaved,
                             type_method: false,

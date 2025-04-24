@@ -5,12 +5,12 @@ use crate::{
     elle_error, ensure_fn_pointer,
     lexer::enums::{Location, MutRc, Token, TokenKind, ValueKind},
     misc::colors::*,
-    parser::{constant::Constant, function::Function, r#struct::Struct},
+    parser::{constant::Constant, function::Function, r#enum::Enum, r#struct::Struct},
     Warnings, GENERIC_END, GENERIC_IDENTIFIER,
 };
 
 use super::{
-    enums::{Argument, Primitive, StructSource},
+    enums::{Argument, AstNode, Primitive, StructSource},
     r#use::Use,
 };
 
@@ -433,6 +433,59 @@ impl Parser {
     }
 
     pub fn get_type(&mut self, generics: Option<&Vec<String>>) -> Type {
+        get_type!(self, generics, self.struct_pool, self.enum_pool, self.tree)
+    }
+
+    pub fn yield_tokens_wrapped_with_semi(&mut self) -> Vec<Token> {
+        let mut paren_nesting = 0;
+        let mut block_nesting = 0;
+        let mut curly_nesting = 0;
+        let mut tokens = vec![];
+
+        while !self.is_eof() {
+            if self.current_token().kind == TokenKind::LeftParenthesis {
+                paren_nesting += 1;
+            }
+
+            if self.current_token().kind == TokenKind::LeftBlockBrace {
+                block_nesting += 1;
+            }
+
+            if self.current_token().kind == TokenKind::LeftCurlyBrace {
+                curly_nesting += 1;
+            }
+
+            tokens.push(self.current_token());
+            self.advance();
+
+            if self.current_token().kind == TokenKind::RightParenthesis {
+                if paren_nesting > 0 {
+                    paren_nesting -= 1;
+                }
+            }
+
+            if self.current_token().kind == TokenKind::RightBlockBrace {
+                if block_nesting > 0 {
+                    block_nesting -= 1;
+                }
+            }
+
+            if self.current_token().kind == TokenKind::RightCurlyBrace {
+                if curly_nesting > 0 {
+                    curly_nesting -= 1;
+                }
+            }
+
+            if self.current_token().kind == TokenKind::Semicolon
+                && paren_nesting == 0
+                && block_nesting == 0
+                && curly_nesting == 0
+            {
+                break;
+            }
+        }
+
+        tokens
     }
 
     // 0 - functions, constants, etc
@@ -667,8 +720,35 @@ impl Parser {
                     }
 
                     let mut r#struct = Struct::new(self);
-                    let res =
-                        r#struct.parse(false, true, do_only == &DoOnly::Structs, location.clone());
+                    let res = r#struct.parse(
+                        false,
+                        true,
+                        do_only == &DoOnly::StructsAndEnums,
+                        location.clone(),
+                    );
+
+                    if let Some((statement, mut builtins)) = res {
+                        self.tree.borrow_mut().push(statement);
+                        self.tree.borrow_mut().append(&mut builtins);
+
+                        clean!()
+                    }
+                }
+                TokenKind::Enum => {
+                    if external {
+                        elle_error!(self.current_token().location.borrow().error("Cannot have an external enumeration. Please remove the `external` keyword."))
+                    }
+
+                    let mut r#enum = Enum::new(self);
+                    let res = r#enum.parse(
+                        if local {
+                            false
+                        } else {
+                            global_public || public
+                        },
+                        do_only == &DoOnly::StructsAndEnums,
+                        location.clone(),
+                    );
 
                     if let Some((statement, mut builtins)) = res {
                         self.tree.borrow_mut().push(statement);

@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use crate::{
-    lexer::enums::{Location, MutRc, Token, TokenKind},
+    lexer::enums::{Location, MutRc, TokenKind},
     set_end,
 };
 
@@ -20,58 +20,6 @@ impl<'a> Constant<'a> {
         Constant { parser }
     }
 
-    fn yield_tokens_wrapped_with_semi(&mut self) -> Vec<Token> {
-        let mut paren_nesting = 0;
-        let mut block_nesting = 0;
-        let mut curly_nesting = 0;
-        let mut tokens = vec![];
-
-        while !self.parser.is_eof() {
-            if self.parser.current_token().kind == TokenKind::LeftParenthesis {
-                paren_nesting += 1;
-            }
-
-            if self.parser.current_token().kind == TokenKind::LeftBlockBrace {
-                block_nesting += 1;
-            }
-
-            if self.parser.current_token().kind == TokenKind::LeftCurlyBrace {
-                curly_nesting += 1;
-            }
-
-            tokens.push(self.parser.current_token());
-            self.parser.advance();
-
-            if self.parser.current_token().kind == TokenKind::RightParenthesis {
-                if paren_nesting > 0 {
-                    paren_nesting -= 1;
-                }
-            }
-
-            if self.parser.current_token().kind == TokenKind::RightBlockBrace {
-                if block_nesting > 0 {
-                    block_nesting -= 1;
-                }
-            }
-
-            if self.parser.current_token().kind == TokenKind::RightCurlyBrace {
-                if curly_nesting > 0 {
-                    curly_nesting -= 1;
-                }
-            }
-
-            if self.parser.current_token().kind == TokenKind::Semicolon
-                && paren_nesting == 0
-                && block_nesting == 0
-                && curly_nesting == 0
-            {
-                break;
-            }
-        }
-
-        tokens
-    }
-
     pub fn parse(
         &mut self,
         public: bool,
@@ -81,7 +29,7 @@ impl<'a> Constant<'a> {
         self.parser.advance();
 
         if !should_parse {
-            self.yield_tokens_wrapped_with_semi();
+            self.parser.yield_tokens_wrapped_with_semi();
             self.parser.expect_tokens(vec![TokenKind::Semicolon]);
             self.parser.advance();
 
@@ -121,7 +69,7 @@ impl<'a> Constant<'a> {
         self.parser.advance();
 
         let value_location = self.parser.current_token().location;
-        let tokens = self.yield_tokens_wrapped_with_semi();
+        let tokens = self.parser.yield_tokens_wrapped_with_semi();
 
         // `end` here is AFTER yielding all the tokens
         set_end!(value_location, self.parser);
