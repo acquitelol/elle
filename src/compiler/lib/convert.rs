@@ -65,12 +65,20 @@ pub fn convert_to_type(
                     "This has the type '{}'",
                     first.display()
                 )).error(format!(
-                    "Cannot implicitly convert '{}' to '{}' or vice versa.\nTo explicitly convert, use the C-like '(type)variable' syntax.",
+                    "Cannot implicitly convert '{}' to '{}' or vice versa.\nTo explicitly convert, use the '#cast(T, expr)' directive.",
                     first.display(),
                     second.display()
                 ))
             )
         };
+    }
+
+    if first.is_enum() || second.is_enum() {
+        if !explicit {
+            implicit_conversion_error!()
+        }
+
+        return (second, val);
     }
 
     if ((first.is_strictly_number() && second.is_string())

@@ -33,6 +33,7 @@ pub enum Type {
     // Inner type
     Pointer(Box<Type>),
     Struct(String),
+    Enum(String, Box<Option<Type>>),
     // Unknown generic
     Unknown(String),
     Function(Box<Option<Function>>),
@@ -62,6 +63,12 @@ impl Type {
             Self::Double => "f64".into(),
             Self::Void => "void".into(),
             Self::Null => "null".into(),
+            Self::Enum(name, ty) => if let Some(ty) = *ty.clone() {
+                format!("{}({})", name, ty.display())
+            } else {
+                name.into()
+            }
+            .into(),
             Self::Struct(td, ..) => {
                 if is_generic!(td) {
                     let (name, parts) = Type::from_internal_id(td.clone());
@@ -165,23 +172,8 @@ impl Type {
             Self::Double => "f64".into(),
             Self::Void => "void".into(),
             Self::Null => "null".into(),
-            Self::Struct(td, ..) => {
-                if is_generic!(td) {
-                    let (name, parts) = Type::from_internal_id(td.clone());
-
-                    format!(
-                        "{name}<{}>",
-                        parts
-                            .iter()
-                            .map(|ty| ty.id())
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    )
-                } else {
-                    td.into()
-                }
-            }
-            Self::Function(_) => self.display(),
+            Self::Enum(name, ..) => name.clone(),
+            Self::Struct(..) | Self::Function(..) => self.display(),
             _ => "".into(),
         }
     }
