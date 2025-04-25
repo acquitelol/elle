@@ -13,7 +13,17 @@ impl fmt::Display for Statement {
         match self {
             Self::Assign(temp, ty, instr) => {
                 assert!(matches!(temp, Value::Temporary(_)));
-                write!(f, "{} ={} {}", temp, ty.clone().into_base(), instr)
+                write!(
+                    f,
+                    "{} ={} {}",
+                    temp,
+                    if matches!(instr, Instruction::Call(..)) {
+                        ty.clone().into_abi()
+                    } else {
+                        ty.clone().into_base()
+                    },
+                    instr
+                )
             }
             Self::Volatile(instr) => write!(f, "{}", instr),
         }
