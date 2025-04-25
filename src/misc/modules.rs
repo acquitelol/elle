@@ -472,7 +472,7 @@ pub fn lex_and_parse(
     tree.to_vec()
 }
 
-pub fn existing_definition(tree: &mut Vec<Primitive>, node_name: &str) -> Option<usize> {
+pub fn existing_definition(tree: &Vec<Primitive>, node_name: &str) -> Option<usize> {
     tree.iter().position(|item| match item {
         Primitive::Use { .. } => false,
         Primitive::Constant(ConstantSource { name, .. }) => name == &node_name,

@@ -26,7 +26,7 @@ pub fn create_monomorphized_function(
     parameters: Vec<(MutRc<Location>, AstNode)>,
     module: &RefCell<Module>,
     func: &RefCell<Function>,
-    call_location: &mut MutRc<Location>,
+    call_location: &MutRc<Location>,
     tmp_function: &mut Function,
     ty: Option<Type>,
 ) {

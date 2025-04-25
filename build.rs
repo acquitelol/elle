@@ -22,5 +22,5 @@ fn main() {
         |s: String| s.split_whitespace().nth(1).unwrap_or("unknown").to_string()
     );
 
-    println!("cargo:rustc-env=BUILD_DATE={}", Utc::now().format("%Y-%m-%d").to_string());
+    println!("cargo:rustc-env=BUILD_DATE={}", Utc::now().format("%Y-%m-%d"));
 }

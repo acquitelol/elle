@@ -1,3 +1,4 @@
+use std::fmt::Write as _;
 use std::rc::Rc;
 
 use crate::{
@@ -16,19 +17,20 @@ pub struct Use<'a> {
 }
 
 impl<'a> Use<'a> {
-    pub fn new(parser: &'a mut Parser) -> Self {
+    pub const fn new(parser: &'a mut Parser) -> Self {
         Use { parser }
     }
 
     fn get_string(&self) -> String {
-        match self.parser.current_token().value {
-            ValueKind::String(val) => val,
-            _ => elle_error!(self
+        if let ValueKind::String(val) = self.parser.current_token().value {
+            val
+        } else {
+            elle_error!(self
                 .parser
                 .current_token()
                 .location
                 .borrow()
-                .error("Token is not a string")),
+                .error("Token is not a string"))
         }
     }
 
@@ -53,7 +55,7 @@ impl<'a> Use<'a> {
 
                 TokenKind::Dot => {
                     // Allow for ./foo/bar
-                    module.push_str(".");
+                    module.push('.');
                     self.parser.advance();
                 }
 
@@ -73,7 +75,8 @@ impl<'a> Use<'a> {
 
                         // Allow for foo/./bar
                         TokenKind::Dot => module.push_str("/."),
-                        _ => module.push_str(&format!("/{}", self.get_string())),
+                        _ => write!(module, "/{}", self.get_string())
+                            .expect("could not write to string"),
                     }
 
                     self.parser.advance();
@@ -87,7 +90,7 @@ impl<'a> Use<'a> {
         }
 
         set_end!(location, self.parser);
-        self.parser.expect_tokens(vec![TokenKind::Semicolon]);
+        self.parser.expect_tokens(&[TokenKind::Semicolon]);
         self.parser.advance();
 
         Primitive::Use(UseSource {

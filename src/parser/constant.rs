@@ -30,7 +30,7 @@ impl<'a> Constant<'a> {
 
         if !should_parse {
             self.parser.yield_tokens_wrapped_with_semi();
-            self.parser.expect_tokens(vec![TokenKind::Semicolon]);
+            self.parser.expect_tokens(&[TokenKind::Semicolon]);
             self.parser.advance();
 
             return None;
@@ -65,7 +65,7 @@ impl<'a> Constant<'a> {
         let name_token = self.parser.current_token();
         self.parser.advance();
 
-        self.parser.expect_tokens(vec![TokenKind::Equal]);
+        self.parser.expect_tokens(&[TokenKind::Equal]);
         self.parser.advance();
 
         let value_location = self.parser.current_token().location;

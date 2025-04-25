@@ -19,7 +19,7 @@ pub struct Struct<'a> {
 }
 
 impl<'a> Struct<'a> {
-    pub fn new(parser: &'a mut Parser) -> Self {
+    pub const fn new(parser: &'a mut Parser) -> Self {
         Struct { parser }
     }
 
@@ -44,17 +44,17 @@ impl<'a> Struct<'a> {
                     self.parser.advance();
                 }
 
-                self.parser.expect_tokens(vec![TokenKind::RightCurlyBrace]);
+                self.parser.expect_tokens(&[TokenKind::RightCurlyBrace]);
                 self.parser.advance();
             }
 
-            self.parser.expect_tokens(vec![TokenKind::Semicolon]);
+            self.parser.expect_tokens(&[TokenKind::Semicolon]);
             self.parser.advance();
 
             return None;
         }
 
-        let keyword_location = self.parser.current_token().location.clone();
+        let keyword_location = self.parser.current_token().location;
         self.parser.advance();
 
         let name = self.parser.get_identifier();
@@ -73,8 +73,8 @@ impl<'a> Struct<'a> {
                         ))
                     )
                 }
-                _ => self.parser.expect_tokens(vec![TokenKind::Semicolon]),
-            };
+                _ => self.parser.expect_tokens(&[TokenKind::Semicolon]),
+            }
 
             set_end!(location, self.parser);
             self.parser.advance();
@@ -117,7 +117,7 @@ impl<'a> Struct<'a> {
                 }
             }
 
-            self.parser.expect_tokens(vec![TokenKind::GreaterThan]);
+            self.parser.expect_tokens(&[TokenKind::GreaterThan]);
             self.parser.advance();
         }
 
@@ -129,6 +129,7 @@ impl<'a> Struct<'a> {
                 self.parser.advance();
                 let attribute = self.parser.current_token().parse_attribute();
 
+                #[allow(clippy::single_match_else)]
                 match attribute {
                     Attribute::NoFormat => {
                         should_add_fmt_builtin = false;
@@ -146,7 +147,7 @@ impl<'a> Struct<'a> {
             }
         }
 
-        self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
+        self.parser.expect_tokens(&[TokenKind::LeftCurlyBrace]);
         self.parser.advance();
 
         let mut members = vec![];
@@ -167,20 +168,20 @@ impl<'a> Struct<'a> {
             let name = self.parser.get_identifier();
             self.parser.advance();
 
-            self.parser.expect_tokens(vec![TokenKind::Semicolon]);
+            self.parser.expect_tokens(&[TokenKind::Semicolon]);
             self.parser.advance();
 
             members.push(Argument {
                 name,
                 r#type: ty,
                 no_fmt: false,
-            })
+            });
         }
 
-        self.parser.expect_tokens(vec![TokenKind::RightCurlyBrace]);
+        self.parser.expect_tokens(&[TokenKind::RightCurlyBrace]);
         self.parser.advance();
 
-        self.parser.expect_tokens(vec![TokenKind::Semicolon]);
+        self.parser.expect_tokens(&[TokenKind::Semicolon]);
         set_end!(location, self.parser);
         self.parser.advance();
 
@@ -275,7 +276,6 @@ impl<'a> Struct<'a> {
                             "{name} {{{{\n{}\n{{}}}}",
                             members
                                 .iter()
-                                .cloned()
                                 .map(|member| format!("    {{}}{} = {{}}", member.name))
                                 .collect::<Vec<String>>()
                                 .join("\n")
@@ -300,7 +300,7 @@ impl<'a> Struct<'a> {
             builtins.push(Primitive::Function(FunctionSource {
                 namespace_token: Token::from_ident(&name),
                 name_token: Token::from_ident(FORMAT_CONSTANT),
-                name: format!("{}.{FORMAT_CONSTANT}", name),
+                name: format!("{name}.{FORMAT_CONSTANT}"),
                 public,
                 usable: true,
                 imported: false,
@@ -314,18 +314,18 @@ impl<'a> Struct<'a> {
                 arguments: vec![
                     Argument {
                         name: "self".into(),
-                        r#type: Type::Struct(if generics.len() > 0 {
+                        r#type: Type::Struct(if generics.is_empty() {
+                            name.clone()
+                        } else {
                             format!(
                                 "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
                                 generics
                                     .iter()
                                     .cloned()
-                                    .map(|ty| Type::Unknown(ty).to_internal_id().to_string())
+                                    .map(|ty| Type::Unknown(ty).to_internal_id())
                                     .collect::<Vec<String>>()
                                     .join(".")
                             )
-                        } else {
-                            name.clone()
                         }),
                         no_fmt: false,
                     },
@@ -405,7 +405,7 @@ impl<'a> Struct<'a> {
 
         Some((
             Primitive::Struct(StructSource {
-                name: name.clone(),
+                name,
                 name_token,
                 public,
                 usable: true,

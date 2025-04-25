@@ -43,7 +43,7 @@ impl<'a> Function<'a> {
                     self.parser.advance();
                 }
 
-                self.parser.expect_tokens(vec![TokenKind::Semicolon]);
+                self.parser.expect_tokens(&[TokenKind::Semicolon]);
                 self.parser.advance();
             } else {
                 while self.parser.current_token().kind != TokenKind::LeftCurlyBrace
@@ -52,7 +52,7 @@ impl<'a> Function<'a> {
                     self.parser.advance();
                 }
 
-                self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
+                self.parser.expect_tokens(&[TokenKind::LeftCurlyBrace]);
                 self.parser.advance();
                 let mut nesting = 0;
 
@@ -72,7 +72,7 @@ impl<'a> Function<'a> {
                     self.parser.advance();
                 }
 
-                self.parser.expect_tokens(vec![TokenKind::RightCurlyBrace]);
+                self.parser.expect_tokens(&[TokenKind::RightCurlyBrace]);
                 self.parser.advance(); // Go past the right curly brace
             }
 
@@ -133,11 +133,11 @@ impl<'a> Function<'a> {
                 }
             }
 
-            self.parser.expect_tokens(vec![TokenKind::GreaterThan]);
+            self.parser.expect_tokens(&[TokenKind::GreaterThan]);
             self.parser.advance();
         }
 
-        self.parser.expect_tokens(vec![TokenKind::LeftParenthesis]);
+        self.parser.expect_tokens(&[TokenKind::LeftParenthesis]);
         self.parser.advance();
 
         let mut arguments = vec![];
@@ -217,7 +217,7 @@ impl<'a> Function<'a> {
             }
         }
 
-        self.parser.expect_tokens(vec![TokenKind::RightParenthesis]);
+        self.parser.expect_tokens(&[TokenKind::RightParenthesis]);
         self.parser.advance();
 
         if !external
@@ -248,7 +248,7 @@ impl<'a> Function<'a> {
                 match attribute {
                     Attribute::Alias => {
                         self.parser.advance();
-                        self.parser.expect_tokens(vec![TokenKind::LeftParenthesis]);
+                        self.parser.expect_tokens(&[TokenKind::LeftParenthesis]);
                         self.parser.advance();
 
                         let mut alias = self.parser.get_identifier();
@@ -279,7 +279,7 @@ impl<'a> Function<'a> {
                         }
 
                         self.parser.advance();
-                        self.parser.expect_tokens(vec![TokenKind::RightParenthesis]);
+                        self.parser.expect_tokens(&[TokenKind::RightParenthesis]);
                         self.parser.advance();
                     }
                     Attribute::Volatile => {
@@ -311,7 +311,7 @@ impl<'a> Function<'a> {
         }
 
         if external {
-            self.parser.expect_tokens(vec![TokenKind::Semicolon]);
+            self.parser.expect_tokens(&[TokenKind::Semicolon]);
             set_end!(location, self.parser);
             self.parser.advance();
 
@@ -337,7 +337,7 @@ impl<'a> Function<'a> {
             }));
         }
 
-        self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
+        self.parser.expect_tokens(&[TokenKind::LeftCurlyBrace]);
 
         let body: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
 

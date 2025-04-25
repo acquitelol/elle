@@ -1,4 +1,9 @@
-#![warn(clippy::all, clippy::restriction, clippy::pedantic)]
+#![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
+#![allow(
+    clippy::format_in_format_args,
+    clippy::too_many_lines,
+    clippy::wildcard_imports
+)]
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::path::Path;
@@ -45,6 +50,7 @@ pub enum EmitKind {
 }
 
 impl Warning {
+    #[must_use]
     pub const fn all() -> u32 {
         Self::InvalidAlias as u32
             | Self::StructFieldsMissing as u32
@@ -60,19 +66,19 @@ struct Warnings {
 }
 
 impl Warnings {
-    fn new() -> Self {
-        Warnings { flags: 0 }
+    const fn new() -> Self {
+        Self { flags: 0 }
     }
 
-    fn set_warning(&mut self, warning: Warning) {
+    const fn set_warning(&mut self, warning: Warning) {
         self.flags |= warning as u32;
     }
 
-    fn has_warning(&self, warning: Warning) -> bool {
+    const fn has_warning(&self, warning: Warning) -> bool {
         (self.flags & (warning as u32)) != 0
     }
 
-    fn set_all(&mut self) {
+    const fn set_all(&mut self) {
         self.flags = Warning::all();
     }
 }
@@ -83,7 +89,7 @@ async fn main() -> ExitCode {
     let program = args.next().expect("program");
 
     if env::var("NO_COLOR").is_ok_and(|x| !x.is_empty()) {
-        disable_colors!()
+        disable_colors!();
     }
 
     if args.peek().is_none() {
@@ -157,7 +163,7 @@ async fn main() -> ExitCode {
                 }
 
                 let next = args.next().unwrap_or_else(|| loc_err!());
-                let parts = next.split(":").collect::<Vec<&str>>();
+                let parts = next.split(':').collect::<Vec<&str>>();
 
                 if parts.len() != 2 {
                     loc_err!()
@@ -182,8 +188,8 @@ async fn main() -> ExitCode {
                 object_output = true;
             }
             "-z" | "--link-flag" => linker_flags.push(args.next()),
-            "-Z" | "--link-path" => linker_path = args.next().unwrap_or("cc".into()),
-            "-Q" | "--qbe-path" => qbe_path = args.next().unwrap_or("qbe".into()),
+            "-Z" | "--link-path" => linker_path = args.next().unwrap_or_else(|| "cc".into()),
+            "-Q" | "--qbe-path" => qbe_path = args.next().unwrap_or_else(|| "qbe".into()),
             "-S" | "--std-path" => {
                 if let Some(arg) = args.next() {
                     let leaked: &'static mut str = Box::leak(arg.into_boxed_str());
@@ -222,7 +228,7 @@ async fn main() -> ExitCode {
             }
             other if other.ends_with(SHORT_EXTENSION) => {
                 if input_path.is_none() {
-                    input_path = Some(other.to_string())
+                    input_path = Some(other.to_string());
                 }
             }
             other if other.ends_with(OBJECT_EXTENSION) => object_files.push(other.into()),
@@ -234,14 +240,14 @@ async fn main() -> ExitCode {
                         RED = get_RED!(),
                         RESET = get_RESET!()
                     ),
-                    help = format!("For help, please use the following command:"),
+                    help = "For help, please use the following command:",
                     usage = format!(
                         "{}{GREEN}{program} [-h | --help]{RESET}\n",
                         " ".repeat(4),
                         GREEN = get_GREEN!(),
                         RESET = get_RESET!()
                     ),
-                    info = format!("If this is a file, please include its file extension."),
+                    info = "If this is a file, please include its file extension.",
                     extensions = format!(
                         "Possible extensions include: {GREEN}{FILE_EXTENSIONS:?}{RESET}",
                         GREEN = get_GREEN!(),
@@ -256,7 +262,7 @@ async fn main() -> ExitCode {
         dbg!("Starting LSP...");
         let stdin = tokio::io::stdin();
         let stdout = tokio::io::stdout();
-        let (service, socket) = LspService::new(|client| Backend::new(client));
+        let (service, socket) = LspService::new(Backend::new);
         Server::new(stdin, stdout, socket).serve(service).await;
     }
 
@@ -352,9 +358,7 @@ async fn main() -> ExitCode {
         },
     ];
 
-    let input_path = if let Some(input_path) = input_path {
-        input_path
-    } else {
+    let Some(input_path) = input_path else {
         eprintln!("ERROR: no input is provided");
         eprintln!("Usage: {program} <main.l | main.elle>");
         return ExitCode::FAILURE;
@@ -406,7 +410,7 @@ async fn main() -> ExitCode {
             imported: false,
             generics: vec![],
             known_generics: hashmap![],
-            members: meta_members.clone(),
+            members: meta_members,
             keyword_location: loc.clone(),
             location: loc.clone(),
             ignore_empty: false,
@@ -423,7 +427,7 @@ async fn main() -> ExitCode {
             imported: false,
             generics: vec![],
             known_generics: hashmap![],
-            members: env_members.clone(),
+            members: env_members,
             keyword_location: loc.clone(),
             location: loc.clone(),
             ignore_empty: false,
@@ -433,20 +437,22 @@ async fn main() -> ExitCode {
     if !object_output && !no_alloc {
         // Rename main to an internal main
         let mut main_arg_len = 0;
-        tree.iter_mut()
-            .find(|x| match x {
-                Primitive::Function(FunctionSource { name, .. }) if name == "main" => true,
-                _ => false,
-            })
-            .map(|x| match x {
+
+        if let Some(x) = tree.iter_mut().find(
+            |x| matches!(x, Primitive::Function(FunctionSource { name, .. }) if name == "main"),
+        ) {
+            match x {
                 Primitive::Function(FunctionSource {
-                    name, arguments, location, ..
+                    name,
+                    arguments,
+                    location,
+                    ..
                 }) if name == "main" => {
                     *name = get_MAIN_ID!().into();
                     main_arg_len = arguments.len();
 
-                    if main_arg_len > 1 {
-                        panic!(
+                    assert!(
+                            main_arg_len <= 1,
                             "{}",
                             location.borrow().error(format!(
                                 "You cannot expect more than 1 argument ({RED}{main_arg_len}{RESET}) in the main function.\nOnly a single argument is supplied of type \"{GREEN}string[]{RESET}\".",
@@ -454,31 +460,31 @@ async fn main() -> ExitCode {
                                 GREEN = get_GREEN!(),
                                 RESET = get_RESET!()
                             ))
-                        )
-                    }
+                        );
 
-                    if main_arg_len == 1 &&
-                        arguments[0].r#type != Type::Pointer(Box::new(
-                            Type::Struct(format!("Array.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
+                    if main_arg_len == 1
+                        && arguments[0].r#type
+                            != Type::Pointer(Box::new(Type::Struct(format!(
+                                "Array.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
                                 Type::Pointer(Box::new(Type::Char)).to_internal_id()
-                            ))
-                        ))
+                            ))))
                     {
                         panic!(
-                            "{}",
-                            location.borrow().error(
-                                format!(
-                                    "Mismatched type for argument in main function.\nExpected type \"{GREEN}string[]{RESET}\" but got \"{GREEN}{}{RESET}\".",
-                                    arguments[0].r#type.display(),
-                                    GREEN = get_GREEN!(),
-                                    RESET = get_RESET!()
+                                "{}",
+                                location.borrow().error(
+                                    format!(
+                                        "Mismatched type for argument in main function.\nExpected type \"{GREEN}string[]{RESET}\" but got \"{GREEN}{}{RESET}\".",
+                                        arguments[0].r#type.display(),
+                                        GREEN = get_GREEN!(),
+                                        RESET = get_RESET!()
+                                    )
                                 )
                             )
-                        )
                     }
                 }
                 _ => {}
-            });
+            }
+        }
 
         // Define a custom main
         tree.push(Primitive::Function(FunctionSource {
@@ -807,7 +813,7 @@ async fn main() -> ExitCode {
             .into_iter()
             .collect(),
             location: loc.clone(),
-            return_location: loc.clone(),
+            return_location: loc,
         }));
     } else {
         unsafe { MAIN_ID = Some("main") };
@@ -841,7 +847,6 @@ async fn main() -> ExitCode {
             .unwrap()
             .to_str()
             .unwrap()
-            .to_string()
     );
 
     // Set the build path so it can be deleted during an error
@@ -876,22 +881,21 @@ async fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    let parsed_output_path = if let Some(output_path) = output_path {
-        output_path
-    } else {
-        let tmp = Path::new(&input_path).file_stem().unwrap();
-        tmp.to_str().unwrap().into()
-    };
+    let parsed_output_path = output_path.map_or_else(
+        || {
+            let tmp = Path::new(&input_path).file_stem().unwrap();
+            tmp.to_str().unwrap().into()
+        },
+        |output_path| output_path,
+    );
 
-    let out;
-
-    if emit_qbe {
+    let out = if emit_qbe {
         let path = Path::new(&parsed_output_path).with_extension("ssa");
         fs::rename(path_to_qbe_dist, path.clone()).unwrap();
 
-        out = EmitKind::QbeFile(path.to_str().unwrap().to_string());
+        EmitKind::QbeFile(path.to_str().unwrap().to_string())
     } else {
-        let result = build(
+        build(
             qbe_path,
             path_to_qbe_dist,
             parsed_output_path,
@@ -901,34 +905,32 @@ async fn main() -> ExitCode {
             linker_path,
             object_files,
             no_std,
-        );
-
-        out = result;
-    }
+        )
+    };
 
     fs::remove_dir_all(get_BUILD_PATH!()).expect("Failed to delete ./.build.");
 
-    if out != EmitKind::None {
-        if !hush {
-            println!(
-                "{GREEN}Finished compiling '{path}' successfully! ヽ(•ᴗ•)ﾉ{RESET}",
-                path = input_path.split("/").last().unwrap(),
-                GREEN = get_GREEN!(),
-                RESET = get_RESET!()
-            );
-        }
-
-        ExitCode::SUCCESS
-    } else {
+    if out == EmitKind::None {
         if !hush {
             println!(
                 "{RED}Compilation of '{path}' finished with errors. (っ◞‸◟ c){RESET}",
-                path = input_path.split("/").last().unwrap(),
+                path = input_path.split('/').next_back().unwrap(),
                 RED = get_RED!(),
                 RESET = get_RESET!()
             );
         }
 
         ExitCode::FAILURE
+    } else {
+        if !hush {
+            println!(
+                "{GREEN}Finished compiling '{path}' successfully! ヽ(•ᴗ•)ﾉ{RESET}",
+                path = input_path.split('/').next_back().unwrap(),
+                GREEN = get_GREEN!(),
+                RESET = get_RESET!()
+            );
+        }
+
+        ExitCode::SUCCESS
     }
 }

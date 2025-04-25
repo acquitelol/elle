@@ -519,7 +519,7 @@ impl Lexer<'_> {
         }
     }
 
-    fn get_location(&mut self, start_row: usize, start_col: usize) -> Location {
+    fn get_location(&self, start_row: usize, start_col: usize) -> Location {
         Location {
             file: Rc::from(self.file.clone()),
             alt_start: Rc::new(Position { row: 0, column: 0 }),
@@ -655,7 +655,7 @@ impl Lexer<'_> {
             && (self.current_char().is_digit(radix)
                 || self.current_char() == '.'
                 || self.current_char() == '_')
-            || vec!['x', 'o', 'b', 'e'].contains(&self.current_char())
+            || ['x', 'o', 'b', 'e'].contains(&self.current_char())
         {
             if self.current_char() == '.' {
                 if self.next_char().is_some_and(|c| !c.is_digit(radix)) {

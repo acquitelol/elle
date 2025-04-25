@@ -148,7 +148,7 @@ macro_rules! get_type {
                     .join(".")
             );
 
-            $self.expect_tokens(vec![TokenKind::RightParenthesis]);
+            $self.expect_tokens(&[TokenKind::RightParenthesis]);
             crate::set_end!(location, $self);
 
             if !tuple_imported {
@@ -256,7 +256,7 @@ macro_rules! get_type {
                         }
 
                         ty = Type::Pointer(Box::new(Type::Struct(generic_name)));
-                        $self.expect_tokens(vec![TokenKind::RightBlockBrace]);
+                        $self.expect_tokens(&[TokenKind::RightBlockBrace]);
                     }
                     TokenKind::LessThan if is_struct => {
                         $self.advance();
@@ -297,7 +297,7 @@ macro_rules! get_type {
                         }
 
                         ty = Type::Struct(generic_name);
-                        $self.expect_tokens(vec![TokenKind::GreaterThan]);
+                        $self.expect_tokens(&[TokenKind::GreaterThan]);
                     }
                     // Crashes if it hasn't got at least 1 nested pointer for
                     // function pointers, ie `fn main(fn a)` is invalid
@@ -348,7 +348,7 @@ impl Parser {
         self.tokens[self.position].clone()
     }
 
-    fn next_token(&mut self) -> Option<Token> {
+    fn next_token(&self) -> Option<Token> {
         match self.is_eof() {
             true => None,
             false => Some(self.tokens[self.position + 1].clone()),
@@ -361,7 +361,7 @@ impl Parser {
         }
     }
 
-    pub fn is_eof(&mut self) -> bool {
+    pub fn is_eof(&self) -> bool {
         self.position >= self.tokens.len() - 1
     }
 
@@ -378,7 +378,7 @@ impl Parser {
         }
     }
 
-    pub fn expect_tokens(&self, expected: Vec<TokenKind>) {
+    pub fn expect_tokens(&self, expected: &[TokenKind]) {
         if !expected.contains(&self.current_token().kind) {
             elle_error!(self.current_token().location.borrow().error(format!(
                 "Expected one of [{}], got {:?}.",
@@ -565,7 +565,7 @@ impl Parser {
                         match_one!()
                     }
 
-                    self.expect_tokens(vec![TokenKind::Semicolon]);
+                    self.expect_tokens(&[TokenKind::Semicolon]);
                     self.advance();
                 }
                 TokenKind::Not => {

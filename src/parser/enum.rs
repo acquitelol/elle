@@ -41,7 +41,7 @@ impl<'a> Enum<'a> {
             return None;
         }
 
-        self.parser.expect_tokens(vec![TokenKind::Identifier]);
+        self.parser.expect_tokens(&[TokenKind::Identifier]);
         let name_token = self.parser.current_token();
         let name = self.parser.get_identifier();
         self.parser.advance();
@@ -62,11 +62,11 @@ impl<'a> Enum<'a> {
                     }
                     Attribute::Repr => {
                         self.parser.advance();
-                        self.parser.expect_tokens(vec![TokenKind::LeftParenthesis]);
+                        self.parser.expect_tokens(&[TokenKind::LeftParenthesis]);
                         self.parser.advance();
                         ty = Some(self.parser.get_type(None));
                         self.parser.advance();
-                        self.parser.expect_tokens(vec![TokenKind::RightParenthesis]);
+                        self.parser.expect_tokens(&[TokenKind::RightParenthesis]);
                         self.parser.advance();
                     }
                     _ => elle_error!(self.parser.current_token().location.borrow().error(format!(
@@ -81,7 +81,7 @@ impl<'a> Enum<'a> {
             }
         }
 
-        self.parser.expect_tokens(vec![TokenKind::LeftCurlyBrace]);
+        self.parser.expect_tokens(&[TokenKind::LeftCurlyBrace]);
         self.parser.advance();
 
         let mut variants = vec![];
@@ -108,7 +108,7 @@ impl<'a> Enum<'a> {
 
             if self.parser.current_token().kind == TokenKind::Equal {
                 self.parser.advance();
-                self.parser.expect_tokens(vec![
+                self.parser.expect_tokens(&[
                     TokenKind::StringLiteral,
                     TokenKind::IntegerLiteral,
                     TokenKind::CharLiteral,
@@ -157,17 +157,17 @@ impl<'a> Enum<'a> {
             variants.push((variant, variant_token, value));
 
             if self.parser.current_token().kind != TokenKind::RightCurlyBrace {
-                self.parser.expect_tokens(vec![TokenKind::Comma]);
+                self.parser.expect_tokens(&[TokenKind::Comma]);
                 self.parser.advance();
             }
         }
 
-        self.parser.expect_tokens(vec![TokenKind::RightCurlyBrace]);
+        self.parser.expect_tokens(&[TokenKind::RightCurlyBrace]);
         self.parser.advance();
 
         set_end!(location, self.parser);
 
-        self.parser.expect_tokens(vec![TokenKind::Semicolon]);
+        self.parser.expect_tokens(&[TokenKind::Semicolon]);
         self.parser.advance();
 
         let mut builtins = vec![];
