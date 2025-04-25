@@ -22,8 +22,8 @@ pub struct Enum<'a> {
 }
 
 impl<'a> Enum<'a> {
-    pub fn new(parser: &'a mut Parser) -> Self {
-        Enum { parser }
+    pub const fn new(parser: &'a mut Parser) -> Self {
+        Self { parser }
     }
 
     pub fn parse(
@@ -93,15 +93,15 @@ impl<'a> Enum<'a> {
             let variant_token = self.parser.current_token();
             let mut inner = None;
 
-            if !seen.contains(&variant) {
-                seen.insert(variant.clone());
-            } else {
+            if seen.contains(&variant) {
                 elle_error!(self
                     .parser
                     .current_token()
                     .location
                     .borrow()
-                    .error(format!("Cannot redefine variant '{}'", variant)))
+                    .error(format!("Cannot redefine variant '{variant}'")))
+            } else {
+                seen.insert(variant.clone());
             }
 
             self.parser.advance();
@@ -117,7 +117,7 @@ impl<'a> Enum<'a> {
                 match self.parser.current_token().kind {
                     TokenKind::StringLiteral => {
                         ty = Some(Type::Pointer(Box::new(Type::Char)));
-                        inner = Some(self.parser.current_token())
+                        inner = Some(self.parser.current_token());
                     }
                     TokenKind::IntegerLiteral => {
                         inner = Some(self.parser.current_token());
@@ -143,16 +143,17 @@ impl<'a> Enum<'a> {
                 self.parser.advance();
             }
 
-            let value = if let Some(inner) = inner {
-                AstNode::token_to_literal(inner)
-            } else {
-                AstNode::Literal(Literal {
-                    kind: TokenKind::IntegerLiteral,
-                    value: ValueKind::Number(variants.len() as i128 + offset.unwrap_or(0)),
-                    location: location.clone(),
-                    tagged: false,
-                })
-            };
+            let value = inner.map_or_else(
+                || {
+                    AstNode::Literal(Literal {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number(variants.len() as i128 + offset.unwrap_or(0)),
+                        location: location.clone(),
+                        tagged: false,
+                    })
+                },
+                AstNode::token_to_literal,
+            );
 
             variants.push((variant, variant_token, value));
 
@@ -175,7 +176,7 @@ impl<'a> Enum<'a> {
         builtins.push(Primitive::Function(FunctionSource {
             namespace_token: Token::from_ident(&name),
             name_token: Token::from_ident(EQUALS_CONSTANT),
-            name: format!("{}.{EQUALS_CONSTANT}", name),
+            name: format!("{name}.{EQUALS_CONSTANT}"),
             public,
             usable: true,
             imported: false,
@@ -228,7 +229,7 @@ impl<'a> Enum<'a> {
             builtins.push(Primitive::Function(FunctionSource {
                 namespace_token: Token::from_ident(&name),
                 name_token: Token::from_ident(FORMAT_CONSTANT),
-                name: format!("{}.{FORMAT_CONSTANT}", name),
+                name: format!("{name}.{FORMAT_CONSTANT}"),
                 public,
                 usable: true,
                 imported: false,
@@ -251,7 +252,7 @@ impl<'a> Enum<'a> {
                         AstNode::IfStatement(IfStatement {
                             condition: Box::new(AstNode::BinaryOperation(BinaryOperation {
                                 left: Box::new(AstNode::token_to_literal(Token::from_ident(
-                                    "self".into(),
+                                    "self",
                                 ))),
                                 right: Box::new(x.2.clone()),
                                 operator: TokenKind::EqualTo,

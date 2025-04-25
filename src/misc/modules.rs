@@ -32,12 +32,14 @@ use crate::{
     BACKUP_ALLOCATOR_MODULE,
 };
 
+type Modules = HashSet<(Rc<String>, Rc<Option<PathBuf>>)>;
+
 pub fn lex_and_parse(
     input_path: &String,
     existing_tree: Option<&mut Vec<Primitive>>,
     struct_pool: &RefCell<StructPool>,
     enum_pool: &RefCell<EnumPool>,
-    parsed_modules: &RefCell<HashSet<(Rc<String>, Rc<Option<PathBuf>>)>>,
+    parsed_modules: &RefCell<Modules>,
     warnings: &Warnings,
     no_strings: bool,
     no_alloc: bool,
@@ -47,7 +49,7 @@ pub fn lex_and_parse(
     object_output: bool,
     expect_info: bool,
     nesting: usize,
-    import_location: MutRc<Location>,
+    import_location: &MutRc<Location>,
     string_module_methods: &mut Vec<String>,
 ) -> Vec<Primitive> {
     let is_std_import;
@@ -237,7 +239,7 @@ pub fn lex_and_parse(
                         if nesting > 0 {
                             "┆    ".repeat(nesting)
                         } else {
-                            "".into()
+                            String::new()
                         },
                         module,
                         GREEN = get_GREEN!(),
@@ -251,12 +253,14 @@ pub fn lex_and_parse(
                     // Set the path to where the current file is so that imports are relative in that regard
                     set_current_dir(Path::new(final_path.parent().unwrap_or_else(|| {
                         elle_error!(location.borrow().basic_error(format!(
-                            "Failed to get the parent directory of {final_path:#?}"
+                            "Failed to get the parent directory of {}",
+                            final_path.display()
                         )))
                     })))
                     .unwrap_or_else(|err| {
                         elle_error!(location.borrow().basic_error(format!(
-                            "Failed to set the current directory of {final_path:#?}\n{err}"
+                            "Failed to set the current directory of {}\n{err}",
+                            final_path.display()
                         )))
                     });
                 }
@@ -277,9 +281,9 @@ pub fn lex_and_parse(
                     expect_info,
                     nesting + 1,
                     if nesting == 0 {
-                        location.clone()
+                        &location
                     } else {
-                        import_location.clone()
+                        import_location
                     },
                     string_module_methods,
                 );
@@ -288,7 +292,8 @@ pub fn lex_and_parse(
                     // Set the path back
                     set_current_dir(current.clone()).unwrap_or_else(|err| {
                         elle_error!(location.borrow().basic_error(format!(
-                            "Failed to set the current directory to {current:#?}\n{err}"
+                            "Failed to set the current directory to {}\n{err}",
+                            current.display()
                         )))
                     });
                 }
@@ -368,7 +373,7 @@ pub fn lex_and_parse(
                         if nesting > 0 {
                             "┆    ".repeat(nesting)
                         } else {
-                            "".into()
+                            String::new()
                         },
                         module,
                         elapsed_with_color!(now.unwrap().elapsed()),
@@ -434,7 +439,7 @@ pub fn lex_and_parse(
             Primitive::Function(FunctionSource {
                 namespace_token: Token::from_ident(get_POINTER_ID!()),
                 name_token: Token::from_ident(LEN_CONSTANT),
-                name: format!("{}.{LEN_CONSTANT}", get_POINTER_ID!()).into(),
+                name: format!("{}.{LEN_CONSTANT}", get_POINTER_ID!()),
                 public: false,
                 usable: true,
                 imported: false,
@@ -464,20 +469,20 @@ pub fn lex_and_parse(
                     location: loc.clone(),
                 })],
                 location: loc.clone(),
-                return_location: loc.clone(),
+                return_location: loc,
             }),
         );
     }
 
-    tree.to_vec()
+    tree.clone()
 }
 
-pub fn existing_definition(tree: &Vec<Primitive>, node_name: &str) -> Option<usize> {
+pub fn existing_definition(tree: &[Primitive], node_name: &str) -> Option<usize> {
     tree.iter().position(|item| match item {
         Primitive::Use { .. } => false,
-        Primitive::Constant(ConstantSource { name, .. }) => name == &node_name,
-        Primitive::Function(FunctionSource { name, .. }) => name == &node_name,
-        Primitive::Struct(StructSource { name, .. }) => name == &node_name,
-        Primitive::Enum(EnumSource { name, .. }) => name == &node_name,
+        Primitive::Constant(ConstantSource { name, .. })
+        | Primitive::Function(FunctionSource { name, .. })
+        | Primitive::Struct(StructSource { name, .. })
+        | Primitive::Enum(EnumSource { name, .. }) => *name == node_name,
     })
 }

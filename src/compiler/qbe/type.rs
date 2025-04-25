@@ -366,8 +366,8 @@ impl Type {
         self,
         struct_pool: Option<&RefCell<StructPool>>,
         tree: Option<&RefCell<Vec<Primitive>>>,
-        generics: Vec<String>,
-        known_generics: HashMap<String, Type>,
+        generics: &[String],
+        known_generics: &HashMap<String, Type>,
     ) -> Type {
         match self.clone() {
             Type::Pointer(inner) => Type::Pointer(Box::new(inner.unknown_to_known(
@@ -422,8 +422,8 @@ impl Type {
                             r#type: member.r#type.clone().unknown_to_known(
                                 struct_pool,
                                 tree,
-                                generics.clone(),
-                                known_generics.clone(),
+                                &generics,
+                                known_generics,
                             ),
                             no_fmt: member.no_fmt,
                         })
@@ -766,7 +766,7 @@ impl Type {
                     .iter()
                     .find(|td| td.name == val.clone())
                     .unwrap_or_else(|| {
-                        elle_error!(Location::base().internal_error(format!(
+                        elle_error!(Location::internal_error(format!(
                             "Unable to find aggregate type named '{}'.",
                             self.display()
                         )))
@@ -802,10 +802,12 @@ impl fmt::Display for Type {
             Self::Struct(td) => write!(formatter, ":{}", td),
             Self::Function(_) => write!(formatter, "l"),
             Self::Enum(_, inner) => write!(formatter, "{}", inner.clone().unwrap_or(Type::Word)),
-            Self::Unknown(name) => elle_error!(Location::base()
-                .internal_error(format!("Tried to compile with a generic type {name}"))),
-            x => elle_error!(Location::base()
-                .internal_error(format!("Attempted to format an invalid type: {x:?}"))),
+            Self::Unknown(name) => elle_error!(Location::internal_error(format!(
+                "Tried to compile with a generic type {name}"
+            ))),
+            x => elle_error!(Location::internal_error(format!(
+                "Attempted to format an invalid type: {x:?}"
+            ))),
         }
     }
 }

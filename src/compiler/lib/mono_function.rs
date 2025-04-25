@@ -262,8 +262,8 @@ pub fn create_monomorphized_function(
                         r#type: arg.r#type.unknown_to_known(
                             Some(&struct_pool),
                             Some(&tree),
-                            this.generics.clone(),
-                            known_generics.clone(),
+                            &this.generics,
+                            &known_generics,
                         ),
                         no_fmt: arg.no_fmt,
                     })
@@ -273,8 +273,8 @@ pub fn create_monomorphized_function(
                     Some(this.r#return.clone().unwrap().unknown_to_known(
                         Some(&struct_pool),
                         Some(&tree),
-                        this.generics.clone(),
-                        known_generics.clone(),
+                        &this.generics,
+                        &known_generics,
                     ))
                 } else {
                     this.r#return.clone()

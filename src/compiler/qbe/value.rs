@@ -19,7 +19,10 @@ impl Value {
             Self::Global(val) => val,
             Self::Literal(val) => val,
             _ => {
-                elle_error!(Location::base().internal_error(format!("Invalid value type {}", self)))
+                elle_error!(Location::internal_error(format!(
+                    "Invalid value type {}",
+                    self
+                )))
             }
         }
     }

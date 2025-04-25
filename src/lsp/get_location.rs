@@ -1,5 +1,5 @@
 pub fn get_location(input: &str) -> Option<(String, u32, u32)> {
-    let location_parts = input.split(":").collect::<Vec<&str>>();
+    let location_parts = input.split(':').collect::<Vec<&str>>();
 
     if location_parts.len() != 3 {
         eprintln!("Found invalid location {input}");

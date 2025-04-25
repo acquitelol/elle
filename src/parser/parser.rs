@@ -28,14 +28,14 @@ pub type StructPool = HashMap<String, (Vec<String>, Vec<Argument>, MutRc<Locatio
 pub type EnumPool = HashMap<String, (Vec<(String, Token, AstNode)>, Option<Type>)>;
 
 pub fn create_generic_struct(
-    name: String,
-    generic_name: String,
-    location: MutRc<Location>,
-    known_generics: Vec<Type>,
+    name: &str,
+    generic_name: &str,
+    location: &MutRc<Location>,
+    known_generics: &[Type],
     struct_pool: &RefCell<StructPool>,
     tree: &RefCell<Vec<Primitive>>,
 ) {
-    let (generics, members, struct_location) = struct_pool.borrow().get(&name).unwrap().clone();
+    let (generics, members, struct_location) = struct_pool.borrow().get(name).unwrap().clone();
 
     if generics.len() != known_generics.len() {
         if generics.len() < known_generics.len() {
@@ -44,8 +44,8 @@ pub fn create_generic_struct(
 
         let unknown = generics
             .iter()
-            .cloned()
             .skip(known_generics.len())
+            .cloned()
             .collect::<Vec<String>>();
 
         location.borrow_mut().above = Some(Rc::from(format!(
@@ -60,7 +60,7 @@ pub fn create_generic_struct(
         elle_error!(
             location.borrow().error(format!(
                 "Mismatched number of generics in struct {}<{}>.\nCould not find generic{} {} where the function specifies <{}>.",
-                name.replace(".", "::"),
+                name.replace('.', "::"),
                 generics.join(", "),
                 if unknown.len() == 1 { "" } else { "s" },
                 unknown.join(", "),
@@ -69,12 +69,11 @@ pub fn create_generic_struct(
         )
     }
 
-    let parsed_generics = HashMap::from_iter(
-        generics
-            .iter()
-            .enumerate()
-            .map(|(i, generic)| (generic.clone(), known_generics[i].clone())),
-    );
+    let parsed_generics = generics
+        .iter()
+        .enumerate()
+        .map(|(i, generic)| (generic.clone(), known_generics[i].clone()))
+        .collect::<HashMap<_, _>>();
 
     let parsed_members = members
         .iter()
@@ -83,16 +82,16 @@ pub fn create_generic_struct(
             r#type: member.r#type.clone().unknown_to_known(
                 Some(struct_pool),
                 Some(tree),
-                generics.clone(),
-                parsed_generics.clone(),
+                &generics,
+                &parsed_generics,
             ),
             no_fmt: member.no_fmt,
         })
         .collect::<Vec<Argument>>();
 
     tree.borrow_mut().push(Primitive::Struct(StructSource {
-        name_token: Token::from_ident(&generic_name),
-        name: generic_name.clone(),
+        name_token: Token::from_ident(generic_name),
+        name: generic_name.into(),
         public: false,
         usable: true,
         imported: false,
@@ -104,9 +103,10 @@ pub fn create_generic_struct(
         ignore_empty: false,
     }));
 
-    struct_pool
-        .borrow_mut()
-        .insert(generic_name.clone(), (vec![], parsed_members, location));
+    struct_pool.borrow_mut().insert(
+        generic_name.into(),
+        (vec![], parsed_members, location.clone()),
+    );
 }
 
 #[macro_export]
@@ -166,10 +166,10 @@ macro_rules! get_type {
 
             if !$struct_pool.borrow().contains_key(&generic_name) {
                 create_generic_struct(
-                    "Tuple".into(),
-                    generic_name.clone(),
-                    location.clone(),
-                    types,
+                    "Tuple",
+                    &generic_name,
+                    &location,
+                    &types,
                     &$struct_pool,
                     &$tree,
                 )
@@ -182,7 +182,7 @@ macro_rules! get_type {
             name = if is_fn_pointer {
                 $self.current_token().value.get_string_inner().unwrap()
             } else {
-                $self.get(vec![TokenKind::Identifier])
+                $self.get(&[TokenKind::Identifier])
             };
 
             is_struct = $struct_pool.borrow().contains_key(&name);
@@ -246,10 +246,10 @@ macro_rules! get_type {
 
                         if !$struct_pool.borrow().contains_key(&generic_name) {
                             create_generic_struct(
-                                "Array".into(),
-                                generic_name.clone(),
-                                location.clone(),
-                                vec![ty],
+                                "Array",
+                                &generic_name,
+                                &location,
+                                &[ty],
                                 &$struct_pool,
                                 &$tree,
                             )
@@ -287,10 +287,10 @@ macro_rules! get_type {
 
                         if !$struct_pool.borrow().contains_key(&generic_name) {
                             create_generic_struct(
-                                name.clone(),
-                                generic_name.clone(),
-                                location.clone(),
-                                known_generics,
+                                &name,
+                                &generic_name,
+                                &location,
+                                &known_generics,
                                 &$struct_pool,
                                 &$tree,
                             )
@@ -326,13 +326,13 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new(
+    pub const fn new(
         tokens: Vec<Token>,
         struct_pool: StructPool,
         enum_pool: EnumPool,
         warnings: Warnings,
     ) -> Self {
-        Parser {
+        Self {
             tokens,
             position: 0,
             tree: RefCell::new(vec![]),
@@ -349,28 +349,28 @@ impl Parser {
     }
 
     fn next_token(&self) -> Option<Token> {
-        match self.is_eof() {
-            true => None,
-            false => Some(self.tokens[self.position + 1].clone()),
+        if self.is_eof() {
+            None
+        } else {
+            Some(self.tokens[self.position + 1].clone())
         }
     }
 
-    pub fn advance(&mut self) {
+    pub const fn advance(&mut self) {
         if !self.is_eof() {
             self.position += 1;
         }
     }
 
-    pub fn is_eof(&self) -> bool {
+    pub const fn is_eof(&self) -> bool {
         self.position >= self.tokens.len() - 1
     }
 
     pub fn match_token(&mut self, expected: TokenKind, advance: bool) -> bool {
         if self.current_token().kind == expected {
-            match advance {
-                true => self.advance(),
-                _ => {}
-            };
+            if advance {
+                self.advance();
+            }
 
             true
         } else {
@@ -384,7 +384,7 @@ impl Parser {
                 "Expected one of [{}], got {:?}.",
                 expected
                     .iter()
-                    .map(|kind| format!("{:?}", kind))
+                    .map(|kind| format!("{kind:?}"))
                     .collect::<Vec<String>>()
                     .join(", "),
                 self.current_token().kind
@@ -392,10 +392,10 @@ impl Parser {
         }
     }
 
-    pub fn get(&self, expected: Vec<TokenKind>) -> String {
+    pub fn get(&self, expected: &[TokenKind]) -> String {
         let mut found = false;
 
-        for kind in expected.clone().iter() {
+        for kind in expected {
             if &self.current_token().kind == kind {
                 found = true;
                 break;
@@ -411,16 +411,14 @@ impl Parser {
             )))
         }
 
-        let identifier = if let Token {
+        let Token {
             value: ValueKind::String(identifier),
             ..
         } = self.current_token()
-        {
-            identifier.clone()
-        } else {
+        else {
             elle_error!(token.location.borrow().error(format!(
                 "Expected one of {:?} for function name, got {:?}",
-                expected.clone(),
+                expected,
                 self.current_token()
             )));
         };
@@ -429,7 +427,7 @@ impl Parser {
     }
 
     pub fn get_identifier(&self) -> String {
-        self.get(vec![TokenKind::Identifier, TokenKind::ExactLiteral])
+        self.get(&[TokenKind::Identifier, TokenKind::ExactLiteral])
     }
 
     pub fn get_type(&mut self, generics: Option<&Vec<String>>) -> Type {
@@ -562,7 +560,7 @@ impl Parser {
                     // Match until no more commas
                     while self.current_token().kind == TokenKind::Comma && !self.is_eof() {
                         self.advance();
-                        match_one!()
+                        match_one!();
                     }
 
                     self.expect_tokens(&[TokenKind::Semicolon]);
@@ -583,7 +581,7 @@ impl Parser {
                             self.current_token()
                                 .value
                                 .get_string_inner()
-                                .unwrap_or(self.current_token().kind.to_string())
+                                .unwrap_or_else(|| self.current_token().kind.to_string())
                         ))),
                     }
 
@@ -605,7 +603,7 @@ impl Parser {
                         self.tree.borrow_mut().push(statement);
                     }
 
-                    clean!()
+                    clean!();
                 }
                 TokenKind::Function => {
                     if local && public {
@@ -646,7 +644,7 @@ impl Parser {
                         self.tree.borrow_mut().push(statement);
                     }
 
-                    clean!()
+                    clean!();
                 }
                 TokenKind::Constant => {
                     if external {
@@ -677,7 +675,7 @@ impl Parser {
                         self.tree.borrow_mut().push(statement);
                     }
 
-                    clean!()
+                    clean!();
                 }
                 TokenKind::Struct => {
                     if external {
@@ -712,7 +710,7 @@ impl Parser {
                         self.tree.borrow_mut().append(&mut builtins);
                     }
 
-                    clean!()
+                    clean!();
                 }
                 TokenKind::Namespace => {
                     if external {
@@ -730,8 +728,7 @@ impl Parser {
                     if let Some((statement, mut builtins)) = res {
                         self.tree.borrow_mut().push(statement);
                         self.tree.borrow_mut().append(&mut builtins);
-
-                        clean!()
+                        clean!();
                     }
                 }
                 TokenKind::Enum => {
@@ -753,8 +750,7 @@ impl Parser {
                     if let Some((statement, mut builtins)) = res {
                         self.tree.borrow_mut().push(statement);
                         self.tree.borrow_mut().append(&mut builtins);
-
-                        clean!()
+                        clean!();
                     }
                 }
                 _ => elle_error!(self.current_token().location.borrow().error(format!(

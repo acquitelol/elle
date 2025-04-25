@@ -5,19 +5,19 @@ use super::get_location::get_location;
 pub fn find_hovers(output: &str) -> Option<Hover> {
     let res = output
         .split("\n\n")
-        .filter_map(|x| get_hover_info(x))
+        .filter_map(get_hover_info)
         .collect::<Vec<Hover>>();
 
-    if !res.is_empty() {
-        Some(res[0].clone())
-    } else {
+    if res.is_empty() {
         None
+    } else {
+        Some(res[0].clone())
     }
 }
 
 pub fn get_hover_info(output: &str) -> Option<Hover> {
     let parts = output
-        .splitn(4, "\n")
+        .splitn(4, '\n')
         .filter(|x| !x.is_empty())
         .collect::<Vec<&str>>();
 

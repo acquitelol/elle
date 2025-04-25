@@ -9,11 +9,11 @@ pub async fn get_file_output(path: &Path, extra_args: Option<Vec<&str>>) -> Resu
         .extension()
         .is_none_or(|ext| format!(".{}", ext.display()) != SHORT_EXTENSION)
     {
-        return Err(anyhow::anyhow!("File must have the '.le' extension").into());
+        return Err(anyhow::anyhow!("File must have the '.le' extension"));
     }
 
     set_current_dir(path.parent().unwrap())
-        .unwrap_or_else(|err| panic!("Failed to set the current dir: {}", err));
+        .unwrap_or_else(|err| panic!("Failed to set the current dir: {err}"));
 
     let mut args = vec!["-c", "-x", "-Wall", "--noclr"];
 

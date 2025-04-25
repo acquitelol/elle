@@ -39,8 +39,8 @@ pub fn create_monomorphized_struct(
             r#type: member.r#type.clone().unknown_to_known(
                 Some(&struct_pool),
                 Some(&tree),
-                generics.clone(),
-                parsed_generics.clone(),
+                &generics,
+                &parsed_generics,
             ),
             no_fmt: member.no_fmt,
         })

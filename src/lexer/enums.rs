@@ -9,7 +9,7 @@ use crate::{elle_error, ISSUE_URL};
 
 pub type MutRc<T> = Rc<RefCell<T>>;
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum TokenKind {
     Use,
     Public,
@@ -117,12 +117,12 @@ pub enum TokenKind {
 }
 
 impl TokenKind {
-    pub fn highest_precedence() -> i8 {
+    pub const fn highest_precedence() -> i8 {
         // Self::Exponent.precedence()
         Self::Multiply.precedence()
     }
 
-    pub fn precedence(&self) -> i8 {
+    pub const fn precedence(self) -> i8 {
         match self {
             // Self::Exponent => 11,
             Self::Multiply | Self::Divide | Self::Modulus => 11,
@@ -140,16 +140,17 @@ impl TokenKind {
         }
     }
 
-    pub fn is_ternary_start(&self) -> bool {
-        self == &TokenKind::Question
+    pub const fn is_ternary_start(self) -> bool {
+        matches!(self, Self::Question)
     }
 
-    pub fn is_ternary_end(&self) -> bool {
-        self == &TokenKind::Colon
+    pub const fn is_ternary_end(self) -> bool {
+        matches!(self, Self::Colon)
     }
 
-    pub fn is_arithmetic(&self) -> bool {
-        match self.to_owned() {
+    pub const fn is_arithmetic(self) -> bool {
+        matches!(
+            self,
             Self::Multiply
             // | Self::Exponent
             | Self::Divide
@@ -171,107 +172,106 @@ impl TokenKind {
             | Self::ShiftLeft
             | Self::ShiftRight
             | Self::Range
-            | Self::RangeEqual => true,
-            _ => false,
-        }
+            | Self::RangeEqual
+        )
     }
 
-    pub fn is_literal(&self) -> bool {
-        match self.to_owned() {
+    pub const fn is_literal(self) -> bool {
+        matches!(
+            self,
             Self::StringLiteral
-            | Self::IntegerLiteral
-            | Self::CharLiteral
-            | Self::FloatLiteral
-            | Self::LongLiteral
-            | Self::TrueLiteral
-            | Self::FalseLiteral
-            | Self::Break
-            | Self::Continue
-            | Self::FloatingPoint => true,
-            _ => false,
-        }
+                | Self::IntegerLiteral
+                | Self::CharLiteral
+                | Self::FloatLiteral
+                | Self::LongLiteral
+                | Self::TrueLiteral
+                | Self::FalseLiteral
+                | Self::Break
+                | Self::Continue
+                | Self::FloatingPoint
+        )
     }
 
-    pub fn is_declarative(&self) -> bool {
-        match self.to_owned() {
+    pub const fn is_declarative(self) -> bool {
+        matches!(
+            self,
             Self::AddEqual
-            | Self::ConcatEqual
-            | Self::SubtractEqual
-            | Self::MultiplyEqual
-            | Self::DivideEqual
-            | Self::ModulusEqual
-            | Self::BitwiseXorEqual
-            | Self::BitwiseOrEqual
-            | Self::BitwiseAndEqual
-            | Self::ShiftLeftEqual
-            | Self::ShiftRightEqual => true,
-            _ => false,
-        }
+                | Self::ConcatEqual
+                | Self::SubtractEqual
+                | Self::MultiplyEqual
+                | Self::DivideEqual
+                | Self::ModulusEqual
+                | Self::BitwiseXorEqual
+                | Self::BitwiseOrEqual
+                | Self::BitwiseAndEqual
+                | Self::ShiftLeftEqual
+                | Self::ShiftRightEqual
+        )
     }
 
-    pub fn is_comparative(&self) -> bool {
-        match self {
+    pub const fn is_comparative(self) -> bool {
+        matches!(
+            self,
             Self::GreaterThan
-            | Self::GreaterThanEqual
-            | Self::LessThan
-            | Self::LessThanEqual
-            | Self::EqualTo
-            | Self::NotEqualTo => true,
-            _ => false,
-        }
+                | Self::GreaterThanEqual
+                | Self::LessThan
+                | Self::LessThanEqual
+                | Self::EqualTo
+                | Self::NotEqualTo
+        )
     }
 
-    pub fn is_brace(&self) -> bool {
-        match self {
+    pub const fn is_brace(self) -> bool {
+        matches!(
+            self,
             Self::LeftParenthesis
-            | Self::RightParenthesis
-            | Self::LeftBlockBrace
-            | Self::RightBlockBrace
-            | Self::LeftCurlyBrace
-            | Self::RightCurlyBrace => true,
-            _ => false,
-        }
+                | Self::RightParenthesis
+                | Self::LeftBlockBrace
+                | Self::RightBlockBrace
+                | Self::LeftCurlyBrace
+                | Self::RightCurlyBrace
+        )
     }
 
-    pub fn is_unary_context(&self) -> bool {
-        match self {
+    pub const fn is_unary_context(self) -> bool {
+        matches!(
+            self,
             Self::LeftParenthesis
-            | Self::LeftCurlyBrace
-            | Self::RightCurlyBrace
-            | Self::LeftBlockBrace
-            | Self::Comma
-            | Self::Colon
-            | Self::Not
-            | Self::Semicolon
-            | Self::Return
-            | Self::While
-            | Self::For
-            | Self::If
-            | Self::Equal
-            | Self::Question
-            | Self::In => true,
-            other if other.is_declarative() => true,
-            other if other.is_arithmetic() => true,
-            _ => false,
-        }
+                | Self::LeftCurlyBrace
+                | Self::RightCurlyBrace
+                | Self::LeftBlockBrace
+                | Self::Comma
+                | Self::Colon
+                | Self::Not
+                | Self::Semicolon
+                | Self::Return
+                | Self::While
+                | Self::For
+                | Self::If
+                | Self::Equal
+                | Self::Question
+                | Self::In
+        ) || self.is_declarative()
+            || self.is_arithmetic()
     }
 
-    pub fn to_non_declarative(&self) -> TokenKind {
+    pub fn to_non_declarative(self) -> Self {
         match self {
-            Self::AddEqual => TokenKind::Add,
-            Self::ConcatEqual => TokenKind::Concat,
-            Self::SubtractEqual => TokenKind::Subtract,
-            Self::MultiplyEqual => TokenKind::Multiply,
-            Self::DivideEqual => TokenKind::Divide,
-            Self::ModulusEqual => TokenKind::Modulus,
-            Self::BitwiseXorEqual => TokenKind::BitwiseXor,
-            Self::BitwiseAndEqual => TokenKind::BitwiseAnd,
-            Self::BitwiseOrEqual => TokenKind::BitwiseOr,
-            Self::ShiftLeftEqual => TokenKind::ShiftLeft,
-            Self::ShiftRightEqual => TokenKind::ShiftRight,
+            Self::AddEqual => Self::Add,
+            Self::ConcatEqual => Self::Concat,
+            Self::SubtractEqual => Self::Subtract,
+            Self::MultiplyEqual => Self::Multiply,
+            Self::DivideEqual => Self::Divide,
+            Self::ModulusEqual => Self::Modulus,
+            Self::BitwiseXorEqual => Self::BitwiseXor,
+            Self::BitwiseAndEqual => Self::BitwiseAnd,
+            Self::BitwiseOrEqual => Self::BitwiseOr,
+            Self::ShiftLeftEqual => Self::ShiftLeft,
+            Self::ShiftRightEqual => Self::ShiftRight,
             other => {
-                elle_error!(Location::base()
-                    .internal_error(format!("Invalid identifier operation {other:?}")))
+                elle_error!(Location::internal_error(format!(
+                    "Invalid identifier operation {other:?}"
+                )))
             }
         }
     }
@@ -279,7 +279,7 @@ impl TokenKind {
 
 impl fmt::Display for TokenKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", format!("{:?}", self).to_lowercase())
+        write!(f, "{}", format!("{self:?}").to_lowercase())
     }
 }
 
@@ -299,7 +299,7 @@ impl ValueKind {
         inner: Option<Type>,
     ) -> Option<Type> {
         match self.clone() {
-            ValueKind::String(val) => match val.as_str() {
+            Self::String(val) => match val.as_str() {
                 "string" => Some(Type::Pointer(Box::new(Type::Char))),
                 "any" => Some(Type::Pointer(Box::new(Type::Void))),
                 "i8" => Some(Type::Byte),
@@ -315,9 +315,8 @@ impl ValueKind {
                 "char" => Some(Type::Char),
                 "bool" => Some(Type::Boolean),
                 // Arbitrary because it will be turned into `long` anyway when used as void*`
-                "void" => Some(Type::Void),
                 // Treat fn as void* so it becomes printable in structs
-                "fn" => Some(Type::Void),
+                "void" | "fn" => Some(Type::Void),
                 other => Some(if is_struct {
                     Type::Struct(other.into())
                 } else if is_enum {
@@ -330,23 +329,24 @@ impl ValueKind {
         }
     }
 
-    pub fn similar_mapping(ty: String) -> Option<String> {
-        match ty.as_str() {
-            "short" => Some("i16".into()),
-            "int" => Some("i32".into()),
-            "long" => Some("i64".into()),
-            "float" => Some("f32".into()),
-            "double" => Some("f64".into()),
+    pub fn similar_mapping(ty: &str) -> Option<String> {
+        match ty {
+            "short" => Some("i16"),
+            "int" => Some("i32"),
+            "long" => Some("i64"),
+            "float" => Some("f32"),
+            "double" => Some("f64"),
             _ => None,
         }
+        .map(std::convert::Into::into)
     }
 
     pub fn is_base_type(&self) -> bool {
         self.to_type_string(false, false, None).is_some()
-            && match self.to_type_string(false, false, None).unwrap() {
-                Type::Unknown(_) | Type::Struct(_) => false,
-                _ => true,
-            }
+            && !matches!(
+                self.to_type_string(false, false, None).unwrap(),
+                Type::Unknown(_) | Type::Struct(_)
+            )
     }
 
     pub fn get_string_inner(&self) -> Option<String> {
@@ -374,9 +374,9 @@ impl ValueKind {
 impl fmt::Display for ValueKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::String(val) => write!(f, "{}", val),
-            Self::Number(val) => write!(f, "{}", val),
-            Self::Character(val) => write!(f, "{}", val),
+            Self::String(val) => write!(f, "{val}"),
+            Self::Number(val) => write!(f, "{val}"),
+            Self::Character(val) => write!(f, "{val}"),
             Self::Nil => write!(f, ""),
         }
     }
@@ -389,8 +389,8 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn from_tuple(x: (usize, usize)) -> Self {
-        Position {
+    pub const fn from_tuple(x: (usize, usize)) -> Self {
+        Self {
             row: x.0,
             column: x.1,
         }
@@ -424,7 +424,7 @@ impl Location {
     }
 
     pub fn display(&self, is_warning: bool) -> String {
-        return format!(
+        format!(
             "{BOLD}{UNDERLINE}{GREEN}{}{RESET}:{UNDERLINE}{fmt}{}{RESET}:{UNDERLINE}{YELLOW}{}{RESET}",
             self.file,
             self.start.row + 1,
@@ -435,11 +435,11 @@ impl Location {
             UNDERLINE = get_UNDERLINE!(),
             YELLOW = get_YELLOW!(),
             fmt = if is_warning { get_YELLOW!() } else { get_RED!() }
-        );
+        )
     }
 
     pub fn display_plain(&self, end: bool) -> String {
-        return format!(
+        format!(
             "{}:{}:{}",
             self.file,
             (if end { self.end.row } else { self.start.row }) + 1,
@@ -448,11 +448,11 @@ impl Location {
             } else {
                 self.start.column
             }) + 1
-        );
+        )
     }
 
     pub fn display_alt(&self, end: bool) -> String {
-        return format!(
+        format!(
             "{}:{}:{}",
             self.file,
             (if end {
@@ -465,19 +465,19 @@ impl Location {
             } else {
                 self.alt_start.column
             }) + 1
-        );
+        )
     }
 
     /// This function can be slightly confusing in its usecase.
     /// I'll write some basic documentation here because I keep
     /// refactoring and then forgetting how this function works
-    /// and it ends up breaking ElleMeta exprs formatting
+    /// and it ends up breaking `ElleMeta` exprs formatting
     ///
     /// Its primary purpose is to get a new string based on
     /// `self.ctx` starting at `self.start.column`, where:
     ///
     /// For an expression such as `a(b($dbg(foo)))` if the parameter
-    /// to search is `foo` inside of $dbg(), the returned expression
+    /// to search is `foo` inside of `$dbg()`, the returned expression
     /// is `foo)))`.
     ///
     /// This can then be properly parsed later.
@@ -495,7 +495,7 @@ impl Location {
         trimmed.get(byte_offset..).unwrap_or("").to_string()
     }
 
-    fn trim_indentation(&self, ctx: Rc<str>, above: Rc<str>) -> (String, String) {
+    fn trim_indentation(ctx: Rc<str>, above: Rc<str>) -> (String, String) {
         let lines: Vec<&str> = ctx.lines().chain(above.lines()).collect();
 
         let min_indent = lines
@@ -526,11 +526,10 @@ impl Location {
     }
 
     pub fn display_pretty(&self, message: impl Into<String>, is_warning: bool) -> String {
-        let (ctx, above) = if let Some(above) = self.above.clone() {
-            self.trim_indentation(self.ctx.clone(), above)
-        } else {
-            (self.ctx.trim_start().to_string(), "".into())
-        };
+        let (ctx, above) = self.above.clone().map_or_else(
+            || (self.ctx.trim_start().to_string(), String::new()),
+            |above| Self::trim_indentation(self.ctx.clone(), above),
+        );
 
         let upper = format!(
             "{fmt}{}{RESET}[{}]{fmt}{}{RESET}",
@@ -565,38 +564,36 @@ impl Location {
         let split_index = ctx
             .char_indices()
             .nth(left)
-            .map(|(i, _)| i)
-            .unwrap_or_else(|| ctx.len());
+            .map_or_else(|| ctx.len(), |(i, _)| i);
 
         let (lhs, rhs) = ctx.split_at(split_index);
 
         let split_index = rhs
             .char_indices()
             .nth(self.end.column.saturating_sub(self.start.column))
-            .map(|(i, _)| i)
-            .unwrap_or_else(|| rhs.len());
+            .map_or_else(|| rhs.len(), |(i, _)| i);
 
         let issue = &rhs[..split_index];
         let rhs = &rhs[split_index..];
         let line = format!("{} | ", self.start.row + 1);
 
-        return format!(
+        format!(
             "\n{upper}\n{user_message}\n\n{above}{line_number}{}{lhs}{BOLD}{fmt}{UNDERLINE}{issue}{RESET}{rhs}\n{}{}{BOLD}{GREEN}^{}{}{RESET}\n{fmt}{}{RESET}\n",
             " ".repeat(padding),
             " ".repeat(padding + format!("{} | ", self.start.row + 1).len()),
             " ".repeat(left),
-            "~".repeat(self.end.column.saturating_sub(self.start.column).checked_sub(1).unwrap_or(0)),
-            if !self.extra_info.is_empty() { format!(" {}", self.extra_info) } else { "".into() },
+            "~".repeat(self.end.column.saturating_sub(self.start.column).saturating_sub(1)),
+            if self.extra_info.is_empty() { String::new()} else { format!(" {}", self.extra_info)  },
             "―".repeat(upper_plain.len()),
-            above = if !above.is_empty() {
+            above = if above.is_empty() {
+                String::new()
+            } else {
                 format!(
                     "{:<2} | {}{}\n",
                     self.start.row,
                     " ".repeat(padding),
                     above
                 )
-            } else {
-                "".into()
             },
             user_message = message.into(),
             line_number = line,
@@ -605,10 +602,10 @@ impl Location {
             GREEN = get_GREEN!(),
             RESET = get_RESET!(),
             fmt = if is_warning { get_YELLOW!() } else { get_RED!() }
-        );
+        )
     }
 
-    pub fn display_pretty_no_lines(&self, message: impl Into<String>, is_warning: bool) -> String {
+    pub fn display_pretty_no_lines(message: impl Into<String>, is_warning: bool) -> String {
         let lines = format!(
             "{fmt}{}{RESET}",
             "―".repeat(50),
@@ -620,7 +617,7 @@ impl Location {
             }
         );
 
-        return format!("\n{lines}\n{}\n{lines}\n", message.into());
+        format!("\n{lines}\n{}\n{lines}\n", message.into())
     }
 
     pub fn warning(&self, message: impl Into<String>) -> String {
@@ -650,7 +647,7 @@ impl Location {
             );
         }
 
-        self.display_pretty_no_lines(message, true)
+        Self::display_pretty_no_lines(message, true)
     }
 
     pub fn error(&self, message: impl Into<String>) -> String {
@@ -680,11 +677,11 @@ impl Location {
             );
         }
 
-        self.display_pretty_no_lines(message, false)
+        Self::display_pretty_no_lines(message, false)
     }
 
-    pub fn internal_error(&self, message: impl Into<String>) -> String {
-        self.display_pretty_no_lines(format!(
+    pub fn internal_error(message: impl Into<String>) -> String {
+        Self::display_pretty_no_lines(format!(
             "An internal error occured during compilation:\n{}\n\nPlease report this so that it can be fixed:\n{MAGENTA}{ISSUE_URL}{RESET}",
             message.into(),
             MAGENTA = get_MAGENTA!(),
@@ -692,8 +689,8 @@ impl Location {
         ), false)
     }
 
-    pub fn default(file: String) -> Location {
-        Location {
+    pub fn default(file: String) -> Self {
+        Self {
             file: Rc::from(file),
             alt_start: Rc::new(Position { row: 0, column: 0 }),
             alt_end: Rc::new(Position { row: 0, column: 1 }),
@@ -705,8 +702,8 @@ impl Location {
         }
     }
 
-    pub fn base() -> Location {
-        Location {
+    pub fn base() -> Self {
+        Self {
             file: Rc::from("_"),
             alt_start: Rc::new(Position { row: 0, column: 0 }),
             alt_end: Rc::new(Position { row: 0, column: 1 }),
@@ -788,12 +785,12 @@ impl Token {
     }
 
     pub fn from_ident(ident: &str) -> Self {
-        return Token {
+        Self {
             kind: TokenKind::Identifier,
             value: ValueKind::String(ident.into()),
             location: Rc::new(RefCell::new(Location::base())),
             tagged: false,
-        };
+        }
     }
 }
 

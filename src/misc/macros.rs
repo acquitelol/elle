@@ -153,7 +153,7 @@ macro_rules! not_valid_struct_or_type {
         elle_error!($self.current_token().location.borrow().error(format!(
             "Identifier '{}' isn't a struct or primitive type.\n{}",
             name.clone(),
-            if let Some(map) = ValueKind::similar_mapping(name.clone()) {
+            if let Some(map) = ValueKind::similar_mapping(&name) {
                 format!(
                     "A similar type exists which might be what you need: '{}'",
                     map
@@ -302,7 +302,7 @@ macro_rules! is_type {
     }};
 }
 
-/// Converts a token [`token`] into an AstNode
+/// Converts a token [`token`] into an `AstNode`
 ///
 /// This accounts for [`TrueLiteral`, `FalseLiteral`, `FloatingPoint`]
 ///
@@ -317,7 +317,7 @@ macro_rules! token_to_node {
                 AstNode::Literal(Literal {
                     kind: TokenKind::BoolLiteral,
                     value: ValueKind::Number(1),
-                    location: $token.location,
+                    location: $token.location.clone(),
                     tagged: $token.tagged,
                 })
             }
@@ -327,15 +327,15 @@ macro_rules! token_to_node {
                 AstNode::Literal(Literal {
                     kind: TokenKind::BoolLiteral,
                     value: ValueKind::Number(0),
-                    location: $token.location,
+                    location: $token.location.clone(),
                     tagged: $token.tagged,
                 })
             }
             TokenKind::FloatingPoint => $self.parse_float($token),
             _ => AstNode::Literal(Literal {
-                kind: $token.kind,
-                value: $token.value,
-                location: $token.location,
+                kind: $token.kind.clone(),
+                value: $token.value.clone(),
+                location: $token.location.clone(),
                 tagged: $token.tagged,
             }),
         }

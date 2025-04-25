@@ -40,25 +40,23 @@ impl Function {
 
     pub fn last_block(&self) -> &Block {
         self.blocks.last().unwrap_or_else(|| {
-            elle_error!(Location::base().internal_error("Function must have at least one block"))
+            elle_error!(Location::internal_error(
+                "Function must have at least one block"
+            ))
         })
     }
 
     pub fn add_instruction(&mut self, instruction: Instruction) {
         self.blocks
             .last_mut()
-            .unwrap_or_else(|| {
-                elle_error!(Location::base().internal_error("Couldn't find last block!"))
-            })
+            .unwrap_or_else(|| elle_error!(Location::internal_error("Couldn't find last block!")))
             .add_instruction(instruction);
     }
 
     pub fn assign_instruction(&mut self, temp: &Value, r#type: &Type, instruction: Instruction) {
         self.blocks
             .last_mut()
-            .unwrap_or_else(|| {
-                elle_error!(Location::base().internal_error("Couldn't find last block!"))
-            })
+            .unwrap_or_else(|| elle_error!(Location::internal_error("Couldn't find last block!")))
             .assign_instruction(temp, r#type, instruction);
     }
 
@@ -70,9 +68,7 @@ impl Function {
     ) {
         self.blocks
             .first_mut()
-            .unwrap_or_else(|| {
-                elle_error!(Location::base().internal_error("Couldn't find last block!"))
-            })
+            .unwrap_or_else(|| elle_error!(Location::internal_error("Couldn't find last block!")))
             .assign_instruction_front(temp, r#type, instruction);
     }
 

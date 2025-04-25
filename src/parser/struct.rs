@@ -254,7 +254,7 @@ impl<'a> Struct<'a> {
                 .collect::<Vec<(MutRc<Location>, AstNode)>>();
 
             let mut interleaved = interleave_with(
-                parameters,
+                &parameters,
                 (
                     location.clone(),
                     AstNode::Literal(Literal {

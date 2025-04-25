@@ -45,9 +45,8 @@ impl Lexer<'_> {
     pub fn next_token(&mut self) -> Option<Token> {
         // For calculating length of token
         let token = self.internal_next_token();
-        self.prev_token = token.clone();
-
-        return token;
+        self.prev_token.clone_from(&token);
+        token
     }
 
     fn internal_next_token(&mut self) -> Option<Token> {
@@ -84,7 +83,7 @@ impl Lexer<'_> {
             });
         }
 
-        if c.is_digit(10) {
+        if c.is_ascii_digit() {
             let (kind, value) = self.consume_number_literal(start_row, start_col);
             let location = self.get_location(start_row, start_col);
             let mut tagged =
@@ -195,7 +194,7 @@ impl Lexer<'_> {
 
                     elle_error!(
                         self.get_location(start_row, start_col).error(
-                            format!("Invalid token: Elle does not support '--' incrementing.\nPlease use '-= 1' for incrementing instead.")
+                            "Invalid token: Elle does not support '--' decrementing.\nPlease use '-= 1' for incrementing instead."
                         )
                     )
                 } else {
@@ -268,7 +267,7 @@ impl Lexer<'_> {
 
                     elle_error!(
                         self.get_location(start_row, start_col).error(
-                            format!("Invalid token: Elle does not support '++' incrementing.\nPlease use '+= 1' for incrementing instead.")
+                            "Invalid token: Elle does not support '++' incrementing.\nPlease use '+= 1' for incrementing instead."
                         )
                     )
                 } else {
@@ -428,29 +427,28 @@ impl Lexer<'_> {
             '#' => {
                 self.advance();
 
-                match self.current_char() {
-                    '[' => (TokenKind::Hashtag, ValueKind::Nil),
-                    _ => {
-                        let (_, value) = self.consume_identifier(start_row, start_col);
+                if self.current_char() == '[' {
+                    (TokenKind::Hashtag, ValueKind::Nil)
+                } else {
+                    let (_, value) = self.consume_identifier(start_row, start_col);
 
-                        match value {
-                            ValueKind::String(val) => match val.as_str() {
-                                "size" => (TokenKind::Size, ValueKind::Nil),
-                                "len" => (TokenKind::ArrayLength, ValueKind::Nil),
-                                "i" => (TokenKind::IndexOf, ValueKind::Nil),
-                                "env" => (TokenKind::Environment, ValueKind::Nil),
-                                "alloc" => (TokenKind::Alloc, ValueKind::Nil),
-                                "realloc" => (TokenKind::Realloc, ValueKind::Nil),
-                                "free" => (TokenKind::Free, ValueKind::Nil),
-                                "set_allocator" => (TokenKind::SetAllocator, ValueKind::Nil),
-                                "reset_allocator" => (TokenKind::ResetAllocator, ValueKind::Nil),
-                                "cast" => (TokenKind::Cast, ValueKind::Nil),
-                                other => elle_error!(self
-                                    .get_location(start_row, start_col)
-                                    .error(format!("Unimplemented directive: '{}'", other))),
-                            },
-                            _ => unreachable!(),
-                        }
+                    match value {
+                        ValueKind::String(val) => match val.as_str() {
+                            "size" => (TokenKind::Size, ValueKind::Nil),
+                            "len" => (TokenKind::ArrayLength, ValueKind::Nil),
+                            "i" => (TokenKind::IndexOf, ValueKind::Nil),
+                            "env" => (TokenKind::Environment, ValueKind::Nil),
+                            "alloc" => (TokenKind::Alloc, ValueKind::Nil),
+                            "realloc" => (TokenKind::Realloc, ValueKind::Nil),
+                            "free" => (TokenKind::Free, ValueKind::Nil),
+                            "set_allocator" => (TokenKind::SetAllocator, ValueKind::Nil),
+                            "reset_allocator" => (TokenKind::ResetAllocator, ValueKind::Nil),
+                            "cast" => (TokenKind::Cast, ValueKind::Nil),
+                            other => elle_error!(self
+                                .get_location(start_row, start_col)
+                                .error(format!("Unimplemented directive: '{other}'"))),
+                        },
+                        _ => unreachable!(),
                     }
                 }
             }
@@ -458,7 +456,7 @@ impl Lexer<'_> {
                 self.advance();
                 elle_error!(self
                     .get_location(start_row, start_col)
-                    .error(format!("Unexpected character: '{}'", c)))
+                    .error(format!("Unexpected character: '{c}'")))
             }
         };
 
@@ -477,15 +475,15 @@ impl Lexer<'_> {
             }
         }
 
-        return Some(Token {
+        Some(Token {
             kind,
             value,
             location: Rc::new(RefCell::new(location)),
             tagged,
-        });
+        })
     }
 
-    fn is_eof(&self) -> bool {
+    const fn is_eof(&self) -> bool {
         self.position >= self.input.len()
     }
 
@@ -498,7 +496,7 @@ impl Lexer<'_> {
     }
 
     fn previous_char(&self) -> Option<char> {
-        self.input[..self.position].chars().rev().next()
+        self.input[..self.position].chars().next_back()
     }
 
     fn advance(&mut self) {
@@ -532,7 +530,7 @@ impl Lexer<'_> {
                 row: self.row,
                 column: self.position - self.bol,
             }),
-            ctx: Rc::from(self.get_line(self.row).unwrap_or("".into())),
+            ctx: Rc::from(self.get_line(self.row).unwrap_or("")),
             above: if self.row == 0 {
                 None
             } else {
@@ -557,11 +555,9 @@ impl Lexer<'_> {
     }
 
     fn is_unary_context(&self) -> bool {
-        if let Some(ref prev_token) = self.prev_token {
-            prev_token.kind.is_unary_context()
-        } else {
-            true
-        }
+        self.prev_token
+            .as_ref()
+            .is_none_or(|prev_token| prev_token.kind.is_unary_context())
     }
 
     fn consume_identifier(&mut self, start_row: usize, start_col: usize) -> (TokenKind, ValueKind) {
@@ -580,8 +576,7 @@ impl Lexer<'_> {
         if RESERVED_KEYWORDS.contains(&identifier) {
             elle_error!(
                 self.get_location(start_row, start_col).error(format!(
-                    "Use of the reserved keyword '{}' is disallowed.\nThis keyword is currently not in use, but it is reserved\nbecause it may be used in the language in the future.",
-                    identifier
+                    "Use of the reserved keyword '{identifier}' is disallowed.\nThis keyword is currently not in use, but it is reserved\nbecause it may be used in the language in the future."
                 ))
             )
         }
@@ -690,10 +685,10 @@ impl Lexer<'_> {
         }
 
         let unparsed_literal: String = self.input[start..self.position].chars().collect();
-        let mut literal = unparsed_literal.replace("_", "");
+        let mut literal = unparsed_literal.replace('_', "");
 
         if radix != 10 {
-            if self.current_char().is_digit(10) {
+            if self.current_char().is_ascii_digit() {
                 elle_error!(self.get_location(start_row, start_col).error(format!(
                     "Character '{}' is not a valid digit of radix {}.",
                     self.current_char(),
@@ -702,19 +697,18 @@ impl Lexer<'_> {
             }
 
             if float {
-                elle_error!(self.get_location(start_row, start_col).error(format!(
+                elle_error!(self.get_location(start_row, start_col).error(
                     "Cannot have a floating point or scientific literal of a base other than 10."
-                )))
+                ))
             }
 
             literal = format!("{:?}", u128::from_str_radix(&literal[2..], radix).unwrap());
         }
 
         if scientific {
-            let base_string = literal.split("e").next().unwrap_or_else(|| {
+            let base_string = literal.split('e').next().unwrap_or_else(|| {
                 elle_error!(self.get_location(start_row, start_col).error(format!(
-                    "Failed to get the base string of {} for scientific literal",
-                    literal
+                    "Failed to get the base string of {literal} for scientific literal",
                 )))
             });
 
@@ -731,43 +725,40 @@ impl Lexer<'_> {
             }
             .unwrap_or_else(|err| {
                 elle_error!(self.get_location(start_row, start_col).error(format!(
-                    "Failed to parse the base {} of scientific literal into a number\n{err}",
-                    base_string
+                    "Failed to parse the base {base_string} of scientific literal into a number\n{err}"
                 )))
             });
 
-            let exponent_base = literal.split("e").skip(1).next().unwrap_or_else(|| {
+            let exponent_base = literal.split('e').nth(1).unwrap_or_else(|| {
                 elle_error!(self.get_location(start_row, start_col).error(format!(
-                    "Failed to get the base string of {} for scientific literal",
-                    literal
+                    "Failed to get the base string of {literal} for scientific literal"
                 )))
             });
 
-            let exponent = exponent_base.parse::<i64>().unwrap_or_else(|err| {
+            let exponent = exponent_base.parse::<u32>().unwrap_or_else(|err| {
                 elle_error!(self.get_location(start_row, start_col).error(format!(
-                    "Failed to parse the exponent {} of scientific literal into an integer\n{err}",
-                    exponent_base
+                    "Failed to parse the exponent {exponent_base} of scientific literal into an integer\n{err}"
                 )))
             });
 
             match base {
                 ParseResult::Float(val) => {
-                    literal = (val * 10_f64.powf(exponent as f64)).to_string();
+                    literal = (val * 10_f64.powf(f64::from(exponent))).to_string();
 
                     if !literal.contains('.') {
                         literal.push_str(".0");
                     }
                 }
                 ParseResult::Int(val) => {
-                    literal = (val * 10_i64.pow(exponent as u32)).to_string();
+                    literal = (val * 10_i64.pow(exponent)).to_string();
                 }
-            };
+            }
         }
 
         if float {
             (
                 TokenKind::FloatingPoint,
-                ValueKind::String(format!("{}", literal)),
+                ValueKind::String(literal.to_string()),
             )
         } else {
             (
@@ -839,7 +830,7 @@ impl Lexer<'_> {
                 '\'' => '\'',
                 _ => elle_error!(self
                     .get_location(start_row, start_col)
-                    .error(format!("Invalid escape sequence: '{}'", character))),
+                    .error(format!("Invalid escape sequence: '{character}'"))),
             };
 
             self.advance();

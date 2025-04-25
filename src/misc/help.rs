@@ -6,7 +6,7 @@ use crate::{
     DIVIDER_SIZE,
 };
 
-pub fn print_help(program: String) {
+pub fn print_help(program: &str) {
     println!(
         "{}Welcome to the Elle compiler! (˶ᵔ ᵕ ᵔ˶){}",
         get_GREEN!(),

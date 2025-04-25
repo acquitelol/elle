@@ -12,16 +12,16 @@ pub fn get_diagnostics(primary_file: &PathBuf, output: &str) -> Vec<Diagnostic> 
 }
 
 pub fn get_diagnostic(primary_file: &PathBuf, output: &str) -> Option<Diagnostic> {
-    let lines = output.splitn(6, "\n").collect::<Vec<&str>>();
+    let lines = output.splitn(6, '\n').collect::<Vec<&str>>();
 
     if lines.len() != 6 {
         eprintln!("Found invalid diagnostic {output}");
         return None;
     }
 
-    let severity = match lines[0] {
-        "error" => Some(DiagnosticSeverity::ERROR),
-        "warning" => Some(DiagnosticSeverity::WARNING),
+    let severity = match lines.first() {
+        Some(&"error") => Some(DiagnosticSeverity::ERROR),
+        Some(&"warning") => Some(DiagnosticSeverity::WARNING),
         _ => {
             eprintln!("Invalid severity");
             None
@@ -62,7 +62,7 @@ pub fn get_diagnostic(primary_file: &PathBuf, output: &str) -> Option<Diagnostic
 
     Some(Diagnostic {
         range,
-        message: message.trim().replace("\n", "\n\n").to_string(),
+        message: message.trim().replace('\n', "\n\n"),
         severity,
         ..Default::default()
     })

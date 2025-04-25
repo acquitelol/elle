@@ -16,8 +16,8 @@ pub struct Constant<'a> {
 }
 
 impl<'a> Constant<'a> {
-    pub fn new(parser: &'a mut Parser) -> Self {
-        Constant { parser }
+    pub const fn new(parser: &'a mut Parser) -> Self {
+        Self { parser }
     }
 
     pub fn parse(

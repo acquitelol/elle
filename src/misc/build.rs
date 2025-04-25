@@ -6,23 +6,23 @@ use crate::{
 };
 
 pub fn build(
-    qbe_path: String,
-    path_to_qbe_dist: String,
+    qbe_path: &str,
+    path_to_qbe_dist: &str,
     mut output_path: String,
     emit_asm: bool,
     object_output: bool,
-    linker_flags: Vec<Option<String>>,
+    linker_flags: &[Option<String>],
     linker_path: String,
-    object_files: Vec<String>,
+    object_files: &[String],
     no_std: bool,
 ) -> EmitKind {
     let path = Path::new(&path_to_qbe_dist).with_extension("s");
     let path_string = path.to_str().unwrap().to_string();
 
     let result = Command::new(qbe_path)
-        .args(["-o", &path_string, &path_to_qbe_dist])
+        .args(["-o", &path_string, path_to_qbe_dist])
         .output()
-        .expect(&format!("{}Failed to execute QBE.", get_RED!()));
+        .unwrap_or_else(|err| panic!("{}Failed to execute QBE: {err}{}", get_RED!(), get_RESET!()));
 
     if !result.stderr.is_empty() {
         eprintln!(
@@ -36,11 +36,15 @@ pub fn build(
     }
 
     if emit_asm {
-        fs::rename(&path_string, Path::new(&output_path).with_extension("s")).expect(&format!(
-            "{}Failed to rename {path_string} to {output_path}{}",
-            get_RED!(),
-            get_RESET!()
-        ));
+        fs::rename(&path_string, Path::new(&output_path).with_extension("s")).unwrap_or_else(
+            |err| {
+                panic!(
+                    "{}Failed to rename {path_string} to {output_path}: {err}{}",
+                    get_RED!(),
+                    get_RESET!()
+                )
+            },
+        );
 
         return EmitKind::AsmFile(output_path);
     }
@@ -58,12 +62,11 @@ pub fn build(
         linker_flags
             .iter()
             .filter(|x| x.is_some())
-            .map(|x| x.as_ref().unwrap().as_str())
-            .collect::<Vec<&str>>(),
+            .map(|x| x.as_ref().unwrap().as_str()),
     );
 
     if !object_files.is_empty() {
-        for file in &object_files {
+        for file in object_files {
             args.push(file.as_str());
         }
     }
@@ -84,11 +87,13 @@ pub fn build(
     let result = Command::new(linker_path)
         .args(args)
         .output()
-        .expect(&format!(
-            "{}Failed to execute CC for {path_string}.{}",
-            get_RED!(),
-            get_RESET!()
-        ));
+        .unwrap_or_else(|err| {
+            panic!(
+                "{}Failed to execute CC for {path_string}: {err}{}",
+                get_RED!(),
+                get_RESET!()
+            )
+        });
 
     if !result.stderr.is_empty() {
         eprintln!(

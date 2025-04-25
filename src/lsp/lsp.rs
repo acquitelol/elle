@@ -10,14 +10,14 @@ pub struct Backend {
 }
 
 impl Backend {
-    pub fn new(client: Client) -> Self {
+    pub const fn new(client: Client) -> Self {
         Self { client }
     }
 }
 
 impl Backend {
     pub async fn try_report_diagnostics(&self, uri: &Url) {
-        if let Some(path) = uri.to_file_path().ok() {
+        if let Ok(path) = uri.to_file_path() {
             if let Ok(output) = get_file_output(&path, None).await {
                 let diagnostics = get_diagnostics(&path, &output);
                 dbg!(&diagnostics);

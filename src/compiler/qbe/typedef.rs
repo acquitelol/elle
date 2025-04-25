@@ -27,7 +27,7 @@ impl TypeDef {
                     .iter()
                     .find(|td| td.name == ty.get_struct_inner().unwrap())
                     .unwrap_or_else(|| {
-                        elle_error!(Location::base().internal_error(format!(
+                        elle_error!(Location::internal_error(format!(
                             "Unable to find struct named '{}'",
                             ty.get_struct_inner().unwrap(),
                         )))

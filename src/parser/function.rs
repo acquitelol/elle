@@ -17,12 +17,85 @@ use super::{
     statement::Statement,
 };
 
+fn insert_deferred_statements(nodes: &mut Vec<AstNode>, deferred: &Vec<AstNode>, root: bool) {
+    let mut new_nodes = vec![];
+    let mut found_return = false;
+
+    for node in nodes.drain(..) {
+        match node {
+            AstNode::Return { .. } => {
+                new_nodes.extend(deferred.clone());
+                new_nodes.push(node);
+                found_return = true;
+            }
+            AstNode::WhileLoopStatement(WhileLoopStatement {
+                condition,
+                step,
+                body,
+                location,
+            }) => {
+                let mut new_body = body;
+                insert_deferred_statements(&mut new_body, deferred, false);
+
+                new_nodes.push(AstNode::WhileLoopStatement(WhileLoopStatement {
+                    condition,
+                    step,
+                    body: new_body,
+                    location,
+                }));
+            }
+            AstNode::BlockStatement(BlockStatement { body, location }) => {
+                let mut new_body = body;
+                insert_deferred_statements(&mut new_body, deferred, false);
+
+                new_nodes.push(AstNode::BlockStatement(BlockStatement {
+                    body: new_body,
+                    location,
+                }));
+            }
+            AstNode::IfStatement(IfStatement {
+                condition,
+                body,
+                elifs,
+                else_body,
+                location,
+            }) => {
+                let mut new_body = body;
+                let mut new_else_body = else_body;
+                let mut new_elifs = elifs;
+
+                insert_deferred_statements(&mut new_body, deferred, false);
+                insert_deferred_statements(&mut new_else_body, deferred, false);
+
+                for (_, elif) in &mut new_elifs {
+                    insert_deferred_statements(elif, deferred, false);
+                }
+
+                new_nodes.push(AstNode::IfStatement(IfStatement {
+                    condition,
+                    body: new_body,
+                    elifs: new_elifs,
+                    else_body: new_else_body,
+                    location,
+                }));
+            }
+            _ => new_nodes.push(node),
+        }
+    }
+
+    if !found_return && root {
+        new_nodes.extend(deferred.clone());
+    }
+
+    *nodes = new_nodes;
+}
+
 pub struct Function<'a> {
     parser: &'a mut Parser,
 }
 
 impl<'a> Function<'a> {
-    pub fn new(parser: &'a mut Parser) -> Self {
+    pub const fn new(parser: &'a mut Parser) -> Self {
         Function { parser }
     }
 
@@ -44,7 +117,6 @@ impl<'a> Function<'a> {
                 }
 
                 self.parser.expect_tokens(&[TokenKind::Semicolon]);
-                self.parser.advance();
             } else {
                 while self.parser.current_token().kind != TokenKind::LeftCurlyBrace
                     && !self.parser.is_eof()
@@ -73,9 +145,9 @@ impl<'a> Function<'a> {
                 }
 
                 self.parser.expect_tokens(&[TokenKind::RightCurlyBrace]);
-                self.parser.advance(); // Go past the right curly brace
             }
 
+            self.parser.advance();
             return None;
         }
 
@@ -87,8 +159,7 @@ impl<'a> Function<'a> {
 
         if self.parser.current_token().kind == TokenKind::Dot {
             elle_error!(self.parser.current_token().location.borrow().error(format!(
-                "Cannot create a method for '{}' using '.'\nPlease use '::' instead.",
-                name
+                "Cannot create a method for '{name}' using '.'\nPlease use '::' instead."
             )))
         }
 
@@ -99,12 +170,12 @@ impl<'a> Function<'a> {
             {
                 elle_error!(
                     location.borrow().error(format!(
-                        "Cannot create a method for '{}' because it isn't a struct or primitive type.\n{}",
-                        name.clone(), if let Some(map) = ValueKind::similar_mapping(name.clone()) {
-                            format!("A similar type exists which might be what you need: '{}'", map)
-                        } else {
-                            format!("Are you sure you spelt '{}' correctly?", name)
-                        }
+                        "Cannot create a method for '{name}' because it isn't a struct or primitive type.\n{}",
+                        ValueKind::similar_mapping(&name)
+                            .map_or_else(
+                                || format!("Are you sure you spelt '{name}' correctly?"),
+                                |map| format!("A similar type exists which might be what you need: '{map}'")
+                            )
                     ))
                 )
             }
@@ -112,7 +183,7 @@ impl<'a> Function<'a> {
             self.parser.advance();
 
             let identifier = self.parser.get_identifier();
-            name = format!("{}.{}", name, identifier);
+            name = format!("{name}.{identifier}");
 
             namespace_token = name_token;
             name_token = self.parser.current_token();
@@ -174,7 +245,7 @@ impl<'a> Function<'a> {
                             self.parser.advance();
                         }
                         _ => {}
-                    };
+                    }
                 }
 
                 let r#type = self.parser.get_type(Some(&generics));
@@ -190,7 +261,7 @@ impl<'a> Function<'a> {
                         eprintln!(
                             "{}",
                             ty_loc.borrow().warning("Elle does not support C-style explicit function prototypes.\nPlease remove the 'void' type from this function's signature.\nThis is a warning, which means the compiler will ignore this.")
-                        )
+                        );
                     }
 
                     break;
@@ -203,17 +274,17 @@ impl<'a> Function<'a> {
                         .current_token()
                         .location
                         .borrow()
-                        .error(format!("Invalid token type: {:?}", other))),
+                        .error(format!("Invalid token type: {other:?}"))),
                 };
 
                 self.parser.advance();
                 self.parser.match_token(TokenKind::Comma, true);
 
                 arguments.push(Argument {
-                    r#type,
                     name,
+                    r#type,
                     no_fmt,
-                })
+                });
             }
         }
 
@@ -228,8 +299,7 @@ impl<'a> Function<'a> {
         {
             eprintln!("{}", location.borrow().warning(
                 format!(
-                    "Generating a variadic function named '{}' without the ElleMeta struct.\nThis internal structure provides you with arity, it may be useful.\nAre you sure you want to create this function without it?",
-                    name
+                    "Generating a variadic function named '{name}' without the ElleMeta struct.\nThis internal structure provides you with arity, it may be useful.\nAre you sure you want to create this function without it?",
                 )
             ));
         }
@@ -271,10 +341,10 @@ impl<'a> Function<'a> {
                                 eprintln!(
                                     "{}",
                                     location.borrow().warning(format!(
-                                        "Can't assign aliases to non-external functions\nSkipping alias '{}' for function '{}'",
-                                        alias, name.replace(".", "::")
+                                        "Can't assign aliases to non-external functions\nSkipping alias '{alias}' for function '{}'",
+                                        name.replace('.', "::")
                                     ))
-                                )
+                                );
                             }
                         }
 
@@ -302,10 +372,10 @@ impl<'a> Function<'a> {
             }
         }
 
-        let mut return_location = self.parser.current_token().location.clone();
+        let mut return_location = self.parser.current_token().location;
 
         if self.parser.match_token(TokenKind::RightArrow, true) {
-            return_location = self.parser.current_token().location.clone();
+            return_location = self.parser.current_token().location;
             r#return = Some(self.parser.get_type(Some(&generics)));
             self.parser.advance();
         }
@@ -333,7 +403,7 @@ impl<'a> Function<'a> {
                 usable: true,
                 imported: false,
                 location,
-                return_location: return_location.clone(),
+                return_location,
             }));
         }
 
@@ -354,122 +424,42 @@ impl<'a> Function<'a> {
 
             let current = self.parser.current_token();
 
-            match current.kind {
-                TokenKind::RightCurlyBrace => {
-                    self.parser.advance();
-                    break;
-                }
-                _ => {
-                    let (node, position, tokens) = Statement::new(
-                        self.parser.tokens.clone(),
-                        self.parser.position.clone(),
-                        &body,
-                        &Shared {
-                            struct_pool: &self.parser.struct_pool,
-                            enum_pool: &self.parser.enum_pool,
-                            tree: &self.parser.tree,
-                            generics: &generics,
-                            known_generics: &vec![],
-                        },
-                    )
-                    .parse();
+            if current.kind == TokenKind::RightCurlyBrace {
+                self.parser.advance();
+                break;
+            } else {
+                let (node, position, tokens) = Statement::new(
+                    self.parser.tokens.clone(),
+                    self.parser.position,
+                    &body,
+                    &Shared {
+                        struct_pool: &self.parser.struct_pool,
+                        enum_pool: &self.parser.enum_pool,
+                        tree: &self.parser.tree,
+                        generics: &generics,
+                        known_generics: &vec![],
+                    },
+                )
+                .parse();
 
-                    body.borrow_mut().push(node);
-                    self.parser.position = position;
-                    self.parser.tokens = tokens;
-                }
-            };
+                body.borrow_mut().push(node);
+                self.parser.position = position;
+                self.parser.tokens = tokens;
+            }
         }
 
-        let mut res = body.borrow_mut().to_owned().clone();
+        let mut res = body.borrow_mut().to_owned();
         let mut deferred: Vec<AstNode> = vec![];
 
         res.retain(|node| match node.clone() {
             AstNode::DeferStatement { value, .. } => {
-                deferred.push(*value.clone());
+                deferred.push(*value);
                 false
             }
             _ => true,
         });
 
         deferred.reverse();
-
-        fn insert_deferred_statements(
-            nodes: &mut Vec<AstNode>,
-            deferred: &Vec<AstNode>,
-            root: bool,
-        ) {
-            let mut new_nodes = vec![];
-            let mut found_return = false;
-
-            for node in nodes.drain(..) {
-                match node {
-                    AstNode::Return { .. } => {
-                        new_nodes.extend(deferred.clone());
-                        new_nodes.push(node);
-                        found_return = true;
-                    }
-                    AstNode::WhileLoopStatement(WhileLoopStatement {
-                        condition,
-                        step,
-                        body,
-                        location,
-                    }) => {
-                        let mut new_body = body;
-                        insert_deferred_statements(&mut new_body, deferred, false);
-
-                        new_nodes.push(AstNode::WhileLoopStatement(WhileLoopStatement {
-                            condition,
-                            step,
-                            body: new_body,
-                            location,
-                        }));
-                    }
-                    AstNode::BlockStatement(BlockStatement { body, location }) => {
-                        let mut new_body = body;
-                        insert_deferred_statements(&mut new_body, deferred, false);
-
-                        new_nodes.push(AstNode::BlockStatement(BlockStatement {
-                            body: new_body,
-                            location,
-                        }));
-                    }
-                    AstNode::IfStatement(IfStatement {
-                        condition,
-                        body,
-                        elifs,
-                        else_body,
-                        location,
-                    }) => {
-                        let mut new_body = body;
-                        let mut new_else_body = else_body;
-                        let mut new_elifs = elifs;
-
-                        insert_deferred_statements(&mut new_body, deferred, false);
-                        insert_deferred_statements(&mut new_else_body, deferred, false);
-
-                        for (_cond, elif) in new_elifs.iter_mut() {
-                            insert_deferred_statements(elif, deferred, false);
-                        }
-
-                        new_nodes.push(AstNode::IfStatement(IfStatement {
-                            condition,
-                            body: new_body,
-                            elifs: new_elifs,
-                            else_body: new_else_body,
-                            location,
-                        }));
-                    }
-                    _ => new_nodes.push(node),
-                }
-            }
-
-            if !found_return && root {
-                new_nodes.extend(deferred.clone());
-            }
-
-            *nodes = new_nodes;
-        }
 
         insert_deferred_statements(&mut res, &deferred, true);
         set_end!(location, self.parser);

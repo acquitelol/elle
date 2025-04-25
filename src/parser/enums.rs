@@ -214,7 +214,7 @@ pub enum AstNode {
     },
     /// Holds identifiers, literals, inline IR
     Literal(Literal),
-    /// A declaration of name `name` with type `r#type` to value `value
+    /// A declaration of name `name` with type `r#type` to value `value`
     Declare(Declare),
     /// Allocates stack memory of size `valist`, assigns it to `name`, and calls `vastart` on it
     VariadicStart(VariadicStart),
@@ -224,7 +224,7 @@ pub enum AstNode {
     Return(Return),
     /// Calls function `name` with parameters `parameters`
     FunctionCall(FunctionCall),
-    /// Performs an arithmetic operation with `operator` using `left` and `right
+    /// Performs an arithmetic operation with `operator` using `left` and `right`
     BinaryOperation(BinaryOperation),
     /// Runs `body` if condition `condition` is true, otherwise runs `else_body`
     IfStatement(IfStatement),
@@ -260,7 +260,7 @@ pub enum AstNode {
     /// and returns a single line statement result
     Lambda(Lambda),
     /// Calculates the array length of an Elle-generated array
-    /// Uses the formula *(array_ptr - #size(i32))
+    /// Uses the formula *(`array_ptr` - #size(i32))
     ArrayLength(ArrayLength),
     /// An expression which allows you to declare a value to something conditionally.
     Ternary(Ternary),
@@ -273,7 +273,7 @@ pub enum AstNode {
 }
 
 impl AstNode {
-    pub fn token_to_literal(token: Token) -> AstNode {
+    pub fn token_to_literal(token: Token) -> Self {
         Self::Literal(Literal {
             kind: token.kind,
             value: token.value,
@@ -304,7 +304,7 @@ fn modify_type_in_node(
     tree: Option<&RefCell<Vec<Primitive>>>,
 ) -> AstNode {
     match &mut node {
-        AstNode::Literal { .. } => {}
+        AstNode::VariadicStart { .. } | AstNode::Literal { .. } => {}
         AstNode::Declare(Declare { r#type, value, .. }) => {
             if let Some(ty) = r#type {
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
@@ -326,21 +326,10 @@ fn modify_type_in_node(
 
             *value = modify_type_in_ast(value.clone(), generics, known_types, struct_pool, tree);
         }
-        AstNode::Return(Return { value, .. }) => {
-            let new_value =
-                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
-            *value = Box::new(new_value);
-        }
         AstNode::VariadicArgument(VariadicArgument { r#type, .. }) => {
             if let Some(ty) = r#type {
                 *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
             }
-        }
-        AstNode::VariadicStart { .. } => {}
-        AstNode::ArrayLength(ArrayLength { value, .. }) => {
-            let new_value =
-                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
-            *value = Box::new(new_value);
         }
         AstNode::Buffer(Buffer { r#type, size, .. }) => {
             if let Some(ty) = r#type {
@@ -439,20 +428,8 @@ fn modify_type_in_node(
         }
         AstNode::FieldAccess(FieldAccess {
             left, right, value, ..
-        }) => {
-            let new_left =
-                modify_type_in_node(*left.clone(), generics, known_types, struct_pool, tree);
-            *left = Box::new(new_left);
-            let new_right =
-                modify_type_in_node(*right.clone(), generics, known_types, struct_pool, tree);
-            *right = Box::new(new_right);
-            if let Some(val) = value {
-                let new_value =
-                    modify_type_in_node(*val.clone(), generics, known_types, struct_pool, tree);
-                *value = Some(Box::new(new_value));
-            }
-        }
-        AstNode::MemoryOperation(MemoryOperation {
+        })
+        | AstNode::MemoryOperation(MemoryOperation {
             left, right, value, ..
         }) => {
             let new_left =
@@ -467,25 +444,16 @@ fn modify_type_in_node(
                 *value = Some(Box::new(new_value));
             }
         }
-        AstNode::DeferStatement { value, .. } => {
-            let new_value =
-                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
-            *value = Box::new(new_value);
-        }
         AstNode::BlockStatement(BlockStatement { body, .. }) => {
             *body = modify_type_in_ast(body.clone(), generics, known_types, struct_pool, tree);
         }
-        AstNode::LogicalNot(LogicalNot { value, .. }) => {
-            let new_value =
-                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
-            *value = Box::new(new_value);
-        }
-        AstNode::BitwiseNot(BitwiseNot { value, .. }) => {
-            let new_value =
-                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
-            *value = Box::new(new_value);
-        }
-        AstNode::Address(Address { value, .. }) => {
+        AstNode::DeferStatement { value, .. }
+        | AstNode::LogicalNot(LogicalNot { value, .. })
+        | AstNode::BitwiseNot(BitwiseNot { value, .. })
+        | AstNode::SetAllocator(SetAllocator { value, .. })
+        | AstNode::ArrayLength(ArrayLength { value, .. })
+        | AstNode::Return(Return { value, .. })
+        | AstNode::Address(Address { value, .. }) => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
@@ -520,11 +488,6 @@ fn modify_type_in_node(
                 *value = Some(Box::new(new_value));
             }
         }
-        AstNode::SetAllocator(SetAllocator { value, .. }) => {
-            let new_value =
-                modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
-            *value = Box::new(new_value);
-        }
     }
 
     node
@@ -532,12 +495,12 @@ fn modify_type_in_node(
 
 fn modify_type(
     ty: Type,
-    generics: &Vec<String>,
+    generics: &[String],
     known_types: &HashMap<String, Type>,
     struct_pool: Option<&RefCell<StructPool>>,
     tree: Option<&RefCell<Vec<Primitive>>>,
 ) -> Type {
-    ty.unknown_to_known(struct_pool, tree, generics.clone(), known_types.clone())
+    ty.unknown_to_known(struct_pool, tree, generics, known_types)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

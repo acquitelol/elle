@@ -2,7 +2,13 @@
 #![allow(
     clippy::format_in_format_args,
     clippy::too_many_lines,
-    clippy::wildcard_imports
+    clippy::wildcard_imports,
+    clippy::option_option,
+    clippy::module_inception,
+    clippy::single_match,
+    clippy::struct_excessive_bools,
+    clippy::fn_params_excessive_bools,
+    clippy::too_many_arguments
 )]
 use std::collections::{HashMap, HashSet};
 use std::env;
@@ -93,7 +99,7 @@ async fn main() -> ExitCode {
     }
 
     if args.peek().is_none() {
-        print_help(program);
+        print_help(&program);
         exit(0);
     }
 
@@ -181,7 +187,7 @@ async fn main() -> ExitCode {
             "-p" | "--pedantic" => pedantic = true,
             "-o" => output_path = args.next(),
             "-h" | "--help" => {
-                print_help(program);
+                print_help(&program);
                 exit(0);
             }
             "-c" | "--compile-only" => {
@@ -396,7 +402,7 @@ async fn main() -> ExitCode {
         object_output,
         expect_info,
         0,
-        loc.clone(),
+        &loc,
         &mut string_module_methods,
     );
 
@@ -896,14 +902,14 @@ async fn main() -> ExitCode {
         EmitKind::QbeFile(path.to_str().unwrap().to_string())
     } else {
         build(
-            qbe_path,
-            path_to_qbe_dist,
+            &qbe_path,
+            &path_to_qbe_dist,
             parsed_output_path,
             emit_asm,
             object_output,
-            linker_flags,
+            &linker_flags,
             linker_path,
-            object_files,
+            &object_files,
             no_std,
         )
     };
