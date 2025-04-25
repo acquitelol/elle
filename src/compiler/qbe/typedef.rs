@@ -19,7 +19,7 @@ impl TypeDef {
     pub fn size(&self, module: &RefCell<Module>) -> usize {
         let mut size = 0;
 
-        for (ty, _) in self.items.iter().cloned() {
+        for (ty, _) in &self.items {
             if ty.is_struct() {
                 let tmp_size = module
                     .borrow()
@@ -34,9 +34,9 @@ impl TypeDef {
                     })
                     .size(module);
 
-                size += tmp_size
+                size += tmp_size;
             } else {
-                size += ty.size(module) as usize;
+                size += usize::try_from(ty.size(module)).expect("failed to cast to usize");
             }
         }
 
@@ -48,7 +48,7 @@ impl fmt::Display for TypeDef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "type :{} = ", self.name)?;
         if let Some(align) = self.align {
-            write!(f, "align {} ", align)?;
+            write!(f, "align {align} ")?;
         }
 
         write!(
@@ -59,20 +59,20 @@ impl fmt::Display for TypeDef {
                 .map(|(ty, count)| if *count > 1 {
                     format!(
                         "{} {}",
-                        if !ty.is_struct() {
-                            ty.clone().into_base()
-                        } else {
+                        if ty.is_struct() {
                             ty.clone()
+                        } else {
+                            ty.clone().into_base()
                         },
                         count
                     )
                 } else {
                     format!(
                         "{}",
-                        if !ty.is_struct() {
-                            ty.clone().into_base()
-                        } else {
+                        if ty.is_struct() {
                             ty.clone()
+                        } else {
+                            ty.clone().into_base()
                         }
                     )
                 })

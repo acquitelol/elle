@@ -14,8 +14,8 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn new() -> Module {
-        Module {
+    pub fn new() -> Self {
+        Self {
             functions: hashmap![],
             types: vec![],
             data: vec![],
@@ -42,12 +42,12 @@ impl Module {
 
             let mut used_functions: HashSet<String> = HashSet::new();
 
-            for (_, func) in self.functions.iter() {
-                for block in func.blocks.iter() {
-                    for statement in block.statements.iter() {
+            for func in self.functions.values() {
+                for block in &func.blocks {
+                    for statement in &block.statements {
                         match statement {
                             Statement::Assign(_, _, instr) | Statement::Volatile(instr) => {
-                                for (_, other) in self.functions.iter() {
+                                for other in self.functions.values() {
                                     if instr.is_global_used(&other.name) {
                                         used_functions.insert(other.name.clone());
                                     }
@@ -71,12 +71,12 @@ impl Module {
     pub fn remove_unused_data(&mut self) {
         let mut used_data_sections: HashSet<String> = HashSet::new();
 
-        for (_, func) in self.functions.iter() {
-            for block in func.blocks.iter() {
-                for statement in block.statements.iter() {
+        for func in self.functions.values() {
+            for block in &func.blocks {
+                for statement in &block.statements {
                     match statement {
                         Statement::Assign(_, _, instr) | Statement::Volatile(instr) => {
-                            for data in self.data.iter() {
+                            for data in &self.data {
                                 if instr.is_global_used(&data.name) {
                                     used_data_sections.insert(data.name.clone());
                                 }
@@ -87,45 +87,39 @@ impl Module {
             }
         }
 
-        self.data.retain(|data| {
-            if !used_data_sections.contains(&data.name) {
-                false
-            } else {
-                true
-            }
-        });
+        self.data
+            .retain(|data| used_data_sections.contains(&data.name));
     }
 
     pub fn remove_generics(&mut self) {
         self.types.retain(|ty: &TypeDef| {
-            ty.items
+            !ty.items
                 .iter()
-                .find(|item| Type::Void.has_generic_type(item.0.clone()))
-                .is_none()
-        })
+                .any(|item| Type::Void.has_generic_type(&item.0))
+        });
     }
 
     pub fn remove_empty_structs(&mut self) {
-        self.types.retain(|ty| !ty.items.is_empty())
+        self.types.retain(|ty| !ty.items.is_empty());
     }
 }
 
 impl fmt::Display for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for r#type in self.types.iter() {
-            writeln!(f, "{}", r#type)?;
+        for r#type in &self.types {
+            writeln!(f, "{type}")?;
         }
 
-        for data in self.data.iter() {
-            writeln!(f, "{}", data)?;
+        for data in &self.data {
+            writeln!(f, "{data}")?;
         }
 
-        for (_, func) in self.functions.iter() {
+        for func in self.functions.values() {
             // ensure we retain external functions until this point
             // because some data sections may rely on these functions
             // if we remove them the data sections will also be removed
             if !func.external {
-                writeln!(f, "{}", func)?;
+                writeln!(f, "{func}")?;
             }
         }
 

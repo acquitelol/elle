@@ -57,7 +57,7 @@ impl fmt::Display for Block {
             "{}",
             self.statements
                 .iter()
-                .map(|instr| format!("\t{}", instr))
+                .map(|instr| format!("\t{instr}"))
                 .collect::<Vec<String>>()
                 .join("\n")
         )

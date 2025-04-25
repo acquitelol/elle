@@ -8,16 +8,16 @@ pub struct Linkage {
 }
 
 impl Linkage {
-    pub fn private() -> Linkage {
-        Linkage {
+    pub const fn private() -> Self {
+        Self {
             exported: false,
             section: None,
             secflags: None,
         }
     }
 
-    pub fn public() -> Linkage {
-        Linkage {
+    pub const fn public() -> Self {
+        Self {
             exported: true,
             section: None,
             secflags: None,
@@ -30,11 +30,12 @@ impl fmt::Display for Linkage {
         if self.exported {
             write!(formatter, "export ")?;
         }
+
         if let Some(section) = &self.section {
-            write!(formatter, "section \"{}\"", section)?;
+            write!(formatter, "section \"{section}\"")?;
 
             if let Some(secflags) = &self.secflags {
-                write!(formatter, " \"{}\"", secflags)?;
+                write!(formatter, " \"{secflags}\"")?;
             }
 
             write!(formatter, " ")?;

@@ -25,7 +25,7 @@ impl fmt::Display for Statement {
                     instr
                 )
             }
-            Self::Volatile(instr) => write!(f, "{}", instr),
+            Self::Volatile(instr) => write!(f, "{instr}"),
         }
     }
 }

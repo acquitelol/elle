@@ -11,7 +11,7 @@ pub struct Data {
 }
 
 impl Data {
-    pub fn new(
+    pub const fn new(
         linkage: Linkage,
         name: String,
         align: Option<u64>,
@@ -31,14 +31,14 @@ impl fmt::Display for Data {
         write!(formatter, "{}data ${} = ", self.linkage, self.name)?;
 
         if let Some(align) = self.align {
-            write!(formatter, "align {} ", align)?;
+            write!(formatter, "align {align} ")?;
         }
         write!(
             formatter,
             "{{ {} }}",
             self.items
                 .iter()
-                .map(|(ty, item)| format!("{} {}", ty, item))
+                .map(|(ty, item)| format!("{ty} {item}"))
                 .collect::<Vec<String>>()
                 .join(", ")
         )

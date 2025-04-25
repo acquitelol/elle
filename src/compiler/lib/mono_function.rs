@@ -76,7 +76,7 @@ pub fn create_monomorphized_function(
                 let param_ty = {
                     let tmp = this.arguments.get(i + *add_meta as usize);
 
-                    if tmp.is_some() && !Type::Void.has_generic_type(tmp.unwrap().r#type.clone()) {
+                    if tmp.is_some() && !Type::Void.has_generic_type(&tmp.unwrap().r#type) {
                         tmp.map(|item| item.r#type.clone())
                     } else {
                         None
@@ -114,9 +114,9 @@ pub fn create_monomorphized_function(
                 }
                 .unwrap_or(Type::Void);
 
-                if ty.clone().has_generic_type(other.clone()) {
+                if ty.has_generic_type(&other) {
                     // Possibly Option.generic.8 and Option
-                    if let Some(inner) = ty.clone().deduce_generic_type(other.clone()) {
+                    if let Some(inner) = ty.deduce_generic_type(&other) {
                         for (key, ty) in inner.iter().map(|(x, y)| (x.clone(), y.clone())) {
                             match known_generics.get(&key) {
                                 Some(existing_ty)
@@ -164,11 +164,11 @@ pub fn create_monomorphized_function(
 
             if let Some(other) = this.r#return.clone() {
                 if let Some(ty) = ty {
-                    if ty.clone().has_generic_type(other.clone())
+                    if ty.clone().has_generic_type(&other)
                         && known_generics.len() < this.generics.len()
                     {
                         // Possibly Option.generic.8 and Option
-                        if let Some(inner) = ty.clone().deduce_generic_type(other.clone()) {
+                        if let Some(inner) = ty.deduce_generic_type(&other) {
                             known_generics.extend(inner)
                         } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
                             eprintln!(
@@ -184,11 +184,11 @@ pub fn create_monomorphized_function(
                 }
 
                 if let Some(ty) = func.borrow().return_type.clone() {
-                    if ty.clone().has_generic_type(other.clone())
+                    if ty.clone().has_generic_type(&other)
                         && known_generics.len() < this.generics.len()
                     {
                         // Possibly Option.generic.8 and Option
-                        if let Some(inner) = ty.clone().deduce_generic_type(other.clone()) {
+                        if let Some(inner) = ty.deduce_generic_type(&other) {
                             known_generics.extend(inner)
                         } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
                             eprintln!(

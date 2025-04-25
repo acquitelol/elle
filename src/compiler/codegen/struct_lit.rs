@@ -29,7 +29,7 @@ impl Codegen<'_> for StructLiteral {
             && is_generic!(inner.get_struct_inner().unwrap())
             && !is_generic!(plain_name)
         {
-            let generic_name = Type::from_internal_id(inner.get_struct_inner().unwrap()).0;
+            let (generic_name, ..) = Type::from_internal_id(&inner.get_struct_inner().unwrap());
 
             if plain_name == generic_name {
                 plain_name = inner.get_struct_inner().unwrap();

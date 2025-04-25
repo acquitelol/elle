@@ -169,10 +169,10 @@ pub fn generate_function(
             if $return_type != $first_type && !(maybe_void_pointer!($return_type, $first_type)) {
                 if maybe_generic!($return_type, $first_type) {
                     let (a, a_parts) =
-                        Type::from_internal_id($return_type.get_struct_inner().unwrap());
+                        Type::from_internal_id(&$return_type.get_struct_inner().unwrap());
 
                     let (b, b_parts) =
-                        Type::from_internal_id($first_type.get_struct_inner().unwrap());
+                        Type::from_internal_id(&$first_type.get_struct_inner().unwrap());
 
                     if a != b || a_parts != b_parts {
                         elle_error!(
@@ -235,11 +235,12 @@ pub fn generate_function(
                             && !(maybe_void_pointer!(return_type, first_type))
                         {
                             if maybe_generic!(return_type, first_type) {
-                                let (a, a_parts) =
-                                    Type::from_internal_id(return_type.get_struct_inner().unwrap());
+                                let (a, a_parts) = Type::from_internal_id(
+                                    &return_type.get_struct_inner().unwrap(),
+                                );
 
                                 let (b, b_parts) =
-                                    Type::from_internal_id(first_type.get_struct_inner().unwrap());
+                                    Type::from_internal_id(&first_type.get_struct_inner().unwrap());
 
                                 if a != b || a_parts != b_parts {
                                     elle_error!(

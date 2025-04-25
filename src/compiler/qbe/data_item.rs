@@ -9,8 +9,8 @@ pub enum DataItem {
 impl fmt::Display for DataItem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::String(string) => write!(f, "\"{}\"", string),
-            Self::Const(val) => write!(f, "{}", val),
+            Self::String(string) => write!(f, "\"{string}\""),
+            Self::Const(val) => write!(f, "{val}"),
         }
     }
 }

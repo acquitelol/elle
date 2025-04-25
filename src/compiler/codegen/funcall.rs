@@ -71,11 +71,11 @@ impl Codegen<'_> for FunctionCall {
 
                 if inner.is_struct() && is_generic!(inner.get_struct_inner().unwrap()) {
                     ty = Type::Pointer(Box::new(Type::Struct(
-                        Type::from_internal_id(inner.get_struct_inner().unwrap()).0,
+                        Type::from_internal_id(&inner.get_struct_inner().unwrap()).0,
                     )));
                 }
             } else if ty.is_struct() && is_generic!(ty.get_struct_inner().unwrap()) {
-                ty = Type::Struct(Type::from_internal_id(ty.get_struct_inner().unwrap()).0);
+                ty = Type::Struct(Type::from_internal_id(&ty.get_struct_inner().unwrap()).0);
             }
 
             // struct access
@@ -279,7 +279,7 @@ impl Codegen<'_> for FunctionCall {
         if type_method {
             if let Some((ty, _)) = first_param.clone() {
                 let parsed_ty = if ty.is_struct() && is_generic!(ty.get_struct_inner().unwrap()) {
-                    Type::Struct(Type::from_internal_id(ty.get_struct_inner().unwrap()).0)
+                    Type::Struct(Type::from_internal_id(&ty.get_struct_inner().unwrap()).0)
                 } else {
                     ty.clone()
                 };
@@ -394,7 +394,7 @@ impl Codegen<'_> for FunctionCall {
                         .unwrap_or(Function::default());
 
                     if is_generic!(struct_name) {
-                        let (real_struct_name, _) = Type::from_internal_id(struct_name);
+                        let (real_struct_name, _) = Type::from_internal_id(&struct_name);
                         func_name = format!("{real_struct_name}.{FORMAT_CONSTANT}");
 
                         if gen.generic_functions.contains_key(&func_name) {

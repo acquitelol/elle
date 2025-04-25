@@ -73,11 +73,10 @@ impl Function {
     }
 
     pub fn returns(&self) -> bool {
-        let last = self.last_block().statements.last();
-
-        last.map_or(false, |i| {
-            matches!(i, Statement::Volatile(Instruction::Return(_)))
-        })
+        self.last_block()
+            .statements
+            .last()
+            .is_some_and(|i| matches!(i, Statement::Volatile(Instruction::Return(_))))
     }
 }
 
@@ -92,9 +91,8 @@ impl fmt::Display for Function {
         let mut arguments_clone = self
             .arguments
             .iter()
-            .map(|((r#type, temp), _)| format!("{} {}", r#type.clone().into_abi(), temp))
-            .collect::<Vec<String>>()
-            .clone();
+            .map(|((r#type, temp), _)| format!("{} {temp}", r#type.clone().into_abi()))
+            .collect::<Vec<_>>();
 
         if self.variadic {
             arguments_clone.push("...".to_string());
@@ -107,8 +105,8 @@ impl fmt::Display for Function {
             args = arguments_clone.join(", "),
         )?;
 
-        for blk in self.blocks.iter() {
-            writeln!(formatter, "{}", blk)?;
+        for blk in &self.blocks {
+            writeln!(formatter, "{blk}")?;
         }
 
         write!(formatter, "}}")

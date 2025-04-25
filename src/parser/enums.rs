@@ -307,7 +307,7 @@ fn modify_type_in_node(
         AstNode::VariadicStart { .. } | AstNode::Literal { .. } => {}
         AstNode::Declare(Declare { r#type, value, .. }) => {
             if let Some(ty) = r#type {
-                *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
+                *ty = modify_type(ty, generics, known_types, struct_pool, tree);
             }
 
             if let Some(value) = value {
@@ -319,21 +319,20 @@ fn modify_type_in_node(
         AstNode::Lambda(Lambda {
             arguments, value, ..
         }) => {
-            for arg in arguments.iter_mut() {
-                arg.r#type =
-                    modify_type(arg.r#type.clone(), generics, known_types, struct_pool, tree);
+            for arg in arguments {
+                arg.r#type = modify_type(&arg.r#type, generics, known_types, struct_pool, tree);
             }
 
             *value = modify_type_in_ast(value.clone(), generics, known_types, struct_pool, tree);
         }
         AstNode::VariadicArgument(VariadicArgument { r#type, .. }) => {
             if let Some(ty) = r#type {
-                *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
+                *ty = modify_type(ty, generics, known_types, struct_pool, tree);
             }
         }
         AstNode::Buffer(Buffer { r#type, size, .. }) => {
             if let Some(ty) = r#type {
-                *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
+                *ty = modify_type(ty, generics, known_types, struct_pool, tree);
             }
             let new_size =
                 modify_type_in_node(*size.clone(), generics, known_types, struct_pool, tree);
@@ -351,7 +350,7 @@ fn modify_type_in_node(
             }
 
             for generic in base_generics {
-                *generic = modify_type(generic.clone(), generics, known_types, struct_pool, tree);
+                *generic = modify_type(generic, generics, known_types, struct_pool, tree);
             }
         }
         AstNode::BinaryOperation(BinaryOperation { left, right, .. }) => {
@@ -460,7 +459,7 @@ fn modify_type_in_node(
         }
         AstNode::Conversion(Conversion { r#type, value, .. }) => {
             if let Some(ty) = r#type {
-                *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
+                *ty = modify_type(ty, generics, known_types, struct_pool, tree);
             }
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
@@ -468,7 +467,7 @@ fn modify_type_in_node(
         }
         AstNode::Size(Size { value, .. }) => match value {
             Ok(ty) => {
-                *ty = modify_type(ty.clone(), generics, known_types, struct_pool, tree);
+                *ty = modify_type(ty, generics, known_types, struct_pool, tree);
             }
             Err(ast_node) => {
                 let new_ast_node = modify_type_in_node(
@@ -494,7 +493,7 @@ fn modify_type_in_node(
 }
 
 fn modify_type(
-    ty: Type,
+    ty: &Type,
     generics: &[String],
     known_types: &HashMap<String, Type>,
     struct_pool: Option<&RefCell<StructPool>>,

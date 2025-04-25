@@ -58,7 +58,7 @@ impl Codegen<'_> for MemoryOperation {
                                 .generic_functions
                                 .get(&format!(
                                     "{}.{}",
-                                    Type::from_internal_id(struct_name.clone()).0,
+                                    Type::from_internal_id(&struct_name).0,
                                     $constant
                                 ))
                                 .is_some())

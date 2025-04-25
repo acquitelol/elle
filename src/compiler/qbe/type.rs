@@ -53,7 +53,7 @@ impl Type {
             Self::Long => "i64".into(),
             Self::UnsignedLong => "u64".into(),
             Self::Pointer(inner) => {
-                if *inner.as_ref() == Type::Char {
+                if *inner.as_ref() == Self::Char {
                     "string".into()
                 } else {
                     format!("{}*", inner.display())
@@ -63,22 +63,18 @@ impl Type {
             Self::Double => "f64".into(),
             Self::Void => "void".into(),
             Self::Null => "null".into(),
-            Self::Enum(name, ty) => if let Some(ty) = *ty.clone() {
-                format!("{}({})", name, ty.display())
-            } else {
-                name.into()
-            }
-            .into(),
+            Self::Enum(name, ty) => Option::as_ref(ty)
+                .map_or_else(|| name.into(), |ty| format!("{name}({})", ty.display())),
             Self::Struct(td, ..) => {
                 if is_generic!(td) {
-                    let (name, parts) = Type::from_internal_id(td.clone());
+                    let (name, parts) = Self::from_internal_id(td);
 
                     format!(
                         "{name}<{}>",
                         parts
                             .iter()
-                            .map(|ty| ty.display())
-                            .collect::<Vec<String>>()
+                            .map(Self::display)
+                            .collect::<Vec<_>>()
                             .join(", ")
                     )
                 } else {
@@ -92,29 +88,30 @@ impl Type {
                         {
                             let namespaced = inner
                                 .name
-                                .split(".")
+                                .split('.')
                                 .nth(1)
                                 .is_some_and(|x| x != GENERIC_IDENTIFIER);
 
                             if is_generic!(inner.name) {
                                 let generic_name = if namespaced {
-                                    inner.name.replacen(".", "::", 1)
+                                    inner.name.replacen('.', "::", 1)
                                 } else {
                                     inner.name
                                 };
-                                let (name, parts) = Type::from_internal_id(generic_name.clone());
+
+                                let (name, parts) = Self::from_internal_id(&generic_name);
 
                                 format!(
                                     "{}<{}>",
                                     name,
                                     parts
                                         .iter()
-                                        .map(|ty| ty.display())
-                                        .collect::<Vec<String>>()
+                                        .map(Self::display)
+                                        .collect::<Vec<_>>()
                                         .join(", ")
                                 )
                             } else {
-                                inner.name.replace(".", "::")
+                                inner.name.replace('.', "::")
                             }
                         },
                         inner
@@ -122,30 +119,28 @@ impl Type {
                             .iter()
                             .map(|arg| format!(
                                 "{} {}",
-                                arg.0 .0.clone().display(),
+                                arg.0 .0.display(),
                                 arg.0
                                      .1
                                     .get_string_inner()
-                                    .replace("%", "")
-                                    .split(".")
+                                    .replace('%', "")
+                                    .split('.')
                                     .nth(0)
                                     .unwrap()
                             ))
-                            .collect::<Vec<String>>()
+                            .collect::<Vec<_>>()
                             .join(", "),
                         if inner.variadic { ", ..." } else { "" },
-                        if let Some(ty) = inner.return_type {
-                            format!(" -> {}", ty.display())
-                        } else {
-                            "".into()
-                        }
+                        inner
+                            .return_type
+                            .map_or_else(String::new, |ty| format!(" -> {}", ty.display()))
                     )
                 } else {
                     "<unknown function>".into()
                 }
             }
             Self::Unknown(name) => name.into(),
-            _ => unreachable!(),
+            Self::Infer => unreachable!(),
         }
     }
 
@@ -162,10 +157,10 @@ impl Type {
             Self::UnsignedWord => "u32".into(),
             Self::UnsignedLong => "u64".into(),
             Self::Pointer(inner) => {
-                if *inner.as_ref() == Type::Char {
+                if *inner.as_ref() == Self::Char {
                     "string".into()
                 } else {
-                    format!("{}*", (*inner).clone().id())
+                    format!("{}*", inner.id())
                 }
             }
             Self::Single => "f32".into(),
@@ -174,7 +169,7 @@ impl Type {
             Self::Null => "null".into(),
             Self::Enum(name, ..) => name.clone(),
             Self::Struct(..) | Self::Function(..) => self.display(),
-            _ => "".into(),
+            _ => String::new(),
         }
     }
 
@@ -182,13 +177,13 @@ impl Type {
         match self {
             x if x.is_string() => "string".into(),
             x if x.is_void_pointer() => VOID_POINTER_ID.into(),
-            Type::Pointer(_) => get_POINTER_ID!().into(),
+            Self::Pointer(_) => get_POINTER_ID!().into(),
             _ => self.id(),
         }
     }
 
     pub fn to_internal_id(&self) -> String {
-        fn ty_to_num(ty: Type) -> u8 {
+        fn ty_to_num(ty: &Type) -> u8 {
             match ty {
                 Type::UnsignedByte => 4,
                 Type::UnsignedHalfword => 5,
@@ -204,33 +199,33 @@ impl Type {
                 Type::Char => 15,
                 Type::Void => 16,
                 Type::Null => 17,
-                Type::Enum(_, inner) => ty_to_num(inner.unwrap_or(Type::Word)),
+                Type::Enum(_, inner) => ty_to_num(Option::as_ref(inner).unwrap_or(&Type::Word)),
                 Type::Function(_) => 18,
                 _ => 100, // Invalid
             }
         }
 
-        let num: u8 = ty_to_num(self.clone());
+        let num: u8 = ty_to_num(self);
 
         match self {
-            Type::Pointer(inner) => format!("{GENERIC_POINTER}.{}", inner.to_internal_id()),
-            Type::Struct(name) => name.clone(),
-            Type::Unknown(name) => format!("{GENERIC_UNKNOWN}.{name}"),
+            Self::Pointer(inner) => format!("{GENERIC_POINTER}.{}", inner.to_internal_id()),
+            Self::Struct(name) => name.clone(),
+            Self::Unknown(name) => format!("{GENERIC_UNKNOWN}.{name}"),
             _ => num.to_string(),
         }
     }
 
     // Foo.0.8.10.Bar.ptr.ptr.7.1 turns into
     // ("Foo", vec![Word, Single, Struct("Bar"), Pointer(Pointer(Boolean))])
-    pub fn from_internal_id(id: String) -> (String, Vec<Type>) {
-        fn is_num_id(id: String) -> Result<u8, ParseIntError> {
+    pub fn from_internal_id(id: &str) -> (String, Vec<Self>) {
+        fn is_num_id(id: &str) -> Result<u8, ParseIntError> {
             if [
                 GENERIC_IDENTIFIER,
                 GENERIC_END,
                 GENERIC_POINTER,
                 GENERIC_UNKNOWN,
             ]
-            .contains(&id.as_str())
+            .contains(&id)
             {
                 "-1".parse::<u8>() // Throw an artificial error
             } else {
@@ -238,9 +233,10 @@ impl Type {
             }
         }
 
-        fn id_to_ty(id: String) -> Type {
-            match id.parse::<u8>() {
-                Ok(inner) => match inner {
+        fn id_to_ty(id: &str) -> Type {
+            id.parse::<u8>().map_or_else(
+                |_| Type::Struct(id.to_string()),
+                |inner| match inner {
                     4 => Type::UnsignedByte,
                     5 => Type::UnsignedHalfword,
                     6 => Type::UnsignedWord,
@@ -256,69 +252,59 @@ impl Type {
                     16 => Type::Void,
                     17 => Type::Null,
                     18 => Type::Function(Box::new(None)),
-                    _ => todo!("{}", id),
+                    _ => todo!("{id}"),
                 },
-                Err(_) => Type::Struct(id),
-            }
+            )
         }
 
-        fn internal_match<T>(parts: &mut Peekable<T>) -> Option<Type>
+        fn internal_match<'a, T>(parts: &mut Peekable<T>) -> Option<Type>
         where
-            T: Iterator<Item = String>,
+            T: Iterator<Item = &'a str>,
         {
-            if parts.peek().is_none() {
-                return None;
-            }
+            parts.peek()?;
 
             let mut part = parts.next().unwrap();
-            match is_num_id(part.clone()) {
+            match is_num_id(part) {
                 Ok(_) => Some(id_to_ty(part)),
                 Err(_) => {
-                    if &part == GENERIC_POINTER {
+                    if part == GENERIC_POINTER {
                         let mut nesting = 0;
 
-                        while &part == GENERIC_POINTER {
-                            if parts.peek().is_none() {
-                                return None;
-                            }
-
+                        while part == GENERIC_POINTER {
                             nesting += 1;
 
-                            if parts.peek().is_some_and(|next| next != GENERIC_POINTER) {
+                            if *parts.peek()? != GENERIC_POINTER {
                                 break;
                             }
 
                             part = parts.next().unwrap();
                         }
 
-                        let res = internal_match(parts);
-
-                        if let Some(mut res) = res {
+                        internal_match(parts).map(|mut res| {
                             for _ in 0..nesting {
                                 res = Type::Pointer(Box::new(res));
                             }
 
-                            Some(res)
-                        } else {
-                            None
-                        }
-                    } else if &part == GENERIC_UNKNOWN {
-                        Some(Type::Unknown(parts.next().unwrap()))
-                    } else if &part == GENERIC_END {
+                            res
+                        })
+                    } else if part == GENERIC_UNKNOWN {
+                        Some(Type::Unknown(parts.next().unwrap().to_string()))
+                    } else if part == GENERIC_END {
                         internal_match(parts)
                     } else {
                         Some(Type::Struct(
-                            if parts.peek().is_some_and(|part| part == GENERIC_IDENTIFIER) {
+                            if parts.peek().is_some_and(|part| *part == GENERIC_IDENTIFIER) {
                                 let mut res = vec![];
                                 res.push(parts.next().unwrap());
                                 let mut nesting = 0;
 
                                 loop {
-                                    if parts.peek().is_some_and(|part| part == GENERIC_IDENTIFIER) {
+                                    if parts.peek().is_some_and(|part| *part == GENERIC_IDENTIFIER)
+                                    {
                                         nesting += 1;
                                     }
 
-                                    if parts.peek().is_some_and(|part| part == GENERIC_END) {
+                                    if parts.peek().is_some_and(|part| *part == GENERIC_END) {
                                         if nesting > 0 {
                                             nesting -= 1;
                                         } else {
@@ -332,7 +318,7 @@ impl Type {
 
                                 format!("{part}.{}.{GENERIC_END}", res.join("."))
                             } else {
-                                part
+                                part.to_string()
                             },
                         ))
                     }
@@ -340,16 +326,13 @@ impl Type {
             }
         }
 
-        let mut parts = id
-            .split('.')
-            .map(|arg| arg.to_string())
-            .collect::<Vec<String>>();
+        let mut parts = id.split('.').collect::<Vec<_>>();
 
         let name = parts.remove(0);
         assert_eq!(parts.remove(0), GENERIC_IDENTIFIER.to_string());
 
         let mut res = vec![];
-        let mut iter = parts.iter().cloned().peekable();
+        let mut iter = parts.iter().copied().peekable();
 
         while iter.peek().is_some() {
             if let Some(x) = internal_match(&mut iter) {
@@ -359,47 +342,39 @@ impl Type {
             }
         }
 
-        (name, res)
+        (name.to_string(), res)
     }
 
     pub fn unknown_to_known(
-        self,
+        &self,
         struct_pool: Option<&RefCell<StructPool>>,
         tree: Option<&RefCell<Vec<Primitive>>>,
         generics: &[String],
-        known_generics: &HashMap<String, Type>,
-    ) -> Type {
-        match self.clone() {
-            Type::Pointer(inner) => Type::Pointer(Box::new(inner.unknown_to_known(
+        known_generics: &HashMap<String, Self>,
+    ) -> Self {
+        match self {
+            Self::Pointer(inner) => Self::Pointer(Box::new(inner.unknown_to_known(
                 struct_pool,
                 tree,
                 generics,
                 known_generics,
             ))),
-            Type::Unknown(name) => {
-                if !generics.contains(&name) {
-                    self
+            Self::Unknown(name) => {
+                if generics.contains(name) {
+                    known_generics.get(name).unwrap().to_owned()
                 } else {
-                    known_generics.get(&name).unwrap().to_owned()
+                    self.clone()
                 }
             }
-            Type::Struct(name) if is_unknown!(name) => {
-                let (original_name, generics) = Type::from_internal_id(name.clone());
+            Self::Struct(name) if is_unknown!(name) => {
+                let (original_name, generics) = Self::from_internal_id(name);
 
                 let generic_name = format!(
                     "{original_name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
                     generics
                         .iter()
-                        .map(|v| v.get_unknown_inner())
-                        .filter(|v| v.is_some())
-                        .map(|v| v.unwrap())
-                        .map(|generic| {
-                            known_generics
-                                .get(&generic)
-                                .unwrap()
-                                .to_internal_id()
-                                .to_string()
-                        })
+                        .filter_map(Self::get_unknown_inner)
+                        .map(|generic| known_generics.get(&generic).unwrap().to_internal_id())
                         .collect::<Vec<String>>()
                         .join(".")
                 );
@@ -427,7 +402,7 @@ impl Type {
                             ),
                             no_fmt: member.no_fmt,
                         })
-                        .collect::<Vec<Argument>>();
+                        .collect::<Vec<_>>();
 
                     tree.unwrap().borrow_mut().insert(
                         0,
@@ -452,39 +427,41 @@ impl Type {
                         .insert(generic_name.clone(), (vec![], parsed_members, location));
                 }
 
-                Type::Struct(generic_name)
+                Self::Struct(generic_name)
             }
-            other => other,
+            other => other.clone(),
         }
     }
 
-    pub fn has_generic_type(self, ty: Type) -> bool {
-        match ty.clone() {
-            Type::Pointer(inner) => self.has_generic_type(*inner),
-            Type::Unknown(_) => true,
-            Type::Struct(name) => is_unknown!(name),
+    #[allow(clippy::only_used_in_recursion)]
+    pub fn has_generic_type(&self, ty: &Self) -> bool {
+        match ty {
+            Self::Pointer(inner) => self.has_generic_type(inner),
+            Self::Unknown(_) => true,
+            Self::Struct(name) => is_unknown!(name),
             _ => false,
         }
     }
 
-    pub fn deduce_generic_type(self, generic_type: Type) -> Option<HashMap<String, Type>> {
+    #[allow(clippy::only_used_in_recursion)]
+    pub fn deduce_generic_type(&self, generic_type: &Self) -> Option<HashMap<String, Self>> {
         match (self, generic_type) {
-            (Type::Pointer(known_inner), Type::Pointer(generic_inner)) => {
-                known_inner.deduce_generic_type(*generic_inner)
+            (Self::Pointer(known_inner), Self::Pointer(generic_inner)) => {
+                known_inner.deduce_generic_type(generic_inner)
             }
-            (known, Type::Pointer(other)) if known.is_struct() && other.is_struct() => {
-                known.deduce_generic_type(*other)
-            }
-            (Type::Pointer(known), other) if known.is_struct() && other.is_struct() => {
+            (known, Self::Pointer(other)) if known.is_struct() && other.is_struct() => {
                 known.deduce_generic_type(other)
             }
-            (known, Type::Unknown(name)) => Some(hashmap![name => known]),
+            (Self::Pointer(known), other) if known.is_struct() && other.is_struct() => {
+                known.deduce_generic_type(other)
+            }
+            (known, Self::Unknown(name)) => Some(hashmap![name.clone() => known.clone()]),
             // Struct<(known)> vs Struct<T>
-            (Type::Struct(specialized_name), Type::Struct(name))
+            (Self::Struct(specialized_name), Self::Struct(name))
                 if is_generic!(specialized_name) && is_generic!(name) =>
             {
-                let (original_name, known_parts) = Type::from_internal_id(specialized_name.clone());
-                let (struct_name, unknown_parts) = Type::from_internal_id(name.clone());
+                let (original_name, known_parts) = Self::from_internal_id(specialized_name);
+                let (struct_name, unknown_parts) = Self::from_internal_id(name);
 
                 if original_name != struct_name {
                     todo!()
@@ -492,16 +469,13 @@ impl Type {
 
                 // assert_eq!(known_parts.len(), unknown_parts.len());
 
-                Some(HashMap::from_iter(
+                Some(
                     unknown_parts
                         .iter()
-                        .cloned()
                         .enumerate()
                         .map(|(i, v)| {
-                            if !matches!(v, Type::Unknown(_)) {
-                                if let Some(new) =
-                                    known_parts[i].clone().deduce_generic_type(v.clone())
-                                {
+                            if !matches!(v, Self::Unknown(_)) {
+                                if let Some(new) = known_parts[i].deduce_generic_type(v) {
                                     if new.is_empty() {
                                         return (None, known_parts[i].clone());
                                     }
@@ -516,14 +490,15 @@ impl Type {
                             (v.get_unknown_inner(), known_parts[i].clone())
                         })
                         .filter(|(unknown, _)| unknown.is_some())
-                        .map(|(unknown, known)| (unknown.unwrap(), known)),
-                ))
+                        .map(|(unknown, known)| (unknown.unwrap(), known))
+                        .collect::<HashMap<_, _>>(),
+                )
             }
             _ => None,
         }
     }
 
-    pub fn get_pointer_inner(&self) -> Option<Type> {
+    pub fn get_pointer_inner(&self) -> Option<Self> {
         match self {
             Self::Pointer(ty) => Some(*ty.clone()),
             _ => None,
@@ -531,29 +506,29 @@ impl Type {
     }
 
     pub fn get_struct_inner(&self) -> Option<String> {
-        match self.clone() {
-            Self::Struct(val, ..) => Some(val),
+        match self {
+            Self::Struct(val, ..) => Some(val.clone()),
             _ => None,
         }
     }
 
     pub fn get_enum_inner(&self) -> Option<String> {
-        match self.clone() {
-            Self::Enum(val, ..) => Some(val),
+        match self {
+            Self::Enum(val, ..) => Some(val.clone()),
             _ => None,
         }
     }
 
     pub fn get_unknown_inner(&self) -> Option<String> {
-        match self.clone() {
-            Self::Unknown(val) => Some(val),
+        match self {
+            Self::Unknown(val) => Some(val.clone()),
             _ => None,
         }
     }
 
     pub fn get_function_inner(&self) -> Option<Option<Function>> {
-        match self.clone() {
-            Self::Function(val) => Some(*val),
+        match self {
+            Self::Function(val) => Some(*val.clone()),
             _ => None,
         }
     }
@@ -567,7 +542,7 @@ impl Type {
             | Self::UnsignedHalfword
             | Self::UnsignedWord => Self::Word,
             Self::UnsignedLong => Self::Long,
-            Self::Enum(_, inner) => inner.map(|x| x.into_abi()).unwrap_or(Type::Word),
+            Self::Enum(_, inner) => inner.map(Self::into_abi).unwrap_or(Self::Word),
             other => other,
         }
     }
@@ -580,35 +555,25 @@ impl Type {
             | Self::Halfword
             | Self::UnsignedHalfword
             | Self::UnsignedWord => Self::Word,
-            Self::UnsignedLong => Self::Long,
-            Self::Struct(..) => Self::Long,
-            Self::Enum(_, inner) => inner.map(|x| x.into_base()).unwrap_or(Type::Word),
+            Self::UnsignedLong | Self::Struct(..) => Self::Long,
+            Self::Enum(_, inner) => inner.map(Self::into_base).unwrap_or(Self::Word),
             other => other,
         }
     }
 
-    pub fn is_float(&self) -> bool {
-        match self {
-            Self::Single | Self::Double => true,
-            _ => false,
-        }
+    pub const fn is_float(&self) -> bool {
+        matches!(self, Self::Single | Self::Double)
     }
 
-    pub fn is_void(&self) -> bool {
-        match self {
-            Self::Void => true,
-            _ => false,
-        }
+    pub const fn is_void(&self) -> bool {
+        matches!(self, Self::Void)
     }
 
-    pub fn is_infer(&self) -> bool {
-        match self {
-            Self::Infer => true,
-            _ => false,
-        }
+    pub const fn is_infer(&self) -> bool {
+        matches!(self, Self::Infer)
     }
 
-    pub fn is_int(&self) -> bool {
+    pub const fn is_int(&self) -> bool {
         !self.is_float()
     }
 
@@ -620,61 +585,40 @@ impl Type {
             && !self.is_enum()
     }
 
-    pub fn is_struct(&self) -> bool {
-        match self {
-            Self::Struct(..) => true,
-            _ => false,
-        }
+    pub const fn is_struct(&self) -> bool {
+        matches!(self, Self::Struct(..))
     }
 
     pub fn is_string(&self) -> bool {
-        match self {
-            Self::Pointer(inner) => *inner.as_ref() == Self::Char,
-            _ => false,
-        }
+        matches!(self, Self::Pointer(inner) if *inner.as_ref() == Self::Char)
     }
 
     pub fn is_void_pointer(&self) -> bool {
-        match self {
-            Self::Pointer(inner) => *inner.as_ref() == Self::Void,
-            _ => false,
-        }
+        matches!(self, Self::Pointer(inner) if *inner.as_ref() == Self::Void)
     }
 
-    pub fn is_unknown(&self) -> bool {
-        match self {
-            Self::Unknown(_) => true,
-            _ => false,
-        }
+    pub const fn is_unknown(&self) -> bool {
+        matches!(self, Self::Unknown(_))
     }
 
     pub fn is_function(&self) -> bool {
         match self {
             Self::Function(inner) => inner.is_some(),
-            Self::Pointer(inner) => **inner == Type::Void,
+            Self::Pointer(inner) => **inner == Self::Void,
             _ => false,
         }
     }
 
-    pub fn is_pointer(&self) -> bool {
-        match self {
-            Self::Pointer(_) => true,
-            _ => false,
-        }
+    pub const fn is_pointer(&self) -> bool {
+        matches!(self, Self::Pointer(_))
     }
 
-    pub fn is_enum(&self) -> bool {
-        match self {
-            Self::Enum(_, _) => true,
-            _ => false,
-        }
+    pub const fn is_enum(&self) -> bool {
+        matches!(self, Self::Enum(_, _))
     }
 
-    pub fn is_pointer_like(&self) -> bool {
-        match self {
-            Self::Pointer(_) | Self::Long => true,
-            _ => false,
-        }
+    pub const fn is_pointer_like(&self) -> bool {
+        matches!(self, Self::Pointer(_) | Self::Long)
     }
 
     pub fn is_primitive(&self) -> bool {
@@ -695,7 +639,7 @@ impl Type {
             | Self::UnsignedWord
             | Self::Boolean
             | Self::Char => true,
-            Self::Enum(_, inner) => inner.clone().map(|x| x.is_map_to_int()).unwrap_or(false),
+            Self::Enum(_, inner) => Option::as_ref(inner).is_some_and(Self::is_map_to_int),
             _ => false,
         }
     }
@@ -706,18 +650,18 @@ impl Type {
             | Self::UnsignedHalfword
             | Self::UnsignedWord
             | Self::UnsignedLong => true,
-            Self::Enum(_, inner) => inner.clone().map(|x| x.is_unsigned()).unwrap_or(false),
+            Self::Enum(_, inner) => Option::as_ref(inner).is_some_and(Self::is_unsigned),
             _ => false,
         }
     }
 
-    pub fn into_signed(self) -> Type {
+    pub fn into_signed(self) -> Self {
         match self {
             Self::UnsignedByte => Self::Byte,
             Self::UnsignedHalfword => Self::Halfword,
             Self::UnsignedWord => Self::Word,
             Self::UnsignedLong => Self::Long,
-            Self::Enum(_, inner) => inner.clone().map(|x| x.into_signed()).unwrap_or(Type::Word),
+            Self::Enum(_, inner) => inner.map(Self::into_signed).unwrap_or(Self::Word),
             other => other,
         }
     }
@@ -732,7 +676,7 @@ impl Type {
             | Self::Pointer(..)
             | Self::Function(..) => 2,
             Self::Word => 1,
-            Self::Enum(_, inner) => inner.clone().unwrap_or(Type::Word).weight(),
+            Self::Enum(_, inner) => inner.clone().unwrap_or(Self::Word).weight(),
             other if other.is_map_to_int() => 1,
             _ => 0,
         }
@@ -743,7 +687,7 @@ impl Type {
             Self::UnsignedByte | Self::Byte | Self::Char => 1,
             Self::UnsignedHalfword | Self::Halfword => 2,
             Self::Boolean | Self::UnsignedWord | Self::Word | Self::Single => 4,
-            Self::Enum(_, inner) => inner.clone().unwrap_or(Type::Word).size_base(),
+            Self::Enum(_, inner) => inner.clone().unwrap_or(Self::Word).size_base(),
             Self::Double => 8,
             // Returns 4 on 32-bit and 8 on 64-bit
             // Functions are just pointers to the start of them
@@ -784,28 +728,31 @@ impl Type {
 impl fmt::Display for Type {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Byte => write!(formatter, "b"),
+            Self::Byte | Self::Char => write!(formatter, "b"),
+            Self::Boolean | Self::Word => write!(formatter, "w"),
             Self::UnsignedByte => write!(formatter, "ub"),
-            Self::Char => write!(formatter, "b"),
             Self::Halfword => write!(formatter, "h"),
             Self::UnsignedHalfword => write!(formatter, "uh"),
-            Self::Boolean => write!(formatter, "w"),
-            Self::Word => write!(formatter, "w"),
             Self::UnsignedWord => write!(formatter, "uw"),
-            Self::Long => write!(formatter, "l"),
             Self::UnsignedLong => write!(formatter, "ul"),
-            Self::Pointer(..) => write!(formatter, "l"),
             Self::Single => write!(formatter, "s"),
             Self::Double => write!(formatter, "d"),
-            Self::Void => write!(formatter, "l"),
             Self::Null => write!(formatter, ""),
-            Self::Struct(td) => write!(formatter, ":{}", td),
-            Self::Function(_) => write!(formatter, "l"),
-            Self::Enum(_, inner) => write!(formatter, "{}", inner.clone().unwrap_or(Type::Word)),
+            Self::Struct(td) => write!(formatter, ":{td}"),
+            Self::Enum(_, inner) => {
+                write!(
+                    formatter,
+                    "{}",
+                    Option::as_ref(inner).unwrap_or(&Self::Word)
+                )
+            }
+            Self::Pointer(..) | Self::Long | Self::Void | Self::Function(_) => {
+                write!(formatter, "l")
+            }
             Self::Unknown(name) => elle_error!(Location::internal_error(format!(
                 "Tried to compile with a generic type {name}"
             ))),
-            x => elle_error!(Location::internal_error(format!(
+            x @ Self::Infer => elle_error!(Location::internal_error(format!(
                 "Attempted to format an invalid type: {x:?}"
             ))),
         }

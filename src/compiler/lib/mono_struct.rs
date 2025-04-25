@@ -15,7 +15,7 @@ pub fn create_monomorphized_struct(
     module: &RefCell<Module>,
     generic_name: String,
 ) {
-    let (name, parts) = Type::from_internal_id(generic_name.clone());
+    let (name, parts) = Type::from_internal_id(&generic_name);
 
     let (generics, members, ..) = gen
         .struct_pool

@@ -82,8 +82,8 @@ impl Instruction {
                 if found {
                     found
                 } else {
-                    for arg in args.iter().cloned() {
-                        if matches!(arg.1, Value::Global(name) if name == global_name) {
+                    for arg in args {
+                        if matches!(&arg.1, Value::Global(name) if name == global_name) {
                             return true;
                         }
                     }
@@ -101,11 +101,11 @@ impl Instruction {
 impl fmt::Display for Instruction {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Add(lhs, rhs) => write!(formatter, "add {}, {}", lhs, rhs),
-            Self::Subtract(lhs, rhs) => write!(formatter, "sub {}, {}", lhs, rhs),
-            Self::Multiply(lhs, rhs) => write!(formatter, "mul {}, {}", lhs, rhs),
-            Self::Divide(lhs, rhs) => write!(formatter, "div {}, {}", lhs, rhs),
-            Self::Modulus(lhs, rhs) => write!(formatter, "rem {}, {}", lhs, rhs),
+            Self::Add(lhs, rhs) => write!(formatter, "add {lhs}, {rhs}"),
+            Self::Subtract(lhs, rhs) => write!(formatter, "sub {lhs}, {rhs}"),
+            Self::Multiply(lhs, rhs) => write!(formatter, "mul {lhs}, {rhs}"),
+            Self::Divide(lhs, rhs) => write!(formatter, "div {lhs}, {rhs}"),
+            Self::Modulus(lhs, rhs) => write!(formatter, "rem {lhs}, {rhs}"),
             Self::Compare(ty, comparison, lhs, rhs) => {
                 assert!(
                     !matches!(ty, Type::Struct(..)),
@@ -115,7 +115,7 @@ impl fmt::Display for Instruction {
                 write!(
                     formatter,
                     // All comparisons start with c
-                    "c{}{} {}, {}",
+                    "c{}{} {lhs}, {rhs}",
                     if ty.is_float() {
                         match comparison {
                             Comparison::LessThan => "lt",
@@ -145,38 +145,35 @@ impl fmt::Display for Instruction {
                         }
                     },
                     ty.clone().into_abi(),
-                    lhs,
-                    rhs,
                 )
             }
-            Self::BitwiseAnd(lhs, rhs) => write!(formatter, "and {}, {}", lhs, rhs),
-            Self::BitwiseOr(lhs, rhs) => write!(formatter, "or {}, {}", lhs, rhs),
-            Self::BitwiseXor(lhs, rhs) => write!(formatter, "xor {}, {}", lhs, rhs),
-            Self::BitwiseNot(val) => write!(formatter, "xor {}, -1", val),
-            Self::Negate(val) => write!(formatter, "neg {}", val),
-            Self::Copy(val) => write!(formatter, "copy {}", val),
+            Self::BitwiseAnd(lhs, rhs) => write!(formatter, "and {lhs}, {rhs}"),
+            Self::BitwiseOr(lhs, rhs) => write!(formatter, "or {lhs}, {rhs}"),
+            Self::BitwiseXor(lhs, rhs) => write!(formatter, "xor {lhs}, {rhs}"),
+            Self::BitwiseNot(val) => write!(formatter, "xor {val}, -1"),
+            Self::Negate(val) => write!(formatter, "neg {val}"),
+            Self::Copy(val) => write!(formatter, "copy {val}"),
             // Self::Cast(val) => write!(formatter, "cast {}", val),
-            Self::VAArg(val) => write!(formatter, "vaarg {}", val),
-            Self::VAStart(val) => write!(formatter, "vastart {}", val),
+            Self::VAArg(val) => write!(formatter, "vaarg {val}"),
+            Self::VAStart(val) => write!(formatter, "vastart {val}"),
             Self::Return(val) => match val {
-                Some((_, val, _)) => write!(formatter, "ret {}", val),
+                Some((_, val, _)) => write!(formatter, "ret {val}"),
                 None => write!(formatter, "ret"),
             },
             Self::JumpNonZero(val, if_nonzero, if_zero) => {
-                write!(formatter, "jnz {}, @{}, @{}", val, if_nonzero, if_zero)
+                write!(formatter, "jnz {val}, @{if_nonzero}, @{if_zero}")
             }
-            Self::Jump(label) => write!(formatter, "jmp @{}", label),
+            Self::Jump(label) => write!(formatter, "jmp @{label}"),
             Self::Call(name, args) => {
                 write!(
                     formatter,
-                    "call {}({})",
-                    name,
+                    "call {name}({})",
                     args.iter()
                         .map(|(ty, temp)| match ty {
-                            Type::Null => format!("{}", temp),
-                            _ => format!("{} {}", ty.clone().into_abi(), temp),
+                            Type::Null => temp.to_string(),
+                            _ => format!("{} {temp}", ty.clone().into_abi()),
                         })
-                        .collect::<Vec<String>>()
+                        .collect::<Vec<_>>()
                         .join(", "),
                 )
             }
@@ -184,7 +181,7 @@ impl fmt::Display for Instruction {
             //     write!(formatter, "alloc4 {}", val)
             // }
             Self::Alloc8(val) => {
-                write!(formatter, "alloc8 {}", val)
+                write!(formatter, "alloc8 {val}")
             }
             // Self::Alloc16(size) => write!(formatter, "alloc16 {}", size),
             Self::Store(r#type, dest, value) => {
@@ -205,7 +202,7 @@ impl fmt::Display for Instruction {
                     formatter,
                     "load{} {}",
                     if !r#type.is_unsigned() && r#type.is_map_to_int() {
-                        format!("s{}", r#type.clone())
+                        format!("s{type}")
                     } else {
                         if r#type.is_struct() {
                             r#type.clone().into_base()
@@ -239,26 +236,26 @@ impl fmt::Display for Instruction {
                     if ty.is_float() || ty.is_unsigned() {
                         ty.to_string()
                     } else {
-                        format!("s{}", ty)
+                        format!("s{ty}")
                     },
                     value
                 )
             }
             Self::Truncate(value) => {
-                write!(formatter, "truncd {}", value)
+                write!(formatter, "truncd {value}")
             }
             Self::ShiftLeft(val, amount) => {
-                write!(formatter, "shl {}, {}", val, amount)
+                write!(formatter, "shl {val}, {amount}")
             }
             // Self::LogicalShiftRight(val, amount) => {
             //     write!(formatter, "shr {}, {}", val, amount)
             // }
             Self::ArithmeticShiftRight(val, amount) => {
-                write!(formatter, "sar {}, {}", val, amount)
+                write!(formatter, "sar {val}, {amount}")
             }
             #[cfg(debug_assertions)]
             Self::Comment(val) => {
-                write!(formatter, "# {}", val)
+                write!(formatter, "# {val}")
             }
         }
     }
