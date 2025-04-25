@@ -1,5 +1,4 @@
-use std::fmt::Write as _;
-use std::rc::Rc;
+use std::fmt::Write;
 
 use crate::{
     elle_error,
@@ -93,9 +92,6 @@ impl<'a> Use<'a> {
         self.parser.expect_tokens(&[TokenKind::Semicolon]);
         self.parser.advance();
 
-        Primitive::Use(UseSource {
-            module: Rc::new(module),
-            location,
-        })
+        Primitive::Use(UseSource { module, location })
     }
 }

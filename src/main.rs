@@ -27,6 +27,7 @@ mod parser;
 use compiler::compiler::Compiler;
 use lexer::enums::{Location, Token, TokenKind, ValueKind};
 use lsp::lsp::Backend;
+use misc::modules::Interner;
 use misc::{build::build, colors::*, constants::*, help::print_help, modules::lex_and_parse};
 use parser::enums::{Argument, AstNode, Primitive};
 use tower_lsp::{LspService, Server};
@@ -386,6 +387,7 @@ async fn main() -> ExitCode {
     let enum_pool = RefCell::new(HashMap::new());
     let parsed_modules = RefCell::new(HashSet::new());
     let mut string_module_methods = vec![];
+    let mut interner = Interner::new();
 
     let mut tree = lex_and_parse(
         &input_path,
@@ -404,6 +406,7 @@ async fn main() -> ExitCode {
         0,
         &loc,
         &mut string_module_methods,
+        &mut interner,
     );
 
     tree.insert(

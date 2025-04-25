@@ -1,10 +1,14 @@
 use std::collections::HashSet;
 use std::env::{current_dir, set_current_dir};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::exit;
 use std::time::Instant;
 use std::{cell::RefCell, rc::Rc};
+
+use string_interner::backend::BufferBackend;
+use string_interner::symbol::SymbolU32;
+use string_interner::StringInterner;
 
 use crate::compiler::qbe::r#type::Type;
 use crate::lexer::enums::{MutRc, Token};
@@ -32,14 +36,14 @@ use crate::{
     BACKUP_ALLOCATOR_MODULE,
 };
 
-type Modules = HashSet<(Rc<String>, Rc<Option<PathBuf>>)>;
+pub type Interner = StringInterner<BufferBackend>;
 
 pub fn lex_and_parse(
     input_path: &String,
     existing_tree: Option<&mut Vec<Primitive>>,
     struct_pool: &RefCell<StructPool>,
     enum_pool: &RefCell<EnumPool>,
-    parsed_modules: &RefCell<Modules>,
+    parsed_modules: &RefCell<HashSet<SymbolU32>>,
     warnings: &Warnings,
     no_strings: bool,
     no_alloc: bool,
@@ -51,6 +55,7 @@ pub fn lex_and_parse(
     nesting: usize,
     import_location: &MutRc<Location>,
     string_module_methods: &mut Vec<String>,
+    interner: &mut Interner,
 ) -> Vec<Primitive> {
     let is_std_import;
     let final_path;
@@ -98,6 +103,27 @@ pub fn lex_and_parse(
 
         content
     };
+
+    let sym = interner.get_or_intern(final_path.canonicalize().unwrap().to_string_lossy());
+
+    if parsed_modules.borrow().contains(&sym) {
+        if debug_time {
+            println!(
+                "{} Module '{GREEN}{input_path}{RESET}' is already imported.",
+                if nesting > 0 {
+                    "┆    ".repeat(nesting)
+                } else {
+                    String::new()
+                },
+                GREEN = get_GREEN!(),
+                RESET = get_RESET!(),
+            )
+        }
+
+        return vec![];
+    } else {
+        parsed_modules.borrow_mut().insert(sym);
+    }
 
     macro_rules! file_is_empty_error {
         () => {
@@ -172,7 +198,7 @@ pub fn lex_and_parse(
         imports.insert(
             0,
             Primitive::Use(UseSource {
-                module: Rc::new("std/fmt".into()),
+                module: "std/fmt".into(),
                 location: loc.clone(),
             }),
         );
@@ -182,7 +208,7 @@ pub fn lex_and_parse(
         imports.insert(
             0,
             Primitive::Use(UseSource {
-                module: Rc::new("std/string".into()),
+                module: "std/string".into(),
                 location: loc.clone(),
             }),
         );
@@ -192,14 +218,12 @@ pub fn lex_and_parse(
         imports.insert(
             0,
             Primitive::Use(UseSource {
-                module: Rc::new(
-                    if no_gc {
-                        BACKUP_ALLOCATOR_MODULE
-                    } else {
-                        PRIMARY_ALLOCATOR_MODULE
-                    }
-                    .into(),
-                ),
+                module: if no_gc {
+                    BACKUP_ALLOCATOR_MODULE
+                } else {
+                    PRIMARY_ALLOCATOR_MODULE
+                }
+                .into(),
                 location: loc.clone(),
             }),
         );
@@ -207,26 +231,17 @@ pub fn lex_and_parse(
         imports.insert(
             0,
             Primitive::Use(UseSource {
-                module: Rc::new(ARBITRARY_ALLOCATOR_MODULE.into()),
+                module: ARBITRARY_ALLOCATOR_MODULE.into(),
                 location: loc.clone(),
             }),
         );
     }
 
-    let resolved_path = Rc::new(if is_std_import {
-        None
-    } else {
-        Some(final_path.clone())
-    });
-
     for import in imports.iter().cloned() {
         match import {
             Primitive::Use(UseSource {
                 module, location, ..
-            }) if !parsed_modules
-                .borrow()
-                .contains(&(module.clone(), resolved_path.clone())) =>
-            {
+            }) => {
                 let now = if debug_time {
                     Some(Instant::now())
                 } else {
@@ -235,13 +250,12 @@ pub fn lex_and_parse(
 
                 if debug_time {
                     println!(
-                        "{}╭― Importing module '{GREEN}{}{RESET}'",
+                        "{}╭― Importing module '{GREEN}{module}{RESET}'",
                         if nesting > 0 {
                             "┆    ".repeat(nesting)
                         } else {
                             String::new()
                         },
-                        module,
                         GREEN = get_GREEN!(),
                         RESET = get_RESET!(),
                     );
@@ -286,6 +300,7 @@ pub fn lex_and_parse(
                         import_location
                     },
                     string_module_methods,
+                    interner,
                 );
 
                 if !is_std_import {
@@ -354,7 +369,7 @@ pub fn lex_and_parse(
                         }
                     }
 
-                    if *module == "std/string" {
+                    if module == "std/string" {
                         *string_module_methods = tree
                             .iter()
                             .filter(|primitive| matches!(primitive, Primitive::Function { .. }))
@@ -369,22 +384,17 @@ pub fn lex_and_parse(
 
                 if debug_time {
                     println!(
-                        "{}╰― Imported '{GREEN}{}{RESET}' in {}",
+                        "{}╰― Imported '{GREEN}{module}{RESET}' in {}",
                         if nesting > 0 {
                             "┆    ".repeat(nesting)
                         } else {
                             String::new()
                         },
-                        module,
                         elapsed_with_color!(now.unwrap().elapsed()),
                         GREEN = get_GREEN!(),
                         RESET = get_RESET!(),
                     );
                 }
-
-                parsed_modules
-                    .borrow_mut()
-                    .insert((module.clone(), resolved_path.clone()));
             }
             _ => {}
         }
