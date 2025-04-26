@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt::Write, rc::Rc};
 
 use crate::{
     compiler::{
@@ -118,18 +118,21 @@ pub fn generate_function(
 
                     if let Some(next) = parts.peek() {
                         if next != "0" {
-                            name.push_str(&format!("::{}", parts.next().unwrap()));
+                            write!(name, "::{}", parts.next().unwrap()).unwrap();
                         }
                     }
 
-                    name.push_str(&format!(
+                    write!(
+                        name,
                         "<{}>",
                         func.known_generics
                             .iter()
                             .map(|(_, ty)| ty.display())
                             .collect::<Vec<String>>()
                             .join(", ")
-                    ));
+                    )
+                    .unwrap();
+
                     name
                 } else {
                     func.name
@@ -214,60 +217,57 @@ pub fn generate_function(
 
     for block in func_ref.borrow().blocks.iter() {
         for statement in block.statements.clone() {
-            if let Statement::Volatile(Instruction::Return(val)) = statement {
-                if let Some((ty, val, location)) = val {
-                    if first_ty.is_none() {
-                        first_ty = Some(ty.clone());
+            if let Statement::Volatile(Instruction::Return(Some((ty, val, location)))) = statement {
+                if first_ty.is_none() {
+                    first_ty = Some(ty.clone());
 
-                        if let Some(real_return_type) = func_ref.borrow().return_type.clone() {
-                            handle_inconsistent_types!(real_return_type, ty, location)
-                        }
-                    } else {
-                        let return_type = ty.clone();
-                        let first_type = first_ty.clone().unwrap();
+                    if let Some(real_return_type) = func_ref.borrow().return_type.clone() {
+                        handle_inconsistent_types!(real_return_type, ty, location);
+                    }
+                } else {
+                    let return_type = &ty;
+                    let first_type: &Type = Option::as_ref(&first_ty).unwrap();
 
-                        if let Some(real_return_type) = func_ref.borrow().return_type.clone() {
-                            handle_inconsistent_types!(real_return_type, return_type, location)
-                        }
+                    if let Some(real_return_type) = func_ref.borrow().return_type.clone() {
+                        handle_inconsistent_types!(&real_return_type, return_type, location);
+                    }
 
-                        if return_type != first_type
-                            && !matches!(val, Value::Const(_, _))
-                            && !(maybe_void_pointer!(return_type, first_type))
-                        {
-                            if maybe_generic!(return_type, first_type) {
-                                let (a, a_parts) = Type::from_internal_id(
-                                    &return_type.get_struct_inner().unwrap(),
-                                );
+                    if return_type != first_type
+                        && !matches!(val, Value::Const(_, _))
+                        && !(maybe_void_pointer!(return_type, first_type))
+                    {
+                        if maybe_generic!(return_type, first_type) {
+                            let (a, a_parts) =
+                                Type::from_internal_id(&return_type.get_struct_inner().unwrap());
 
-                                let (b, b_parts) =
-                                    Type::from_internal_id(&first_type.get_struct_inner().unwrap());
+                            let (b, b_parts) =
+                                Type::from_internal_id(&first_type.get_struct_inner().unwrap());
 
-                                if a != b || a_parts != b_parts {
-                                    elle_error!(
-                                        ty_err_message!(
-                                            return_type.display(),
-                                            first_type.display(),
-                                            location.borrow().with_extra_info(format!(
-                                                "This has the type '{}'",
-                                                return_type.display()
-                                            )),
-                                            Some(format!(
-                                                "This error was caused because you returned {} elsewhere, but returned {} here.",
-                                                first_type.display(), return_type.display()
-                                            ))
-                                        )
-                                    )
-                                }
-                            } else {
+                            if a != b || a_parts != b_parts {
                                 elle_error!(
                                     ty_err_message!(
-                                        ty.display(),
-                                        first_ty.unwrap().display(),
-                                        location.borrow(),
-                                        Some(format!("This error was caused because you returned '{}' elsewhere, but not here.", first_type.display()))
+                                        return_type.display(),
+                                        first_type.display(),
+                                        location.borrow().with_extra_info(format!(
+                                            "This has the type '{}'",
+                                            return_type.display()
+                                        )),
+                                        Some(format!(
+                                            "This error was caused because you returned {} elsewhere, but returned {} here.",
+                                            first_type.display(), return_type.display()
+                                        ))
                                     )
                                 )
                             }
+                        } else {
+                            elle_error!(
+                                ty_err_message!(
+                                    ty.display(),
+                                    first_type.display(),
+                                    location.borrow(),
+                                    Some(format!("This error was caused because you returned '{}' elsewhere, but not here.", first_type.display()))
+                                )
+                            )
                         }
                     }
                 }
@@ -284,7 +284,7 @@ pub fn generate_function(
             let return_type = return_ty.clone().unwrap();
             let first_type = first_ty.clone().unwrap();
 
-            handle_inconsistent_types!(return_type, first_type, this.return_location)
+            handle_inconsistent_types!(return_type, first_type, this.return_location);
         }
     }
 
@@ -293,7 +293,7 @@ pub fn generate_function(
             .borrow_mut()
             .add_instruction(Instruction::Return(Some((
                 Type::Word,
-                Value::Const("".into(), 0),
+                Value::Const(String::new(), 0),
                 this.location,
             ))));
     }
@@ -301,10 +301,7 @@ pub fn generate_function(
     gen.scopes.pop();
 
     let mut owned_func = func_ref.borrow_mut().to_owned();
-
-    if owned_func.return_type.is_none() {
-        owned_func.return_type = Some(Type::Word)
-    }
+    owned_func.return_type.get_or_insert(Type::Word);
 
     // If there are statements after a return in the very last block
     // QBE will throw an error. This simply gets rid of statements
