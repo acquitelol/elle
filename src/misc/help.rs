@@ -149,15 +149,15 @@ pub fn print_help(program: &str) {
             vec![
                 (
                     "--lsp, --lsp-server",
-                    "Starts an LSP server instead of compiling. Usefol for IDEs",
+                    "Starts an LSP server instead of compiling. Useful for IDE integration.",
                 ),
                 (
                     "-x, --diagnostic-only",
-                    "Only prints diagnostics in an easily-parsable format.",
+                    "Only prints diagnostics in an easily-parsable format, does not compile.",
                 ),
                 (
                     "-i, --info_pos \"<row>:<col>\"",
-                    "Print an expression's type with the position provided.",
+                    "Print an expression's type with the position provided, does not compile,",
                 ),
             ],
         ),
