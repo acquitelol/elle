@@ -427,28 +427,34 @@ impl Lexer<'_> {
             '#' => {
                 self.advance();
 
-                if self.current_char() == '[' {
-                    (TokenKind::Hashtag, ValueKind::Nil)
-                } else {
-                    let (_, value) = self.consume_identifier(start_row, start_col);
+                match self.current_char() {
+                    '[' => (TokenKind::Hashtag, ValueKind::Nil),
+                    // Allows for shebangs to make elle programs executable
+                    '!' => (
+                        TokenKind::Comment,
+                        ValueKind::String(self.consume_comment()),
+                    ),
+                    _ => {
+                        let (_, value) = self.consume_identifier(start_row, start_col);
 
-                    match value {
-                        ValueKind::String(val) => match val.as_str() {
-                            "size" => (TokenKind::Size, ValueKind::Nil),
-                            "len" => (TokenKind::ArrayLength, ValueKind::Nil),
-                            "i" => (TokenKind::IndexOf, ValueKind::Nil),
-                            "env" => (TokenKind::Environment, ValueKind::Nil),
-                            "alloc" => (TokenKind::Alloc, ValueKind::Nil),
-                            "realloc" => (TokenKind::Realloc, ValueKind::Nil),
-                            "free" => (TokenKind::Free, ValueKind::Nil),
-                            "set_allocator" => (TokenKind::SetAllocator, ValueKind::Nil),
-                            "reset_allocator" => (TokenKind::ResetAllocator, ValueKind::Nil),
-                            "cast" => (TokenKind::Cast, ValueKind::Nil),
-                            other => elle_error!(self
-                                .get_location(start_row, start_col)
-                                .error(format!("Unimplemented directive: '{other}'"))),
-                        },
-                        _ => unreachable!(),
+                        match value {
+                            ValueKind::String(val) => match val.as_str() {
+                                "size" => (TokenKind::Size, ValueKind::Nil),
+                                "len" => (TokenKind::ArrayLength, ValueKind::Nil),
+                                "i" => (TokenKind::IndexOf, ValueKind::Nil),
+                                "env" => (TokenKind::Environment, ValueKind::Nil),
+                                "alloc" => (TokenKind::Alloc, ValueKind::Nil),
+                                "realloc" => (TokenKind::Realloc, ValueKind::Nil),
+                                "free" => (TokenKind::Free, ValueKind::Nil),
+                                "set_allocator" => (TokenKind::SetAllocator, ValueKind::Nil),
+                                "reset_allocator" => (TokenKind::ResetAllocator, ValueKind::Nil),
+                                "cast" => (TokenKind::Cast, ValueKind::Nil),
+                                other => elle_error!(self
+                                    .get_location(start_row, start_col)
+                                    .error(format!("Unimplemented directive: '{other}'"))),
+                            },
+                            _ => unreachable!(),
+                        }
                     }
                 }
             }
