@@ -62,6 +62,10 @@ pub fn print_help(program: &str) {
                     "-r, --release",
                     "Enables extra optimizations, but has longer compilation times",
                 ),
+                (
+                    "-e, --run",
+                    "Compiles, runs, and deletes the executable all in one command",
+                ),
             ],
         ),
         (
@@ -183,6 +187,13 @@ pub fn print_help(program: &str) {
                 ("-S, --std-path <path>", &default_std_path),
                 ("-R, --runtime-path <path>", &default_runtime_path),
             ],
+        ),
+        (
+            "Miscellaneous",
+            vec![(
+                "-- [..arguments]",
+                "Passes all leftover arguments to the executable when ran with `--run`",
+            )],
         ),
         (
             "Environment Variables",

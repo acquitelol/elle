@@ -12,8 +12,9 @@
 )]
 use std::collections::{HashMap, HashSet};
 use std::env;
+use std::fs::remove_file;
 use std::path::Path;
-use std::process::{exit, ExitCode};
+use std::process::{exit, Command, ExitCode, Stdio};
 use std::rc::Rc;
 use std::time::Instant;
 use std::{cell::RefCell, fs};
@@ -141,6 +142,9 @@ async fn main() -> ExitCode {
     let mut lsp = false; // LSP support for IDEs
     let mut expect_info = false;
     let mut release_mode = false; // enables dead code elimation
+    let mut run = false; // should also run the executable
+    let mut should_parse_exec_args = false;
+    let mut exec_args = vec![]; // args to be passed to executable if ran with --run
 
     let mut object_files: Vec<String> = vec![];
 
@@ -161,6 +165,7 @@ async fn main() -> ExitCode {
             "--ast" | "--emit-ast" | "--emit-tree" => ast = true,
             "--lsp" | "--lsp-server" => lsp = true,
             "-r" | "--release" => release_mode = true,
+            "-e" | "--run" => run = true,
             "-i" | "--info_pos" => {
                 macro_rules! loc_err {
                     () => {
@@ -233,6 +238,10 @@ async fn main() -> ExitCode {
 
                 exit(0);
             }
+            "--" => {
+                should_parse_exec_args = true;
+                break;
+            }
             other if other.ends_with(SHORT_EXTENSION) => {
                 if input_path.is_none() {
                     input_path = Some(other.to_string());
@@ -263,6 +272,10 @@ async fn main() -> ExitCode {
                 )))
             }
         }
+    }
+
+    if should_parse_exec_args {
+        exec_args.extend(args);
     }
 
     if lsp {
@@ -938,6 +951,39 @@ async fn main() -> ExitCode {
                 GREEN = get_GREEN!(),
                 RESET = get_RESET!()
             );
+        }
+
+        if let EmitKind::Executable(path) = out {
+            if run {
+                let exec = Path::new(&path).to_path_buf();
+                let with_slash = Path::new(".").join(&exec);
+
+                Command::new(&if exec.components().count() > 1 {
+                    exec
+                } else {
+                    with_slash
+                })
+                .args(exec_args)
+                .stdin(Stdio::inherit())
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .output()
+                .unwrap_or_else(|err| {
+                    panic!(
+                        "{}Failed to execute {path}: {err}{}",
+                        get_RED!(),
+                        get_RESET!()
+                    )
+                });
+
+                remove_file(&path).unwrap_or_else(|err| {
+                    panic!(
+                        "{}Failed to delete file {path}: {err}{}",
+                        get_RED!(),
+                        get_RESET!()
+                    )
+                })
+            }
         }
 
         ExitCode::SUCCESS
