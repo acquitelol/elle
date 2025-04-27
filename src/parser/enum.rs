@@ -4,10 +4,13 @@ use crate::{
     compiler::qbe::r#type::Type,
     elle_error,
     lexer::enums::{Attribute, Location, MutRc, Token, TokenKind, ValueKind},
-    misc::constants::{EQUALS_CONSTANT, FORMAT_CONSTANT},
+    misc::{
+        colors::{get_GREEN, get_RESET, GREEN, RESET},
+        constants::{EQUALS_CONSTANT, FORMAT_CONSTANT},
+    },
     parser::enums::{
         Argument, AstNode, BinaryOperation, Conversion, FunctionSource, IfStatement, Literal,
-        Return,
+        Return, Variant,
     },
     set_end,
 };
@@ -86,6 +89,7 @@ impl<'a> Enum<'a> {
 
         let mut variants = vec![];
         let mut seen = HashSet::new();
+        let mut offset_kind = TokenKind::Identifier;
         let mut offset = None;
 
         while self.parser.current_token().kind != TokenKind::RightCurlyBrace {
@@ -119,8 +123,9 @@ impl<'a> Enum<'a> {
                         ty = Some(Type::Pointer(Box::new(Type::Char)));
                         inner = Some(self.parser.current_token());
                     }
-                    TokenKind::IntegerLiteral => {
+                    x @ TokenKind::IntegerLiteral => {
                         inner = Some(self.parser.current_token());
+                        offset_kind = x;
                         offset = Some(
                             self.parser
                                 .current_token()
@@ -130,8 +135,9 @@ impl<'a> Enum<'a> {
                                 .saturating_sub(variants.len() as i128),
                         );
                     }
-                    TokenKind::CharLiteral => {
+                    x @ TokenKind::CharLiteral => {
                         inner = Some(self.parser.current_token());
+                        offset_kind = x;
                         offset = Some(
                             (self.parser.current_token().value.get_char_inner().unwrap() as i128)
                                 .saturating_sub(variants.len() as i128),
@@ -143,19 +149,39 @@ impl<'a> Enum<'a> {
                 self.parser.advance();
             }
 
-            let value = inner.map_or_else(
-                || {
-                    AstNode::Literal(Literal {
-                        kind: TokenKind::IntegerLiteral,
-                        value: ValueKind::Number(variants.len() as i128 + offset.unwrap_or(0)),
-                        location: location.clone(),
-                        tagged: false,
-                    })
-                },
-                AstNode::token_to_literal,
-            );
+            let value = inner.unwrap_or_else(|| {
+                let make_token = || Token {
+                    kind: offset_kind,
+                    value: if offset_kind == TokenKind::CharLiteral {
+                        ValueKind::Character(
+                            (variants.len() as u8 + offset.unwrap_or(0) as u8) as char,
+                        )
+                    } else {
+                        ValueKind::Number(variants.len() as i128 + offset.unwrap_or(0))
+                    },
+                    location: location.clone(),
+                    tagged: false,
+                };
 
-            variants.push((variant, variant_token, value));
+                ty.as_ref().map_or_else(
+                    make_token,
+                    |ty| {
+                        if ty.is_string() {
+                            elle_error!(variant_token.location.borrow().error(
+                                format!("Expected every variant to be filled in an enum with repr({GREEN}string{RESET}).", GREEN = get_GREEN!(), RESET = get_RESET!())
+                            ))
+                        } else {
+                            make_token()
+                        }
+                    },
+                )
+            });
+
+            variants.push(Variant {
+                name: variant,
+                name_token: variant_token,
+                value,
+            });
 
             if self.parser.current_token().kind != TokenKind::RightCurlyBrace {
                 self.parser.expect_tokens(&[TokenKind::Comma]);
@@ -254,7 +280,7 @@ impl<'a> Enum<'a> {
                                 left: Box::new(AstNode::token_to_literal(Token::from_ident(
                                     "self",
                                 ))),
-                                right: Box::new(x.2.clone()),
+                                right: Box::new(AstNode::token_to_literal(x.value.clone())),
                                 operator: TokenKind::EqualTo,
                                 treat_as_string: true,
                                 dunder_methods: true,
@@ -263,7 +289,7 @@ impl<'a> Enum<'a> {
                             body: vec![AstNode::Return(Return {
                                 value: Box::new(AstNode::Literal(Literal {
                                     kind: TokenKind::StringLiteral,
-                                    value: ValueKind::String(x.0.clone()),
+                                    value: ValueKind::String(x.name.clone()),
                                     location: location.clone(),
                                     tagged: false,
                                 })),
