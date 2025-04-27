@@ -269,7 +269,7 @@ macro_rules! struct_hover {
                 $token.location.borrow().display_plain(true),
                 Type::Struct($token.value.get_string_inner().unwrap()).display(),
                 $members
-                    .into_iter()
+                    .iter()
                     .map(|x| format!("\t{} {};", x.r#type.display(), x.name))
                     .collect::<Vec<String>>()
                     .join("\n")
