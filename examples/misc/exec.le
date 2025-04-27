@@ -1,0 +1,6 @@
+#!/usr/bin/env ellec --hush --run
+use std/prelude;
+
+fn main(string[] args) {
+    $dbg(args);
+}
