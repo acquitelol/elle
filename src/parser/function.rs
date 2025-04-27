@@ -215,7 +215,7 @@ impl<'a> Function<'a> {
         let mut variadic = false;
         let mut variadic_name = None;
 
-        if is_type!(self.parser.current_token(), self.parser, generics)
+        if is_type!(self.parser.current_token(), self.parser, generics, false)
             // TODO: Fix this (start of a tuple type, BIGGGG hack)
             || self.parser.current_token().kind == TokenKind::Attribute
             || self.parser.current_token().kind == TokenKind::Ellipsis

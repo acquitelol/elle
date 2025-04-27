@@ -278,6 +278,25 @@ macro_rules! struct_hover {
     };
 }
 
+#[macro_export]
+macro_rules! enum_hover {
+    ($token:expr, $name:expr, $variants:expr) => {
+        if $token.tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\nenum {} {{\n{}\n}};",
+                $token.location.borrow().display_plain(false),
+                $token.location.borrow().display_plain(true),
+                $name,
+                $variants
+                    .iter()
+                    .map(|x| format!("\t{} = {}", x.name, x.value.value.wrapped_display()))
+                    .collect::<Vec<_>>()
+                    .join(",\n")
+            ));
+        }
+    };
+}
+
 /// Handy shorthand for setting the end of a location range
 #[macro_export]
 macro_rules! set_end {

@@ -564,7 +564,7 @@ pub struct EnumSource {
     pub public: bool,
     pub imported: bool,
     pub usable: bool,
-    pub variants: Vec<(String, Token, AstNode)>,
+    pub variants: Vec<Variant>,
     pub location: MutRc<Location>,
 }
 
@@ -582,6 +582,13 @@ pub enum Primitive {
 pub struct Case {
     pub condition: Vec<AstNode>,
     pub body: Box<AstNode>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Variant {
+    pub name: String,
+    pub name_token: Token,
+    pub value: Token,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

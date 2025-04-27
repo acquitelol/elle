@@ -369,6 +369,15 @@ impl ValueKind {
             _ => None,
         }
     }
+
+    pub fn wrapped_display(&self) -> String {
+        match self {
+            Self::String(x) => format!("\"{x}\""),
+            Self::Character(x) => format!("'{x}'"),
+            Self::Number(x) => format!("{x}"),
+            Self::Nil => String::new(),
+        }
+    }
 }
 
 impl fmt::Display for ValueKind {

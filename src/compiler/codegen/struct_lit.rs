@@ -11,7 +11,7 @@ use crate::{
     },
     elle_error, is_generic,
     parser::enums::StructLiteral,
-    Warning,
+    struct_hover, Warning,
 };
 
 impl Codegen<'_> for StructLiteral {
@@ -183,22 +183,7 @@ impl Codegen<'_> for StructLiteral {
             }
         }
 
-        let res = (ty, alloc_tmp);
-
-        if self.name.tagged {
-            elle_error!(format!(
-                "hover\n{}\n{}\nstruct {} {{\n{}\n}};",
-                self.name.location.borrow().display_plain(false),
-                self.name.location.borrow().display_plain(true),
-                Type::Struct(plain_name).display(),
-                members
-                    .into_iter()
-                    .map(|x| format!("\t{} {};", x.r#type.display(), x.name))
-                    .collect::<Vec<String>>()
-                    .join("\n")
-            ));
-        }
-
-        Some(res)
+        struct_hover!(self.name, members.is_empty(), members);
+        Some((ty, alloc_tmp))
     }
 }

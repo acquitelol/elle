@@ -3061,19 +3061,39 @@ impl<'a> Statement<'a> {
                     .error(format!("Unknown enum '{name}'")))
             });
 
+        enum_hover!(name_token, name, enum_def.0);
+
         let mut expression = AstNode::Conversion(Conversion {
             r#type: Some(Type::Enum(name.clone(), Box::new(enum_def.1))),
-            value: Box::new(enum_def.0.iter().find(|x| x.0 == variant).map_or_else(
+            value: Box::new(enum_def.0.iter().find(|x| x.name == variant).map_or_else(
                 || {
                     elle_error!(variant_token.location.borrow().error(format!(
                         "Could not find a variant '{variant}' for enum '{name}'",
                     )))
                 },
-                |x| x.2.clone(),
+                |x| AstNode::token_to_literal(x.value.clone()),
             )),
             location: location.clone(),
             explicit: true,
         });
+
+        if variant_token.tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n{}::{} = {};",
+                variant_token.location.borrow().display_plain(false),
+                variant_token.location.borrow().display_plain(true),
+                name,
+                variant,
+                enum_def
+                    .0
+                    .iter()
+                    .find(|x| x.name == variant)
+                    .unwrap() // we throw an error above if it doesn't exist
+                    .value
+                    .value
+                    .wrapped_display()
+            ));
+        }
 
         match self.current_token().kind {
             TokenKind::Dot => {
