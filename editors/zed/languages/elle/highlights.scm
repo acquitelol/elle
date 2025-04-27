@@ -64,6 +64,7 @@
 
 ; Comments
 (comment) @comment
+(shebang) @comment
 
 ; Keywords
 "pub" @keyword
