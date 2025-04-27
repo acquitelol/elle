@@ -10,7 +10,7 @@ use crate::{
 };
 
 use super::{
-    enums::{Argument, AstNode, Primitive, StructSource},
+    enums::{Argument, Primitive, StructSource, Variant},
     r#use::Use,
 };
 
@@ -25,7 +25,7 @@ pub enum DoOnly {
 pub type StructPool = HashMap<String, (Vec<String>, Vec<Argument>, MutRc<Location>)>;
 
 // Enum name -> (Ordered variants (name, loc, offset value), Optional repr type)
-pub type EnumPool = HashMap<String, (Vec<(String, Token, AstNode)>, Option<Type>)>;
+pub type EnumPool = HashMap<String, (Vec<Variant>, Option<Type>)>;
 
 pub fn create_generic_struct(
     name: &str,
@@ -200,6 +200,18 @@ macro_rules! get_type {
                         name
                     ))
                 )
+            }
+
+            if is_struct && $self.current_token().tagged {
+                let pool = $struct_pool.borrow();
+                let struct_def = pool.get(&name).unwrap();
+                crate::struct_hover!($self.current_token(), struct_def.1.is_empty(), struct_def.1);
+            }
+
+            if is_enum && $self.current_token().tagged {
+                let pool = $enum_pool.borrow();
+                let enum_def = pool.get(&name).unwrap();
+                crate::enum_hover!($self.current_token(), name, enum_def.0);
             }
 
             ValueKind::String(name.clone())
