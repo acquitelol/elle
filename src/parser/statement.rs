@@ -15,8 +15,8 @@ use crate::compiler::qbe::r#type::Type;
 use crate::lexer::enums::{Attribute, MutRc};
 use crate::parser::enums::{BlockStatement, WhileLoopStatement};
 use crate::{
-    elle_error, get_type, is_type, set_end, INTERNAL_IDX_FORMAT, INTERNAL_ITERATOR_FORMAT,
-    LEN_CONSTANT,
+    elle_error, enum_hover, get_type, is_type, set_end, INTERNAL_IDX_FORMAT,
+    INTERNAL_ITERATOR_FORMAT, LEN_CONSTANT,
 };
 use crate::{
     ensure_fn_pointer,
@@ -515,10 +515,7 @@ impl<'a> Statement<'a> {
                 }
 
                 // Generic of a funcall
-                if self.current_token().kind == TokenKind::LessThan
-                    && self
-                        .next_token()
-                        .is_some_and(|token| is_type!(token, self.shared, self.shared.generics))
+                if self.current_token().kind == TokenKind::LessThan && self.is_type_contextually(1)
                 {
                     generic_nesting += 1;
                 }
@@ -830,21 +827,11 @@ impl<'a> Statement<'a> {
         let mut inner_ty = None;
 
         while self.current_token().kind != TokenKind::RightBlockBrace && !self.is_eof() {
-            let ty_name = self
-                .current_token()
-                .value
-                .get_string_inner()
-                .unwrap_or_default();
-
             if dynamic
-                && (self.current_token().kind == TokenKind::Identifier
-                    && (self.shared.struct_pool.borrow().contains_key(&ty_name)
-                        || self.shared.generics.contains(&ty_name)
-                        || self.current_token().value.is_base_type())
+                && (self.is_type_contextually(0)
                     && !self
                         .next_token()
-                        .is_some_and(|token| token.kind == TokenKind::DoubleColon)
-                    || self.current_token().kind == TokenKind::LeftParenthesis)
+                        .is_some_and(|token| token.kind == TokenKind::DoubleColon))
             {
                 inner_ty = Some(self.get_type(Some(self.shared.generics)));
                 self.advance();
@@ -883,15 +870,7 @@ impl<'a> Statement<'a> {
                     curly_nesting += 1;
                 }
 
-                if self.current_token().kind == TokenKind::LessThan
-                    && self.next_token().is_some_and(|token| {
-                        let ty_name = token.value.get_string_inner().unwrap_or_default();
-
-                        token.value.is_base_type()
-                            || self.shared.struct_pool.borrow().contains_key(&ty_name)
-                            || self.shared.generics.contains(&ty_name)
-                            || token.kind == TokenKind::LeftParenthesis
-                    })
+                if self.current_token().kind == TokenKind::LessThan && self.is_type_contextually(1)
                 {
                     generic_nesting += 1;
                 }
@@ -2005,18 +1984,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(&[TokenKind::LeftParenthesis]);
         self.advance();
 
-        let ty_name = self
-            .current_token()
-            .value
-            .get_string_inner()
-            .unwrap_or_default();
-
-        let value = if self.current_token().kind == TokenKind::Identifier
-            && (self.shared.struct_pool.borrow().contains_key(&ty_name)
-                || self.shared.generics.contains(&ty_name)
-                || self.current_token().value.is_base_type()
-                || self.current_token().kind == TokenKind::LeftParenthesis)
-        {
+        let value = if self.is_type_contextually(0) {
             let ty = self.get_type(Some(self.shared.generics));
             self.advance();
             Ok(ty)
@@ -2468,20 +2436,7 @@ impl<'a> Statement<'a> {
 
         let mut tmp = vec![];
 
-        if self.current_token().kind == TokenKind::LessThan
-            && self.next_token().is_some_and(|token| {
-                if ![TokenKind::Identifier, TokenKind::LeftParenthesis].contains(&token.kind) {
-                    return false;
-                }
-
-                let ty_name = token.value.get_string_inner().unwrap();
-
-                self.shared.struct_pool.borrow().contains_key(&ty_name)
-                    || self.shared.generics.contains(&ty_name)
-                    || token.value.is_base_type()
-                    || token.kind == TokenKind::LeftParenthesis
-            })
-        {
+        if self.current_token().kind == TokenKind::LessThan && self.is_type_contextually(1) {
             self.advance();
 
             while self.current_token().kind != TokenKind::GreaterThan && !self.is_eof() {
@@ -2524,20 +2479,7 @@ impl<'a> Statement<'a> {
 
             self.advance();
 
-            if self.current_token().kind == TokenKind::LessThan
-                && self.next_token().is_some_and(|token| {
-                    if ![TokenKind::Identifier, TokenKind::LeftParenthesis].contains(&token.kind) {
-                        return false;
-                    }
-
-                    let ty_name = token.value.get_string_inner().unwrap();
-
-                    self.shared.struct_pool.borrow().contains_key(&ty_name)
-                        || self.shared.generics.contains(&ty_name)
-                        || token.value.is_base_type()
-                        || token.kind == TokenKind::LeftParenthesis
-                })
-            {
+            if self.current_token().kind == TokenKind::LessThan && self.is_type_contextually(1) {
                 self.advance();
 
                 while self.current_token().kind != TokenKind::GreaterThan && !self.is_eof() {
@@ -3406,21 +3348,13 @@ impl<'a> Statement<'a> {
                 brace_nesting -= 1;
             }
 
-            let ty_name = prev_token.value.get_string_inner().unwrap_or_default();
-
             if token.kind.is_arithmetic() {
-                if token.kind == TokenKind::LessThan && next_token.is_some() {
-                    let next = next_token.unwrap();
-                    let next_name = next.value.get_string_inner().unwrap_or_default();
-                    !(self.shared.struct_pool.borrow().contains_key(&next_name)
-                        || self.shared.generics.contains(&next_name)
-                        || next.value.is_base_type()
-                        || next.kind == TokenKind::LeftParenthesis)
+                if token.kind == TokenKind::LessThan {
+                    next_token.is_none_or(|token| {
+                        !is_type!(token, self.shared, self.shared.generics, false)
+                    })
                 } else if token.kind == TokenKind::GreaterThan {
-                    !(self.shared.struct_pool.borrow().contains_key(&ty_name)
-                        || self.shared.generics.contains(&ty_name)
-                        || prev_token.value.is_base_type()
-                        || prev_token.kind == TokenKind::LeftParenthesis)
+                    !is_type!(prev_token, self.shared, self.shared.generics, false)
                 } else {
                     nesting == 0 && brace_nesting == 0
                 }
@@ -3618,6 +3552,24 @@ impl<'a> Statement<'a> {
         res
     }
 
+    fn is_type_contextually(&self, mut start: usize) -> bool {
+        while let Some(x) = self.next_token_seek(start) {
+            if x.kind == TokenKind::LeftParenthesis {
+                start += 1;
+                continue;
+            } else {
+                break;
+            }
+        }
+
+        is_type!(
+            self.next_token_seek(start).unwrap(),
+            self.shared,
+            self.shared.generics,
+            true
+        )
+    }
+
     fn parse_primary(&mut self) -> AstNode {
         while self.current_token().kind == TokenKind::Semicolon {
             self.advance();
@@ -3725,19 +3677,8 @@ impl<'a> Statement<'a> {
                     } else if next.kind.is_declarative() {
                         self.parse_declarative_like()
                     } else if next.kind == TokenKind::LessThan {
-                        if let Some(token) = self.next_token_seek(2) {
-                            let ty_name =
-                                token.value.get_string_inner().unwrap_or_else(String::new);
-
-                            if token.value.is_base_type()
-                                || self.shared.struct_pool.borrow().contains_key(&ty_name)
-                                || self.shared.generics.contains(&ty_name)
-                                || token.kind == TokenKind::LeftParenthesis
-                            {
-                                self.parse_function(None, None, None, None, false)
-                            } else {
-                                self.parse_arithmetic()
-                            }
+                        if self.is_type_contextually(2) {
+                            self.parse_function(None, None, None, None, false)
                         } else {
                             self.parse_arithmetic()
                         }
@@ -3809,7 +3750,13 @@ impl<'a> Statement<'a> {
             {
                 self.parse_lambda()
             }
-            _ if is_type!(self.current_token(), self.shared, self.shared.generics) => {
+            _ if is_type!(
+                self.current_token(),
+                self.shared,
+                self.shared.generics,
+                true
+            ) =>
+            {
                 if let Some(token) = self.next_token() {
                     if token.kind == TokenKind::LeftCurlyBrace {
                         self.parse_struct_init()
