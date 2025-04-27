@@ -27,6 +27,7 @@
     (#match? @constant "^[A-Z][A-Z\\d_]+$"))
 
 ; If the regex doesn't match, at least it's right once
+(enum_definition (identifier) @type)
 (struct_definition (identifier) @type)
 (constant_definition (identifier) @constant)
 
@@ -86,6 +87,7 @@
 "global" @keyword
 "let" @keyword
 "variadic" @keyword
+"enum" @keyword
 
 ; Function definition
 (function_definition name: (identifier) @function)
@@ -110,6 +112,7 @@
 
 ; Struct fields
 (struct_field (identifier) @property)
+(enum_variant (identifier) @property)
 (struct_field_initializer (identifier) @property)
 
 ; Struct literals
