@@ -190,8 +190,10 @@ impl fmt::Display for Instruction {
                     "store{} {}, {}",
                     if r#type.is_unsigned() {
                         r#type.clone().into_signed()
-                    } else {
+                    } else if r#type.is_struct() {
                         r#type.clone().into_base()
+                    } else {
+                        r#type.clone()
                     },
                     value,
                     dest
