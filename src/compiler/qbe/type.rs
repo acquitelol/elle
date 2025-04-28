@@ -630,6 +630,18 @@ impl Type {
         }
     }
 
+    pub fn is_smaller_than_int(&self) -> bool {
+        match self {
+            Self::Byte
+            | Self::UnsignedByte
+            | Self::Halfword
+            | Self::UnsignedHalfword
+            | Self::Char => true,
+            Self::Enum(_, inner) => Option::as_ref(inner).is_some_and(Self::is_smaller_than_int),
+            _ => false,
+        }
+    }
+
     pub fn is_map_to_int(&self) -> bool {
         match self {
             Self::Byte

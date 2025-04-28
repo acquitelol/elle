@@ -85,13 +85,35 @@ impl fmt::Display for Function {
         write!(formatter, "{}function", self.linkage)?;
 
         if let Some(r#type) = &self.return_type {
-            write!(formatter, " {}", r#type.clone().into_abi())?;
+            let ty = if r#type.is_smaller_than_int() {
+                if r#type.is_unsigned() {
+                    r#type.to_string()
+                } else {
+                    format!("s{}", r#type)
+                }
+            } else {
+                r#type.clone().into_abi().to_string()
+            };
+
+            write!(formatter, " {}", ty)?;
         }
 
         let mut arguments_clone = self
             .arguments
             .iter()
-            .map(|((r#type, temp), _)| format!("{} {temp}", r#type.clone().into_abi()))
+            .map(|((r#type, temp), _)| {
+                let ty = if r#type.is_smaller_than_int() {
+                    if r#type.is_unsigned() {
+                        r#type.to_string()
+                    } else {
+                        format!("s{}", r#type)
+                    }
+                } else {
+                    r#type.clone().into_abi().to_string()
+                };
+
+                format!("{} {temp}", ty)
+            })
             .collect::<Vec<_>>();
 
         if self.variadic {
