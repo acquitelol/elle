@@ -833,6 +833,18 @@ enum NPatchLayout {
 // follow this snake case convention for the sake of consistency.
 namespace rl;
 
+fn rlGetTextureIdDefault() -> u32;
+
+!external fn rl::get_default_texture() {
+    return Texture {
+        id = rlGetTextureIdDefault(),
+        width = 1,
+        height = 1,
+        mipmaps = 1,
+        format = PixelFormat::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+    };
+}
+
 // Window-related functions
 fn InitWindow(i32 width, i32 height, string title)       @alias(rl::init_window);                                   // Initialize window and OpenGL context
 fn CloseWindow()                                         @alias(rl::close_window);                                  // Close window and unload OpenGL context
