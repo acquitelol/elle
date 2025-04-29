@@ -46,7 +46,7 @@ fn Button::draw(Button *self, State *state, (i32, i32) offset) {
     hovering := rl::elle_check_collision_point_rec(rl::get_mouse_position(), button);
     button_color := hovering ? BUTTON_HOVER : BUTTON_UNHOVER;
 
-    if hovering && rl::is_mouse_button_pressed(MOUSE_BUTTON_LEFT) {
+    if hovering && rl::is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
         fn *cb = self.cb;
         cb(self, state);
     }

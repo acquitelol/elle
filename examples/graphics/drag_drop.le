@@ -17,7 +17,7 @@ fn main() {
     rl::init_window(SCREEN_HEIGHT, SCREEN_HEIGHT, "Drag & Drop");
     defer rl::close_window();
 
-    rl::set_window_state(FLAG_WINDOW_RESIZABLE);
+    rl::set_window_state(ConfigFlags::FLAG_WINDOW_RESIZABLE);
     files := [string;];
 
     while !rl::window_should_close() {

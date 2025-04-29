@@ -18,7 +18,7 @@ fn render_button(string text, f32 y_offset, Vector2 mouse_pos, i32 *counter, fn 
     hovering := rl::elle_check_collision_point_rec(mouse_pos, button);
     button_color := hovering ? BUTTON_HOVER : BUTTON_UNHOVER;
 
-    if hovering && rl::is_mouse_button_pressed(MOUSE_BUTTON_LEFT) {
+    if hovering && rl::is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
         action(counter);
     }
 

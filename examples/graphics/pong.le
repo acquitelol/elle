@@ -38,19 +38,19 @@ fn main() {
     velocitySign := 1;
 
     while !rl::window_should_close() {
-        if rl::is_key_down(KEY_W) && leftPaddle.y > 0 {
+        if rl::is_key_down(KeyboardKey::KEY_W) && leftPaddle.y > 0 {
             leftPaddle.y -= PADDLE_SPEED;
         }
 
-        if rl::is_key_down(KEY_S) && leftPaddle.y < SCREEN_HEIGHT - PADDLE_HEIGHT {
+        if rl::is_key_down(KeyboardKey::KEY_S) && leftPaddle.y < SCREEN_HEIGHT - PADDLE_HEIGHT {
             leftPaddle.y += PADDLE_SPEED;
         }
 
-        if rl::is_key_down(KEY_LEFT) && rightPaddle.y > 0 {
+        if rl::is_key_down(KeyboardKey::KEY_LEFT) && rightPaddle.y > 0 {
             rightPaddle.y -= PADDLE_SPEED;
         }
 
-        if rl::is_key_down(KEY_RIGHT) && rightPaddle.y < SCREEN_HEIGHT - PADDLE_HEIGHT {
+        if rl::is_key_down(KeyboardKey::KEY_RIGHT) && rightPaddle.y < SCREEN_HEIGHT - PADDLE_HEIGHT {
             rightPaddle.y += PADDLE_SPEED;
         }
 

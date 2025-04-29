@@ -4,8 +4,6 @@ const SCREEN_FACTOR = 80;
 const SCREEN_WIDTH = 8 * SCREEN_FACTOR;
 const SCREEN_HEIGHT = 8 * SCREEN_FACTOR;
 
-external fn rlGetTextureIdDefault() -> u32;
-
 fn main() {
     rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "UV Mango");
     defer rl::close_window();
@@ -34,14 +32,9 @@ fn main() {
     ");
 
     defer rl::unload_shader(shader);
-
-    tex := Texture {
-        id = rlGetTextureIdDefault(),
-        width = SCREEN_WIDTH,
-        height = SCREEN_HEIGHT,
-        mipmaps = 1,
-        format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
-    };
+    tex := rl::get_default_texture();
+    tex.width = SCREEN_WIDTH;
+    tex.height = SCREEN_HEIGHT;
 
     while !rl::window_should_close() {
         rl::begin_drawing();
@@ -52,7 +45,7 @@ fn main() {
                 shader,
                 rl::get_shader_location(shader, "time"),
                 &#cast(f32, rl::get_time()),
-                SHADER_UNIFORM_FLOAT
+                ShaderUniformDataType::SHADER_UNIFORM_FLOAT
             );
 
             rl::draw_texture_pro(

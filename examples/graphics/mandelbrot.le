@@ -17,7 +17,7 @@ fn main() {
     let target = rl::load_render_texture(textureWidth, textureHeight);
     defer rl::unload_render_texture(target);
 
-    rl::set_texture_filter(target.texture, TEXTURE_FILTER_BILINEAR);
+    rl::set_texture_filter(target.texture, TextureFilter::TEXTURE_FILTER_BILINEAR);
     rl::set_target_fps(60);
 
     let zoom = 0.75;
@@ -32,31 +32,31 @@ fn main() {
     let isReset = false;
 
     while !rl::window_should_close() {
-        if rl::is_key_down(KEY_ONE) {
+        if rl::is_key_down(KeyboardKey::KEY_ONE) {
             zoom *= 1.02;
         }
 
-        if rl::is_key_down(KEY_TWO) {
+        if rl::is_key_down(KeyboardKey::KEY_TWO) {
             zoom /= 1.02;
         }
 
-        if rl::is_key_down(KEY_THREE) {
+        if rl::is_key_down(KeyboardKey::KEY_THREE) {
             isReset = true;
         }
 
-        if rl::is_key_down(KEY_A) {
+        if rl::is_key_down(KeyboardKey::KEY_A) {
             offsetX -= baseZoomScale / zoom;
         }
 
-        if rl::is_key_down(KEY_D) {
+        if rl::is_key_down(KeyboardKey::KEY_D) {
             offsetX += baseZoomScale / zoom;
         }
 
-        if rl::is_key_down(KEY_W) {
+        if rl::is_key_down(KeyboardKey::KEY_W) {
             offsetY -= baseZoomScale / zoom;
         }
 
-        if rl::is_key_down(KEY_S) {
+        if rl::is_key_down(KeyboardKey::KEY_S) {
             offsetY += baseZoomScale / zoom;
         }
 
