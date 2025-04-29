@@ -170,7 +170,7 @@ impl<'a> Function<'a> {
             {
                 elle_error!(
                     location.borrow().error(format!(
-                        "Cannot create a method for '{name}' because it isn't a struct or primitive type.\n{}",
+                        "Cannot create a method for '{name}' because it isn't a struct, enum or primitive type.\n{}",
                         ValueKind::similar_mapping(&name)
                             .map_or_else(
                                 || format!("Are you sure you spelt '{name}' correctly?"),

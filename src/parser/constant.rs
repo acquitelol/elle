@@ -1,7 +1,8 @@
 use std::cell::RefCell;
 
 use crate::{
-    lexer::enums::{Location, MutRc, TokenKind},
+    elle_error,
+    lexer::enums::{Location, MutRc, Token, TokenKind, ValueKind},
     set_end,
 };
 
@@ -49,7 +50,7 @@ impl<'a> Constant<'a> {
             || self.parser.current_token().kind == TokenKind::ExactLiteral
         {
             if let Some(next) = self.parser.tokens.get(self.parser.position + 1) {
-                if next.kind == TokenKind::Equal {
+                if [TokenKind::Equal, TokenKind::DoubleColon].contains(&next.kind) {
                     None
                 } else {
                     yield_ty!()
@@ -61,9 +62,42 @@ impl<'a> Constant<'a> {
             yield_ty!()
         };
 
-        let name = self.parser.get_identifier();
-        let name_token = self.parser.current_token();
+        let mut name = self.parser.get_identifier();
+        let mut namespace_token = Token::from_ident("");
+        let mut name_token = self.parser.current_token();
         self.parser.advance();
+
+        if self.parser.current_token().kind == TokenKind::Dot {
+            elle_error!(self.parser.current_token().location.borrow().error(
+                "Cannot create a namespaced constant called using '.'\nPlease use '::' instead."
+            ))
+        }
+
+        if self.parser.current_token().kind == TokenKind::DoubleColon {
+            if !(self.parser.struct_pool.borrow().contains_key(&name)
+                || ValueKind::String(name.clone()).is_base_type())
+            {
+                elle_error!(
+                    name_token.location.borrow().error(format!(
+                        "Cannot create a method for '{name}' because it isn't a struct or primitive type.\n{}",
+                        ValueKind::similar_mapping(&name)
+                            .map_or_else(
+                                || format!("Are you sure you spelt '{name}' correctly?"),
+                                |map| format!("A similar type exists which might be what you need: '{map}'")
+                            )
+                    ))
+                )
+            }
+
+            self.parser.advance();
+
+            let identifier = self.parser.get_identifier();
+            name = format!("{name}.{identifier}");
+
+            namespace_token = name_token;
+            name_token = self.parser.current_token();
+            self.parser.advance();
+        }
 
         self.parser.expect_tokens(&[TokenKind::Equal]);
         self.parser.advance();
@@ -94,6 +128,7 @@ impl<'a> Constant<'a> {
         set_end!(location, self.parser);
 
         Some(Primitive::Constant(ConstantSource {
+            namespace_token,
             name_token,
             name,
             public,

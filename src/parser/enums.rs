@@ -547,6 +547,7 @@ pub struct FunctionSource {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConstantSource {
+    pub namespace_token: Token,
     pub name_token: Token,
     pub name: String,
     pub public: bool,

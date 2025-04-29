@@ -42,10 +42,11 @@ impl Codegen<'_> for Literal {
                             .unwrap_or(false);
 
                         elle_error!(format!(
-                            "hover\n{}\n{}\n{} {name}: {}",
+                            "hover\n{}\n{}\n{} {}: {}",
                             self.location.borrow().display_plain(false),
                             self.location.borrow().display_plain(true),
                             if is_constant { "const" } else { "let" },
+                            name.replace(".", "::"),
                             res.unwrap().0.display()
                         ));
                     }

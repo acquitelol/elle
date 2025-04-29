@@ -356,6 +356,12 @@ impl Compiler {
                         &module_ref,
                     );
 
+                    if this.namespace_token.tagged {
+                        let plain_name = this.namespace_token.value.get_string_inner().unwrap();
+                        let (_, members, _) = gen.struct_pool.get(&plain_name).unwrap();
+                        struct_hover!(this.namespace_token, members.is_empty(), members);
+                    }
+
                     if this.name_token.tagged {
                         elle_error!(format!(
                             "hover\n{}\n{}\nconst {}: {}",

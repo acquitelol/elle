@@ -427,6 +427,7 @@ pub fn lex_and_parse(
         tree.insert(
             0,
             Primitive::Constant(ConstantSource {
+                namespace_token: Token::from_ident(""),
                 name_token: Token::from_ident("nil"),
                 name: "nil".into(),
                 public: false,
