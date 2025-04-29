@@ -89,6 +89,7 @@
 "let" @keyword
 "variadic" @keyword
 "enum" @keyword
+"type" @keyword
 
 ; Function definition
 (function_definition name: (identifier) @function)
@@ -103,6 +104,7 @@
 
 ; Directives and attributes
 (lsp_type_definition directive: (directive_expression name: _ @function))
+(lsp_type_definition (identifier) @type)
 (directive_expression name: _ @function)
 (attribute (identifier) @keyword)
 

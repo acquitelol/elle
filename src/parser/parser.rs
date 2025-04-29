@@ -187,11 +187,12 @@ macro_rules! get_type {
 
             is_struct = $struct_pool.borrow().contains_key(&name);
             let is_enum = $enum_pool.borrow().contains_key(&name);
+            let is_base_type = ValueKind::String(name.clone()).is_base_type();
             let is_valid = is_fn_pointer
                 || is_struct
                 || is_enum
-                || $generics.unwrap_or(&vec![]).contains(&name)
-                || ValueKind::String(name.clone()).is_base_type();
+                || is_base_type
+                || $generics.unwrap_or(&vec![]).contains(&name);
 
             if !is_valid {
                 elle_error!(
@@ -212,6 +213,17 @@ macro_rules! get_type {
                 let pool = $enum_pool.borrow();
                 let enum_def = pool.get(&name).unwrap();
                 crate::enum_hover!($self.current_token(), name, enum_def.0);
+            }
+
+            if is_base_type && $self.current_token().tagged {
+                let ty = ValueKind::String(name.clone()).to_type_string(false, false, None).unwrap();
+                elle_error!(format!(
+                    "hover\n{}\n{}\ntype {}; // size = {}",
+                    $self.current_token().location.borrow().display_plain(false),
+                    $self.current_token().location.borrow().display_plain(true),
+                    ty.display(),
+                    ty.size_base()
+                ));
             }
 
             ValueKind::String(name.clone())
