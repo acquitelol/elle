@@ -519,6 +519,13 @@ impl Type {
         }
     }
 
+    pub fn get_enum_repr(&self) -> Option<Self> {
+        match self {
+            Self::Enum(_, ty) => Some(ty.clone().unwrap_or(Type::Word)),
+            _ => None,
+        }
+    }
+
     pub fn get_unknown_inner(&self) -> Option<String> {
         match self {
             Self::Unknown(val) => Some(val.clone()),

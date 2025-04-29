@@ -122,7 +122,7 @@ impl Codegen<'_> for BinaryOperation {
         }
 
         if left_ty.weight() > right_ty.weight() {
-            let (_, val) = convert_to_type(
+            let (ty, val) = convert_to_type(
                 gen,
                 ctx.func,
                 right_ty.clone(),
@@ -133,6 +133,7 @@ impl Codegen<'_> for BinaryOperation {
                 false,
             );
 
+            right_ty = ty;
             right_val = val;
         } else if left_ty.weight() < right_ty.weight() {
             let (ty, val) = convert_to_type(
@@ -332,13 +333,16 @@ impl Codegen<'_> for BinaryOperation {
         let final_ty = if self.operator.is_comparative() {
             Type::Boolean
         } else {
-            instruction_ty
+            match instruction_ty {
+                Type::Enum(_, ty) => ty.clone().unwrap_or(Type::Word),
+                other => other,
+            }
         };
 
         ctx.func
             .borrow_mut()
             .assign_instruction(&op_temp, &final_ty, res);
 
-        Some((final_ty, op_temp))
+        Some((final_ty.clone(), op_temp))
     }
 }
