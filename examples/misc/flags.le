@@ -1,0 +1,19 @@
+use std/prelude;
+
+enum Flags @repr(u8) {
+    Flag1 = 0b0001,
+    Flag2 = 0b0010,
+    Flag3 = 0b0100
+};
+
+fn has_flag(u8 value, Flags flag) {
+    return (value & flag) != 0;
+}
+
+fn main() {
+    x := Flags::Flag1 | Flags::Flag3;
+
+    $dbg(has_flag(x, Flags::Flag1)); // true
+    $dbg(has_flag(x, Flags::Flag2)); // false
+    $dbg(has_flag(x, Flags::Flag3)); // true
+}
