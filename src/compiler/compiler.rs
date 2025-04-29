@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, fs::File, io::Write};
 
 use crate::{
     elle_error, get_MAIN_ID, hashmap,
-    lexer::enums::{Location, MutRc, Token},
+    lexer::enums::{Location, MutRc, Token, ValueKind},
     misc::{
         colors::*,
         constants::{get_RAW_ERRORS, RAW_ERRORS},
@@ -358,8 +358,21 @@ impl Compiler {
 
                     if this.namespace_token.tagged {
                         let plain_name = this.namespace_token.value.get_string_inner().unwrap();
-                        let (_, members, _) = gen.struct_pool.get(&plain_name).unwrap();
-                        struct_hover!(this.namespace_token, members.is_empty(), members);
+                        if let Some((_, members, _)) = gen.struct_pool.get(&plain_name) {
+                            struct_hover!(this.namespace_token, members.is_empty(), members);
+                        } else {
+                            let ty = ValueKind::String(plain_name)
+                                .to_type_string(false, false, None)
+                                .unwrap();
+
+                            elle_error!(format!(
+                                "hover\n{}\n{}\ntype {}; // size = {}",
+                                this.namespace_token.location.borrow().display_plain(false),
+                                this.namespace_token.location.borrow().display_plain(true),
+                                ty.display(),
+                                ty.size_base()
+                            ));
+                        }
                     }
 
                     if this.name_token.tagged {
@@ -390,8 +403,21 @@ impl Compiler {
 
                         if namespace_token.tagged {
                             let plain_name = namespace_token.value.get_string_inner().unwrap();
-                            let (_, members, _) = gen.struct_pool.get(&plain_name).unwrap();
-                            struct_hover!(namespace_token, members.is_empty(), members);
+                            if let Some((_, members, _)) = gen.struct_pool.get(&plain_name) {
+                                struct_hover!(namespace_token, members.is_empty(), members);
+                            } else {
+                                let ty = ValueKind::String(plain_name)
+                                    .to_type_string(false, false, None)
+                                    .unwrap();
+
+                                elle_error!(format!(
+                                    "hover\n{}\n{}\ntype {}; // size = {}",
+                                    namespace_token.location.borrow().display_plain(false),
+                                    namespace_token.location.borrow().display_plain(true),
+                                    ty.display(),
+                                    ty.size_base()
+                                ));
+                            }
                         }
 
                         if name_token.tagged {
