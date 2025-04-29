@@ -3078,20 +3078,27 @@ impl<'a> Statement<'a> {
         });
 
         if variant_token.tagged {
+            let value = &enum_def
+                .0
+                .iter()
+                .find(|x| x.name == variant)
+                .unwrap() // we throw an error above if it doesn't exist
+                .value
+                .value;
+
             elle_error!(format!(
-                "hover\n{}\n{}\n{}::{} = {};",
+                "hover\n{}\n{}\n{}::{} = {}; // size = {}",
                 variant_token.location.borrow().display_plain(false),
                 variant_token.location.borrow().display_plain(true),
                 name,
                 variant,
-                enum_def
-                    .0
-                    .iter()
-                    .find(|x| x.name == variant)
-                    .unwrap() // we throw an error above if it doesn't exist
-                    .value
-                    .value
-                    .wrapped_display()
+                value.wrapped_display(),
+                match value {
+                    ValueKind::Nil => 0,
+                    ValueKind::Number(_) => Type::Word.size_base(),
+                    ValueKind::Character(_) => Type::Char.size_base(),
+                    ValueKind::String(_) => Type::Pointer(Box::new(Type::Char)).size_base(),
+                }
             ));
         }
 
