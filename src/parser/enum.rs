@@ -280,7 +280,12 @@ impl<'a> Enum<'a> {
                                 left: Box::new(AstNode::token_to_literal(Token::from_ident(
                                     "self",
                                 ))),
-                                right: Box::new(AstNode::token_to_literal(x.value.clone())),
+                                right: Box::new(AstNode::Conversion(Conversion {
+                                    r#type: ty.clone(),
+                                    value: Box::new(AstNode::token_to_literal(x.value.clone())),
+                                    location: location.clone(),
+                                    explicit: true,
+                                })),
                                 operator: TokenKind::EqualTo,
                                 treat_as_string: true,
                                 dunder_methods: true,

@@ -74,11 +74,14 @@ pub fn convert_to_type(
     }
 
     if first.is_enum() || second.is_enum() {
-        if !explicit {
-            implicit_conversion_error!()
+        if (first.is_enum() && second == first.get_enum_repr().unwrap())
+            || (second.is_enum() && first == second.get_enum_repr().unwrap())
+            || explicit
+        {
+            return (second, val);
         }
 
-        return (second, val);
+        implicit_conversion_error!()
     }
 
     if ((first.is_strictly_number() && second.is_string())

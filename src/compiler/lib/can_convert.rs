@@ -37,7 +37,12 @@ pub fn can_convert_to_type(gen: &Compiler, first: Type, second: Type, explicit: 
     let weights_match = first.weight() == second.weight();
     let both_int_or_float =
         (first.is_int() && second.is_int()) || (first.is_float() && second.is_float());
-    let explicit_enum_cast = explicit && (first.is_enum() || second.is_enum());
+    let explicit_enum_cast = if explicit {
+        first.is_enum() || second.is_enum()
+    } else {
+        (first.is_enum() && first.get_enum_repr().unwrap() == second)
+            || (second.is_enum() && second.get_enum_repr().unwrap() == first)
+    };
 
     return weights_match || both_int_or_float || explicit_enum_cast;
 }
