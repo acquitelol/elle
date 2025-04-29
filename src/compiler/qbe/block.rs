@@ -16,7 +16,7 @@ impl Block {
     pub fn assign_instruction(&mut self, temp: &Value, r#type: &Type, instruction: Instruction) {
         self.statements.push(Statement::Assign(
             temp.to_owned(),
-            r#type.to_owned().into_abi(),
+            r#type.to_owned(),
             instruction,
         ));
     }
@@ -29,7 +29,7 @@ impl Block {
     ) {
         self.statements.insert(
             0,
-            Statement::Assign(temp.to_owned(), r#type.to_owned().into_abi(), instruction),
+            Statement::Assign(temp.to_owned(), r#type.to_owned(), instruction),
         );
     }
 

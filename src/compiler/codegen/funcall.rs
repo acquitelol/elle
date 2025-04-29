@@ -297,12 +297,7 @@ impl Codegen<'_> for FunctionCall {
         for (i, mut parameter) in parameters.iter().cloned().enumerate() {
             let param_ty = {
                 let tmp = tmp_function.arguments.get(i + add_meta as usize);
-
-                if tmp.is_some() {
-                    tmp.map(|item| item.0 .0.clone())
-                } else {
-                    None
-                }
+                tmp.map(|item| item.0 .0.clone())
             };
 
             let first_arg = tmp_function.arguments.get(0 + add_meta as usize);
@@ -353,7 +348,7 @@ impl Codegen<'_> for FunctionCall {
                     convert_to_type(
                         gen,
                         ctx.func,
-                        ty.into_abi(),
+                        ty,
                         param_ty.unwrap(),
                         val,
                         &parameter.0,

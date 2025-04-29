@@ -44,7 +44,7 @@ pub fn generate_function(
             .arguments
             .clone()
             .into_iter()
-            .map(|x| ((x.r#type.into_abi(), Value::Temporary(x.name)), false))
+            .map(|x| ((x.r#type, Value::Temporary(x.name)), false))
             .collect(),
         return_type: this.r#return,
         blocks: vec![],
@@ -87,7 +87,7 @@ pub fn generate_function(
         });
 
         stmt.compile(gen, &ctx);
-        args.push(((ty.into_abi(), tmp), argument.no_fmt));
+        args.push(((ty, tmp), argument.no_fmt));
     }
 
     func_ref.borrow_mut().arguments = args;

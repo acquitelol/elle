@@ -23,7 +23,7 @@ impl Codegen<'_> for Lambda {
             let ty = argument.r#type.clone();
             let tmp = gen.new_variable(&ty, &argument.name, None, false, false);
 
-            args.push((ty.into_abi(), tmp));
+            args.push((ty, tmp));
         }
 
         let lambda_func = generate_function(
