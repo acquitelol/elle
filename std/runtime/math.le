@@ -1,24 +1,30 @@
 use std/libc/math;
 global pub;
 
+const i64::MAX_VALUE = 9_223_372_036_854_775_807;
+const i64::MIN_VALUE = ~i64::MAX_VALUE;
+
+const i32::MAX_VALUE = 2_147_483_647;
+const i32::MIN_VALUE = ~i32::MAX_VALUE;
+
 fn i64::max() -> i64 {
-    return 9_223_372_036_854_775_807;
+    return i64::MAX_VALUE;
 }
 
 fn i64::min() -> i64 {
-    return ~i64::max();
+    return i64::MIN_VALUE;
+}
+
+fn i32::max() -> i32 {
+    return i32::MAX_VALUE;
+}
+
+fn i32::min() -> i32 {
+    return i32::MIN_VALUE;
 }
 
 fn i64::truncate(i64 self) {
     return #cast(i32, self);
-}
-
-fn i32::max() -> i32 {
-    return 2_147_483_647;
-}
-
-fn i32::min() -> i32 {
-    return ~i32::max();
 }
 
 fn i32::promote(i32 self) {
