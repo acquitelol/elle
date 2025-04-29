@@ -89,7 +89,7 @@ impl<'a> Enum<'a> {
 
         let mut variants = vec![];
         let mut seen = HashSet::new();
-        let mut offset_kind = TokenKind::Identifier;
+        let mut offset_kind = TokenKind::IntegerLiteral;
         let mut offset = None;
 
         while self.parser.current_token().kind != TokenKind::RightCurlyBrace {
@@ -281,7 +281,7 @@ impl<'a> Enum<'a> {
                                     "self",
                                 ))),
                                 right: Box::new(AstNode::Conversion(Conversion {
-                                    r#type: ty.clone(),
+                                    r#type: ty.clone().or(Some(Type::Word)),
                                     value: Box::new(AstNode::token_to_literal(x.value.clone())),
                                     location: location.clone(),
                                     explicit: true,
