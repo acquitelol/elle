@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{
     compiler::qbe::r#type::Type,
-    elle_error,
+    elle_error, enum_hover,
     lexer::enums::{Attribute, Location, MutRc, Token, TokenKind, ValueKind},
     misc::{
         colors::{get_GREEN, get_RESET, GREEN, RESET},
@@ -315,6 +315,8 @@ impl<'a> Enum<'a> {
             .enum_pool
             .borrow_mut()
             .insert(name.clone(), (variants.clone(), ty));
+
+        enum_hover!(name_token, name, variants);
 
         Some((
             Primitive::Enum(EnumSource {
