@@ -40,8 +40,12 @@ pub fn can_convert_to_type(gen: &Compiler, first: Type, second: Type, explicit: 
     let explicit_enum_cast = if explicit {
         first.is_enum() || second.is_enum()
     } else {
+        // Foo(T) -> T
         (first.is_enum() && first.get_enum_repr().unwrap() == second)
+            // T -> Foo(T)
             || (second.is_enum() && second.get_enum_repr().unwrap() == first)
+            // Foo(T) -> Foo(T)
+            || first == second
     };
 
     return weights_match || both_int_or_float || explicit_enum_cast;

@@ -76,6 +76,7 @@ pub fn convert_to_type(
     if first.is_enum() || second.is_enum() {
         if (first.is_enum() && second == first.get_enum_repr().unwrap())
             || (second.is_enum() && first == second.get_enum_repr().unwrap())
+            || first == second
             || explicit
         {
             return (second, val);
