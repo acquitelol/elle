@@ -211,6 +211,7 @@ impl<'a> Struct<'a> {
                             tagged: false,
                         })),
                         value: None,
+                        addr_only: false,
                         location: location.clone(),
                     });
 

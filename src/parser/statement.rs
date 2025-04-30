@@ -33,6 +33,7 @@ pub struct Shared<'a> {
     pub tree: &'a RefCell<Vec<Primitive>>,
     pub generics: &'a Vec<String>,
     pub known_generics: &'a Vec<Type>,
+    pub addr_only: bool,
 }
 
 pub struct Statement<'a> {
@@ -40,6 +41,7 @@ pub struct Statement<'a> {
     position: usize,
     body: &'a RefCell<Vec<AstNode>>,
     shared: &'a Shared<'a>,
+    consumed_addr: bool,
 }
 
 impl<'a> Statement<'a> {
@@ -49,11 +51,12 @@ impl<'a> Statement<'a> {
         body: &'a RefCell<Vec<AstNode>>,
         shared: &'a Shared<'a>,
     ) -> Self {
-        Statement {
+        Self {
             tokens,
             position,
             body,
             shared,
+            consumed_addr: false,
         }
     }
 
@@ -1091,24 +1094,38 @@ impl<'a> Statement<'a> {
             self.position = position;
 
             if self
-                .next_token()
+                .next_token_seek((self.current_token().kind == TokenKind::Address) as usize + 1)
                 .is_some_and(|token| token.kind == TokenKind::In)
             {
+                let addr_only = if self.current_token().kind == TokenKind::Address {
+                    self.advance();
+                    true
+                } else {
+                    false
+                };
+
                 self.expect_tokens(&[TokenKind::Identifier]);
                 let name = self.current_token();
                 self.advance();
 
-                return self.parse_foreach_statement(Type::Infer, name, location);
+                return self.parse_foreach_statement(Type::Infer, name, addr_only, location);
             }
 
             let ty = self.get_type(Some(self.shared.generics));
             self.advance();
 
+            let addr_only = if self.current_token().kind == TokenKind::Address {
+                self.advance();
+                true
+            } else {
+                false
+            };
+
             self.expect_tokens(&[TokenKind::Identifier]);
             let name = self.current_token();
             self.advance();
 
-            return self.parse_foreach_statement(ty, name, location);
+            return self.parse_foreach_statement(ty, name, addr_only, location);
         }
 
         let declare = if declare_tokens.is_empty() {
@@ -1239,6 +1256,7 @@ impl<'a> Statement<'a> {
         &mut self,
         ty: Type,
         name: Token,
+        addr_only: bool,
         location: MutRc<Location>,
     ) -> AstNode {
         self.advance(); // in
@@ -1302,6 +1320,7 @@ impl<'a> Statement<'a> {
             right_location: location.clone(),
             value_location: location.clone(),
             is_deref: false,
+            addr_only,
         });
 
         let element_node = AstNode::Declare(Declare {
@@ -1557,7 +1576,10 @@ impl<'a> Statement<'a> {
             right_location: right_location.clone(),
             value_location: value_location.clone(),
             is_deref: false,
+            addr_only: self.shared.addr_only,
         });
+
+        self.consumed_addr = true;
 
         match self.current_token().kind {
             TokenKind::Equal => {
@@ -1581,7 +1603,10 @@ impl<'a> Statement<'a> {
                     right_location,
                     value_location,
                     is_deref: false,
+                    addr_only: self.shared.addr_only,
                 });
+
+                self.consumed_addr = true;
             }
             other if other.is_declarative() => {
                 value = Some(Box::new(self.parse_declarative_node(expression.clone())));
@@ -1596,7 +1621,10 @@ impl<'a> Statement<'a> {
                     right_location,
                     value_location,
                     is_deref: false,
+                    addr_only: self.shared.addr_only,
                 });
+
+                self.consumed_addr = true;
             }
             TokenKind::Dot => {
                 expression = self.parse_field_access(Some((position, expression, location)));
@@ -2214,13 +2242,28 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let tokens = self.yield_tokens_for_unary();
-        let value = Box::new(Statement::new(tokens, 0, self.body, self.shared).parse().0);
+        let (value_node, _, _, ignore) = Statement::new(
+            tokens,
+            0,
+            self.body,
+            &Shared {
+                addr_only: true,
+                ..self.shared.clone()
+            },
+        )
+        .parse();
+
+        let value = Box::new(value_node);
         set_end!(location, self);
 
-        let node = AstNode::Address(Address {
-            value,
-            location: location.clone(),
-        });
+        let node = if ignore {
+            *value
+        } else {
+            AstNode::Address(Address {
+                value,
+                location: location.clone(),
+            })
+        };
 
         if self.current_token().kind.is_ternary_start() {
             self.parse_ternary_node(node, location)
@@ -2272,12 +2315,16 @@ impl<'a> Statement<'a> {
                         right_location: right_location.clone(),
                         value_location: value_location.clone(),
                         is_deref: true,
+                        addr_only: self.shared.addr_only,
                     }),
                 )));
+
+                self.consumed_addr = true;
             }
             _ => {}
         }
 
+        self.consumed_addr = true;
         AstNode::MemoryOperation(MemoryOperation {
             left,
             right,
@@ -2286,6 +2333,7 @@ impl<'a> Statement<'a> {
             right_location,
             value_location,
             is_deref: true,
+            addr_only: self.shared.addr_only,
         })
     }
 
@@ -2499,6 +2547,8 @@ impl<'a> Statement<'a> {
                 set_end!(inner_location, self);
                 set_end!(location, self);
 
+                self.consumed_addr = true;
+
                 return self.parse_function(
                     Some((inner_location, Token::from_ident(""), name_token, name)),
                     Some(vec![(
@@ -2508,6 +2558,7 @@ impl<'a> Statement<'a> {
                             right,
                             value,
                             location,
+                            addr_only: self.shared.addr_only,
                         }),
                     )]),
                     if tmp.is_empty() { None } else { Some(tmp) },
@@ -2531,9 +2582,11 @@ impl<'a> Statement<'a> {
                         left: inner_right,
                         right: inner,
                         value: None,
+                        addr_only: false,
                         location: location.clone(),
                     })),
                     value: None,
+                    addr_only: false,
                     location,
                 }));
             } else {
@@ -2542,6 +2595,7 @@ impl<'a> Statement<'a> {
                     right: inner,
                     value: None, // Only the root may have a value
                     location: location.clone(),
+                    addr_only: false,
                 }));
             }
         }
@@ -2553,7 +2607,10 @@ impl<'a> Statement<'a> {
             right: right.clone(),
             value: value.clone(),
             location: location.clone(),
+            addr_only: self.shared.addr_only,
         });
+
+        self.consumed_addr = true;
 
         match self.current_token().kind {
             TokenKind::Equal => {
@@ -2571,7 +2628,10 @@ impl<'a> Statement<'a> {
                     right,
                     value,
                     location,
+                    addr_only: self.shared.addr_only,
                 });
+
+                self.consumed_addr = true;
             }
             // foo.a.meow() = meow(foo.a)
             TokenKind::LeftParenthesis => {
@@ -2594,7 +2654,10 @@ impl<'a> Statement<'a> {
                     right,
                     value,
                     location,
+                    addr_only: self.shared.addr_only,
                 });
+
+                self.consumed_addr = true;
             }
             other if other.is_ternary_start() => {
                 expression = self.parse_ternary_node(expression, location);
@@ -2863,6 +2926,7 @@ impl<'a> Statement<'a> {
                                 tagged: false,
                             })),
                             value: None,
+                            addr_only: false,
                             location: location.clone(),
                         }),
                     ),
@@ -2987,6 +3051,7 @@ impl<'a> Statement<'a> {
                                 tagged: false,
                             })),
                             value: None,
+                            addr_only: false,
                             location: location.clone(),
                         }),
                     ),
@@ -3182,6 +3247,7 @@ impl<'a> Statement<'a> {
                             tagged: false,
                         })),
                         value: None,
+                        addr_only: false,
                         location: location.clone(),
                     }),
                 ),
@@ -3310,6 +3376,7 @@ impl<'a> Statement<'a> {
                     tagged: false,
                 })),
                 value: None,
+                addr_only: false,
                 location: location.clone(),
             })),
             location: location.clone(),
@@ -3552,7 +3619,7 @@ impl<'a> Statement<'a> {
 
                 break;
             } else {
-                let (node, position, tokens) =
+                let (node, position, tokens, _) =
                     Statement::new(self.tokens.clone(), self.position, &cell, self.shared).parse();
 
                 cell.borrow_mut().push(node);
@@ -3734,7 +3801,7 @@ impl<'a> Statement<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> (AstNode, usize, Vec<Token>) {
+    pub fn parse(&mut self) -> (AstNode, usize, Vec<Token>, bool) {
         if self.position >= 2 && self.tokens.len() > 1 {
             let prev = &self.tokens[self.position - 1];
             let kind = &prev.kind;
@@ -3864,6 +3931,6 @@ impl<'a> Statement<'a> {
             _ => self.parse_expression(),
         };
 
-        (node, self.position, self.tokens.clone())
+        (node, self.position, self.tokens.clone(), self.consumed_addr)
     }
 }

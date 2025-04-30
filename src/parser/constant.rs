@@ -120,6 +120,7 @@ impl<'a> Constant<'a> {
                 tree: &self.parser.tree,
                 generics: &vec![],
                 known_generics: &vec![],
+                addr_only: false,
             },
         )
         .parse()

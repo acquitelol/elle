@@ -73,6 +73,7 @@ pub struct MemoryOperation {
     pub right_location: MutRc<Location>,
     pub value_location: MutRc<Location>,
     pub is_deref: bool,
+    pub addr_only: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -199,6 +200,7 @@ pub struct FieldAccess {
     pub right: Box<AstNode>,
     pub value: Option<Box<AstNode>>,
     pub location: MutRc<Location>,
+    pub addr_only: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Codegen)]

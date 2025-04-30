@@ -7,6 +7,7 @@ use crate::{
     },
     elle_error, is_generic,
     lexer::enums::{Token, TokenKind, ValueKind},
+    misc::constants::LOAD_REF_CONSTANT,
     parser::enums::{AstNode, BinaryOperation, FunctionCall, Literal, MemoryOperation},
     LOAD_CONSTANT, STORE_CONSTANT,
 };
@@ -69,7 +70,10 @@ impl Codegen<'_> for MemoryOperation {
                 };
             }
 
-            if (self.value.is_some() && exists!(STORE_CONSTANT)) || exists!(LOAD_CONSTANT) {
+            if (self.value.is_some() && exists!(STORE_CONSTANT))
+                || (self.addr_only && exists!(LOAD_REF_CONSTANT))
+                || exists!(LOAD_CONSTANT)
+            {
                 let mut parameters = vec![
                     (self.left_location.clone(), *self.left),
                     (self.right_location, *self.right),
@@ -81,6 +85,8 @@ impl Codegen<'_> for MemoryOperation {
 
                 let constant = if self.value.is_some() {
                     STORE_CONSTANT
+                } else if self.addr_only {
+                    LOAD_REF_CONSTANT
                 } else {
                     LOAD_CONSTANT
                 };
@@ -205,8 +211,10 @@ impl Codegen<'_> for MemoryOperation {
             return Some((inner, compiled));
         }
 
-        let temp = if inner.is_struct() {
-            compiled_location
+        let res = if inner.is_struct() {
+            (inner, compiled_location)
+        } else if self.addr_only {
+            (Type::Pointer(Box::new(inner)), compiled_location)
         } else {
             let temp = gen.new_temporary(Some("load"), true);
 
@@ -216,9 +224,9 @@ impl Codegen<'_> for MemoryOperation {
                 Instruction::Load(inner.clone(), compiled_location),
             );
 
-            temp
+            (inner, temp)
         };
 
-        Some((inner, temp))
+        Some(res)
     }
 }

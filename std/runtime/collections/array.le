@@ -40,6 +40,11 @@ fn Array::__load__<T>(ElleMeta meta, T[] self, i64 i) {
     return self.elements[i];
 }
 
+fn Array::__load_ref__<T>(ElleMeta meta, T[] self, i64 i) -> T * {
+    __internal_array_bounds_check(meta.file, meta.line, meta.column, i, self.len());
+    return self.elements + i * #size(T);
+}
+
 fn Array::__store__<T>(ElleMeta meta, T[] self, i64 i, T value) {
     __internal_array_bounds_check(meta.file, meta.line, meta.column, i, self.len());
     self.elements[i] = value;

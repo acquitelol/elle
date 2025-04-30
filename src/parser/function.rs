@@ -428,7 +428,7 @@ impl<'a> Function<'a> {
                 self.parser.advance();
                 break;
             } else {
-                let (node, position, tokens) = Statement::new(
+                let (node, position, tokens, _) = Statement::new(
                     self.parser.tokens.clone(),
                     self.parser.position,
                     &body,
@@ -438,6 +438,7 @@ impl<'a> Function<'a> {
                         tree: &self.parser.tree,
                         generics: &generics,
                         known_generics: &vec![],
+                        addr_only: false,
                     },
                 )
                 .parse();

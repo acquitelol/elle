@@ -24,6 +24,7 @@ impl Codegen<'_> for FieldAccess {
             left,
             *self.right,
             false,
+            self.addr_only,
             &self.location,
         );
 
@@ -67,7 +68,7 @@ impl Codegen<'_> for FieldAccess {
         // Structs are stored in contiguous memory.
         // Any field that is a struct should not be dereferenced
         // because that will break everything.
-        if field_ty.is_struct() {
+        if field_ty.is_struct() || self.addr_only {
             Some((field_ty, offset_tmp))
         } else {
             ctx.func.borrow_mut().assign_instruction(

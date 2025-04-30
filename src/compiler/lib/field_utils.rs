@@ -52,6 +52,7 @@ pub fn process_field_access(
     mut left: Value,
     mut right: AstNode,
     load: bool,
+    addr_only: bool,
     location: &MutRc<Location>,
 ) -> (Type, Value) {
     loop {
@@ -119,7 +120,14 @@ pub fn process_field_access(
 
                     return res;
                 } else {
-                    let res = (member_ty.unwrap(), offset_tmp);
+                    let res = (
+                        if addr_only {
+                            Type::Pointer(Box::new(member_ty.unwrap()))
+                        } else {
+                            member_ty.unwrap()
+                        },
+                        offset_tmp,
+                    );
 
                     if tagged {
                         elle_error!(format!(
@@ -138,8 +146,17 @@ pub fn process_field_access(
                 right: nested_right,
                 ..
             }) => {
-                let (nested_ty, nested_left_value) =
-                    process_field_access(gen, func, module, ty, left, *nested_left, true, location);
+                let (nested_ty, nested_left_value) = process_field_access(
+                    gen,
+                    func,
+                    module,
+                    ty,
+                    left,
+                    *nested_left,
+                    true,
+                    addr_only,
+                    location,
+                );
 
                 ty = nested_ty;
                 left = nested_left_value;

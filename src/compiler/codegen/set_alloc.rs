@@ -115,9 +115,11 @@ impl Codegen<'_> for SetAllocator {
                         tagged: false,
                     })),
                     value: None,
+                    addr_only: false,
                     location: self.location.clone(),
                 })),
                 value: Some(Box::new(expr)),
+                addr_only: false,
                 location: self.location.clone(),
             });
 

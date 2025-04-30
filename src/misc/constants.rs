@@ -41,6 +41,7 @@ pub static FILE_EXTENSIONS: &[&'static str] = &[SHORT_EXTENSION, OBJECT_EXTENSIO
 // Dunder methods
 pub static FORMAT_CONSTANT: &'static str = "__fmt__";
 pub static LOAD_CONSTANT: &'static str = "__load__";
+pub static LOAD_REF_CONSTANT: &'static str = "__load_ref__";
 pub static STORE_CONSTANT: &'static str = "__store__";
 pub static LEN_CONSTANT: &'static str = "__len__";
 pub static HASH_CONSTANT: &'static str = "__hash__";
