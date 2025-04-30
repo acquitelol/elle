@@ -297,14 +297,34 @@ fn Array::insert<T>(T[] self, i32 index, T element) {
     self.size += 1;
 }
 
-fn Array::map<T, U>(U[] self, fn *mapping) -> T[] {
+fn Array::map_with<T, U>(U[] self, fn *mapping, void *arg) -> T[] {
     let new_self = Array::with_capacity<T>(self.len());
 
     for let i = 0; i < self.len(); i += 1 {
-        new_self.push(#cast(T, mapping(self[i], i, new_self)));
+        new_self.push(#cast(T, mapping(self[i], arg, i, new_self)));
     }
 
     return new_self;
+}
+
+fn Array::map<T, U>(U[] self, fn *mapping) -> T[] {
+    return self.map_with(mapping, nil);
+}
+
+fn Array::filter_with<T>(T[] self, fn *mapping, void *arg) -> T[] {
+    let new_self = Array::with_capacity<T>(self.len());
+
+    for let i = 0; i < self.len(); i += 1 {
+        if #cast(bool, mapping(self[i], arg, i, new_self)) {
+            new_self.push(self[i]);
+        }
+    }
+
+    return new_self;
+}
+
+fn Array::filter<T>(T[] self, fn *mapping) -> T[] {
+    return self.filter_with(mapping, nil);
 }
 
 fn Array::every<T>(T[] self, fn *cb) {

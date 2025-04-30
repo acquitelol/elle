@@ -1,7 +1,7 @@
 use std/io;
 use std/option;
 
-fn get_meow(i32 input) -> Option<string> {
+fn get_meow(i32 input) -> Option<string> * {
     if (input == 3) {
         return Option::None();
     }
@@ -9,7 +9,7 @@ fn get_meow(i32 input) -> Option<string> {
     return Option::Some("meow");
 }
 
-fn get_miku_number(string input) -> Option<i32> {
+fn get_miku_number(string input) -> Option<i32> * {
     if input == "mikudayo" {
         return Option::Some(39);
     }
