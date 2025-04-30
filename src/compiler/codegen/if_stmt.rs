@@ -96,7 +96,7 @@ impl Codegen<'_> for IfStatement {
         }
 
         if !self.else_body.is_empty() {
-            ctx.func.borrow_mut().add_block(current_false_label.clone());
+            ctx.func.borrow_mut().add_block(current_false_label);
 
             for statement in &self.else_body {
                 statement.clone().compile(gen, ctx);

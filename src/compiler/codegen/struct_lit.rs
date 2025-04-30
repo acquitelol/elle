@@ -17,13 +17,13 @@ use crate::{
 impl Codegen<'_> for StructLiteral {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let mut plain_name = self.name.value.get_string_inner().unwrap();
-        let inner = ctx.ty.clone().unwrap_or(
+        let inner = ctx.ty.clone().unwrap_or_else(|| {
             ctx.func
                 .borrow_mut()
                 .return_type
                 .clone()
-                .unwrap_or(Type::Void),
-        );
+                .unwrap_or(Type::Void)
+        });
 
         if inner.is_struct()
             && is_generic!(inner.get_struct_inner().unwrap())
@@ -36,16 +36,16 @@ impl Codegen<'_> for StructLiteral {
             }
         }
 
-        if gen.struct_pool.get(&plain_name).is_none() {
+        if !gen.struct_pool.contains_key(&plain_name) {
             if is_generic!(plain_name) {
-                create_monomorphized_struct(gen, ctx.module, plain_name.clone())
+                create_monomorphized_struct(gen, ctx.module, &plain_name);
             } else {
                 elle_error!(
                     self.location.borrow().error(format!(
                         "Could not find struct named '{}'. Did you spell it correctly?\nThis struct may be generic but missing generic parameters.",
                         Type::Struct(plain_name).display()
                     ))
-                )
+                );
             }
         }
 
@@ -60,7 +60,7 @@ impl Codegen<'_> for StructLiteral {
                 elle_error!(self
                     .location
                     .borrow()
-                    .error(format!("Unable to find struct named '{}'", plain_name)))
+                    .error(format!("Unable to find struct named '{plain_name}'")))
             });
 
         if !td.usable && !ctx.func.borrow_mut().imported {
@@ -84,13 +84,12 @@ impl Codegen<'_> for StructLiteral {
         let diff: Vec<_> = member_set.difference(&value_set).collect();
 
         if gen.warnings.has_warning(Warning::StructFieldsMissing) {
-            for member in diff.iter().cloned() {
+            for member in diff {
                 eprintln!(
                     "{}",
                     self.location.borrow().warning(format!(
-                        "Declaring struct '{}' without field '{}'",
+                        "Declaring struct '{}' without field '{member}'",
                         Type::Struct(plain_name.clone()).display(),
-                        member
                     ))
                 );
             }
@@ -99,24 +98,23 @@ impl Codegen<'_> for StructLiteral {
         let ty = Type::Struct(plain_name.clone());
         let size = ty.size(ctx.module);
 
-        let alloc_tmp = gen.new_temporary(Some(&format!("struct.{}", plain_name)), true);
+        let alloc_tmp = gen.new_temporary(Some(&format!("struct.{plain_name}")), true);
 
         #[cfg(debug_assertions)]
         ctx.func
             .borrow_mut()
-            .add_instruction(Instruction::Comment(format!("size of :{}", plain_name)));
+            .add_instruction(Instruction::Comment(format!("size of :{plain_name}")));
 
         ctx.func.borrow_mut().assign_instruction_front(
             &alloc_tmp,
             &Type::Long,
-            Instruction::Alloc8(Value::Const("".into(), size as i128)),
+            Instruction::Alloc8(Value::Const(String::new(), i128::from(size))),
         );
 
         for (member_name, value) in self.values.iter().cloned() {
             if !member_names.contains(&member_name) {
                 elle_error!(self.location.borrow().error(format!(
-                    "Struct named '{}' has no field named '{}'. Did you spell it correctly?",
-                    plain_name, member_name
+                    "Struct named '{plain_name}' has no field named '{member_name}'. Did you spell it correctly?",
                 )));
             }
 
@@ -134,7 +132,7 @@ impl Codegen<'_> for StructLiteral {
                 })
                 .unwrap_or_else(||
                     elle_error!(self.location.borrow().error(
-                        format!("Unexpected error when trying to compile the value of a field '{}' in struct '{}'", member_name, plain_name)
+                        format!("Unexpected error when trying to compile the value of a field '{member_name}' in struct '{plain_name}'")
                     )
                 ));
 
@@ -159,7 +157,10 @@ impl Codegen<'_> for StructLiteral {
             ctx.func.borrow_mut().assign_instruction(
                 &offset_tmp,
                 &Type::Long,
-                Instruction::Add(alloc_tmp.clone(), Value::Const("".into(), offset as i128)),
+                Instruction::Add(
+                    alloc_tmp.clone(),
+                    Value::Const(String::new(), i128::from(offset)),
+                ),
             );
 
             if ty.is_struct() {
@@ -172,14 +173,14 @@ impl Codegen<'_> for StructLiteral {
                         (Type::Long, val),
                         (
                             Type::Word,
-                            Value::Const("".into(), ty.size(ctx.module) as i128),
+                            Value::Const(String::new(), i128::from(ty.size(ctx.module))),
                         ),
                     ],
-                ))
+                ));
             } else {
                 ctx.func
                     .borrow_mut()
-                    .add_instruction(Instruction::Store(ty, offset_tmp, val))
+                    .add_instruction(Instruction::Store(ty, offset_tmp, val));
             }
         }
 

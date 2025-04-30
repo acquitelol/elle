@@ -1090,7 +1090,7 @@ impl<'a> Statement<'a> {
             self.position = position;
 
             if self
-                .next_token_seek((self.current_token().kind == TokenKind::Address) as usize + 1)
+                .next_token_seek(usize::from(self.current_token().kind == TokenKind::Address) + 1)
                 .is_some_and(|token| token.kind == TokenKind::In)
             {
                 let addr_only = if self.current_token().kind == TokenKind::Address {
@@ -1487,8 +1487,9 @@ impl<'a> Statement<'a> {
                 }
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
-                    expression = self.parse_ternary_node(expression, location)
+                    expression = self.parse_ternary_node(expression, location);
                 }
+
                 _ => expect_eot!(token),
             }
         }
@@ -1694,8 +1695,9 @@ impl<'a> Statement<'a> {
                 }
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
-                    expression = self.parse_ternary_node(expression, location)
+                    expression = self.parse_ternary_node(expression, location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     return self.parse_arithmetic();
@@ -1973,8 +1975,9 @@ impl<'a> Statement<'a> {
                 }
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
-                    expression = self.parse_ternary_node(expression, location)
+                    expression = self.parse_ternary_node(expression, location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     return self.parse_arithmetic();
@@ -2267,7 +2270,7 @@ impl<'a> Statement<'a> {
             self.body,
             &Shared {
                 addr_only: true,
-                ..self.shared.clone()
+                ..*self.shared
             },
         )
         .parse();
@@ -2480,8 +2483,9 @@ impl<'a> Statement<'a> {
                 }
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
-                    expression = self.parse_ternary_node(expression, location)
+                    expression = self.parse_ternary_node(expression, location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     expression = self.parse_arithmetic();
@@ -2889,7 +2893,7 @@ impl<'a> Statement<'a> {
                 TokenKind::Semicolon => {}
 
                 other if other.is_ternary_start() => {
-                    expression = self.parse_ternary_node(expression, location)
+                    expression = self.parse_ternary_node(expression, location);
                 }
 
                 other if other.is_declarative() => {
@@ -3024,8 +3028,9 @@ impl<'a> Statement<'a> {
 
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
-                    expression = self.parse_ternary_node(expression, location)
+                    expression = self.parse_ternary_node(expression, location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     return self.parse_arithmetic();
@@ -3155,8 +3160,9 @@ impl<'a> Statement<'a> {
 
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
-                    expression = self.parse_ternary_node(expression, location)
+                    expression = self.parse_ternary_node(expression, location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     return self.parse_arithmetic();
@@ -3164,6 +3170,7 @@ impl<'a> Statement<'a> {
                 _ => expect_eot!(self.current_token()),
             }
         }
+
         expression
     }
 
@@ -3246,8 +3253,9 @@ impl<'a> Statement<'a> {
 
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
-                    expression = self.parse_ternary_node(expression, location)
+                    expression = self.parse_ternary_node(expression, location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     return self.parse_arithmetic();
@@ -3341,8 +3349,9 @@ impl<'a> Statement<'a> {
 
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
-                    expression = self.parse_ternary_node(expression, location)
+                    expression = self.parse_ternary_node(expression, location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     return self.parse_arithmetic();
@@ -3410,8 +3419,9 @@ impl<'a> Statement<'a> {
 
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
-                    expression = self.parse_ternary_node(expression, location)
+                    expression = self.parse_ternary_node(expression, location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     return self.parse_arithmetic();
@@ -3473,8 +3483,9 @@ impl<'a> Statement<'a> {
 
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
-                    expression = self.parse_ternary_node(expression, location)
+                    expression = self.parse_ternary_node(expression, location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     return self.parse_arithmetic();

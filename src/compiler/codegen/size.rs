@@ -17,7 +17,7 @@ impl Codegen<'_> for Size {
                 ctx.func.borrow_mut().assign_instruction(
                     &temp,
                     &tmp_ty,
-                    Instruction::Copy(Value::Const("".into(), ty.size(ctx.module) as i128)),
+                    Instruction::Copy(Value::Const(String::new(), i128::from(ty.size(ctx.module)))),
                 );
 
                 Some((tmp_ty, temp))
@@ -50,7 +50,10 @@ impl Codegen<'_> for Size {
                         ctx.func.borrow_mut().assign_instruction(
                             &size,
                             &ty,
-                            Instruction::Copy(Value::Const("".into(), ty.size(ctx.module) as i128)),
+                            Instruction::Copy(Value::Const(
+                                String::new(),
+                                i128::from(ty.size(ctx.module)),
+                            )),
                         );
 
                         Some((ty, size))
@@ -58,7 +61,7 @@ impl Codegen<'_> for Size {
                     other => {
                         ctx.func.borrow_mut().assign_instruction(
                             &size,
-                            &other,
+                            other,
                             Instruction::Copy(Value::Const(
                                 if other.clone() == Type::Double {
                                     "d_"
@@ -68,7 +71,7 @@ impl Codegen<'_> for Size {
                                     ""
                                 }
                                 .into(),
-                                ty.size(ctx.module) as i128,
+                                i128::from(ty.size(ctx.module)),
                             )),
                         );
 

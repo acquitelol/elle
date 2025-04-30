@@ -33,7 +33,7 @@ impl Codegen<'_> for SetAllocator {
                     .error("Unexpected error when compiling a `set allocator` expresssion"))
             });
 
-        if !ty.is_struct() && !(ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct()) {
+        if !(ty.is_struct() || ty.is_pointer() && ty.get_pointer_inner().unwrap().is_struct()) {
             elle_error!(self
                 .location
                 .borrow()

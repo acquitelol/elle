@@ -20,7 +20,7 @@ impl Codegen<'_> for Literal {
                         &name,
                         Some(ctx.func),
                         Some(ctx.module),
-                        self.location.clone(),
+                        &self.location,
                     );
 
                     if self.tagged {
@@ -38,15 +38,14 @@ impl Codegen<'_> for Literal {
                             .borrow()
                             .functions
                             .get(&name)
-                            .map(|function| function.constant)
-                            .unwrap_or(false);
+                            .is_some_and(|function| function.constant);
 
                         elle_error!(format!(
                             "hover\n{}\n{}\n{} {}: {}",
                             self.location.borrow().display_plain(false),
                             self.location.borrow().display_plain(true),
                             if is_constant { "const" } else { "let" },
-                            name.replace(".", "::"),
+                            name.replace('.', "::"),
                             res.unwrap().0.display()
                         ));
                     }
@@ -59,7 +58,7 @@ impl Codegen<'_> for Literal {
                 if let Some(label) = &gen.loop_labels.last() {
                     ctx.func
                         .borrow_mut()
-                        .add_instruction(Instruction::Jump(format!("{}.end", label)));
+                        .add_instruction(Instruction::Jump(format!("{label}.end")));
                 } else {
                     elle_error!(self
                         .location
@@ -73,7 +72,7 @@ impl Codegen<'_> for Literal {
                 if let Some(label) = &gen.loop_labels.last() {
                     ctx.func
                         .borrow_mut()
-                        .add_instruction(Instruction::Jump(format!("{}.step", label)));
+                        .add_instruction(Instruction::Jump(format!("{label}.step")));
                 } else {
                     elle_error!(self
                         .location
@@ -85,6 +84,7 @@ impl Codegen<'_> for Literal {
             }
             _ => match self.value {
                 ValueKind::Number(val) => {
+                    #[allow(clippy::match_same_arms)]
                     let num_ty = match self.kind {
                         TokenKind::BoolLiteral => Type::Boolean,
                         TokenKind::IntegerLiteral => Type::Word,
@@ -115,9 +115,9 @@ impl Codegen<'_> for Literal {
                     let res = (
                         final_ty.clone(),
                         Value::Const(
-                            if final_ty.clone() == Type::Double {
+                            if final_ty == Type::Double {
                                 "d_"
-                            } else if final_ty.clone() == Type::Single {
+                            } else if final_ty == Type::Single {
                                 "s_"
                             } else {
                                 ""
@@ -149,15 +149,12 @@ impl Codegen<'_> for Literal {
                         name.clone(),
                         None,
                         vec![
-                            (Type::Byte, DataItem::String(val.replace("\n", "\\n"))),
+                            (Type::Byte, DataItem::String(val.replace('\n', "\\n"))),
                             (Type::Byte, DataItem::Const(0)),
                         ],
                     ));
 
-                    let res = (
-                        Type::Pointer(Box::new(Type::Char)),
-                        Value::Global(name.clone()),
-                    );
+                    let res = (Type::Pointer(Box::new(Type::Char)), Value::Global(name));
 
                     if self.tagged {
                         elle_error!(format!(
@@ -171,7 +168,7 @@ impl Codegen<'_> for Literal {
                     Some(res)
                 }
                 ValueKind::Character(val) => {
-                    let res = (Type::Char, Value::Const("".into(), val as i128));
+                    let res = (Type::Char, Value::Const(String::new(), val as i128));
 
                     if self.tagged {
                         elle_error!(format!(

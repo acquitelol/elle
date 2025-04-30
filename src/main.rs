@@ -8,8 +8,11 @@
     clippy::single_match,
     clippy::struct_excessive_bools,
     clippy::fn_params_excessive_bools,
-    clippy::too_many_arguments
+    clippy::too_many_arguments,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation
 )]
+#![feature(let_chains)]
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::remove_file;
@@ -892,7 +895,7 @@ async fn main() -> ExitCode {
         pedantic,
         release_mode,
         no_gc,
-        string_module_methods,
+        &string_module_methods,
     );
 
     if debug_time {
@@ -985,7 +988,7 @@ async fn main() -> ExitCode {
                         get_RED!(),
                         get_RESET!()
                     )
-                })
+                });
             }
         }
 

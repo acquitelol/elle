@@ -21,9 +21,9 @@ pub fn create_monomorphized_function(
     gen: &mut Compiler,
     name: &mut String,
     add_meta: &mut bool,
-    base_known_generics: Vec<Type>,
+    base_known_generics: &[Type],
     known_generics: &mut HashMap<String, Type>,
-    parameters: Vec<(MutRc<Location>, AstNode)>,
+    parameters: &[(MutRc<Location>, AstNode)],
     module: &RefCell<Module>,
     func: &RefCell<Function>,
     call_location: &MutRc<Location>,
@@ -38,17 +38,17 @@ pub fn create_monomorphized_function(
                     break;
                 }
 
-                *name = unaliased.clone().unwrap_or(name.to_string());
+                *name = unaliased.clone().unwrap_or_else(|| (*name).to_string());
             }
             _ => {}
-        };
+        }
     }
 
     match &gen.generic_functions.get(&name.clone()).unwrap().clone() {
         Primitive::Function(this) => {
             // Reassign it if the function is generic
             // as the function won't have been found last time
-            if let Some(inner) = this.arguments.get(0) {
+            if let Some(inner) = this.arguments.first() {
                 if inner.r#type.is_struct() {
                     let name = inner.r#type.get_struct_inner().unwrap();
 
@@ -63,18 +63,17 @@ pub fn create_monomorphized_function(
             // and the caller does foo<i32>()
             // it will know T and try to infer U and V
             if base_known_generics.len() <= this.generics.len() {
-                known_generics.extend(HashMap::<String, Type>::from_iter(
+                known_generics.extend(
                     base_known_generics
                         .iter()
                         .enumerate()
-                        .map(|(i, known)| (this.generics[i].clone(), known.clone()))
-                        .collect::<Vec<(String, Type)>>(),
-                ));
+                        .map(|(i, known)| (this.generics[i].clone(), known.clone())),
+                );
             }
 
             for (i, parameter) in parameters.iter().cloned().enumerate() {
                 let param_ty = {
-                    let tmp = this.arguments.get(i + *add_meta as usize);
+                    let tmp = this.arguments.get(i + usize::from(*add_meta));
 
                     if tmp.is_some() && !Type::Void.has_generic_type(&tmp.unwrap().r#type) {
                         tmp.map(|item| item.r#type.clone())
@@ -99,12 +98,11 @@ pub fn create_monomorphized_function(
                     )
                     .unwrap_or_else(|| elle_error!(parameter.0.borrow().error(
                         format!(
-                            "Unexpected error when trying to generate a statement for a parameter in a function called '{}'",
-                            name
+                            "Unexpected error when trying to generate a statement for a parameter in a function called '{name}'",
                         ))));
 
                 let other = {
-                    let tmp = this.arguments.get(i + *add_meta as usize);
+                    let tmp = this.arguments.get(i + usize::from(*add_meta));
 
                     if tmp.is_some() {
                         tmp.map(|item| item.r#type.clone())
@@ -120,20 +118,15 @@ pub fn create_monomorphized_function(
                         for (key, ty) in inner.iter().map(|(x, y)| (x.clone(), y.clone())) {
                             match known_generics.get(&key) {
                                 Some(existing_ty)
-                                    if !can_convert_to_type(
-                                        gen,
-                                        existing_ty.clone(),
-                                        ty.clone(),
-                                        false,
-                                    ) =>
+                                    if !can_convert_to_type(gen, existing_ty, &ty, false) =>
                                 {
                                     elle_error!(
                                         call_location.borrow().with_extra_info(format!("{key} = `{}`, but got `{}`", existing_ty.display(), ty.display())).error(
                                             format!(
                                                 "Mismatched type for generic {key} in {}<{}>({}):\n{key} is defined with both type \"{GREEN}{}{RESET}\" and \"{RED}{}{RESET}\"",
-                                                name.replace(".", "::"),
+                                                name.replace('.', "::"),
                                                 this.generics.join(", "),
-                                                if this.arguments.len() > 0 { "..." } else { "" },
+                                                if this.arguments.is_empty() { "" } else { "..." },
                                                 existing_ty.display(),
                                                 ty.display(),
                                                 GREEN = get_GREEN!(),
@@ -157,19 +150,17 @@ pub fn create_monomorphized_function(
                                 ty.display(),
                                 other.display()
                             ),)
-                        )
+                        );
                     }
                 }
             }
 
             if let Some(other) = this.r#return.clone() {
                 if let Some(ty) = ty {
-                    if ty.clone().has_generic_type(&other)
-                        && known_generics.len() < this.generics.len()
-                    {
+                    if ty.has_generic_type(&other) && known_generics.len() < this.generics.len() {
                         // Possibly Option.generic.8 and Option
                         if let Some(inner) = ty.deduce_generic_type(&other) {
-                            known_generics.extend(inner)
+                            known_generics.extend(inner);
                         } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
                             eprintln!(
                                 "{}",
@@ -178,18 +169,16 @@ pub fn create_monomorphized_function(
                                     ty.display(),
                                     other.display()
                                 ))
-                            )
+                            );
                         }
                     }
                 }
 
                 if let Some(ty) = func.borrow().return_type.clone() {
-                    if ty.clone().has_generic_type(&other)
-                        && known_generics.len() < this.generics.len()
-                    {
+                    if ty.has_generic_type(&other) && known_generics.len() < this.generics.len() {
                         // Possibly Option.generic.8 and Option
                         if let Some(inner) = ty.deduce_generic_type(&other) {
-                            known_generics.extend(inner)
+                            known_generics.extend(inner);
                         } else if other.is_unknown() && other.get_unknown_inner().unwrap() == "fn" {
                             eprintln!(
                                 "{}",
@@ -198,7 +187,7 @@ pub fn create_monomorphized_function(
                                     ty.display(),
                                     other.display()
                                 ),)
-                            )
+                            );
                         }
                     }
                 }
@@ -217,9 +206,9 @@ pub fn create_monomorphized_function(
                 elle_error!(
                     call_location.borrow().error(format!(
                         "Mismatched number of generics in function {}<{}>({}).\nCould not find generic{} {} where the function specifies <{}>.",
-                        name.replace(".", "::"),
+                        name.replace('.', "::"),
                         this.generics.join(", "),
-                        if this.arguments.len() > 0 { "..." } else { "" },
+                        if this.arguments.is_empty() { "" } else { "..." },
                         if diff.len() == 1 { "" } else { "s" },
                         diff.join(", "),
                         this.generics.join(", ")
@@ -231,19 +220,13 @@ pub fn create_monomorphized_function(
                 "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
                 this.generics
                     .iter()
-                    .map(|generic| {
-                        known_generics
-                            .get(generic)
-                            .unwrap()
-                            .to_internal_id()
-                            .to_string()
-                    })
-                    .collect::<Vec<String>>()
+                    .map(|generic| { known_generics.get(generic).unwrap().to_internal_id() })
+                    .collect::<Vec<_>>()
                     .join(".")
             );
 
             let existing = module.borrow().functions.get(&generic_name).cloned();
-            *name = generic_name.clone();
+            name.clone_from(&generic_name);
 
             if existing.is_none() {
                 // Temporarily empty the scopes
@@ -263,7 +246,7 @@ pub fn create_monomorphized_function(
                             Some(&struct_pool),
                             Some(&tree),
                             &this.generics,
-                            &known_generics,
+                            known_generics,
                         ),
                         no_fmt: arg.no_fmt,
                     })
@@ -274,7 +257,7 @@ pub fn create_monomorphized_function(
                         Some(&struct_pool),
                         Some(&tree),
                         &this.generics,
-                        &known_generics,
+                        known_generics,
                     ))
                 } else {
                     this.r#return.clone()
@@ -283,21 +266,21 @@ pub fn create_monomorphized_function(
                 let parsed_body = modify_type_in_ast(
                     this.body.clone(),
                     &this.generics,
-                    &known_generics,
+                    known_generics,
                     Some(&struct_pool),
                     Some(&tree),
                 );
 
-                gen.struct_pool = struct_pool.borrow().to_owned();
+                struct_pool.borrow().clone_into(&mut gen.struct_pool);
 
-                for primitive in tree.borrow().to_owned().into_iter() {
+                for primitive in tree.borrow().to_owned() {
                     match primitive {
                         Primitive::Struct(this) => {
                             let td = generate_struct(this, gen);
                             module.borrow_mut().add_type(td);
                         }
                         _ => {}
-                    };
+                    }
                 }
 
                 let function = generate_function(
@@ -313,7 +296,7 @@ pub fn create_monomorphized_function(
                     false,
                     false,
                     known_generics.clone(),
-                    &module,
+                    module,
                 );
 
                 module.borrow_mut().add_function(function.clone());
@@ -326,5 +309,5 @@ pub fn create_monomorphized_function(
             }
         }
         _ => {}
-    };
+    }
 }

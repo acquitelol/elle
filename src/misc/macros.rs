@@ -169,7 +169,7 @@ macro_rules! not_valid_struct_or_type {
 macro_rules! unknown_field {
     ($struct:expr, $struct_name:expr, $name:expr, $location:expr $(,)?) => {{
         let mut similar_name = None;
-        let mut lowest_distance = usize::max_value();
+        let mut lowest_distance = usize::MAX;
 
         for arg in $struct.1.iter().map(|arg| arg.name.clone()) {
             let contains_name = arg.contains($name.as_str());
@@ -208,7 +208,7 @@ macro_rules! unknown_field {
 macro_rules! unknown_function {
     ($location:expr, $name:expr, $module:expr $(,)?) => {{
         let mut similar_name = None;
-        let mut lowest_distance = usize::max_value();
+        let mut lowest_distance = usize::MAX;
 
         for (_, func) in $module.borrow_mut().functions.iter().filter(|(_, func)| {
             func.name != "nil" && func.name != "main" && (func.usable || func.imported)

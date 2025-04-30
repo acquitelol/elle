@@ -117,7 +117,7 @@ pub fn lex_and_parse(
                 },
                 GREEN = get_GREEN!(),
                 RESET = get_RESET!(),
-            )
+            );
         }
 
         return vec![];

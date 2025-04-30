@@ -40,7 +40,7 @@ pub fn convert_to_type(
 
                 func.borrow_mut().assign_instruction(
                     &tmp,
-                    &second.clone(),
+                    &second,
                     Instruction::Load(second.clone(), val),
                 );
 
@@ -109,7 +109,7 @@ pub fn convert_to_type(
     }
 
     if first.weight() == second.weight() {
-        return (second, val);
+        (second, val)
     } else if (first.is_int() && second.is_int()) || (first.is_float() && second.is_float()) {
         let conv = gen.new_temporary(Some("conv"), true);
         let is_first_higher = first.weight() > second.weight();
@@ -130,7 +130,7 @@ pub fn convert_to_type(
             },
         );
 
-        return (second, conv);
+        (second, conv)
     } else {
         let conv = gen.new_temporary(Some("conv"), true);
 
@@ -140,6 +140,6 @@ pub fn convert_to_type(
             Instruction::Conversion(first, second.clone(), val),
         );
 
-        return (second, conv);
+        (second, conv)
     }
 }

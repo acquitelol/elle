@@ -69,7 +69,7 @@ pub fn generate_function(
         is_return: false,
     };
 
-    for argument in this.arguments.iter() {
+    for argument in &this.arguments {
         let ty = argument.r#type.clone();
         let tmp = gen.new_variable(&ty, &argument.name, None, false, false);
 
@@ -102,7 +102,7 @@ pub fn generate_function(
         module.borrow_mut().add_function(func.clone());
     }
 
-    for statement in this.body.iter() {
+    for statement in &this.body {
         statement.clone().compile(gen, &ctx);
     }
 
@@ -215,7 +215,7 @@ pub fn generate_function(
         };
     }
 
-    for block in func_ref.borrow().blocks.iter() {
+    for block in &func_ref.borrow().blocks {
         for statement in block.statements.clone() {
             if let Statement::Volatile(Instruction::Return(Some((ty, val, location)))) = statement {
                 if first_ty.is_none() {
@@ -281,8 +281,8 @@ pub fn generate_function(
         if return_ty.is_none() {
             func_ref.borrow_mut().return_type = first_ty;
         } else {
-            let return_type = return_ty.clone().unwrap();
-            let first_type = first_ty.clone().unwrap();
+            let return_type = return_ty.unwrap();
+            let first_type = first_ty.unwrap();
 
             handle_inconsistent_types!(return_type, first_type, this.return_location);
         }

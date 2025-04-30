@@ -16,17 +16,18 @@ impl Codegen<'_> for VariadicArgument {
                 &plain_name,
                 Some(ctx.func),
                 Some(ctx.module),
-                self.location.clone(),
+                &self.location,
             )
             .unwrap_or_else(|| {
                 elle_error!(self.location.borrow().error(format!(
-                    "Unexpected error when trying to get a variable named '{}'",
-                    plain_name
+                    "Unexpected error when trying to get a variable named '{plain_name}'"
                 )))
             })
             .1;
 
-        let ty = self.r#type.unwrap_or(Type::Pointer(Box::new(Type::Void)));
+        let ty = self
+            .r#type
+            .unwrap_or_else(|| Type::Pointer(Box::new(Type::Void)));
         let tmp = gen.new_temporary(Some("next"), true);
 
         ctx.func

@@ -17,7 +17,7 @@ impl Codegen<'_> for VariadicStart {
         ctx.func.borrow_mut().assign_instruction(
             &val,
             &ty,
-            Instruction::Alloc8(Value::Const("".into(), VA_LIST_SIZE_BYTES as i128)),
+            Instruction::Alloc8(Value::Const(String::new(), VA_LIST_SIZE_BYTES as i128)),
         );
 
         ctx.func

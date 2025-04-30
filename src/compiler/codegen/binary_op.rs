@@ -19,13 +19,13 @@ impl Codegen<'_> for BinaryOperation {
         if matches!(self.operator, TokenKind::And | TokenKind::Or) {
             return Some(handle_short_circuiting_operation(
                 gen,
-                self.left,
-                self.right,
+                *self.left,
+                *self.right,
                 ctx.func,
                 ctx.module,
                 ctx.ty.clone(),
                 ctx.is_return,
-                self.location,
+                &self.location,
                 self.operator,
             ));
         }
@@ -223,7 +223,7 @@ impl Codegen<'_> for BinaryOperation {
                     let meta = generate_meta_struct(
                         ctx.func,
                         &params,
-                        vec![
+                        &[
                             (self.location.clone(), *self.left),
                             (self.location.clone(), *self.right),
                         ],

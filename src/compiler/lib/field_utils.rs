@@ -29,13 +29,13 @@ pub fn member_to_offset(
             let mut offset = 0_u64;
             let mut ty = None;
 
-            for member in members.iter() {
+            for member in members {
                 if &member.name == member_name {
                     ty = Some(member.r#type.clone());
                     break;
                 }
 
-                offset += member.r#type.size(module)
+                offset += member.r#type.size(module);
             }
 
             Some((ty, offset))
@@ -58,11 +58,11 @@ pub fn process_field_access(
     loop {
         match right.clone() {
             AstNode::Literal(Literal {
-                kind,
+                kind: TokenKind::Identifier,
                 value,
                 location,
                 tagged,
-            }) if kind == TokenKind::Identifier => {
+            }) => {
                 let field = value.get_string_inner().unwrap();
 
                 if !ty.is_struct() {
@@ -95,7 +95,7 @@ pub fn process_field_access(
                 func.borrow_mut().assign_instruction(
                     &offset_tmp,
                     &Type::Long,
-                    Instruction::Add(left, Value::Const("".into(), offset as i128)),
+                    Instruction::Add(left, Value::Const(String::new(), i128::from(offset))),
                 );
 
                 if load && !member_ty.clone().unwrap().is_struct() {
@@ -163,8 +163,7 @@ pub fn process_field_access(
                 right = *nested_right;
             }
             _ => elle_error!(location.borrow().error(format!(
-                "Unexpected AST node type for field access: {:?}",
-                right
+                "Unexpected AST node type for field access: {right:?}",
             ))),
         }
     }

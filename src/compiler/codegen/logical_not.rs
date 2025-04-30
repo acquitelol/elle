@@ -25,9 +25,9 @@ impl Codegen<'_> for LogicalNot {
                 Comparison::Equal,
                 val,
                 Value::Const(
-                    if ty.clone() == Type::Double {
+                    if ty == Type::Double {
                         "d_"
-                    } else if ty.clone() == Type::Single {
+                    } else if ty == Type::Single {
                         "s_"
                     } else {
                         ""

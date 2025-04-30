@@ -14,7 +14,7 @@ use crate::{
 
 impl Codegen<'_> for MemoryOperation {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let mut tmp_func = ctx.func.borrow().clone().to_owned();
+        let mut tmp_func = ctx.func.borrow().clone();
         tmp_func.add_block("start");
 
         let tmp_ctx = CodegenContext {
@@ -80,7 +80,7 @@ impl Codegen<'_> for MemoryOperation {
                 ];
 
                 if self.value.is_some() {
-                    parameters.push((self.value_location, *self.value.clone().unwrap()))
+                    parameters.push((self.value_location, *self.value.clone().unwrap()));
                 }
 
                 let constant = if self.value.is_some() {
@@ -150,7 +150,7 @@ impl Codegen<'_> for MemoryOperation {
             right: Box::new(AstNode::BinaryOperation(BinaryOperation {
                 left: Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::LongLiteral,
-                    value: ValueKind::Number(inner.size(ctx.module) as i128),
+                    value: ValueKind::Number(i128::from(inner.size(ctx.module))),
                     location: self.right_location.clone(),
                     tagged: false,
                 })),
@@ -204,7 +204,7 @@ impl Codegen<'_> for MemoryOperation {
 
             ctx.func.borrow_mut().add_instruction(Instruction::Store(
                 inner.clone(),
-                compiled_location.clone(),
+                compiled_location,
                 compiled.clone(),
             ));
 

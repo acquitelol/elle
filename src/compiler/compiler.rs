@@ -34,18 +34,18 @@ pub struct CodegenContext<'a> {
 impl CodegenContext<'_> {
     /// nnf = None, None, false
     ///
-    /// ty -> None
-    /// value -> None
-    /// is_return -> false
+    /// `ty` -> None
+    /// `value` -> None
+    /// `is_return` -> false
     ///
     /// returns a new struct
     pub fn to_nnf(&self) -> Self {
-        return CodegenContext {
+        CodegenContext {
             ty: None,
             value: None,
             is_return: false,
             ..self.clone()
-        };
+        }
     }
 }
 
@@ -104,7 +104,7 @@ impl Compiler {
         let tmp = if new {
             self.new_temporary(Some(name), minify)
         } else {
-            let existing_var = self.get_variable(name, func, None, VariableInfo::default());
+            let existing_var = self.get_variable(name, func, None, &VariableInfo::default());
 
             match existing_var {
                 Ok((_, val)) => match val {
@@ -120,7 +120,7 @@ impl Compiler {
             .last_mut()
             .expect("Expected last scope to exist");
 
-        scope.insert(name.to_owned(), (ty.to_owned(), tmp.to_owned()));
+        scope.insert(name.to_string(), (ty.clone(), tmp.clone()));
         tmp
     }
 
@@ -129,14 +129,13 @@ impl Compiler {
         name: &str,
         func: Option<&RefCell<Function>>,
         module: Option<&RefCell<Module>>,
-        state: VariableInfo,
+        state: &VariableInfo,
     ) -> Result<(Type, Value), String> {
         let var = self
             .scopes
             .iter()
             .rev()
-            .filter_map(|s| s.get(name))
-            .next()
+            .find_map(|s| s.get(name))
             .ok_or_else(|| {
                 format!(
                     "\nUndefined variable '{}'{}",
@@ -159,7 +158,7 @@ impl Compiler {
                         elle_error!(Location::base().basic_error(format!(
                             "{} named '{}' was not imported and can't be used",
                             if is_constant { "Constant" } else { "Function" },
-                            name.replace(".", "::")
+                            name.replace('.', "::")
                         )))
                     }
 
@@ -190,7 +189,7 @@ impl Compiler {
                         // TODO: Take call location here
                         elle_error!(Location::base().basic_error(format!(
                             "Function named '{}' was not imported and can't be used",
-                            name.replace(".", "::")
+                            name.replace('.', "::")
                         )))
                     }
 
@@ -207,18 +206,18 @@ impl Compiler {
         name: &String,
         func: Option<&RefCell<Function>>,
         module: Option<&RefCell<Module>>,
-        location: MutRc<Location>,
+        location: &MutRc<Location>,
         // (ty, val)
     ) -> Option<(Type, Value)> {
-        let var = self.get_variable(&name, func, module, VariableInfo::default());
+        let var = self.get_variable(name, func, module, &VariableInfo::default());
 
         match var {
             Ok((ty, val)) => {
                 let res = self.get_variable(
-                    &format!("{}.addr", name),
+                    &format!("{name}.addr"),
                     func,
                     module,
-                    VariableInfo::default(),
+                    &VariableInfo::default(),
                 );
 
                 if res.is_ok() && func.is_some() {
@@ -245,7 +244,7 @@ impl Compiler {
                     };
                 }
 
-                if !module.is_some() {
+                if module.is_none() {
                     undefined_error!();
                 }
 
@@ -257,11 +256,10 @@ impl Compiler {
                     .iter()
                     .find(|item| item.name == name.clone());
 
-                if let Some(item) = global {
-                    Some((Type::Long, Value::Global(item.name.clone())))
-                } else {
-                    undefined_error!()
-                }
+                global.map_or_else(
+                    || undefined_error!(),
+                    |item| Some((Type::Long, Value::Global(item.name.clone()))),
+                )
             }
         }
     }
@@ -274,9 +272,9 @@ impl Compiler {
         pedantic: bool,
         release_mode: bool,
         no_gc: bool,
-        string_module_methods: Vec<String>,
+        string_module_methods: &[String],
     ) {
-        let mut gen = Compiler {
+        let mut gen = Self {
             tmp_counter: 0,
             scopes: vec![],
             data_sections: vec![],
@@ -299,18 +297,11 @@ impl Compiler {
         // Each string data section needs to be added to the module
         let module_ref = RefCell::new(module);
 
-        if gen
+        if !gen
             .tree
             .iter()
-            .find(|primitive| match primitive {
-                Primitive::Function(FunctionSource { name, .. })
-                    if &(name.to_owned()) == get_MAIN_ID!() =>
-                {
-                    true
-                }
-                _ => false,
-            })
-            .is_none()
+            .any(|primitive|
+                matches!(&primitive, Primitive::Function(FunctionSource { name, .. }) if name == get_MAIN_ID!()))
             && !object_output
         {
             elle_error!(Location::base().basic_error(format!(
@@ -442,11 +433,11 @@ impl Compiler {
                                 "hover\n{}\n{}\nfn {}{}({}{}){}",
                                 this.name_token.location.borrow().display_plain(false),
                                 this.name_token.location.borrow().display_plain(true),
-                                this.name.replace(".", "::"),
-                                if !this.generics.is_empty() {
-                                    format!("<{}>", this.generics.join(", "))
+                                this.name.replace('.', "::"),
+                                if this.generics.is_empty() {
+                                    String::new()
                                 } else {
-                                    "".into()
+                                    format!("<{}>", this.generics.join(", "))
                                 },
                                 this.arguments
                                     .iter()
@@ -454,11 +445,8 @@ impl Compiler {
                                     .collect::<Vec<String>>()
                                     .join(", "),
                                 if this.variadic { ", ..." } else { "" },
-                                if let Some(ty) = this.r#return {
-                                    format!(" -> {}", ty.display())
-                                } else {
-                                    "".into()
-                                }
+                                this.r#return
+                                    .map_or_else(String::new, |ty| format!(" -> {}", ty.display()))
                             ));
                         }
 
@@ -469,13 +457,7 @@ impl Compiler {
                     let td = generate_struct(this.clone(), &mut gen);
                     struct_hover!(this.name_token, this.ignore_empty, this.members);
 
-                    if module_ref
-                        .borrow()
-                        .types
-                        .iter()
-                        .find(|other_td| **other_td == td)
-                        .is_none()
-                    {
+                    if !module_ref.borrow().types.contains(&td) {
                         module_ref.borrow_mut().add_type(td);
                     }
                 }
@@ -505,7 +487,7 @@ impl Compiler {
             module_ref
                 .borrow_mut()
                 .functions
-                .retain(|_, f| !string_module_methods.contains(&f.name))
+                .retain(|_, f| !string_module_methods.contains(&f.name));
         }
 
         // assuming RAW_ERRORS is lsp-mode
@@ -514,7 +496,9 @@ impl Compiler {
         if !get_RAW_ERRORS!() {
             let mut file = File::create(output_path).expect("Failed to create the file.");
             file.write_all(module_ref.borrow().to_string().as_bytes())
-                .expect(&format!("{RED}Failed to write to file.", RED = get_RED!()));
+                .unwrap_or_else(|err| {
+                    panic!("{RED}Failed to write to file: {err}", RED = get_RED!())
+                });
 
             file.flush().expect("Failed to flush file");
         }

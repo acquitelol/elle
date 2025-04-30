@@ -521,7 +521,7 @@ impl Type {
 
     pub fn get_enum_repr(&self) -> Option<Self> {
         match self {
-            Self::Enum(_, ty) => Some(ty.clone().unwrap_or(Type::Word)),
+            Self::Enum(_, ty) => Some(ty.clone().unwrap_or(Self::Word)),
             _ => None,
         }
     }

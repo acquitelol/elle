@@ -17,15 +17,6 @@ impl Codegen<'_> for Lambda {
         let scopes = gen.scopes.clone();
         gen.scopes = vec![hashmap![]];
 
-        let mut args = vec![];
-
-        for argument in self.arguments.clone() {
-            let ty = argument.r#type.clone();
-            let tmp = gen.new_variable(&ty, &argument.name, None, false, false);
-
-            args.push((ty, tmp));
-        }
-
         let lambda_func = generate_function(
             FunctionSource {
                 namespace_token: Token::from_ident(""),

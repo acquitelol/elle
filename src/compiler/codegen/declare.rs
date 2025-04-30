@@ -18,7 +18,7 @@ impl Codegen<'_> for Declare {
             plain_name.as_str(),
             Some(ctx.func),
             Some(ctx.module),
-            VariableInfo::default(),
+            &VariableInfo::default(),
         ) {
             Ok((ty, _)) => ty,
             Err(_) => Type::Word,
@@ -30,7 +30,7 @@ impl Codegen<'_> for Declare {
                     plain_name.as_str(),
                     Some(ctx.func),
                     Some(ctx.module),
-                    VariableInfo::default(),
+                    &VariableInfo::default(),
                 )
                 .is_err()
         {
@@ -50,7 +50,7 @@ impl Codegen<'_> for Declare {
             &format!("{}.addr", plain_name),
             Some(ctx.func),
             Some(ctx.module),
-            VariableInfo::default(),
+            &VariableInfo::default(),
         );
 
         let mut local_ty = self.r#type.clone().unwrap_or(existing);

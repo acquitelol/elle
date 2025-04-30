@@ -89,13 +89,13 @@ impl fmt::Display for Function {
                 if r#type.is_unsigned() {
                     r#type.to_string()
                 } else {
-                    format!("s{}", r#type)
+                    format!("s{type}")
                 }
             } else {
                 r#type.clone().into_abi().to_string()
             };
 
-            write!(formatter, " {}", ty)?;
+            write!(formatter, " {ty}")?;
         }
 
         let mut arguments_clone = self
@@ -106,13 +106,13 @@ impl fmt::Display for Function {
                     if r#type.is_unsigned() {
                         r#type.to_string()
                     } else {
-                        format!("s{}", r#type)
+                        format!("s{type}")
                     }
                 } else {
                     r#type.clone().into_abi().to_string()
                 };
 
-                format!("{} {temp}", ty)
+                format!("{ty} {temp}")
             })
             .collect::<Vec<_>>();
 

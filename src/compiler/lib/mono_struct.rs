@@ -13,21 +13,20 @@ use crate::{
 pub fn create_monomorphized_struct(
     gen: &mut Compiler,
     module: &RefCell<Module>,
-    generic_name: String,
+    generic_name: &str,
 ) {
-    let (name, parts) = Type::from_internal_id(&generic_name);
+    let (name, parts) = Type::from_internal_id(generic_name);
 
     let (generics, members, ..) = gen
         .struct_pool
         .get(&name)
-        .expect(&format!("Base {name} should exist"));
+        .unwrap_or_else(|| panic!("Base {name} should exist"));
 
-    let parsed_generics = HashMap::from_iter(
-        generics
-            .iter()
-            .enumerate()
-            .map(|(i, generic)| (generic.clone(), parts[i].clone())),
-    );
+    let parsed_generics = generics
+        .iter()
+        .enumerate()
+        .map(|(i, generic)| (generic.clone(), parts[i].clone()))
+        .collect::<HashMap<_, _>>();
 
     let struct_pool = RefCell::new(gen.struct_pool.clone());
     let tree = RefCell::new(vec![]);
@@ -39,23 +38,23 @@ pub fn create_monomorphized_struct(
             r#type: member.r#type.clone().unknown_to_known(
                 Some(&struct_pool),
                 Some(&tree),
-                &generics,
+                generics,
                 &parsed_generics,
             ),
             no_fmt: member.no_fmt,
         })
         .collect::<Vec<Argument>>();
 
-    gen.struct_pool = struct_pool.borrow().to_owned();
+    struct_pool.borrow().clone_into(&mut gen.struct_pool);
 
-    for primitive in tree.borrow().to_owned().into_iter() {
+    for primitive in tree.borrow().to_owned() {
         match primitive {
             Primitive::Struct(this) => {
                 let td = generate_struct(this, gen);
                 module.borrow_mut().add_type(td);
             }
             _ => {}
-        };
+        }
     }
 
     let mut items = vec![];
@@ -65,7 +64,7 @@ pub fn create_monomorphized_struct(
     }
 
     let td = TypeDef {
-        name: generic_name.clone(),
+        name: generic_name.to_string(),
         align: None,
         known_generics: parsed_generics,
         items,
@@ -77,7 +76,7 @@ pub fn create_monomorphized_struct(
     module.borrow_mut().add_type(td);
 
     gen.struct_pool.insert(
-        generic_name.clone(),
+        generic_name.to_string(),
         (
             vec![],
             parsed_members,

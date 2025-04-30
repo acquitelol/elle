@@ -15,13 +15,13 @@ use crate::{
 
 pub fn handle_short_circuiting_operation(
     gen: &mut Compiler,
-    left: Box<AstNode>,
-    right: Box<AstNode>,
+    left: AstNode,
+    right: AstNode,
     func: &RefCell<Function>,
     module: &RefCell<Module>,
     ty: Option<Type>,
     is_return: bool,
-    location: MutRc<Location>,
+    location: &MutRc<Location>,
     kind: TokenKind,
 ) -> (Type, Value) {
     gen.tmp_counter += 1;
@@ -69,7 +69,7 @@ pub fn handle_short_circuiting_operation(
 
     func.borrow_mut().add_block(left_label);
 
-    let left_tmp = gen.new_temporary(Some(&format!("{}.left", kind)), true);
+    let left_tmp = gen.new_temporary(Some(&format!("{kind}.left")), true);
 
     func.borrow_mut().assign_instruction(
         &left_tmp,
@@ -78,7 +78,7 @@ pub fn handle_short_circuiting_operation(
             Type::Boolean,
             Comparison::Equal,
             left_val.clone(),
-            Value::Const("".into(), 0),
+            Value::Const(String::new(), 0),
         ),
     );
 
@@ -98,14 +98,13 @@ pub fn handle_short_circuiting_operation(
             ));
         }
         other => elle_error!(location.borrow().error(format!(
-            "Invalid operator token for conditional short circuiting '{}'",
-            other
+            "Invalid operator token for conditional short circuiting '{other}'",
         ))),
     }
 
     func.borrow_mut().add_block(right_label);
 
-    let (_, right_val) = (*right)
+    let (_, right_val) = right
         .compile(
             gen,
             &CodegenContext {
@@ -122,7 +121,7 @@ pub fn handle_short_circuiting_operation(
             ))
         });
 
-    let right_tmp = gen.new_temporary(Some(&format!("{}.right", kind)), true);
+    let right_tmp = gen.new_temporary(Some(&format!("{kind}.right")), true);
 
     func.borrow_mut().assign_instruction(
         &right_tmp,
@@ -131,7 +130,7 @@ pub fn handle_short_circuiting_operation(
             Type::Boolean,
             Comparison::Equal,
             right_val.clone(),
-            Value::Const("".into(), 0),
+            Value::Const(String::new(), 0),
         ),
     );
 
@@ -159,5 +158,5 @@ pub fn handle_short_circuiting_operation(
         .add_instruction(Instruction::Jump(end_label.clone()));
 
     func.borrow_mut().add_block(end_label);
-    return (left_ty, result_tmp);
+    (left_ty, result_tmp)
 }

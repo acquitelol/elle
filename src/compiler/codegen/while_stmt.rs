@@ -1,7 +1,7 @@
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        qbe::{instruction::Instruction, r#type::Type, value::Value},
+        qbe::{block::Block, instruction::Instruction, r#type::Type, value::Value},
     },
     elle_error, hashmap,
     parser::enums::WhileLoopStatement,
@@ -43,11 +43,11 @@ impl Codegen<'_> for WhileLoopStatement {
 
         ctx.func
             .borrow_mut()
-            .add_instruction(Instruction::Jump(cond_label.clone()));
+            .add_instruction(Instruction::Jump(cond_label));
 
-        ctx.func.borrow_mut().add_block(body_label.clone());
+        ctx.func.borrow_mut().add_block(body_label);
 
-        for statement in self.body.iter() {
+        for statement in &self.body {
             statement.clone().compile(gen, ctx);
         }
 
@@ -56,7 +56,7 @@ impl Codegen<'_> for WhileLoopStatement {
             .borrow_mut()
             .blocks
             .last()
-            .map_or(false, |b| b.jumps())
+            .is_some_and(Block::jumps)
         {
             ctx.func
                 .borrow_mut()

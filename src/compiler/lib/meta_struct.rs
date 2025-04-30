@@ -11,8 +11,8 @@ use crate::{
 
 pub fn generate_meta_struct(
     func: &RefCell<Function>,
-    params: &Vec<((Type, Value), bool)>,
-    parameters: Vec<(MutRc<Location>, AstNode)>,
+    params: &[((Type, Value), bool)],
+    parameters: &[(MutRc<Location>, AstNode)],
     location: MutRc<Location>,
 ) -> AstNode {
     let node = AstNode::StructLiteral(StructLiteral {
@@ -107,9 +107,9 @@ pub fn generate_meta_struct(
                                 AstNode::Literal(Literal {
                                     kind: TokenKind::StringLiteral,
                                     value: ValueKind::String(
-                                        res.replace("\\", "\\\\").replace("\"", "\\\""),
+                                        res.replace('\\', "\\\\").replace('\"', "\\\""),
                                     ),
-                                    location: location.clone(),
+                                    location,
                                     tagged: false,
                                 }),
                             )
@@ -182,8 +182,8 @@ pub fn generate_meta_struct(
                             .borrow()
                             .file
                             .clone()
-                            .split("/")
-                            .last()
+                            .split('/')
+                            .next_back()
                             .unwrap()
                             .to_string(),
                     ),
@@ -213,5 +213,5 @@ pub fn generate_meta_struct(
         location,
     });
 
-    return node;
+    node
 }
