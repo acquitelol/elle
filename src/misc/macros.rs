@@ -306,6 +306,17 @@ macro_rules! set_end {
     };
 }
 
+/// Simple macro to report an error when at the end of a token stream but getting an incorrect token
+#[macro_export]
+macro_rules! expect_eot {
+    ($token:expr) => {
+        elle_error!($token.location.borrow().error(format!(
+            "Expected end of expression but got {:?} instead.\nPerhaps you forgot a delimiter (semicolon, comma) here?",
+            $token.kind
+        )))
+    };
+}
+
 #[macro_export]
 macro_rules! is_type {
     ($token:expr, $pools:expr, $generics:expr, $restricted:literal) => {{

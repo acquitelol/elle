@@ -26,5 +26,5 @@ fn main() {
     io::assert(true, "This should not fail because it is `true`.\nSomething has gone terribly wrong.");
     $assert(false, "This assert has intentionally failed." <> "\nThis means that this test has passed.".color("green").reset());
 
-    io::println("This path should be unreachable.\nSomething has gone terribly wrong.".color("red").reset())
+    io::println("This path should be unreachable.\nSomething has gone terribly wrong.".color("red").reset());
 }

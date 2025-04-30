@@ -15,7 +15,7 @@ use crate::compiler::qbe::r#type::Type;
 use crate::lexer::enums::{Attribute, MutRc};
 use crate::parser::enums::{BlockStatement, WhileLoopStatement};
 use crate::{
-    elle_error, enum_hover, get_type, is_type, set_end, INTERNAL_IDX_FORMAT,
+    elle_error, enum_hover, expect_eot, get_type, is_type, set_end, INTERNAL_IDX_FORMAT,
     INTERNAL_ITERATOR_FORMAT, LEN_CONSTANT,
 };
 use crate::{
@@ -66,12 +66,12 @@ impl<'a> Statement<'a> {
         }
     }
 
-    pub const fn advance_opt(&mut self) -> Option<()> {
+    pub fn advance_opt(&mut self) -> Option<Token> {
         if self.is_eof() {
             None
         } else {
             self.position += 1;
-            Some(())
+            Some(self.current_token())
         }
     }
 
@@ -343,42 +343,34 @@ impl<'a> Statement<'a> {
     fn parse_literal(&mut self) -> AstNode {
         let location = self.current_token().location;
         let position = self.position;
+        let current = self.current_token();
 
         if self.is_eof() {
-            let current = self.current_token();
             token_to_node!(&current, self)
         } else {
-            match self.next_token() {
+            match self.advance_opt() {
                 Some(token) => match token.kind {
                     TokenKind::Semicolon => {
-                        let current = self.current_token();
-                        self.advance();
                         token_to_node!(&current, self)
                     }
-                    TokenKind::LeftBlockBrace => {
-                        let current = self.current_token();
-                        self.advance();
-                        self.parse_offset_store(Some((
-                            position,
-                            token_to_node!(&current, self),
-                            location,
-                        )))
-                    }
-                    TokenKind::Dot => {
-                        let current = self.current_token();
-                        self.advance();
-                        self.parse_field_access(Some((
-                            position,
-                            token_to_node!(&current, self),
-                            location,
-                        )))
-                    }
+                    TokenKind::LeftBlockBrace => self.parse_offset_store(Some((
+                        position,
+                        token_to_node!(&current, self),
+                        location,
+                    ))),
+                    TokenKind::Dot => self.parse_field_access(Some((
+                        position,
+                        token_to_node!(&current, self),
+                        location,
+                    ))),
                     TokenKind::Question => {
-                        let current = self.current_token();
-                        self.advance();
                         self.parse_ternary_node(token_to_node!(&current, self), location)
                     }
-                    _ => self.parse_arithmetic(),
+                    other if other.is_arithmetic() => {
+                        self.position = position;
+                        self.parse_arithmetic()
+                    }
+                    _ => expect_eot!(token),
                 },
                 None => unreachable!(),
             }
@@ -601,7 +593,6 @@ impl<'a> Statement<'a> {
             Some("Perhaps you forgot to close a nested expression?"),
         );
         set_end!(location, self);
-        self.advance();
 
         let mut expression = AstNode::FunctionCall(FunctionCall {
             namespace_token,
@@ -614,21 +605,24 @@ impl<'a> Statement<'a> {
             location: location.clone(),
         });
 
-        match self.current_token().kind {
-            TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location)));
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    return self.parse_ternary_node(expression, location);
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => expect_eot!(token),
             }
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
-            other if other.is_ternary_start() => {
-                return self.parse_ternary_node(expression, location);
-            }
-            other if other.is_arithmetic() => {
-                self.position = position;
-                return self.parse_arithmetic();
-            }
-            _ => {}
         }
 
         expression
@@ -956,7 +950,6 @@ impl<'a> Statement<'a> {
 
         self.expect_tokens(&[TokenKind::RightBlockBrace]);
         set_end!(location, self);
-        self.advance();
 
         let mut expression = AstNode::ArrayLiteral(ArrayLiteral {
             values,
@@ -966,21 +959,24 @@ impl<'a> Statement<'a> {
             dynamic,
         });
 
-        match self.current_token().kind {
-            TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location)));
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location);
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => expect_eot!(token),
             }
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
-            other if other.is_ternary_start() => {
-                expression = self.parse_ternary_node(expression, location);
-            }
-            other if other.is_arithmetic() => {
-                self.position = position;
-                return self.parse_arithmetic();
-            }
-            _ => {}
         }
 
         expression
@@ -1480,19 +1476,21 @@ impl<'a> Statement<'a> {
 
         self.expect_tokens(&[TokenKind::RightParenthesis]);
         set_end!(location, self);
-        self.advance();
 
-        match self.current_token().kind {
-            TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location)));
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location)
+                }
+                _ => expect_eot!(token),
             }
-
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
-
-            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
-            _ => {}
         }
 
         expression
@@ -1564,7 +1562,6 @@ impl<'a> Statement<'a> {
         self.expect_tokens(&[TokenKind::RightBlockBrace]);
         set_end!(right_location, self);
         set_end!(location, self);
-        self.advance();
 
         let value_location = self.current_token().location;
 
@@ -1581,65 +1578,68 @@ impl<'a> Statement<'a> {
 
         self.consumed_addr = true;
 
-        match self.current_token().kind {
-            TokenKind::Equal => {
-                self.advance();
-                let value_tokens = self.yield_tokens_wrapped_with_semi();
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Equal => {
+                    self.advance();
+                    let value_tokens = self.yield_tokens_wrapped_with_semi();
 
-                value = Some(Box::new(
-                    Statement::new(value_tokens, 0, self.body, self.shared)
-                        .parse()
-                        .0,
-                ));
+                    value = Some(Box::new(
+                        Statement::new(value_tokens, 0, self.body, self.shared)
+                            .parse()
+                            .0,
+                    ));
 
-                set_end!(value_location, self);
-                set_end!(location, self);
+                    set_end!(value_location, self);
+                    set_end!(location, self);
 
-                expression = AstNode::MemoryOperation(MemoryOperation {
-                    left,
-                    right,
-                    value,
-                    left_location,
-                    right_location,
-                    value_location,
-                    is_deref: false,
-                    addr_only: self.shared.addr_only,
-                });
+                    expression = AstNode::MemoryOperation(MemoryOperation {
+                        left,
+                        right,
+                        value,
+                        left_location,
+                        right_location,
+                        value_location,
+                        is_deref: false,
+                        addr_only: self.shared.addr_only,
+                    });
 
-                self.consumed_addr = true;
-            }
-            other if other.is_declarative() => {
-                value = Some(Box::new(self.parse_declarative_node(expression.clone())));
-                set_end!(value_location, self);
-                set_end!(location, self);
+                    self.consumed_addr = true;
+                }
+                other if other.is_declarative() => {
+                    value = Some(Box::new(self.parse_declarative_node(expression.clone())));
+                    set_end!(value_location, self);
+                    set_end!(location, self);
 
-                expression = AstNode::MemoryOperation(MemoryOperation {
-                    left,
-                    right,
-                    value,
-                    left_location,
-                    right_location,
-                    value_location,
-                    is_deref: false,
-                    addr_only: self.shared.addr_only,
-                });
+                    expression = AstNode::MemoryOperation(MemoryOperation {
+                        left,
+                        right,
+                        value,
+                        left_location,
+                        right_location,
+                        value_location,
+                        is_deref: false,
+                        addr_only: self.shared.addr_only,
+                    });
 
-                self.consumed_addr = true;
+                    self.consumed_addr = true;
+                }
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    return self.parse_ternary_node(expression, location)
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => expect_eot!(token),
             }
-            TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location)));
-            }
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
-            other if other.is_ternary_start() => {
-                return self.parse_ternary_node(expression, location)
-            }
-            other if other.is_arithmetic() => {
-                self.position = position;
-                return self.parse_arithmetic();
-            }
-            _ => {}
         }
 
         expression
@@ -1677,7 +1677,6 @@ impl<'a> Statement<'a> {
 
         self.expect_tokens(&[TokenKind::RightParenthesis]);
         set_end!(location, self);
-        self.advance();
 
         let mut expression = AstNode::VariadicArgument(VariadicArgument {
             name,
@@ -1685,21 +1684,24 @@ impl<'a> Statement<'a> {
             location: location.clone(),
         });
 
-        match self.current_token().kind {
-            TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location)));
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location)
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => expect_eot!(token),
             }
-
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
-
-            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
-            other if other.is_arithmetic() => {
-                self.position = position;
-                return self.parse_arithmetic();
-            }
-            _ => {}
         }
 
         expression
@@ -1952,7 +1954,6 @@ impl<'a> Statement<'a> {
 
         self.expect_tokens(&[TokenKind::RightParenthesis]);
         set_end!(location, self);
-        self.advance();
 
         let stmt = Statement::new(tokens, 0, self.body, self.shared).parse().0;
         let mut expression = AstNode::Conversion(Conversion {
@@ -1962,21 +1963,24 @@ impl<'a> Statement<'a> {
             explicit: true,
         });
 
-        match self.current_token().kind {
-            TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location)));
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location)
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => expect_eot!(token),
             }
-
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
-
-            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
-            other if other.is_arithmetic() => {
-                self.position = position;
-                return self.parse_arithmetic();
-            }
-            _ => {}
         }
 
         expression
@@ -2065,22 +2069,30 @@ impl<'a> Statement<'a> {
 
         self.expect_tokens(&[TokenKind::RightParenthesis]);
         set_end!(location, self);
-        self.advance();
 
         let mut expression = AstNode::Size(Size {
             value,
             location: location.clone(),
         });
 
-        match self.current_token().kind {
-            other if other.is_ternary_start() => {
-                expression = self.parse_ternary_node(expression, location);
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location);
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    expression = self.parse_arithmetic();
+                }
+                _ => expect_eot!(token),
             }
-            other if other.is_arithmetic() => {
-                self.position = position;
-                expression = self.parse_arithmetic();
-            }
-            _ => {}
         }
 
         expression
@@ -2151,24 +2163,31 @@ impl<'a> Statement<'a> {
 
         self.expect_tokens(&[TokenKind::RightParenthesis]);
         set_end!(location, self);
-        self.advance();
 
         let mut expression = AstNode::ArrayLength(ArrayLength {
             value,
             location: location.clone(),
         });
 
-        match self.current_token().kind {
-            other if other.is_ternary_start() => {
-                expression = self.parse_ternary_node(expression, location);
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location);
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    expression = self.parse_arithmetic();
+                }
+                _ => expect_eot!(token),
             }
-            other if other.is_arithmetic() => {
-                self.position = position;
-                expression = self.parse_arithmetic();
-            }
-            _ => {}
         }
-
         expression
     }
 
@@ -2274,6 +2293,7 @@ impl<'a> Statement<'a> {
 
     fn parse_deref(&mut self) -> AstNode {
         let left_location = self.current_token().location;
+        let position = self.position;
         self.advance();
         let mut value = None;
 
@@ -2291,37 +2311,45 @@ impl<'a> Statement<'a> {
         set_end!(left_location, self);
         let value_location = self.current_token().location;
 
-        match self.current_token().kind {
-            TokenKind::Equal => {
-                self.advance();
-                set_end!(value_location, self);
-                set_end!(left_location, self);
-                let value_tokens = self.yield_tokens_wrapped_with_semi();
+        if !self.is_eof() {
+            match self.current_token().kind {
+                TokenKind::Equal => {
+                    self.advance();
+                    set_end!(value_location, self);
+                    set_end!(left_location, self);
+                    let value_tokens = self.yield_tokens_wrapped_with_semi();
 
-                value = Some(Box::new(
-                    Statement::new(value_tokens, 0, self.body, self.shared)
-                        .parse()
-                        .0,
-                ));
+                    value = Some(Box::new(
+                        Statement::new(value_tokens, 0, self.body, self.shared)
+                            .parse()
+                            .0,
+                    ));
+                }
+
+                TokenKind::Semicolon => {}
+                other if other.is_declarative() => {
+                    value = Some(Box::new(self.parse_declarative_node(
+                        AstNode::MemoryOperation(MemoryOperation {
+                            left: left.clone(),
+                            right: right.clone(),
+                            value,
+                            left_location: left_location.clone(),
+                            right_location: right_location.clone(),
+                            value_location: value_location.clone(),
+                            is_deref: true,
+                            addr_only: self.shared.addr_only,
+                        }),
+                    )));
+
+                    self.consumed_addr = true;
+                }
+
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => expect_eot!(self.current_token()),
             }
-
-            other if other.is_declarative() => {
-                value = Some(Box::new(self.parse_declarative_node(
-                    AstNode::MemoryOperation(MemoryOperation {
-                        left: left.clone(),
-                        right: right.clone(),
-                        value,
-                        left_location: left_location.clone(),
-                        right_location: right_location.clone(),
-                        value_location: value_location.clone(),
-                        is_deref: true,
-                        addr_only: self.shared.addr_only,
-                    }),
-                )));
-
-                self.consumed_addr = true;
-            }
-            _ => {}
         }
 
         self.consumed_addr = true;
@@ -2339,6 +2367,7 @@ impl<'a> Statement<'a> {
 
     fn parse_struct_init(&mut self) -> AstNode {
         let location = self.current_token().location;
+        let position = self.position;
         self.expect_tokens(&[TokenKind::Identifier]);
         let name = self.current_token();
         let plain_name = name.value.get_string_inner().unwrap();
@@ -2435,11 +2464,33 @@ impl<'a> Statement<'a> {
 
         set_end!(location, self);
 
-        AstNode::StructLiteral(StructLiteral {
+        let mut expression = AstNode::StructLiteral(StructLiteral {
             name,
             values,
-            location,
-        })
+            location: location.clone(),
+        });
+
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location)
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    expression = self.parse_arithmetic();
+                }
+                _ => expect_eot!(token),
+            }
+        }
+
+        expression
     }
 
     fn parse_field_access(&mut self, lhs: Option<(usize, AstNode, MutRc<Location>)>) -> AstNode {
@@ -2612,61 +2663,63 @@ impl<'a> Statement<'a> {
 
         self.consumed_addr = true;
 
-        match self.current_token().kind {
-            TokenKind::Equal => {
-                self.advance();
-                let value_tokens = self.yield_tokens_wrapped_with_semi();
+        if !self.is_eof() {
+            match self.current_token().kind {
+                TokenKind::Equal => {
+                    self.advance();
+                    let value_tokens = self.yield_tokens_wrapped_with_semi();
 
-                value = Some(Box::new(
-                    Statement::new(value_tokens, 0, self.body, self.shared)
-                        .parse()
-                        .0,
-                ));
+                    value = Some(Box::new(
+                        Statement::new(value_tokens, 0, self.body, self.shared)
+                            .parse()
+                            .0,
+                    ));
 
-                expression = AstNode::FieldAccess(FieldAccess {
-                    left,
-                    right,
-                    value,
-                    location,
-                    addr_only: self.shared.addr_only,
-                });
+                    expression = AstNode::FieldAccess(FieldAccess {
+                        left,
+                        right,
+                        value,
+                        location,
+                        addr_only: self.shared.addr_only,
+                    });
 
-                self.consumed_addr = true;
-            }
-            // foo.a.meow() = meow(foo.a)
-            TokenKind::LeftParenthesis => {
-                expression = self.parse_function(
-                    Some((location.clone(), Token::from_ident(""), name_token, name)),
-                    Some(vec![(location, *left)]),
-                    if tmp.is_empty() { None } else { Some(tmp) },
-                    Some(position),
-                    true,
-                );
-            }
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
-            other if other.is_declarative() => {
-                value = Some(Box::new(self.parse_declarative_node(expression)));
+                    self.consumed_addr = true;
+                }
+                // foo.a.meow() = meow(foo.a)
+                TokenKind::LeftParenthesis => {
+                    expression = self.parse_function(
+                        Some((location.clone(), Token::from_ident(""), name_token, name)),
+                        Some(vec![(location, *left)]),
+                        if tmp.is_empty() { None } else { Some(tmp) },
+                        Some(position),
+                        true,
+                    );
+                }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
+                other if other.is_declarative() => {
+                    value = Some(Box::new(self.parse_declarative_node(expression)));
 
-                expression = AstNode::FieldAccess(FieldAccess {
-                    left,
-                    right,
-                    value,
-                    location,
-                    addr_only: self.shared.addr_only,
-                });
+                    expression = AstNode::FieldAccess(FieldAccess {
+                        left,
+                        right,
+                        value,
+                        location,
+                        addr_only: self.shared.addr_only,
+                    });
 
-                self.consumed_addr = true;
+                    self.consumed_addr = true;
+                }
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location);
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    expression = self.parse_arithmetic();
+                }
+                _ => expect_eot!(self.current_token()),
             }
-            other if other.is_ternary_start() => {
-                expression = self.parse_ternary_node(expression, location);
-            }
-            other if other.is_arithmetic() => {
-                self.position = position;
-                expression = self.parse_arithmetic();
-            }
-            _ => {}
         }
 
         expression
@@ -2739,7 +2792,6 @@ impl<'a> Statement<'a> {
         self.advance();
         self.expect_tokens(&[TokenKind::RightParenthesis]);
         set_end!(location, self);
-        self.advance();
 
         let mut fmt = name.clone();
         fmt.value = ValueKind::String(format!(
@@ -2749,41 +2801,43 @@ impl<'a> Statement<'a> {
 
         let mut expression = token_to_node!(&fmt, self);
 
-        match self.current_token().kind {
-            TokenKind::Equal => {
-                self.advance();
-                let value_tokens = self.yield_tokens_wrapped_with_semi();
-                set_end!(location, self);
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Equal => {
+                    self.advance();
+                    let value_tokens = self.yield_tokens_wrapped_with_semi();
+                    set_end!(location, self);
 
-                expression = AstNode::Declare(Declare {
-                    name: fmt,
-                    r#type: None,
-                    value: Some(Box::new(
-                        Statement::new(value_tokens, 0, self.body, self.shared)
-                            .parse()
-                            .0,
-                    )),
-                    location: location.clone(),
-                    value_location: location,
-                });
+                    expression = AstNode::Declare(Declare {
+                        name: fmt,
+                        r#type: None,
+                        value: Some(Box::new(
+                            Statement::new(value_tokens, 0, self.body, self.shared)
+                                .parse()
+                                .0,
+                        )),
+                        location: location.clone(),
+                        value_location: location,
+                    });
+                }
+                other if other.is_declarative() => {
+                    expression = AstNode::Declare(Declare {
+                        name: fmt,
+                        r#type: None,
+                        value: Some(Box::new(self.parse_declarative_node(expression))),
+                        location: location.clone(),
+                        value_location: location,
+                    });
+                }
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location);
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    expression = self.parse_arithmetic();
+                }
+                _ => expect_eot!(token),
             }
-            other if other.is_declarative() => {
-                expression = AstNode::Declare(Declare {
-                    name: fmt,
-                    r#type: None,
-                    value: Some(Box::new(self.parse_declarative_node(expression))),
-                    location: location.clone(),
-                    value_location: location,
-                });
-            }
-            other if other.is_ternary_start() => {
-                expression = self.parse_ternary_node(expression, location);
-            }
-            other if other.is_arithmetic() => {
-                self.position = position;
-                expression = self.parse_arithmetic();
-            }
-            _ => {}
         }
 
         expression
@@ -2801,7 +2855,6 @@ impl<'a> Statement<'a> {
             ));
         }
 
-        self.advance();
         set_end!(location, self);
 
         let mut expression = AstNode::Environment(Environment {
@@ -2809,43 +2862,49 @@ impl<'a> Statement<'a> {
             location: location.clone(),
         });
 
-        match self.current_token().kind {
-            TokenKind::Equal => {
-                self.advance();
-                let value_tokens = self.yield_tokens_wrapped_with_semi();
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Equal => {
+                    self.advance();
+                    let value_tokens = self.yield_tokens_wrapped_with_semi();
 
-                expression = AstNode::Environment(Environment {
-                    value: Some(Box::new(
-                        Statement::new(value_tokens, 0, self.body, self.shared)
-                            .parse()
-                            .0,
-                    )),
-                    location,
-                });
+                    expression = AstNode::Environment(Environment {
+                        value: Some(Box::new(
+                            Statement::new(value_tokens, 0, self.body, self.shared)
+                                .parse()
+                                .0,
+                        )),
+                        location,
+                    });
+                }
+
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
+
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
+
+                TokenKind::Semicolon => {}
+
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location)
+                }
+
+                other if other.is_declarative() => {
+                    expression = AstNode::Environment(Environment {
+                        value: Some(Box::new(self.parse_declarative_node(expression))),
+                        location,
+                    });
+                }
+
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => expect_eot!(token),
             }
-
-            other if other.is_declarative() => {
-                expression = AstNode::Environment(Environment {
-                    value: Some(Box::new(self.parse_declarative_node(expression))),
-                    location,
-                });
-            }
-
-            other if other.is_arithmetic() => {
-                self.position = position;
-                return self.parse_arithmetic();
-            }
-
-            TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location)));
-            }
-
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
-
-            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
-            _ => {}
         }
 
         expression
@@ -2953,21 +3012,26 @@ impl<'a> Statement<'a> {
             explicit: true,
         });
 
-        match self.current_token().kind {
-            TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location)));
-            }
+        if !self.is_eof() {
+            match self.current_token().kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
 
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
 
-            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
-            other if other.is_arithmetic() => {
-                self.position = position;
-                return self.parse_arithmetic();
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location)
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => expect_eot!(self.current_token()),
             }
-            _ => {}
         }
 
         expression
@@ -3079,23 +3143,27 @@ impl<'a> Statement<'a> {
             explicit: true,
         });
 
-        match self.current_token().kind {
-            TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location)));
-            }
+        if !self.is_eof() {
+            match self.current_token().kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
 
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
 
-            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
-            other if other.is_arithmetic() => {
-                self.position = position;
-                return self.parse_arithmetic();
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location)
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => expect_eot!(self.current_token()),
             }
-            _ => {}
         }
-
         expression
     }
 
@@ -3111,7 +3179,6 @@ impl<'a> Statement<'a> {
         let variant = self.get_identifier();
         let variant_token = self.current_token();
         set_end!(location, self);
-        self.advance();
 
         let enum_def = self
             .shared
@@ -3167,21 +3234,26 @@ impl<'a> Statement<'a> {
             ));
         }
 
-        match self.current_token().kind {
-            TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location)));
-            }
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
 
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
 
-            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
-            other if other.is_arithmetic() => {
-                self.position = position;
-                return self.parse_arithmetic();
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location)
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => expect_eot!(token),
             }
-            _ => {}
         }
 
         expression
@@ -3224,7 +3296,6 @@ impl<'a> Statement<'a> {
         }
 
         set_end!(location, self);
-        self.advance();
         let ptr = Statement::new(tokens, 0, self.body, self.shared).parse().0;
 
         let mut expression = AstNode::FunctionCall(FunctionCall {
@@ -3258,21 +3329,26 @@ impl<'a> Statement<'a> {
             location: location.clone(),
         });
 
-        match self.current_token().kind {
-            TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location)));
-            }
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
 
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
 
-            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
-            other if other.is_arithmetic() => {
-                self.position = position;
-                return self.parse_arithmetic();
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location)
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => expect_eot!(token),
             }
-            _ => {}
         }
 
         expression
@@ -3315,7 +3391,6 @@ impl<'a> Statement<'a> {
         }
 
         set_end!(location, self);
-        self.advance();
         let allocator = Statement::new(tokens, 0, self.body, self.shared).parse().0;
 
         let mut expression = AstNode::SetAllocator(SetAllocator {
@@ -3323,21 +3398,26 @@ impl<'a> Statement<'a> {
             location: location.clone(),
         });
 
-        match self.current_token().kind {
-            TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location)));
-            }
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
 
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
 
-            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
-            other if other.is_arithmetic() => {
-                self.position = position;
-                return self.parse_arithmetic();
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location)
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => {}
             }
-            _ => {}
         }
 
         expression
@@ -3361,7 +3441,6 @@ impl<'a> Statement<'a> {
 
         self.expect_tokens(&[TokenKind::RightParenthesis]);
         set_end!(location, self);
-        self.advance();
 
         let mut expression = AstNode::SetAllocator(SetAllocator {
             value: Box::new(AstNode::FieldAccess(FieldAccess {
@@ -3382,21 +3461,26 @@ impl<'a> Statement<'a> {
             location: location.clone(),
         });
 
-        match self.current_token().kind {
-            TokenKind::Dot => {
-                expression = self.parse_field_access(Some((position, expression, location)));
-            }
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
 
-            TokenKind::LeftBlockBrace => {
-                expression = self.parse_offset_store(Some((position, expression, location)));
-            }
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
 
-            TokenKind::Question => expression = self.parse_ternary_node(expression, location),
-            other if other.is_arithmetic() => {
-                self.position = position;
-                return self.parse_arithmetic();
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location)
+                }
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => expect_eot!(token),
             }
-            _ => {}
         }
 
         expression
@@ -3425,21 +3509,43 @@ impl<'a> Statement<'a> {
         let mut nesting = 0;
         let mut brace_nesting = 0;
 
+        if self.is_eof() && self.current_token().kind == TokenKind::Address {
+            elle_error!(self
+                .current_token()
+                .location
+                .borrow()
+                .error("Expected to yield tokens for unary but got end of stream."))
+        }
+
         self.yield_tokens_with_condition(|token, prev_token, next_token| {
             if prev_token.kind == TokenKind::LeftParenthesis {
                 nesting += 1;
             }
 
-            if prev_token.kind == TokenKind::RightParenthesis && nesting > 0 {
-                nesting -= 1;
+            if prev_token.kind == TokenKind::RightParenthesis {
+                if nesting > 0 {
+                    nesting -= 1;
+                } else {
+                    elle_error!(prev_token
+                        .location
+                        .borrow()
+                        .error("Unbalanced brackets found parsing this unary expression"))
+                }
             }
 
             if prev_token.kind == TokenKind::LeftCurlyBrace {
                 brace_nesting += 1;
             }
 
-            if prev_token.kind == TokenKind::RightCurlyBrace && brace_nesting > 0 {
-                brace_nesting -= 1;
+            if prev_token.kind == TokenKind::RightCurlyBrace {
+                if brace_nesting > 0 {
+                    brace_nesting -= 1;
+                } else {
+                    elle_error!(prev_token
+                        .location
+                        .borrow()
+                        .error("Unbalanced curly braces found parsing this unary expression"))
+                }
             }
 
             if token.kind.is_arithmetic() {
