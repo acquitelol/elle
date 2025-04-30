@@ -149,7 +149,7 @@ macro_rules! get_type {
             );
 
             $self.expect_tokens(&[TokenKind::RightParenthesis]);
-            crate::set_end!(location, $self);
+            $crate::set_end!(location, $self);
 
             if !tuple_imported {
                 let import_text = "use std/collections/tuple;";
@@ -206,13 +206,13 @@ macro_rules! get_type {
             if is_struct && $self.current_token().tagged {
                 let pool = $struct_pool.borrow();
                 let struct_def = pool.get(&name).unwrap();
-                crate::struct_hover!($self.current_token(), struct_def.1.is_empty(), struct_def.1);
+                $crate::struct_hover!($self.current_token(), struct_def.1.is_empty(), struct_def.1);
             }
 
             if is_enum && $self.current_token().tagged {
                 let pool = $enum_pool.borrow();
                 let enum_def = pool.get(&name).unwrap();
-                crate::enum_hover!($self.current_token(), name, enum_def.0);
+                $crate::enum_hover!($self.current_token(), name, enum_def.0);
             }
 
             if is_base_type && $self.current_token().tagged {
@@ -248,7 +248,7 @@ macro_rules! get_type {
                         $self.advance();
 
                         if !$struct_pool.borrow().contains_key("Array") {
-                            crate::set_end!(location, $self);
+                            $crate::set_end!(location, $self);
                             let import_text = "use std/collections/array;";
 
                             elle_error!(
@@ -266,7 +266,7 @@ macro_rules! get_type {
                             ty.to_internal_id().to_string()
                         );
 
-                        crate::set_end!(location, $self);
+                        $crate::set_end!(location, $self);
 
                         if !$struct_pool.borrow().contains_key(&generic_name) {
                             create_generic_struct(
@@ -298,7 +298,7 @@ macro_rules! get_type {
                             }
                         }
 
-                        crate::set_end!(location, $self);
+                        $crate::set_end!(location, $self);
 
                         let generic_name = format!(
                             "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
@@ -480,22 +480,16 @@ impl Parser {
             tokens.push(self.current_token());
             self.advance();
 
-            if self.current_token().kind == TokenKind::RightParenthesis {
-                if paren_nesting > 0 {
-                    paren_nesting -= 1;
-                }
+            if self.current_token().kind == TokenKind::RightParenthesis && paren_nesting > 0 {
+                paren_nesting -= 1;
             }
 
-            if self.current_token().kind == TokenKind::RightBlockBrace {
-                if block_nesting > 0 {
-                    block_nesting -= 1;
-                }
+            if self.current_token().kind == TokenKind::RightBlockBrace && block_nesting > 0 {
+                block_nesting -= 1;
             }
 
-            if self.current_token().kind == TokenKind::RightCurlyBrace {
-                if curly_nesting > 0 {
-                    curly_nesting -= 1;
-                }
+            if self.current_token().kind == TokenKind::RightCurlyBrace && curly_nesting > 0 {
+                curly_nesting -= 1;
             }
 
             if self.current_token().kind == TokenKind::Semicolon

@@ -28,11 +28,11 @@ impl Codegen<'_> for Address {
             ctx.func.borrow_mut().assign_instruction_front(
                 &addr_val,
                 &addr_ty,
-                Instruction::Alloc8(Value::Const("".into(), ty.size(ctx.module) as i128)),
+                Instruction::Alloc8(Value::Const(String::new(), i128::from(ty.size(ctx.module)))),
             );
 
             ctx.func.borrow_mut().add_instruction(Instruction::Store(
-                ty.clone(),
+                ty,
                 addr_val.clone(),
                 val.clone(),
             ));

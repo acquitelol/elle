@@ -197,12 +197,10 @@ impl Lexer<'_> {
                             "Invalid token: Elle does not support '--' decrementing.\nPlease use '-= 1' for incrementing instead."
                         )
                     )
+                } else if self.is_unary_context() {
+                    (TokenKind::Unary, ValueKind::Number(-1))
                 } else {
-                    if self.is_unary_context() {
-                        (TokenKind::Unary, ValueKind::Number(-1))
-                    } else {
-                        (TokenKind::Subtract, ValueKind::Nil)
-                    }
+                    (TokenKind::Subtract, ValueKind::Nil)
                 }
             }
             ';' => {
@@ -222,12 +220,10 @@ impl Lexer<'_> {
                 // } else if self.current_char() == '*' {
                 //     self.advance();
                 //     (TokenKind::Exponent, ValueKind::Nil)
+                } else if self.is_unary_context() {
+                    (TokenKind::Deref, ValueKind::Nil)
                 } else {
-                    if self.is_unary_context() {
-                        (TokenKind::Deref, ValueKind::Nil)
-                    } else {
-                        (TokenKind::Multiply, ValueKind::Nil)
-                    }
+                    (TokenKind::Multiply, ValueKind::Nil)
                 }
             }
             '^' => {
@@ -270,12 +266,10 @@ impl Lexer<'_> {
                             "Invalid token: Elle does not support '++' incrementing.\nPlease use '+= 1' for incrementing instead."
                         )
                     )
+                } else if self.is_unary_context() {
+                    (TokenKind::Unary, ValueKind::Number(1))
                 } else {
-                    if self.is_unary_context() {
-                        (TokenKind::Unary, ValueKind::Number(1))
-                    } else {
-                        (TokenKind::Add, ValueKind::Nil)
-                    }
+                    (TokenKind::Add, ValueKind::Nil)
                 }
             }
             '%' => {

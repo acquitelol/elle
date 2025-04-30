@@ -12,17 +12,13 @@ use crate::{
 
 impl Codegen<'_> for ArrayLiteral {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let inner_ty = if let Some(ty) = ctx.ty.clone() {
-            ty.get_pointer_inner()
-        } else {
-            None
-        };
+        let inner_ty = ctx.ty.clone().and_then(|ty| ty.get_pointer_inner());
 
         if self.dynamic {
             let new_func = ctx.func.borrow_mut().to_owned();
             let inner_ty = if let Some(ref ty) = self.explicit_inner {
                 Some(ty.clone())
-            } else if self.values.len() > 0 {
+            } else if !self.values.is_empty() {
                 let (ty, _) = self.values[0]
                     .clone()
                     .1
@@ -34,35 +30,25 @@ impl Codegen<'_> for ArrayLiteral {
                         },
                     )
                     .unwrap_or_else(|| {
-                        elle_error!(self.location.borrow().error(format!(
+                        elle_error!(self.location.borrow().error(
                             "Unexpected error when trying to compile the first item in an array"
-                        )))
+                        ))
                     });
 
-                Some(ty.clone())
+                Some(ty)
             } else if !self.known_generics.is_empty() {
-                Some(self.known_generics.get(0).unwrap().clone())
-            } else if let Some(ref ty) = ctx.ty {
-                Some(ty.clone())
-            // } else if is_return {
-            //     None
+                Some(self.known_generics.first().unwrap().clone())
             } else {
-                // panic!(
-                //     "{}",
-                //     location.with_extra_info("Try specifying a type here").error(format!("Could not determine any type for this array.\nPlease specify a type explicitly with the {GREEN}[T;]{RESET} syntax."))
-                // )
-                None
+                ctx.ty.clone()
             };
 
             let node = AstNode::FunctionCall(FunctionCall {
                 namespace_token: Token::from_ident("Array"),
                 name_token: Token::from_ident("new"),
                 name: "Array.new".into(),
-                generics: if let Some(ref ty) = inner_ty {
-                    vec![ty.clone()]
-                } else {
-                    vec![]
-                },
+                generics: inner_ty
+                    .as_ref()
+                    .map_or_else(Vec::new, |ty| vec![ty.clone()]),
                 parameters: if let Some(ty) = inner_ty {
                     self.values
                         .into_iter()
@@ -72,7 +58,7 @@ impl Codegen<'_> for ArrayLiteral {
                                 AstNode::Conversion(Conversion {
                                     r#type: Some(ty.clone()),
                                     value: Box::new(node),
-                                    location: loc.clone(),
+                                    location: loc,
                                     explicit: false,
                                 }),
                             )
@@ -87,9 +73,10 @@ impl Codegen<'_> for ArrayLiteral {
             });
 
             let (ty, val) = node.compile(gen, ctx).unwrap_or_else(|| {
-                elle_error!(self.location.borrow().error(format!(
-                    "Unexpected error when trying to compile a dynamic array"
-                )))
+                elle_error!(self
+                    .location
+                    .borrow()
+                    .error("Unexpected error when trying to compile a dynamic array"))
             });
 
             return Some((ty, val));
@@ -126,8 +113,7 @@ impl Codegen<'_> for ArrayLiteral {
                 )
                 .unwrap_or_else(|| {
                     elle_error!(location.borrow().error(format!(
-                        "Unexpected error when trying to compile an item in an array with index {}",
-                        i
+                        "Unexpected error when trying to compile an item in an array with index {i}"
                     )))
                 });
 
@@ -168,7 +154,10 @@ impl Codegen<'_> for ArrayLiteral {
         } else {
             0
         };
-        let array_size_val = Value::Const("".into(), (array_size + Type::Word.size_base()) as i128);
+        let array_size_val = Value::Const(
+            String::new(),
+            i128::from(array_size + Type::Word.size_base()),
+        );
         let tmp_full = gen.new_temporary(Some("array.full"), true);
 
         ctx.func.borrow_mut().assign_instruction_front(
@@ -180,7 +169,7 @@ impl Codegen<'_> for ArrayLiteral {
         ctx.func.borrow_mut().add_instruction(Instruction::Store(
             Type::Word,
             tmp_full.clone(),
-            Value::Const("".into(), results.len() as i128),
+            Value::Const(String::new(), results.len() as i128),
         ));
 
         let tmp = gen.new_temporary(Some("array"), true);
@@ -190,12 +179,12 @@ impl Codegen<'_> for ArrayLiteral {
             &buf_ty,
             Instruction::Add(
                 tmp_full,
-                Value::Const("".into(), Type::Word.size(ctx.module) as i128),
+                Value::Const(String::new(), i128::from(Type::Word.size(ctx.module))),
             ),
         );
 
         gen.buf_metadata.insert(
-            ctx.value.clone().unwrap_or(tmp.clone()),
+            ctx.value.clone().unwrap_or_else(|| tmp.clone()),
             (buf_ty.get_pointer_inner().unwrap(), array_size_val),
         );
 
@@ -208,8 +197,8 @@ impl Codegen<'_> for ArrayLiteral {
                 Instruction::Add(
                     tmp.clone(),
                     Value::Const(
-                        "".into(),
-                        i as i128 * first_type.as_ref().unwrap().size(ctx.module) as i128,
+                        String::new(),
+                        i as i128 * i128::from(first_type.as_ref().unwrap().size(ctx.module)),
                     ),
                 ),
             );

@@ -520,96 +520,94 @@ impl Codegen<'_> for FunctionCall {
             );
         }
 
-        if !tmp_function.variadic {
-            if tmp_function.arguments.len() != params.len() {
-                let only = if tmp_function.arguments.len() > params.len() && !params.is_empty() {
-                    "only "
-                } else {
-                    ""
-                };
+        if !tmp_function.variadic && tmp_function.arguments.len() != params.len() {
+            let only = if tmp_function.arguments.len() > params.len() && !params.is_empty() {
+                "only "
+            } else {
+                ""
+            };
 
-                let name = if is_generic!(tmp_function.name) {
-                    let mut parts = tmp_function.name.split('.').map(ToString::to_string);
-                    let mut name = parts.next().unwrap();
+            let name = if is_generic!(tmp_function.name) {
+                let mut parts = tmp_function.name.split('.').map(ToString::to_string);
+                let mut name = parts.next().unwrap();
 
-                    if type_method {
-                        write!(name, "::{}", parts.next().unwrap()).unwrap();
-                    }
+                if type_method {
+                    write!(name, "::{}", parts.next().unwrap()).unwrap();
+                }
 
-                    write!(
-                        name,
-                        "<{}>",
-                        known_generics
-                            .iter()
-                            .map(|generic| generic.1.display())
-                            .collect::<Vec<String>>()
-                            .join(", ")
+                write!(
+                    name,
+                    "<{}>",
+                    known_generics
+                        .iter()
+                        .map(|generic| generic.1.display())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+                .unwrap();
+
+                name
+            } else {
+                tmp_function.name
+            };
+
+            let arg_len = tmp_function
+                .arguments
+                .len()
+                .saturating_sub(usize::from(add_meta))
+                .saturating_sub(usize::from(type_method));
+            let param_len = params.len().saturating_sub(usize::from(add_meta));
+
+            elle_error!(call_location
+                .borrow()
+                .with_extra_info(if tmp_function.arguments.is_empty() && type_method {
+                    format!(
+                        "Use `{}({})` instead here",
+                        name.replace('.', "::"),
+                        if arg_len > 0 { "..." } else { "" }
                     )
-                    .unwrap();
-
-                    name
                 } else {
-                    tmp_function.name
-                };
-
-                let arg_len = tmp_function
-                    .arguments
-                    .len()
-                    .saturating_sub(usize::from(add_meta))
-                    .saturating_sub(usize::from(type_method));
-                let param_len = params.len().saturating_sub(usize::from(add_meta));
-
-                elle_error!(call_location
-                    .borrow()
-                    .with_extra_info(if tmp_function.arguments.is_empty() && type_method {
+                    String::new()
+                })
+                .error(format!(
+                    "Function named `{}({})` takes {} argument{}, but you {}passed {}\n{}",
+                    name.replace('.', "::"),
+                    if arg_len > 0 { "..." } else { "" },
+                    arg_len,
+                    if arg_len == 1 { "" } else { "s" },
+                    only,
+                    param_len,
+                    if tmp_function.arguments.is_empty() && type_method {
                         format!(
-                            "Use `{}({})` instead here",
-                            name.replace('.', "::"),
-                            if arg_len > 0 { "..." } else { "" }
+                            "This function doesn't accept a `{} self` parameter.",
+                            first_param
+                                .expect("This function is a type method")
+                                .0
+                                .display()
                         )
                     } else {
-                        String::new()
-                    })
-                    .error(format!(
-                        "Function named `{}({})` takes {} argument{}, but you {}passed {}\n{}",
-                        name.replace('.', "::"),
-                        if arg_len > 0 { "..." } else { "" },
-                        arg_len,
-                        if arg_len == 1 { "" } else { "s" },
-                        only,
-                        param_len,
-                        if tmp_function.arguments.is_empty() && type_method {
-                            format!(
-                                "This function doesn't accept a `{} self` parameter.",
-                                first_param
-                                    .expect("This function is a type method")
-                                    .0
-                                    .display()
-                            )
-                        } else {
-                            tmp_function
-                                .arguments
-                                .iter()
-                                .skip(params.len())
-                                .map(|((ty, val), _)| {
-                                    format!(
-                                        "Missing argument named \"{}\" (of type \"{}\")",
-                                        val.get_string_inner()
-                                            .replace('%', "")
-                                            .split('.')
-                                            .nth(0)
-                                            .unwrap(),
-                                        ty.display()
-                                    )
-                                })
-                                .collect::<Vec<String>>()
-                                .join("\n")
-                        }
-                    )))
-            }
+                        tmp_function
+                            .arguments
+                            .iter()
+                            .skip(params.len())
+                            .map(|((ty, val), _)| {
+                                format!(
+                                    "Missing argument named \"{}\" (of type \"{}\")",
+                                    val.get_string_inner()
+                                        .replace('%', "")
+                                        .split('.')
+                                        .nth(0)
+                                        .unwrap(),
+                                    ty.display()
+                                )
+                            })
+                            .collect::<Vec<String>>()
+                            .join("\n")
+                    }
+                )))
         }
 
-        let temp = gen.new_temporary(None, true);
+        let tmp = gen.new_temporary(None, true);
         let val = if is_callback {
             let tmp = gen.new_temporary(None, true);
             let res = gen.get_variable(
@@ -651,11 +649,11 @@ impl Codegen<'_> for FunctionCall {
         };
 
         ctx.func.borrow_mut().assign_instruction(
-            &temp,
+            &tmp,
             &ty,
             Instruction::Call(val, params.into_iter().map(|x| x.0).collect()),
         );
 
-        Some((ty, temp))
+        Some((ty, tmp))
     }
 }

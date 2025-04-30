@@ -35,17 +35,17 @@ pub fn convert_to_type(
         if first.is_pointer() && first.get_pointer_inner().unwrap() == second {
             if second.is_struct() {
                 return (second, val);
-            } else {
-                let tmp = gen.new_temporary(Some("load"), false);
-
-                func.borrow_mut().assign_instruction(
-                    &tmp,
-                    &second,
-                    Instruction::Load(second.clone(), val),
-                );
-
-                return (second, tmp);
             }
+
+            let tmp = gen.new_temporary(Some("load"), false);
+
+            func.borrow_mut().assign_instruction(
+                &tmp,
+                &second,
+                Instruction::Load(second.clone(), val),
+            );
+
+            return (second, tmp);
         }
 
         elle_error!(left_location

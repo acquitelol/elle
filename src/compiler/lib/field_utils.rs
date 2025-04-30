@@ -119,27 +119,27 @@ pub fn process_field_access(
                     }
 
                     return res;
-                } else {
-                    let res = (
-                        if addr_only {
-                            Type::Pointer(Box::new(member_ty.unwrap()))
-                        } else {
-                            member_ty.unwrap()
-                        },
-                        offset_tmp,
-                    );
-
-                    if tagged {
-                        elle_error!(format!(
-                            "hover\n{}\n{}\n{struct_name}.{field}: {}",
-                            location.borrow().display_plain(false),
-                            location.borrow().display_plain(true),
-                            res.0.display()
-                        ));
-                    }
-
-                    return res;
                 }
+
+                let res = (
+                    if addr_only {
+                        Type::Pointer(Box::new(member_ty.unwrap()))
+                    } else {
+                        member_ty.unwrap()
+                    },
+                    offset_tmp,
+                );
+
+                if tagged {
+                    elle_error!(format!(
+                        "hover\n{}\n{}\n{struct_name}.{field}: {}",
+                        location.borrow().display_plain(false),
+                        location.borrow().display_plain(true),
+                        res.0.display()
+                    ));
+                }
+
+                return res;
             }
             AstNode::FieldAccess(FieldAccess {
                 left: nested_left,

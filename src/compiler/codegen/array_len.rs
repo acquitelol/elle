@@ -25,7 +25,7 @@ impl Codegen<'_> for ArrayLength {
             left: self.value,
             right: Box::new(AstNode::Literal(Literal {
                 kind: TokenKind::IntegerLiteral,
-                value: ValueKind::Number(Type::Word.size(ctx.module) as i128),
+                value: ValueKind::Number(i128::from(Type::Word.size(ctx.module))),
                 location: self.location.clone(),
                 tagged: false,
             })),

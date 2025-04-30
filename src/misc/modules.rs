@@ -121,9 +121,9 @@ pub fn lex_and_parse(
         }
 
         return vec![];
-    } else {
-        parsed_modules.borrow_mut().insert(sym);
     }
+
+    parsed_modules.borrow_mut().insert(sym);
 
     macro_rules! file_is_empty_error {
         () => {

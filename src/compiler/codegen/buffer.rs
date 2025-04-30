@@ -19,7 +19,7 @@ impl Codegen<'_> for Buffer {
                 left: self.size,
                 right: Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::LongLiteral,
-                    value: ValueKind::Number(ty.size(ctx.module) as i128),
+                    value: ValueKind::Number(i128::from(ty.size(ctx.module))),
                     location: self.location.clone(),
                     tagged: false,
                 })),
@@ -39,8 +39,7 @@ impl Codegen<'_> for Buffer {
 
         let (ty, val) = node.compile(gen, &ctx.to_nnf()).unwrap_or_else(|| {
             elle_error!(self.location.borrow().error(format!(
-                "Unexpected error when trying to compile size for a buffer named '{}'",
-                plain_name
+                "Unexpected error when trying to compile size for a buffer named '{plain_name}'"
             )))
         });
 

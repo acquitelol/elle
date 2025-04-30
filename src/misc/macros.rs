@@ -69,7 +69,7 @@ macro_rules! global {
 #[macro_export]
 macro_rules! elle_error {
     ($loc:expr) => {{
-        let _ = std::fs::remove_dir_all(unsafe { crate::misc::constants::BUILD_PATH.unwrap() });
+        let _ = std::fs::remove_dir_all(unsafe { $crate::misc::constants::BUILD_PATH.unwrap() });
 
         // Panic in debug mode so you can see the line number where the error occured in the compiler
         if cfg!(debug_assertions) {
@@ -84,14 +84,14 @@ macro_rules! elle_error {
 #[macro_export]
 macro_rules! is_generic {
     ($name:expr $(,)?) => {
-        $name.contains(&format!(".{}.", crate::GENERIC_IDENTIFIER))
+        $name.contains(&format!(".{}.", $crate::GENERIC_IDENTIFIER))
     };
 }
 
 #[macro_export]
 macro_rules! is_unknown {
     ($name:expr $(,)?) => {
-        $name.contains(&format!(".{}.", crate::GENERIC_UNKNOWN))
+        $name.contains(&format!(".{}.", $crate::GENERIC_UNKNOWN))
     };
 }
 
@@ -134,12 +134,16 @@ macro_rules! override_and_add_node {
 macro_rules! elapsed_with_color {
     ($elapsed:expr) => {{
         let color = match $elapsed.as_millis() {
-            val if val < 1000 => crate::misc::colors::get_GREEN!(),
-            val if val < 3000 => crate::misc::colors::get_YELLOW!(),
-            _ => crate::misc::colors::get_RED!(),
+            val if val < 1000 => $crate::misc::colors::get_GREEN!(),
+            val if val < 3000 => $crate::misc::colors::get_YELLOW!(),
+            _ => $crate::misc::colors::get_RED!(),
         };
 
-        format!("{color}{:?}{}", $elapsed, crate::misc::colors::get_RESET!())
+        format!(
+            "{color}{:?}{}",
+            $elapsed,
+            $crate::misc::colors::get_RESET!()
+        )
     }};
 }
 
@@ -342,7 +346,7 @@ macro_rules! token_to_node {
     ($token:expr, $self:expr) => {
         match $token.kind {
             TokenKind::TrueLiteral => {
-                crate::bool_hover!($token, $self.current_token().location, true);
+                $crate::bool_hover!($token, $self.current_token().location, true);
 
                 AstNode::Literal(Literal {
                     kind: TokenKind::BoolLiteral,
@@ -352,7 +356,7 @@ macro_rules! token_to_node {
                 })
             }
             TokenKind::FalseLiteral => {
-                crate::bool_hover!($token, $self.current_token().location, false);
+                $crate::bool_hover!($token, $self.current_token().location, false);
 
                 AstNode::Literal(Literal {
                     kind: TokenKind::BoolLiteral,

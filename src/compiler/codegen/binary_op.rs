@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
@@ -43,11 +45,9 @@ impl Codegen<'_> for BinaryOperation {
                         self.location.clone(),
                         AstNode::Literal(Literal {
                             kind: TokenKind::IntegerLiteral,
-                            value: ValueKind::Number(if self.operator == TokenKind::RangeEqual {
-                                1
-                            } else {
-                                0
-                            }),
+                            value: ValueKind::Number(i128::from(
+                                self.operator == TokenKind::RangeEqual,
+                            )),
                             location: self.location.clone(),
                             tagged: false,
                         }),
@@ -121,34 +121,38 @@ impl Codegen<'_> for BinaryOperation {
             }
         }
 
-        if left_ty.weight() > right_ty.weight() {
-            let (ty, val) = convert_to_type(
-                gen,
-                ctx.func,
-                right_ty.clone(),
-                left_ty.clone(),
-                right_val_unparsed,
-                &self.location,
-                &self.location,
-                false,
-            );
+        match left_ty.weight().cmp(&right_ty.weight()) {
+            Ordering::Greater => {
+                let (ty, val) = convert_to_type(
+                    gen,
+                    ctx.func,
+                    right_ty.clone(),
+                    left_ty.clone(),
+                    right_val_unparsed,
+                    &self.location,
+                    &self.location,
+                    false,
+                );
 
-            right_ty = ty;
-            right_val = val;
-        } else if left_ty.weight() < right_ty.weight() {
-            let (ty, val) = convert_to_type(
-                gen,
-                ctx.func,
-                left_ty,
-                right_ty.clone(),
-                left_val_unparsed,
-                &self.location,
-                &self.location,
-                false,
-            );
+                right_ty = ty;
+                right_val = val;
+            }
+            Ordering::Less => {
+                let (ty, val) = convert_to_type(
+                    gen,
+                    ctx.func,
+                    left_ty,
+                    right_ty.clone(),
+                    left_val_unparsed,
+                    &self.location,
+                    &self.location,
+                    false,
+                );
 
-            left_ty = ty;
-            left_val = val;
+                left_ty = ty;
+                left_val = val;
+            }
+            Ordering::Equal => {}
         }
 
         if ((!left_ty.is_primitive() || !right_ty.is_primitive())
@@ -175,7 +179,7 @@ impl Codegen<'_> for BinaryOperation {
                 node = AstNode::LogicalNot(LogicalNot {
                     value: Box::new(node),
                     location: self.location.clone(),
-                })
+                });
             }
 
             let (ty, val) = node.compile(gen, ctx).unwrap_or_else(|| {
@@ -193,7 +197,7 @@ impl Codegen<'_> for BinaryOperation {
             match self.operator {
                 // Token => (Name, HasMeta, Type),
                 TokenKind::Concat => {
-                    kind = Some(("concat", true, Type::Pointer(Box::new(Type::Char))))
+                    kind = Some(("concat", true, Type::Pointer(Box::new(Type::Char))));
                 }
                 _ => {}
             }
@@ -293,7 +297,7 @@ impl Codegen<'_> for BinaryOperation {
         let instruction_ty = left_ty;
         let cloned_ty = instruction_ty.clone();
 
-        let res = match self.operator.clone() {
+        let res = match self.operator {
             TokenKind::Add => Instruction::Add(left_val, right_val),
             TokenKind::Subtract => Instruction::Subtract(left_val, right_val),
             TokenKind::Multiply => Instruction::Multiply(left_val, right_val),
@@ -334,7 +338,7 @@ impl Codegen<'_> for BinaryOperation {
             Type::Boolean
         } else {
             match instruction_ty {
-                Type::Enum(_, ty) => ty.clone().unwrap_or(Type::Word),
+                Type::Enum(_, ty) => ty.unwrap_or(Type::Word),
                 other => other,
             }
         };
@@ -343,6 +347,6 @@ impl Codegen<'_> for BinaryOperation {
             .borrow_mut()
             .assign_instruction(&op_temp, &final_ty, res);
 
-        Some((final_ty.clone(), op_temp))
+        Some((final_ty, op_temp))
     }
 }

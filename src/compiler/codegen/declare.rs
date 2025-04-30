@@ -36,18 +36,17 @@ impl Codegen<'_> for Declare {
         {
             elle_error!(
                 self.location.borrow().error(
-                    format!("Variable named '{}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.", plain_name)));
+                    format!("Variable named '{plain_name}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.")));
         }
 
         if self.r#type.clone().is_some_and(|ty| ty == Type::Infer) && self.value.is_none() {
             elle_error!(self.location.borrow().error(format!(
-                "Failed to determine a type for '{}'.\nPlease give this variable a type or a value.",
-                plain_name
+                "Failed to determine a type for '{plain_name}'.\nPlease give this variable a type or a value."
             )));
         }
 
         let res = gen.get_variable(
-            &format!("{}.addr", plain_name),
+            &format!("{plain_name}.addr"),
             Some(ctx.func),
             Some(ctx.module),
             &VariableInfo::default(),
@@ -60,8 +59,8 @@ impl Codegen<'_> for Declare {
             Some(gen.new_variable(&local_ty, &plain_name, Some(ctx.func), true, false))
         };
 
-        let node = *self.value.unwrap_or(Box::new(
-            if self.r#type.clone().is_some_and(|ty| ty.is_struct()) {
+        let node = *self.value.unwrap_or_else(|| {
+            Box::new(if self.r#type.clone().is_some_and(|ty| ty.is_struct()) {
                 AstNode::StructLiteral(StructLiteral {
                     name: Token::from_ident(
                         &self.r#type.clone().unwrap().get_struct_inner().unwrap(),
@@ -76,8 +75,8 @@ impl Codegen<'_> for Declare {
                     location: self.location.clone(),
                     tagged: false,
                 })
-            },
-        ));
+            })
+        });
 
         let parsed = node.compile(
             gen,
@@ -110,28 +109,27 @@ impl Codegen<'_> for Declare {
             // essentially the below sets the former
             // to the latter if necessary
             if ret_ty.is_function()
-                && local_ty.get_pointer_inner().is_some_and(|ptr| {
-                    ptr.get_unknown_inner()
-                        .is_some_and(|inner| inner == "fn".to_string())
-                })
+                && local_ty
+                    .get_pointer_inner()
+                    .is_some_and(|ptr| ptr.get_unknown_inner().is_some_and(|inner| inner == "fn"))
             {
                 local_ty = ret_ty.clone();
-                temp = Some(gen.new_variable(&local_ty, &plain_name, Some(ctx.func), false, false))
+                temp = Some(gen.new_variable(&local_ty, &plain_name, Some(ctx.func), false, false));
             }
 
-            let (final_ty, final_val) = if ret_ty != local_ty {
+            let (final_ty, final_val) = if ret_ty == local_ty {
+                (local_ty.clone(), value)
+            } else {
                 convert_to_type(
                     gen,
                     ctx.func,
                     ret_ty,
                     local_ty.clone(),
-                    value.clone(),
+                    value,
                     &self.location,
                     &self.value_location,
                     false,
                 )
-            } else {
-                (local_ty.clone(), value.clone())
             };
 
             if res.is_ok() && self.r#type.is_none() {
@@ -163,9 +161,7 @@ impl Codegen<'_> for Declare {
                     ));
                 }
 
-                gen.address_pool
-                    .insert(temp.unwrap().clone(), addr_val.clone());
-
+                gen.address_pool.insert(temp.unwrap(), addr_val);
                 let res = (addr_ty, final_val);
 
                 if self.name.tagged {
@@ -182,7 +178,7 @@ impl Codegen<'_> for Declare {
 
             let addr_val = gen.new_variable(
                 &local_ty,
-                &format!("{}.addr", plain_name),
+                &format!("{plain_name}.addr"),
                 Some(ctx.func),
                 true,
                 false,
@@ -192,13 +188,12 @@ impl Codegen<'_> for Declare {
                 &addr_val,
                 &Type::Pointer(Box::new(final_ty.clone())),
                 Instruction::Alloc8(Value::Const(
-                    "".into(),
-                    if final_ty.is_struct() {
-                        Type::Pointer(Box::new(Type::Void))
+                    String::new(),
+                    i128::from(if final_ty.is_struct() {
+                        Type::Pointer(Box::new(Type::Void)).size(ctx.module)
                     } else {
-                        final_ty.clone()
-                    }
-                    .size(ctx.module) as i128,
+                        final_ty.size(ctx.module)
+                    }),
                 )),
             );
 
@@ -215,9 +210,7 @@ impl Codegen<'_> for Declare {
                 ));
             }
 
-            gen.address_pool
-                .insert(temp.clone().unwrap(), addr_val.clone());
-
+            gen.address_pool.insert(temp.unwrap(), addr_val);
             let res = (final_ty, final_val);
 
             if self.name.tagged {
@@ -229,15 +222,14 @@ impl Codegen<'_> for Declare {
                 ));
             }
 
-            return Some(res);
+            Some(res)
         } else {
             elle_error!(self
                 .location
                 .borrow()
                 .with_extra_info("This variable might be assigned to a statement")
                 .error(format!(
-                    "Unexpected error when declaring variable named '{}'\nCould not generate a valid value for this variable.\nMaybe '{}' is being incorrectly assigned to a statement?",
-                    plain_name, plain_name
+                    "Unexpected error when declaring variable named '{plain_name}'\nCould not generate a valid value for this variable.\nMaybe '{plain_name}' is being incorrectly assigned to a statement?"
                 )));
         }
     }

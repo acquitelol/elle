@@ -477,10 +477,9 @@ impl<'a> Statement<'a> {
                 location,
                 tagged: name_token.tagged,
             });
-        } else {
-            self.expect_tokens(&[TokenKind::LeftParenthesis]);
         }
 
+        self.expect_tokens(&[TokenKind::LeftParenthesis]);
         self.advance();
 
         let mut parameters = maybe_params.unwrap_or_default();
@@ -567,10 +566,8 @@ impl<'a> Statement<'a> {
                     }
                 }
 
-                if self.current_token().kind == TokenKind::GreaterThan {
-                    if generic_nesting > 0 {
-                        generic_nesting -= 1;
-                    }
+                if self.current_token().kind == TokenKind::GreaterThan && generic_nesting > 0 {
+                    generic_nesting -= 1;
                 }
 
                 if self.is_eof() {
@@ -924,10 +921,8 @@ impl<'a> Statement<'a> {
                     }
                 }
 
-                if self.current_token().kind == TokenKind::GreaterThan {
-                    if generic_nesting > 0 {
-                        generic_nesting -= 1;
-                    }
+                if self.current_token().kind == TokenKind::GreaterThan && generic_nesting > 0 {
+                    generic_nesting -= 1;
                 }
 
                 if self.is_eof() {
@@ -1262,9 +1257,9 @@ impl<'a> Statement<'a> {
             if token.kind == TokenKind::LeftCurlyBrace {
                 if nesting == 0 {
                     return true;
-                } else {
-                    nesting += 1;
                 }
+
+                nesting += 1;
             }
 
             if token.kind == TokenKind::RightCurlyBrace {
@@ -1409,7 +1404,7 @@ impl<'a> Statement<'a> {
         let mut index = 0;
         let position = self.position;
 
-        while index <= self.tokens.len() - 1 {
+        while index < self.tokens.len() {
             let token = self.tokens[index].clone();
 
             match token.kind {
@@ -2438,22 +2433,16 @@ impl<'a> Statement<'a> {
                     }
                 }
 
-                if self.current_token().kind == TokenKind::RightParenthesis {
-                    if paren_nesting > 0 {
-                        paren_nesting -= 1;
-                    }
+                if self.current_token().kind == TokenKind::RightParenthesis && paren_nesting > 0 {
+                    paren_nesting -= 1;
                 }
 
-                if self.current_token().kind == TokenKind::RightBlockBrace {
-                    if block_nesting > 0 {
-                        block_nesting -= 1;
-                    }
+                if self.current_token().kind == TokenKind::RightBlockBrace && block_nesting > 0 {
+                    block_nesting -= 1;
                 }
 
-                if self.current_token().kind == TokenKind::RightCurlyBrace {
-                    if curly_nesting > 0 {
-                        curly_nesting -= 1;
-                    }
+                if self.current_token().kind == TokenKind::RightCurlyBrace && curly_nesting > 0 {
+                    curly_nesting -= 1;
                 }
 
                 if self.is_eof() {
@@ -3735,15 +3724,14 @@ impl<'a> Statement<'a> {
                 }
 
                 break;
-            } else {
-                let (node, position, tokens, _) =
-                    Statement::new(self.tokens.clone(), self.position, &cell, self.shared).parse();
-
-                cell.borrow_mut().push(node);
-                self.position = position;
-                self.tokens = tokens;
             }
 
+            let (node, position, tokens, _) =
+                Statement::new(self.tokens.clone(), self.position, &cell, self.shared).parse();
+
+            cell.borrow_mut().push(node);
+            self.position = position;
+            self.tokens = tokens;
             self.advance();
         }
 
@@ -3768,9 +3756,9 @@ impl<'a> Statement<'a> {
             if x.kind == TokenKind::LeftParenthesis {
                 start += 1;
                 continue;
-            } else {
-                break;
             }
+
+            break;
         }
 
         is_type!(

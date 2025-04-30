@@ -14,9 +14,9 @@ impl Codegen<'_> for BlockStatement {
 
         let body_label = format!("block.start.{}", gen.tmp_counter);
         let end_label = format!("block.end.{}", gen.tmp_counter);
-        ctx.func.borrow_mut().add_block(body_label.clone());
+        ctx.func.borrow_mut().add_block(body_label);
 
-        for statement in self.body.iter() {
+        for statement in self.body {
             statement.clone().compile(gen, ctx);
         }
 

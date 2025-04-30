@@ -336,16 +336,14 @@ impl<'a> Function<'a> {
                         if external {
                             unaliased = Some(name);
                             name = alias;
-                        } else {
-                            if self.parser.warnings.has_warning(Warning::InvalidAlias) {
-                                eprintln!(
-                                    "{}",
-                                    location.borrow().warning(format!(
-                                        "Can't assign aliases to non-external functions\nSkipping alias '{alias}' for function '{}'",
-                                        name.replace('.', "::")
-                                    ))
-                                );
-                            }
+                        } else if self.parser.warnings.has_warning(Warning::InvalidAlias) {
+                            eprintln!(
+                                "{}",
+                                location.borrow().warning(format!(
+                                    "Can't assign aliases to non-external functions\nSkipping alias '{alias}' for function '{}'",
+                                    name.replace('.', "::")
+                                ))
+                            );
                         }
 
                         self.parser.advance();
@@ -427,26 +425,26 @@ impl<'a> Function<'a> {
             if current.kind == TokenKind::RightCurlyBrace {
                 self.parser.advance();
                 break;
-            } else {
-                let (node, position, tokens, _) = Statement::new(
-                    self.parser.tokens.clone(),
-                    self.parser.position,
-                    &body,
-                    &Shared {
-                        struct_pool: &self.parser.struct_pool,
-                        enum_pool: &self.parser.enum_pool,
-                        tree: &self.parser.tree,
-                        generics: &generics,
-                        known_generics: &vec![],
-                        addr_only: false,
-                    },
-                )
-                .parse();
-
-                body.borrow_mut().push(node);
-                self.parser.position = position;
-                self.parser.tokens = tokens;
             }
+
+            let (node, position, tokens, _) = Statement::new(
+                self.parser.tokens.clone(),
+                self.parser.position,
+                &body,
+                &Shared {
+                    struct_pool: &self.parser.struct_pool,
+                    enum_pool: &self.parser.enum_pool,
+                    tree: &self.parser.tree,
+                    generics: &generics,
+                    known_generics: &vec![],
+                    addr_only: false,
+                },
+            )
+            .parse();
+
+            body.borrow_mut().push(node);
+            self.parser.position = position;
+            self.parser.tokens = tokens;
         }
 
         let mut res = body.borrow_mut().to_owned();

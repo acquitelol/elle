@@ -178,12 +178,12 @@ impl Compiler {
                         );
 
                         return Ok((ty.unwrap(), temp));
-                    } else {
-                        return Ok((
-                            Type::Function(Box::new(Some(val.to_owned()))),
-                            Value::Global(name.into()),
-                        ));
-                    };
+                    }
+
+                    return Ok((
+                        Type::Function(Box::new(Some(val.to_owned()))),
+                        Value::Global(name.into()),
+                    ));
                 } else if let Some(Primitive::Function(val)) = self.generic_functions.get(name) {
                     if !val.usable && !val.imported {
                         // TODO: Take call location here
@@ -209,9 +209,9 @@ impl Compiler {
         location: &MutRc<Location>,
         // (ty, val)
     ) -> Option<(Type, Value)> {
-        let var = self.get_variable(name, func, module, &VariableInfo::default());
+        let val = self.get_variable(name, func, module, &VariableInfo::default());
 
-        match var {
+        match val {
             Ok((ty, val)) => {
                 let res = self.get_variable(
                     &format!("{name}.addr"),

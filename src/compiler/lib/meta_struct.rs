@@ -72,9 +72,9 @@ pub fn generate_meta_struct(
                                         res.push(chars[i]);
                                         advance!(i, chars);
                                         continue;
-                                    } else {
-                                        break;
                                     }
+
+                                    break;
                                 }
 
                                 if chars[i] == ')' {
