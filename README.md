@@ -13,7 +13,9 @@
 
 # ♡ **FAQ**
 
-### I _heavily_ recommend reading the [FAQ](https://github.com/acquitelol/elle/blob/rewrite/FAQ.md) before trying the language. It will allow you to grasp the strengths and weaknesses of the language at a glance and quickly learn whether this language is one you would be comfortable using.
+### ✩ I _heavily_ recommend reading the [FAQ](https://github.com/acquitelol/elle/blob/rewrite/FAQ.md) before trying the language. ✩
+
+It will allow you to grasp the strengths and weaknesses of the language at a glance and quickly learn whether this language is one you would be comfortable using.
 
 ### ✩ _If you like this project, consider giving it a star!_ ✩
 

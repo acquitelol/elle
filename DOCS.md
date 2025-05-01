@@ -2109,3 +2109,92 @@ pub external fn InitWindow(i32 width, i32 height, string title) @alias(raylib::i
 **Technical note:** This declaration does not emit any IR code. This means that all these definitions do is provide more information and context to the compiler. They do not change the output of the program directly.
 
 <hr />
+
+### ♡ **C FFI**
+
+Elle is entirely C ABI compliant. This means that C code is directly callable from within Elle:
+
+- Structs are packed like C
+- Strings are null terminated
+- Nothing is mangled
+
+♡ **You can import any C function like this:**
+
+```rs
+external fn ClearBackground(Color color);
+```
+
+- Structs are packed by default:
+
+```rs
+struct Color {
+    u8 r;
+    u8 g;
+    u8 b;
+    u8 a;
+};
+```
+
+No `extern "C"` is necessary.
+
+♡ **Strings are null terminated** which means you are able use the same string type for importing functions that take `char*` in C:
+
+```rs
+external fn printf(string fmt, ...) -> i32;
+```
+
+aswell as being able to call the function with no wrappers:
+
+```rs
+printf("Hello, world! %d\n", 42);
+```
+
+**Technical note:** `string` is sugar for `char *`. `any` is sugar for `void *`.
+
+♡ **Linking with Elle code is as easy as C:**
+
+`cc test.c -c`
+
+```c
+int square(int x) {
+    return x * x;
+}
+```
+
+`ellec test.le test.o --run`
+
+```rs
+use std/prelude;
+
+external fn square(i32 x) -> i32;
+
+fn main() {
+    $dbg(square(5));
+}
+```
+
+You can do the opposite:
+
+`ellec test.le --noalloc --nofmt --nosm -c`
+
+```rs
+pub fn square(i32 x) {
+    return x * x;
+}
+```
+
+`cc -o test test.c test.o && ./test`
+
+```c
+#include <stdio.h>
+
+extern int square(int x);
+
+int main() {
+    printf("%d\n", square(5));
+}
+```
+
+♡ **Functions in Elle are callable from C, but not if they're namespaced:**
+
+A namespaced function `foo::bar` internally creates `foo.bar`, which isn't importable from C. You can just make wrappers for these cases.
