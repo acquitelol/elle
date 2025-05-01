@@ -2,6 +2,7 @@ use std/collections/array;
 use std/collections/tuple;
 use std/libc/io;
 use std/hashes;
+use std/limits;
 use std/core;
 use std/math;
 
