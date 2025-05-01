@@ -16,3 +16,50 @@ fn i32::min() -> i32 {
     return ~i32::max();
 }
 
+fn i16::max() -> i16 {
+    return 32_767;
+}
+
+fn i16::min() -> i16 {
+    return ~i16::max();
+}
+
+fn i8::max() -> i8 {
+    return 127;
+}
+
+fn i8::min() -> i8 {
+    return ~i8::max();
+}
+
+fn u64::max() -> u64 {
+    return 18_446_744_073_709_551_615;
+}
+
+fn u64::min() -> u64 {
+    return ~u64::max();
+}
+
+fn u32::max() -> u32 {
+    return 4_294_967_295;
+}
+
+fn u32::min() -> u32 {
+    return ~u32::max();
+}
+
+fn u16::max() -> u16 {
+    return 65_535;
+}
+
+fn u16::min() -> u16 {
+    return ~u16::max();
+}
+
+fn u8::max() -> u8 {
+    return 255;
+}
+
+fn u8::min() -> u8 {
+    return ~u8::max();
+}
