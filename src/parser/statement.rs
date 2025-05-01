@@ -479,6 +479,13 @@ impl<'a> Statement<'a> {
             });
         }
 
+        // Foo::X == Foo::Y
+        // doing binops to functions without calling them
+        if self.current_token().kind.is_arithmetic() {
+            self.position = position;
+            return self.parse_arithmetic();
+        }
+
         self.expect_tokens(&[TokenKind::LeftParenthesis]);
         self.advance();
 
