@@ -1,3 +1,7 @@
+// NOTE: These are imported in a specific order
+// because some depend on eachother
+//
+// DO NOT reorder them by length of import
 use std/runtime/allocators/arbitrary;
 use std/runtime/allocators/arena;
 use std/runtime/allocators/heap;
@@ -6,6 +10,7 @@ use std/runtime/vectors;
 use std/runtime/libc/fd;
 use std/runtime/string;
 use std/runtime/fmt;
+use std/runtime/limits;
 use std/runtime/hashes;
 use std/runtime/rand;
 use std/runtime/cast;

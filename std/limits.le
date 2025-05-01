@@ -1,0 +1,11 @@
+global pub, external;
+
+fn i64::max() -> i64;
+fn i64::min() -> i64;
+fn i32::max() -> i32;
+fn i32::min() -> i32;
+
+const i64::MAX = i64::max();
+const i64::MIN = i64::min();
+const i32::MAX = i32::max();
+const i32::MIN = i32::min();
