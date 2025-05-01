@@ -3,6 +3,7 @@ use std/prelude;
 fn main() {
     $dbg(i64::MAX, i64::MIN, i32::MAX, i32::MIN, i16::MAX, i16::MIN, i8::MAX, i8::MIN);
     $dbg(u64::MAX, u64::MIN, u32::MAX, u32::MIN, u16::MAX, u16::MIN, u8::MAX, u8::MIN);
+    $dbg(f64::MAX, f64::MIN, f32::MAX, f32::MIN);
 
     $assert(i64::MAX == i64::max(), nil);
     $assert(i64::MIN == i64::min(), nil);
@@ -21,6 +22,11 @@ fn main() {
     $assert(u16::MIN == u16::min(), nil);
     $assert(u8::MAX == u8::max(), nil);
     $assert(u8::MIN == u8::min(), nil);
+
+    $assert(f64::MAX == f64::max(), nil);
+    $assert(f64::MIN == f64::min(), nil);
+    $assert(f32::MAX == f32::max(), nil);
+    $assert(f32::MIN == f32::min(), nil);
 
     $println("All `limits` tests have passed!".color("green").reset());
 }

@@ -17,6 +17,11 @@ fn u16::min() -> u16;
 fn u8::max() -> u8;
 fn u8::min() -> u8;
 
+fn f64::max() -> f64;
+fn f64::min() -> f64;
+fn f32::max() -> f32;
+fn f32::min() -> f32;
+
 const i64::MAX = i64::max();
 const i64::MIN = i64::min();
 const i32::MAX = i32::max();
@@ -34,3 +39,8 @@ const u16::MAX = u16::max();
 const u16::MIN = u16::min();
 const u8::MAX = u8::max();
 const u8::MIN = u8::min();
+
+const f64::MAX = f64::max();
+const f64::MIN = f64::min();
+const f32::MAX = f32::max();
+const f32::MIN = f32::min();
