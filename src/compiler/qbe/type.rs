@@ -542,7 +542,8 @@ impl Type {
 
     pub fn into_abi(self) -> Self {
         match self {
-            Self::Byte
+            Self::Boolean
+            | Self::Byte
             | Self::Char
             | Self::UnsignedByte
             | Self::Halfword
@@ -556,7 +557,8 @@ impl Type {
 
     pub fn into_base(self) -> Self {
         match self {
-            Self::Byte
+            Self::Boolean
+            | Self::Byte
             | Self::Char
             | Self::UnsignedByte
             | Self::Halfword
@@ -639,7 +641,8 @@ impl Type {
 
     pub fn is_smaller_than_int(&self) -> bool {
         match self {
-            Self::Byte
+            Self::Boolean
+            | Self::Byte
             | Self::UnsignedByte
             | Self::Halfword
             | Self::UnsignedHalfword
@@ -703,9 +706,9 @@ impl Type {
 
     pub fn size_base(&self) -> u64 {
         match self {
-            Self::UnsignedByte | Self::Byte | Self::Char => 1,
+            Self::Boolean | Self::UnsignedByte | Self::Byte | Self::Char => 1,
             Self::UnsignedHalfword | Self::Halfword => 2,
-            Self::Boolean | Self::UnsignedWord | Self::Word | Self::Single => 4,
+            Self::UnsignedWord | Self::Word | Self::Single => 4,
             Self::Enum(_, inner) => inner.clone().unwrap_or(Self::Word).size_base(),
             Self::Double => 8,
             // Returns 4 on 32-bit and 8 on 64-bit
@@ -747,8 +750,8 @@ impl Type {
 impl fmt::Display for Type {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Byte | Self::Char => write!(formatter, "b"),
-            Self::Boolean | Self::Word => write!(formatter, "w"),
+            Self::Boolean | Self::Byte | Self::Char => write!(formatter, "b"),
+            Self::Word => write!(formatter, "w"),
             Self::UnsignedByte => write!(formatter, "ub"),
             Self::Halfword => write!(formatter, "h"),
             Self::UnsignedHalfword => write!(formatter, "uh"),
