@@ -11,9 +11,9 @@
 じしˍ,)ノ
 <br />
 
-### ♡ **FAQ**
+# ♡ **FAQ**
 
-I _heavily_ recommend reading the [FAQ](https://github.com/acquitelol/elle/blob/rewrite/FAQ.md) before trying the language. It will allow you to grasp the strengths and weaknesses of the language at a glance and quickly learn whether this language is one you would be comfortable using.
+### I _heavily_ recommend reading the [FAQ](https://github.com/acquitelol/elle/blob/rewrite/FAQ.md) before trying the language. It will allow you to grasp the strengths and weaknesses of the language at a glance and quickly learn whether this language is one you would be comfortable using.
 
 ### ✩ _If you like this project, consider giving it a star!_ ✩
 
@@ -28,12 +28,6 @@ fn main() {
     io::println("Hello world!");
 }
 ```
-
-Let's dissect the code:
-
-- The `fn` keyword declares the statement as a function declaration.
-- The word `main` is the function's name and defines the function as the entry point of our program.
-- The function call `io::println` is a function which prints all of its arguments using their formatter.
 
 - Simple enough! ♡
 
@@ -61,7 +55,13 @@ All contributions to this project are welcome and I love talking about this stuf
     $ make
   ```
 
-  to install the compiler and standard library (installs into ~/.local/ by default)
+  to install the compiler, standard library, and runtime (installs into ~/.local/ by default)
+
+  Add the compiler executable to your `$PATH`:
+
+  ```console
+    $ export PATH="$HOME/.local/bin:$PATH"
+  ```
 
   **OR**
 

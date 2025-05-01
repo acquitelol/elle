@@ -6,7 +6,7 @@
 
 | Feature                  | Support | Notes                                                                                                        |
 | ------------------------ | ------- | ------------------------------------------------------------------------------------------------------------ |
-| Custom Allocators        | Yes     | Allocator can be changed at runtime, but must be GC or Arena by default.                                     |
+| Custom Allocators        | Yes     | The allocator can be changed at runtime, but must be GC or Arena by default.                                 |
 | Lambdas (Closures)       | Partial | Lambdas exist, but don't capture their surrounding scopes.                                                   |
 | Pattern matching         | No      | Support planned in the future.                                                                               |
 | Operator overloading     | Partial | Can overload `x[y]`, `&x[y]`, `x[y] = z` `x == y`, aswell as length and hash.                                |
@@ -17,7 +17,7 @@
 | `Maybe`/`Option`         | Yes     | Pointers can be `nil`, but an additional `Option` feature exists in the stdlib.                              |
 | Manual memory management | Yes     | Use `mem::malloc` and `mem::free` to allocate without the GC, or use `#set_allocator(HeapAllocator::new())`. |
 | Coroutines               | No      | Support planned in the future.                                                                               |
-| Rich errors              | Partial | `nil` values + enums + tuples + $panic allow for decent error handling, but no standard has ben set.         |
+| Rich errors              | Partial | `nil` values + enums + tuples + `$panic` allow for decent error handling, but no standard has been set.      |
 | Macros/metaprogramming   | Partial | Constants act as macros in a way, they will be recreated each time they're referenced.                       |
 | Modules/namespaces       | Partial | Functions and constants can be namespaces but only 1 level deep. Modules exist but do not qualify imports.   |
 | Tail call optimization   | No      | Support planned in the future.                                                                               |
