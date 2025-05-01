@@ -341,6 +341,8 @@ fn modify_type_in_node(
             *size = Box::new(new_size);
         }
         AstNode::FunctionCall(FunctionCall {
+            namespace_token,
+            name,
             parameters,
             generics: base_generics,
             ..
@@ -353,6 +355,27 @@ fn modify_type_in_node(
 
             for generic in base_generics {
                 *generic = modify_type(generic, generics, known_types, struct_pool, tree);
+            }
+
+            let namespace_name = namespace_token.value.get_string_inner().unwrap();
+
+            if generics.contains(&namespace_name) {
+                let id = modify_type(
+                    &namespace_token
+                        .value
+                        .to_type_string(false, false, None)
+                        .unwrap(),
+                    generics,
+                    known_types,
+                    struct_pool,
+                    tree,
+                )
+                .strict_id();
+
+                namespace_token.value = ValueKind::String(id.clone());
+                let parts = name.splitn(2, '.').collect::<Vec<_>>();
+                assert!(parts[0] == namespace_name);
+                *name = format!("{id}.{}", parts[1]);
             }
         }
         AstNode::BinaryOperation(BinaryOperation { left, right, .. }) => {
