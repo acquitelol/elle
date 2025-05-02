@@ -32,6 +32,7 @@ pub static GENERIC_IDENTIFIER: &str = "0"; // Start of a generic
 pub static GENERIC_END: &str = "1"; // Allowing for nested generic structs
 pub static GENERIC_POINTER: &str = "2"; // Pointer to another type
 pub static GENERIC_UNKNOWN: &str = "3"; // Unknown type T
+pub static GENERIC_ENUM: &str = "99"; // Enum with another repr type
 
 // Extensions
 pub static SHORT_EXTENSION: &str = ".le";

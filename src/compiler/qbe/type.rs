@@ -8,7 +8,8 @@ use crate::{
         enums::{Argument, Primitive, StructSource},
         parser::StructPool,
     },
-    GENERIC_END, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN, POINTER_ID, VOID_POINTER_ID,
+    GENERIC_END, GENERIC_ENUM, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN, POINTER_ID,
+    VOID_POINTER_ID,
 };
 
 use super::{function::Function, module::Module};
@@ -199,7 +200,6 @@ impl Type {
                 Type::Char => 15,
                 Type::Void => 16,
                 Type::Null => 17,
-                Type::Enum(_, inner) => ty_to_num(Option::as_ref(inner).unwrap_or(&Type::Word)),
                 Type::Function(_) => 18,
                 _ => 100, // Invalid
             }
@@ -209,6 +209,13 @@ impl Type {
 
         match self {
             Self::Pointer(inner) => format!("{GENERIC_POINTER}.{}", inner.to_internal_id()),
+            Self::Enum(name, inner) => format!(
+                "{GENERIC_ENUM}.{}.{}",
+                name,
+                Option::as_ref(inner)
+                    .unwrap_or(&Type::Word)
+                    .to_internal_id()
+            ),
             Self::Struct(name) => name.clone(),
             Self::Unknown(name) => format!("{GENERIC_UNKNOWN}.{name}"),
             _ => num.to_string(),
@@ -224,6 +231,7 @@ impl Type {
                 GENERIC_END,
                 GENERIC_POINTER,
                 GENERIC_UNKNOWN,
+                GENERIC_ENUM,
             ]
             .contains(&id)
             {
@@ -287,6 +295,10 @@ impl Type {
 
                             res
                         })
+                    } else if part == GENERIC_ENUM {
+                        let name = parts.next().unwrap();
+                        let ty = id_to_ty(parts.next().unwrap());
+                        Some(Type::Enum(name.to_string(), Box::new(Some(ty))))
                     } else if part == GENERIC_UNKNOWN {
                         Some(Type::Unknown(parts.next().unwrap().to_string()))
                     } else if part == GENERIC_END {
