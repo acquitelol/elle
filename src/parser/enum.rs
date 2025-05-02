@@ -266,11 +266,18 @@ impl<'a> Enum<'a> {
                 format: false,
                 unaliased: None,
                 generics: vec![],
-                arguments: vec![Argument {
-                    name: "self".into(),
-                    r#type: Type::Enum(name.clone(), Box::new(ty.clone())),
-                    no_fmt: false,
-                }],
+                arguments: vec![
+                    Argument {
+                        name: "self".into(),
+                        r#type: Type::Enum(name.clone(), Box::new(ty.clone())),
+                        no_fmt: false,
+                    },
+                    Argument {
+                        name: "nesting".into(),
+                        r#type: Type::Word,
+                        no_fmt: false,
+                    },
+                ],
                 r#return: None,
                 body: variants
                     .iter()
