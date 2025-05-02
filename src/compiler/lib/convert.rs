@@ -74,8 +74,11 @@ pub fn convert_to_type(
     }
 
     if first.is_enum() || second.is_enum() {
-        if (first.is_enum() && second == first.get_enum_repr().unwrap())
-            || (second.is_enum() && first == second.get_enum_repr().unwrap())
+        if (first.is_enum() && second == first.get_enum_repr().unwrap_or(Type::Word))
+            || (second.is_enum() && first == second.get_enum_repr().unwrap_or(Type::Word))
+            || (first.is_enum()
+                && second.is_enum()
+                && first.get_enum_inner().unwrap() == second.get_enum_inner().unwrap())
             || first == second
             || explicit
         {

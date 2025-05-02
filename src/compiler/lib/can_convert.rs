@@ -41,9 +41,11 @@ pub fn can_convert_to_type(gen: &Compiler, first: &Type, second: &Type, explicit
         first.is_enum() || second.is_enum()
     } else {
         // Foo(T) -> T
-        (first.is_enum() && first.get_enum_repr().unwrap() == *second)
+        (first.is_enum() && first.get_enum_repr().unwrap_or(Type::Word) == *second)
             // T -> Foo(T)
-            || (second.is_enum() && second.get_enum_repr().unwrap() == *first)
+            || (second.is_enum() && second.get_enum_repr().unwrap_or(Type::Word) == *first)
+            // Foo(???) -> Foo(???)
+            || (first.is_enum() && second.is_enum() && first.get_enum_inner().unwrap() == second.get_enum_inner().unwrap())
             // Foo(T) -> Foo(T)
             || first == second
     };
