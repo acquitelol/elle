@@ -23,7 +23,7 @@ struct State {
 
 struct Button {
     string kind;
-    void *cb;
+    fn *cb;
 };
 
 fn Button::new(string kind, fn *cb) {

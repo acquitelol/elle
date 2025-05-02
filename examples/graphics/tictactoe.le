@@ -1,0 +1,188 @@
+use std/collections/hashmap;
+use std/prelude;
+use std/raylib;
+
+const SCALING_FACTOR = 2;
+const SCREEN_WIDTH = 150 * SCALING_FACTOR;
+const SCREEN_HEIGHT = 185 * SCALING_FACTOR;
+const PADDING = 6 * SCALING_FACTOR;
+
+const TEXT_SIZE = 20 * SCALING_FACTOR;
+const LINE_THICKNESS = 2 * SCALING_FACTOR;
+
+const BUTTON_UNHOVER = rl::get_color(0x777777FF);
+const BUTTON_HOVER = rl::get_color(0x555555FF);
+const BACKGROUND = rl::get_color(0x181818FF);
+
+enum StateKind {
+    Empty,
+    Draw,
+    X,
+    O
+};
+
+fn StateKind::__fmt__(StateKind self, i32 nesting) {
+    if self == StateKind::X { return "X"; }
+    if self == StateKind::O { return "O"; }
+    return "";
+}
+
+struct State {
+    StateKind[] board;
+    StateKind current_player;
+    StateKind winner;
+};
+
+struct Button {
+    i32 index;
+    fn *cb;
+};
+
+fn Button::new(i32 index, fn *cb) {
+    self := #alloc(Button);
+    self.index = index;
+    self.cb = cb;
+    return self;
+}
+
+fn Button::draw(Button *self, State *state, string text, i32 font_size, i32 line_thickness, Rectangle button) {
+    scale_ratio := 40 * SCALING_FACTOR;
+
+    hovering := rl::elle_check_collision_point_rec(rl::get_mouse_position(), button);
+    button_color := hovering ? BUTTON_HOVER : BUTTON_UNHOVER;
+
+    if hovering && rl::is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
+        fn *cb = self.cb;
+        cb(self, state);
+    }
+
+    rl::draw_rectangle_rec(button, button_color);
+    rl::draw_rectangle_lines_ex(button, line_thickness, BLACK);
+
+    text_width := rl::measure_text(text, font_size);
+    text_x := button.x + (button.width - text_width) / 2;
+    text_y := button.y + (button.height - font_size) / 2;
+
+    rl::draw_text(text, text_x, text_y, font_size, WHITE);
+}
+
+fn Button::draw_contextual(Button *self, State *state, (i32, i32) offset) {
+    scale_ratio := 40 * SCALING_FACTOR;
+
+    button := Rectangle {
+        x = PADDING * 1.5 + (scale_ratio + PADDING) * offset.x,
+        y = PADDING * 1.5 + (scale_ratio + PADDING) * offset.y,
+        width = scale_ratio,
+        height = scale_ratio
+    };
+
+    text := "{}".format(state.board[self.index]);
+    self.draw(state, text, TEXT_SIZE, LINE_THICKNESS, button);
+}
+
+fn State::check_winner(State *self) {
+    wins := [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],  // rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],  // cols
+        [0, 4, 8], [2, 4, 6]              // diags
+    ];
+
+    for line in wins {
+        a := line[0];
+        b := line[1];
+        c := line[2];
+
+        if self.board[a] != StateKind::Empty
+            && self.board[a] == self.board[b]
+            && self.board[a] == self.board[c]
+        {
+            self.winner = self.board[a];
+            return;
+        }
+    }
+
+    if self.board.every(fn(StateKind x) x != StateKind::Empty)
+        && self.winner == StateKind::Empty
+    {
+        self.winner = StateKind::Draw;
+    }
+}
+
+fn State::make_move(State *self, Button *button) {
+    if self.board[button.index] != StateKind::Empty || self.winner != StateKind::Empty {
+        return;
+    }
+
+    self.board[button.index] = self.current_player;
+    self.check_winner();
+
+    if self.winner == StateKind::Empty {
+        self.current_player = self.current_player == StateKind::X ? StateKind::O : StateKind::X;
+    }
+}
+
+fn State::draw_board(State *self) {
+    for i in 0..9 {
+        btn := Button::new(i, fn(Button *self, State *state) state.make_move(self));
+        btn.draw_contextual(self, $(i % 3, i / 3));
+    }
+
+    if self.winner != StateKind::Empty {
+        winner_text := self.winner == StateKind::Draw ? "Draw!" : "{} wins!".format(self.winner);
+
+        rl::draw_text(
+            winner_text,
+            PADDING * 2,
+            SCREEN_HEIGHT - TEXT_SIZE - PADDING,
+            TEXT_SIZE, WHITE
+        );
+
+        new_game := Button::new(-1, fn(Button *self, State *state) {
+            state.board.fill(StateKind::Empty);
+            state.current_player = StateKind::X;
+            state.winner = StateKind::Empty;
+        });
+
+        new_game_width := 40 * SCALING_FACTOR;
+        new_game_height := 20 * SCALING_FACTOR;
+
+        new_game.draw(
+            self, "Reset", TEXT_SIZE / 2, LINE_THICKNESS / 2,
+            Rectangle {
+                width = new_game_width,
+                height = new_game_height,
+                x = SCREEN_WIDTH - new_game_width - PADDING,
+                y = SCREEN_HEIGHT - new_game_height - PADDING
+            }
+        );
+    } else {
+        turn_text := "{}'s turn".format(self.current_player);
+
+        rl::draw_text(
+            turn_text,
+            (SCREEN_WIDTH - rl::measure_text(turn_text, TEXT_SIZE)) / 2,
+            SCREEN_HEIGHT - TEXT_SIZE - PADDING,
+            TEXT_SIZE, WHITE
+        );
+    }
+}
+
+fn main() {
+    rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Tic Tac Toe");
+    defer rl::close_window();
+
+    state := State {
+        board = Array::with_capacity<StateKind>(9).fill(StateKind::Empty),
+        current_player = StateKind::X,
+        winner = StateKind::Empty
+    };
+
+    rl::set_target_fps(60);
+
+    while !rl::window_should_close() {
+        rl::begin_drawing();
+            rl::clear_background(BACKGROUND);
+            state.draw_board();
+        rl::end_drawing();
+    }
+}
