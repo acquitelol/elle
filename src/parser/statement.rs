@@ -2164,7 +2164,6 @@ impl<'a> Statement<'a> {
         }
 
         let value = Box::new(Statement::new(tokens, 0, self.body, self.shared).parse().0);
-        self.advance();
 
         self.expect_tokens(&[TokenKind::RightParenthesis]);
         set_end!(location, self);
@@ -3525,6 +3524,7 @@ impl<'a> Statement<'a> {
     fn yield_tokens_for_unary(&mut self) -> Vec<Token> {
         let mut nesting = 0;
         let mut brace_nesting = 0;
+        let mut block_nesting = 0;
 
         if self.is_eof() && self.current_token().kind == TokenKind::Address {
             elle_error!(self
@@ -3565,6 +3565,21 @@ impl<'a> Statement<'a> {
                 }
             }
 
+            if prev_token.kind == TokenKind::LeftBlockBrace {
+                block_nesting += 1;
+            }
+
+            if prev_token.kind == TokenKind::RightBlockBrace {
+                if block_nesting > 0 {
+                    block_nesting -= 1;
+                } else {
+                    elle_error!(prev_token
+                        .location
+                        .borrow()
+                        .error("Unbalanced block braces found parsing this unary expression"))
+                }
+            }
+
             if token.kind.is_arithmetic() {
                 if token.kind == TokenKind::LessThan {
                     next_token.is_none_or(|token| {
@@ -3573,14 +3588,16 @@ impl<'a> Statement<'a> {
                 } else if token.kind == TokenKind::GreaterThan {
                     !is_type!(prev_token, self.shared, self.shared.generics, false)
                 } else {
-                    nesting == 0 && brace_nesting == 0
+                    nesting == 0 && brace_nesting == 0 && block_nesting == 0
                 }
             } else {
                 (token.kind.is_declarative()
                     || token.kind == TokenKind::Semicolon
                     || token.kind == TokenKind::Equal
                     || token.kind == TokenKind::Question)
+                    && nesting == 0
                     && brace_nesting == 0
+                    && block_nesting == 0
             }
         })
     }
