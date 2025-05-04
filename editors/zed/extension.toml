@@ -1,6 +1,6 @@
 id = "elle"
 name = "Elle"
-version = "0.3.1"
+version = "0.3.2"
 schema_version = 1
 authors = ["Rosie <acquitefx@gmail.com>", "tnixc <tnixxc@gmail.com>"]
 description = "Elle support."
@@ -12,4 +12,4 @@ languages = ["Elle"]
 
 [grammars.elle]
 repository = "https://github.com/acquitelol/tree-sitter-elle/"
-rev = "4557fd6c7b6bc196c2afc8578d3abc0091c7e20a"
+rev = "49090501d367618276a92ae35a1fb7eb35b1f566"
