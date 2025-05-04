@@ -830,9 +830,14 @@ impl<'a> Statement<'a> {
         while self.current_token().kind != TokenKind::RightBlockBrace && !self.is_eof() {
             if dynamic
                 && (self.is_type_contextually(0)
+                    // namespaced call
                     && !self
                         .next_token()
-                        .is_some_and(|token| token.kind == TokenKind::DoubleColon))
+                        .is_some_and(|token| token.kind == TokenKind::DoubleColon)
+                    // struct literal
+                    && !self
+                        .next_token()
+                        .is_some_and(|token| token.kind == TokenKind::LeftCurlyBrace))
             {
                 inner_ty = Some(self.get_type(Some(self.shared.generics)));
                 self.advance();
