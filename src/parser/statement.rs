@@ -2696,7 +2696,17 @@ impl<'a> Statement<'a> {
                     );
                 }
                 TokenKind::LeftBlockBrace => {
-                    expression = self.parse_offset_store(Some((position, expression, location)));
+                    expression = self.parse_offset_store(Some((
+                        position,
+                        AstNode::FieldAccess(FieldAccess {
+                            left: left.clone(),
+                            right: right.clone(),
+                            value: value.clone(),
+                            location: location.clone(),
+                            addr_only: false, // dont take the address because if required it will now be taken here instead
+                        }),
+                        location,
+                    )));
                 }
                 other if other.is_declarative() => {
                     value = Some(Box::new(self.parse_declarative_node(expression)));
