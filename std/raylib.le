@@ -1456,7 +1456,7 @@ fn LoadMaterials(string fileName, i32 *materialCount)        @alias(rl::load_mat
 fn LoadMaterialDefault()                                     @alias(rl::load_material_default) -> Material;         // Load default material (Supports: DIFFUSE, SPECULAR, NORMAL maps)
 fn IsMaterialReady(Material material)                        @alias(rl::is_material_ready)     -> bool;             // Check if a material is ready
 fn UnloadMaterial(Material material)                         @alias(rl::unload_material);                           // Unload material from GPU memory (VRAM)
-fn SetMaterialTexture(Material *material, i32 mapType, Texture texture) @alias(rl::set_material_texture);         // Set texture for a material map type (MATERIAL_MAP_DIFFUSE, MATERIAL_MAP_SPECULAR...)
+fn SetMaterialTexture(Material *material, i32 mapType, Texture texture) @alias(rl::set_material_texture);           // Set texture for a material map type (MATERIAL_MAP_DIFFUSE, MATERIAL_MAP_SPECULAR...)
 fn SetModelMeshMaterial(Model *model, i32 meshId, i32 materialId)         @alias(rl::set_model_mesh_material);      // Set material for a mesh
 
 // Model animations loading/unloading functions

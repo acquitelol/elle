@@ -27,6 +27,7 @@ fn Vector2::scale(Vector2 self, f32 scalar) -> Vector2;
 fn Vector2::normalize(Vector2 self) -> Vector2;
 fn Vector2::rotate(Vector2 self, f32 angle) -> Vector2;
 fn Vector2::angle(Vector2 self, Vector2 v2) -> f32;
+fn Vector2::new(f32 x, f32 y) @alias(Vector2::xy) -> Vector2;
 
 fn Vector3::zero() -> Vector3;
 fn Vector3::clone(Vector3 self) -> Vector3;
@@ -42,3 +43,4 @@ fn Vector3::scale(Vector3 self, f32 scalar) -> Vector3;
 fn Vector3::normalize(Vector3 self) -> Vector3;
 fn Vector3::rotate(Vector3 self, Vector3 axis, f32 angle) -> Vector3;
 fn Vector3::angle(Vector3 self, Vector3 v2) -> f32;
+fn Vector3::new(f32 x, f32 y, f32 z) @alias(Vector3::xyz) -> Vector3;
