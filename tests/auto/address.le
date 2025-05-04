@@ -1,0 +1,134 @@
+use std/prelude;
+
+struct Foo {
+    i32 x;
+    i32[] y;
+};
+
+// Typical address of a variable
+fn `normal.addr`() {
+    x := 5;
+    x_addr := &x;
+    *x_addr *= 2;
+    $assert(x == 10, nil);
+}
+
+// Dereferencing right after taking the address
+fn `inline.deref.addr`() {
+    x := 5;
+    *(&x) += 1;
+    $assert(x == 6, nil);
+}
+
+// Taking the address of any expression should allocate a new variable and put it there
+fn `literal.addr`() {
+    x := &123;
+    $assert(*x == 123, nil);
+
+    xs := &[1, 2, 3];
+    $assert((*xs).map<i32>(fn(i32 x) x * x) == [1, 4, 9], nil);
+}
+
+// Taking the address of an index operation like this should
+// NOT dereference or should call `__load_ref__` if exists
+fn `index.addr`() {
+    xs := [1, 2, 3];
+    $assert(xs[1] == 2, nil);
+
+    snd := &xs[1];
+    *snd *= -1;
+    $assert(xs[1] == -2, nil);
+
+    buf := #[1, 2, 3, 4, 5, 6];
+    tail := &buf[#len(buf) - 1];
+    *tail += 1;
+
+    $assert(buf[#len(buf) - 1] == 7, nil);
+}
+
+// Taking the address of a field in a struct should
+// not dereference that field
+fn `field.addr`() {
+    foo := Foo { x = 42, y = [1, 2, 3] };
+    foo_x_addr := &foo.x;
+    *foo_x_addr = 39;
+    $assert(foo.x == 39, nil);
+}
+
+// Taking the address of a collection that is a field of
+// a struct should NOT take the address of the field
+fn `field.index.addr`() {
+    foo := Foo { x = 42, y = [1, 2, 3] };
+    snd := &foo.y[1];
+    *snd += 100;
+    $assert(foo.y[1] == 102, nil);
+}
+
+// Owned foreach loops should not affect the values
+// unless the array holds pointers
+fn `owned.foreach`() {
+    xs := [1, 2, 3];
+
+    for x in xs {
+        x *= 5;
+        // Does mutate local copy of x
+        $assert(x == xs[#i(x)] * 5, nil);
+    }
+
+    // Does NOT mutate original xs
+    $assert(xs == [1, 2, 3], nil);
+}
+
+fn `addr.foreach`() {
+    xs := [1, 2, 3];
+
+    for &x in xs {
+        *x *= 5;
+        // This x pointer should be identical to taking the address
+        $assert(x == &xs[#i(x)], nil);
+    }
+
+    // Does mutate original xs
+    $assert(xs == [5, 10, 15], nil);
+}
+
+fn `field.owned.foreach`() {
+    foo := Foo { x = 42, y = [1, 2, 3] };
+
+    for x in foo.y {
+        x *= 5;
+        // Does mutate local copy of x
+        $assert(x == foo.y[#i(x)] * 5, nil);
+    }
+
+    // Does NOT mutate original xs
+    $assert(foo.y == [1, 2, 3], nil);
+}
+
+fn `field.addr.foreach`() {
+    foo := Foo { x = 42, y = [1, 2, 3] };
+
+    for &x in foo.y {
+        *x *= 5;
+        // This x pointer should be identical to taking the address
+        $assert(x == &foo.y[#i(x)], nil);
+    }
+
+    // Does mutate original xs
+    $assert(foo.y == [5, 10, 15], nil);
+}
+
+fn main() {
+    `normal.addr`();
+    `inline.deref.addr`();
+    `literal.addr`();
+    `index.addr`();
+    `field.addr`();
+    `field.index.addr`();
+    `owned.foreach`();
+    `addr.foreach`();
+    `field.owned.foreach`();
+    `field.addr.foreach`();
+
+    $println("All `address` tests have passed!".color("green").reset());
+}
