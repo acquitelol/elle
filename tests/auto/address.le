@@ -64,6 +64,42 @@ fn `field.index.addr`() {
     $assert(foo.y[1] == 102, nil);
 }
 
+// Taking the address of a field in an indexing
+// should deref the index but not the field
+fn `index.field.addr`() {
+    xs := [&Foo { x = 42, y = [] }];
+    x_addr := &xs[0].x;
+    *x_addr -= 2;
+    $assert(xs[0].x == 40, nil);
+}
+
+// Taking the address of a nested indexing should
+// deref the first index but not the last one
+fn `index.index.addr`() {
+    xs := [[1, 2, 3], [4, 5, 6]];
+    fst_of_snd := &xs[1][0];
+    *fst_of_snd *= 2;
+    $assert(xs == [[1, 2, 3], [8, 5, 6]], nil);
+}
+
+// Taking the address of a field after being indexed more
+// than once should deref the index but not the field
+fn `index.index.field.addr`() {
+    xs := [[&Foo { x = 42, y = [] }]];
+    x_addr := &xs[0][0].x;
+    *x_addr += 10;
+    $assert(xs[0][0].x == 52, nil);
+}
+
+// Taking the address of an index that is a field of another index
+// should only take the addr of the final index and deref all else
+fn `index.field.index.addr`() {
+    xs := [&Foo { x = 42, y = [1, 2, 3] }];
+    snd := &xs[0].y[1];
+    *snd *= -2;
+    $assert(xs[0].y[1] == -4, nil);
+}
+
 // Owned foreach loops should not affect the values
 // unless the array holds pointers
 fn `owned.foreach`() {
@@ -124,7 +160,11 @@ fn main() {
     `literal.addr`();
     `index.addr`();
     `field.addr`();
+    `index.field.addr`();
     `field.index.addr`();
+    `index.index.addr`();
+    `index.index.field.addr`();
+    `index.field.index.addr`();
     `owned.foreach`();
     `addr.foreach`();
     `field.owned.foreach`();
