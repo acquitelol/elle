@@ -1628,10 +1628,36 @@ impl<'a> Statement<'a> {
                     self.consumed_addr = true;
                 }
                 TokenKind::Dot => {
-                    expression = self.parse_field_access(Some((position, expression, location)));
+                    expression = self.parse_field_access(Some((
+                        position,
+                        AstNode::MemoryOperation(MemoryOperation {
+                            left: left.clone(),
+                            right: right.clone(),
+                            value: None,
+                            left_location: left_location.clone(),
+                            right_location: right_location.clone(),
+                            value_location: value_location.clone(),
+                            is_deref: false,
+                            addr_only: false,
+                        }),
+                        location,
+                    )));
                 }
                 TokenKind::LeftBlockBrace => {
-                    expression = self.parse_offset_store(Some((position, expression, location)));
+                    expression = self.parse_offset_store(Some((
+                        position,
+                        AstNode::MemoryOperation(MemoryOperation {
+                            left: left.clone(),
+                            right: right.clone(),
+                            value: None,
+                            left_location: left_location.clone(),
+                            right_location: right_location.clone(),
+                            value_location: value_location.clone(),
+                            is_deref: false,
+                            addr_only: false,
+                        }),
+                        location,
+                    )));
                 }
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
