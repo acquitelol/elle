@@ -1,0 +1,35 @@
+use std/prelude;
+use std/raylib;
+
+enum Screen {
+    WIDTH = 800,
+    HEIGHT = 600
+};
+
+fn main() {
+    rl::init_window(Screen::WIDTH, Screen::HEIGHT, "Spinning Cube");
+    defer rl::close_window();
+
+    camera := Camera3D {
+        position = Vector3::from(4.0),
+        target = Vector3::zero(),
+        up = Vector3::xyz(0, 1, 0),
+        fovy = 45,
+        projection = CameraProjection::CAMERA_PERSPECTIVE,
+    };
+
+    rl::set_target_fps(60);
+
+    while !rl::window_should_close() {
+        rl::update_camera(&camera, CameraMode::CAMERA_ORBITAL);
+
+        rl::begin_drawing();
+            rl::clear_background(#cast(Color, &0xFF181818));
+
+            rl::begin_mode_3d(camera);
+                rl::draw_cube_v(Vector3::zero(), Vector3::from(2.0), #cast(Color, &0xFFC98FFC));
+                rl::draw_cube_wires_v(Vector3::zero(), Vector3::from(2.0), WHITE);
+            rl::end_mode_3d();
+        rl::end_drawing();
+    }
+}
