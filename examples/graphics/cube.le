@@ -28,7 +28,7 @@ fn main() {
 
             rl::begin_mode_3d(camera);
                 rl::draw_cube_v(Vector3::zero(), Vector3::from(2.0), #cast(Color, &0xFFC98FFC));
-                rl::draw_cube_wires_v(Vector3::zero(), Vector3::from(2.0), WHITE);
+                rl::draw_cube_wires_v(Vector3::zero(), Vector3::from(2.0), #cast(Color, &0xFF1A1A1A));
             rl::end_mode_3d();
         rl::end_drawing();
     }
