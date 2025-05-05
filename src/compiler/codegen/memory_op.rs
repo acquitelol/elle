@@ -211,10 +211,10 @@ impl Codegen<'_> for MemoryOperation {
             return Some((inner, compiled));
         }
 
-        let res = if inner.is_struct() {
-            (inner, compiled_location)
-        } else if self.addr_only {
+        let res = if self.addr_only {
             (Type::Pointer(Box::new(inner)), compiled_location)
+        } else if inner.is_struct() {
+            (inner, compiled_location)
         } else {
             let temp = gen.new_temporary(Some("load"), true);
 
