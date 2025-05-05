@@ -36,6 +36,7 @@ pub enum Instruction {
     Truncate(Value),
     ShiftLeft(Value, Value),
     ArithmeticShiftRight(Value, Value),
+    Blit(Value, Value, u64),
     // LogicalShiftRight(Value, Value),
     #[cfg(debug_assertions)]
     Comment(String),
@@ -56,7 +57,8 @@ impl Instruction {
             | Self::Store(_, v1, v2)
             | Self::ShiftLeft(v1, v2)
             // | Self::LogicalShiftRight(v1, v2)
-            | Self::ArithmeticShiftRight(v1, v2) => {
+            | Self::ArithmeticShiftRight(v1, v2)
+            | Self::Blit(v1, v2, _) => {
                 matches!(v1, Value::Global(name) if name == global_name)
                     || matches!(v2, Value::Global(name) if name == global_name)
             }
@@ -254,6 +256,9 @@ impl fmt::Display for Instruction {
             // }
             Self::ArithmeticShiftRight(val, amount) => {
                 write!(formatter, "sar {val}, {amount}")
+            }
+            Self::Blit(src, dst, size) => {
+                write!(formatter, "blit {src}, {dst}, {size}")
             }
             #[cfg(debug_assertions)]
             Self::Comment(val) => {
