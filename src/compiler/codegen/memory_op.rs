@@ -182,7 +182,7 @@ impl Codegen<'_> for MemoryOperation {
         });
 
         if let Some(ref val) = self.value {
-            let (_, compiled) = val
+            let (val_ty, compiled) = val
                 .clone()
                 .compile(
                     gen,
@@ -202,11 +202,19 @@ impl Codegen<'_> for MemoryOperation {
                     )))
                 });
 
-            ctx.func.borrow_mut().add_instruction(Instruction::Store(
-                inner.clone(),
-                compiled_location,
-                compiled.clone(),
-            ));
+            if val_ty.is_struct() {
+                ctx.func.borrow_mut().add_instruction(Instruction::Blit(
+                    compiled.clone(),
+                    compiled_location,
+                    val_ty.size(ctx.module),
+                ));
+            } else {
+                ctx.func.borrow_mut().add_instruction(Instruction::Store(
+                    inner.clone(),
+                    compiled_location,
+                    compiled.clone(),
+                ));
+            }
 
             return Some((inner, compiled));
         }
