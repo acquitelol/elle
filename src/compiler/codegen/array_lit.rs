@@ -203,11 +203,21 @@ impl Codegen<'_> for ArrayLiteral {
                 ),
             );
 
-            ctx.func.borrow_mut().add_instruction(Instruction::Store(
-                first_type.as_ref().unwrap().clone(),
-                value_ptr,
-                value.clone(),
-            ));
+            let ty = first_type.as_ref().unwrap().clone();
+
+            if ty.is_struct() {
+                ctx.func.borrow_mut().add_instruction(Instruction::Blit(
+                    value.clone(),
+                    value_ptr,
+                    ty.size(ctx.module),
+                ));
+            } else {
+                ctx.func.borrow_mut().add_instruction(Instruction::Store(
+                    ty,
+                    value_ptr,
+                    value.clone(),
+                ));
+            }
         }
 
         Some((buf_ty, tmp))
