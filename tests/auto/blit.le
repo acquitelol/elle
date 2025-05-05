@@ -1,0 +1,30 @@
+use std/prelude;
+
+struct Foo {
+    i32 x;
+};
+
+fn main() {
+    // This test aims to ensure that storing struct copies inside of buffers does
+    // so via blit instead of storing the struct's address (previous (incorrect) behavior)
+    //
+    // There are 3 cases to test:
+    //
+    // - Dynamic arrays (have an internal buffer, almost equivalent to case 3)
+    // - Static arrays
+    // - Buffers themselves
+    //
+    // Exists since: 0.53.0
+    x := [Foo { x = 42 }]; // dynamic
+    y := #[Foo { x = 39 }]; // static
+
+    // should be blit into the internal buffer
+    $assert(x[0].x == 42, nil);
+    $assert(y[0].x == 39, nil);
+
+    Foo z[1];
+    z[0] = Foo { x = 123 }; // should be blit instead of assigned
+
+    $assert(z[0].x == 123, nil);
+    $println("All `blit assignment` tests have passed!".color("green").reset());
+}

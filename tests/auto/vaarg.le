@@ -1,0 +1,33 @@
+use std/prelude;
+
+struct Foo {
+    i32 x;
+};
+
+fn foo(ElleMeta meta, ...args) {
+    $assert(meta.arity == 4, nil);
+    $assert(args.yield(Foo).x == 39, nil);
+    $assert(args.yield(Foo).x == 137, nil);
+    $assert(args.yield(Foo).x == -2, nil);
+    $assert(args.yield(Foo *).x == 123, nil); // also pass one by ptr for good measure
+}
+
+fn main() {
+    // This test aims to ensure that variadic arguments
+    // passed to variadic functions are NOT abi types
+    //
+    // For example: passing an owned struct into a function
+    // should use the ABI `:Foo %x` UNLESS the argument
+    // being passed is one of the optional variadic ones.
+    // In this case we pass the base ABI-less `l %x`
+    //
+    // Exists since: 0.53.0
+    foo(
+        Foo { x = 39 },
+        Foo { x = 137 },
+        Foo { x = -2 },
+        &Foo { x = 123 }
+    );
+
+    $println("All `vaarg` tests have passed!".color("green").reset());
+}
