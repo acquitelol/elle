@@ -518,6 +518,12 @@ impl Codegen<'_> for FunctionCall {
                 tmp_function.arguments.len(),
                 ((Type::Null, Value::Literal("...".into())), false),
             );
+
+            // ensure structs are not passed as abi structs but rather just the pure
+            // address so that it can be reconstructed accordingly with vaarg
+            for arg in &mut params[tmp_function.arguments.len()..] {
+                arg.0 .0 = arg.0 .0.clone().into_base();
+            }
         }
 
         if !tmp_function.variadic && tmp_function.arguments.len() != params.len() {
