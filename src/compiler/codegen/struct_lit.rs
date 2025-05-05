@@ -164,18 +164,10 @@ impl Codegen<'_> for StructLiteral {
             );
 
             if ty.is_struct() {
-                ctx.func.borrow_mut().add_instruction(Instruction::Call(
-                    Value::Global("memcpy".into()),
-                    // The structs must have their pointers diminished
-                    // to just a `Long` instead of a `Struct(name)`
-                    vec![
-                        (Type::Long, offset_tmp),
-                        (Type::Long, val),
-                        (
-                            Type::Word,
-                            Value::Const(String::new(), i128::from(ty.size(ctx.module))),
-                        ),
-                    ],
+                ctx.func.borrow_mut().add_instruction(Instruction::Blit(
+                    val,
+                    offset_tmp,
+                    ty.size(ctx.module),
                 ));
             } else {
                 ctx.func
