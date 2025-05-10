@@ -1,15 +1,15 @@
 use std/io;
 use std/option;
 
-fn get_meow(i32 input) -> Option<string> * {
-    if (input == 3) {
+fn get_meow(i32 input) -> Option<string> {
+    if input == 3 {
         return Option::None();
     }
 
     return Option::Some("meow");
 }
 
-fn get_miku_number(string input) -> Option<i32> * {
+fn get_miku_number(string input) -> Option<i32> {
     if input == "mikudayo" {
         return Option::Some(39);
     }
@@ -18,14 +18,14 @@ fn get_miku_number(string input) -> Option<i32> * {
 }
 
 fn main() {
-    let a = get_meow(1);
-    let b = get_meow(3);
+    a := get_meow(1);
+    b := get_meow(3);
 
     $assert(a.unwrap_or("Fallback :3") == "meow", nil);
     $assert(b.unwrap_or("Fallback :3") == "Fallback :3", nil);
 
-    let c = get_miku_number("aaa :3");
-    let d = get_miku_number("mikudayo");
+    c := get_miku_number("aaa :3");
+    d := get_miku_number("mikudayo");
 
     $assert(c.unwrap_or(-1) == -1, nil);
     $assert(d.unwrap_or(-1) == 39, nil);

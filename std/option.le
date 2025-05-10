@@ -13,19 +13,19 @@ struct Option<T> {
     option.__value = value;
     option.__is_some = is_some;
 
-    return option;
+    return *option;
 }
 
-fn Option::Some<T>(T value) -> Option<T> * {
+fn Option::Some<T>(T value) -> Option<T> {
     return Option::new(value, true);
 }
 
-fn Option::None<T>() -> Option<T> * {
+fn Option::None<T>() -> Option<T> {
     return Option::new(#cast(T, nil), false);
 }
 
 // Returns the inner T if the option is some, otherwise aborts with a custom message
-fn Option::expect<T>(Option<T> *self, string message) -> T {
+fn Option::expect<T>(Option<T> self, string message) -> T {
     if !self.__is_some {
         io::fprintf(stderr, "%s\n", message);
         libc::abort();
@@ -35,12 +35,12 @@ fn Option::expect<T>(Option<T> *self, string message) -> T {
 }
 
 // Returns the inner T if the option is some, otherwise aborts
-fn Option::unwrap<T>(Option<T> *self) -> T {
+fn Option::unwrap<T>(Option<T> self) -> T {
     return self.expect("Called `Option::unwrap()` on a `None` value");
 }
 
 // Returns the inner T if the option is some, otherwise returns the fallback
-fn Option::unwrap_or<T>(Option<T> *self, T fallback) -> T {
+fn Option::unwrap_or<T>(Option<T> self, T fallback) -> T {
     if !self.__is_some {
         return fallback;
     }
@@ -49,16 +49,16 @@ fn Option::unwrap_or<T>(Option<T> *self, T fallback) -> T {
 }
 
 // Returns true if the option has a value inside
-fn Option::is_some<T>(Option<T> *self) {
+fn Option::is_some<T>(Option<T> self) {
     return self.__is_some;
 }
 
 // Returns true if the option has no value inside
-fn Option::is_none<T>(Option<T> *self) {
+fn Option::is_none<T>(Option<T> self) {
     return !self.is_some();
 }
 
-fn Option::resolve<T>(Option<T> *self, fn *if_some, fn *if_none) {
+fn Option::resolve<T>(Option<T> self, fn *if_some, fn *if_none) {
     if self.is_some() {
         return if_some(self.unwrap());
     }
