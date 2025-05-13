@@ -272,7 +272,7 @@ fn string::capitalize(string self) {
 fn string::split(string self, string delimiter) -> string[] {
     let parts = Array::with_capacity(10);
 
-    if delimiter.len() == 0 {
+    if self == "" || delimiter.len() == 0 {
         return parts;
     }
 
@@ -564,12 +564,18 @@ fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
                 continue;
             }
 
+            arg += 1;
+
             if c != '}' {
-                io::fprintf(__internal_stderr, "Invalid format at position '%d' (%c)\n", #i(c), c);
+                io::fprintf(__internal_stderr, "Invalid format for argument '%d' at position '%d' (%c)\n", arg, #i(c), c);
                 return "";
             }
 
-            arg += 1;
+
+            if arg >= meta.arity {
+                io::fprintf(__internal_stderr, "Failed to format argument '%d' at position '%d': Ran out of arguments (%c)\n", arg, #i(c), c);
+                libc::abort();
+            }
 
             let out = __to_string(meta.types[arg], args, wrapped);
             result.extend(out);
