@@ -54,11 +54,19 @@ impl Codegen<'_> for FieldAccess {
                 false,
             );
 
-            ctx.func.borrow_mut().add_instruction(Instruction::Store(
-                final_ty.clone(),
-                offset_tmp.clone(),
-                final_val,
-            ));
+            if final_ty.is_struct() {
+                ctx.func.borrow_mut().add_instruction(Instruction::Blit(
+                    final_val,
+                    offset_tmp.clone(),
+                    final_ty.size(ctx.module),
+                ));
+            } else {
+                ctx.func.borrow_mut().add_instruction(Instruction::Store(
+                    final_ty.clone(),
+                    offset_tmp.clone(),
+                    final_val,
+                ));
+            }
 
             return Some((final_ty, offset_tmp));
         }
