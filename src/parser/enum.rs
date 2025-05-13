@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
+    cfg_attr,
     compiler::qbe::r#type::Type,
     elle_error, enum_hover,
     lexer::enums::{Attribute, Location, MutRc, Token, TokenKind, ValueKind},
@@ -34,7 +35,7 @@ impl<'a> Enum<'a> {
         public: bool,
         should_parse: bool,
         location: MutRc<Location>,
-    ) -> Option<(Primitive, Vec<Primitive>)> {
+    ) -> Option<(Primitive, Vec<Primitive>, bool)> {
         self.parser.advance();
 
         if !should_parse {
@@ -51,6 +52,7 @@ impl<'a> Enum<'a> {
 
         let mut ty = None;
         let mut should_add_fmt_builtin = true;
+        let mut should_compile = true;
 
         if self.parser.match_token(TokenKind::Attribute, false) {
             while self.parser.current_token().kind == TokenKind::Attribute && !self.parser.is_eof()
@@ -72,6 +74,7 @@ impl<'a> Enum<'a> {
                         self.parser.expect_tokens(&[TokenKind::RightParenthesis]);
                         self.parser.advance();
                     }
+                    Attribute::Cfg => cfg_attr!(self, &mut should_compile),
                     _ => elle_error!(self.parser.current_token().location.borrow().error(format!(
                         "Unknown attribute for enum '{}'",
                         self.parser
@@ -318,10 +321,12 @@ impl<'a> Enum<'a> {
             }));
         }
 
-        self.parser
-            .enum_pool
-            .borrow_mut()
-            .insert(name.clone(), (variants.clone(), ty));
+        if should_compile {
+            self.parser
+                .enum_pool
+                .borrow_mut()
+                .insert(name.clone(), (variants.clone(), ty));
+        }
 
         enum_hover!(name_token, name, variants);
 
@@ -336,6 +341,7 @@ impl<'a> Enum<'a> {
                 location,
             }),
             builtins,
+            should_compile,
         ))
     }
 }

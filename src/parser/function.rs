@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 
 use crate::{
+    cfg_attr,
     compiler::qbe::r#type::Type,
     elle_error, is_type,
     lexer::enums::{Attribute, Location, MutRc, Token, TokenKind, ValueKind},
@@ -105,7 +106,7 @@ impl<'a> Function<'a> {
         external: bool,
         should_parse: bool,
         location: MutRc<Location>,
-    ) -> Option<Primitive> {
+    ) -> Option<(Primitive, bool)> {
         self.parser.advance();
 
         if !should_parse {
@@ -308,6 +309,7 @@ impl<'a> Function<'a> {
         let mut unaliased = None;
         let mut volatile = false;
         let mut format = false;
+        let mut should_compile = true;
 
         if self.parser.match_token(TokenKind::Attribute, false) {
             while self.parser.current_token().kind == TokenKind::Attribute {
@@ -358,6 +360,7 @@ impl<'a> Function<'a> {
                         format = true;
                         self.parser.advance();
                     }
+                    Attribute::Cfg => cfg_attr!(self, &mut should_compile),
                     _ => elle_error!(self.parser.current_token().location.borrow().error(format!(
                         "Unknown attribute for function '{}'",
                         self.parser
@@ -383,26 +386,29 @@ impl<'a> Function<'a> {
             set_end!(location, self.parser);
             self.parser.advance();
 
-            return Some(Primitive::Function(FunctionSource {
-                public,
-                variadic,
-                name_token,
-                namespace_token,
-                name,
-                external,
-                builtin: false,
-                volatile: false,
-                format,
-                unaliased,
-                generics,
-                arguments,
-                r#return,
-                body: vec![],
-                usable: true,
-                imported: false,
-                location,
-                return_location,
-            }));
+            return Some((
+                Primitive::Function(FunctionSource {
+                    public,
+                    variadic,
+                    name_token,
+                    namespace_token,
+                    name,
+                    external,
+                    builtin: false,
+                    volatile: false,
+                    format,
+                    unaliased,
+                    generics,
+                    arguments,
+                    r#return,
+                    body: vec![],
+                    usable: true,
+                    imported: false,
+                    location,
+                    return_location,
+                }),
+                should_compile,
+            ));
         }
 
         self.parser.expect_tokens(&[TokenKind::LeftCurlyBrace]);
@@ -463,25 +469,28 @@ impl<'a> Function<'a> {
         insert_deferred_statements(&mut res, &deferred, true);
         set_end!(location, self.parser);
 
-        Some(Primitive::Function(FunctionSource {
-            public,
-            variadic,
-            name,
-            name_token,
-            namespace_token,
-            external,
-            builtin: false,
-            volatile,
-            format,
-            unaliased,
-            generics,
-            arguments,
-            r#return,
-            body: res,
-            usable: true,
-            imported: false,
-            location,
-            return_location,
-        }))
+        Some((
+            Primitive::Function(FunctionSource {
+                public,
+                variadic,
+                name,
+                name_token,
+                namespace_token,
+                external,
+                builtin: false,
+                volatile,
+                format,
+                unaliased,
+                generics,
+                arguments,
+                r#return,
+                body: res,
+                usable: true,
+                imported: false,
+                location,
+                return_location,
+            }),
+            should_compile,
+        ))
     }
 }

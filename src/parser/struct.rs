@@ -1,4 +1,5 @@
 use crate::{
+    cfg_attr,
     compiler::qbe::r#type::Type,
     elle_error, hashmap,
     lexer::enums::{Attribute, Location, MutRc, Token, TokenKind, ValueKind},
@@ -29,7 +30,7 @@ impl<'a> Struct<'a> {
         namespace: bool,
         should_parse: bool,
         location: MutRc<Location>,
-    ) -> Option<(Primitive, Vec<Primitive>)> {
+    ) -> Option<(Primitive, Vec<Primitive>, bool)> {
         if !should_parse {
             if namespace {
                 while self.parser.current_token().kind != TokenKind::Semicolon
@@ -98,6 +99,7 @@ impl<'a> Struct<'a> {
                     ignore_empty: namespace,
                 }),
                 vec![],
+                true,
             ));
         }
 
@@ -122,6 +124,7 @@ impl<'a> Struct<'a> {
         }
 
         let mut should_add_fmt_builtin = true;
+        let mut should_compile = true;
 
         if self.parser.match_token(TokenKind::Attribute, false) {
             while self.parser.current_token().kind == TokenKind::Attribute && !self.parser.is_eof()
@@ -135,6 +138,7 @@ impl<'a> Struct<'a> {
                         should_add_fmt_builtin = false;
                         self.parser.advance();
                     }
+                    Attribute::Cfg => cfg_attr!(self, &mut should_compile),
                     _ => elle_error!(self.parser.current_token().location.borrow().error(format!(
                         "Unknown attribute for struct '{}'",
                         self.parser
@@ -152,6 +156,7 @@ impl<'a> Struct<'a> {
 
         let mut members = vec![];
 
+        let struct_pool = self.parser.struct_pool.borrow().to_owned();
         self.parser.struct_pool.borrow_mut().insert(
             name.clone(),
             (generics.clone(), members.clone(), location.clone()),
@@ -185,10 +190,14 @@ impl<'a> Struct<'a> {
         set_end!(location, self.parser);
         self.parser.advance();
 
-        self.parser.struct_pool.borrow_mut().insert(
-            name.clone(),
-            (generics.clone(), members.clone(), location.clone()),
-        );
+        if should_compile {
+            self.parser.struct_pool.borrow_mut().insert(
+                name.clone(),
+                (generics.clone(), members.clone(), location.clone()),
+            );
+        } else {
+            *self.parser.struct_pool.borrow_mut() = struct_pool;
+        }
 
         let mut builtins = vec![];
 
@@ -419,6 +428,7 @@ impl<'a> Struct<'a> {
                 ignore_empty: namespace,
             }),
             builtins,
+            should_compile,
         ))
     }
 }

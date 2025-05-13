@@ -769,6 +769,8 @@ pub enum Attribute {
     Format,
     // Representation of the inner type in an enum
     Repr,
+    // Only compile if the thing inside is true
+    Cfg,
 }
 
 impl Token {
@@ -789,6 +791,7 @@ impl Token {
             "nofmt" => Attribute::NoFormat,
             "fmt" => Attribute::Format,
             "repr" => Attribute::Repr,
+            "cfg" => Attribute::Cfg,
             _ => todo!("more attributes: {attribute}"),
         }
     }

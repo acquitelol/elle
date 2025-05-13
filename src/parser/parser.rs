@@ -658,7 +658,9 @@ impl Parser {
                     );
 
                     // Will only be Some(T) if do_only == &DoOnly::FunctionsAndConstants
-                    if let Some(statement) = statement {
+                    if let Some((statement, should_compile)) = statement
+                        && should_compile
+                    {
                         self.tree.borrow_mut().push(statement);
                     }
 
@@ -723,7 +725,9 @@ impl Parser {
                         location.clone(),
                     );
 
-                    if let Some((statement, mut builtins)) = res {
+                    if let Some((statement, mut builtins, should_compile)) = res
+                        && should_compile
+                    {
                         self.tree.borrow_mut().push(statement);
                         self.tree.borrow_mut().append(&mut builtins);
                     }
@@ -743,7 +747,9 @@ impl Parser {
                         location.clone(),
                     );
 
-                    if let Some((statement, mut builtins)) = res {
+                    if let Some((statement, mut builtins, should_compile)) = res
+                        && should_compile
+                    {
                         self.tree.borrow_mut().push(statement);
                         self.tree.borrow_mut().append(&mut builtins);
                         clean!();
@@ -765,7 +771,9 @@ impl Parser {
                         location.clone(),
                     );
 
-                    if let Some((statement, mut builtins)) = res {
+                    if let Some((statement, mut builtins, should_compile)) = res
+                        && should_compile
+                    {
                         self.tree.borrow_mut().push(statement);
                         self.tree.borrow_mut().append(&mut builtins);
                         clean!();

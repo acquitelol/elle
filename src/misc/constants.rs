@@ -1,10 +1,13 @@
 use crate::global;
+use std::env;
 
 // Mutable globals
 global!(STD_LIB_PATH: &str = ".local/include/elle", get_STD_LIB_PATH);
 global!(RUNTIME_PATH: &str = ".local/lib", get_RUNTIME_PATH);
 global!(BUILD_PATH: &str = "./.build/", get_BUILD_PATH);
 global!(MAIN_ID: &str = "__internal.elle.__main__", get_MAIN_ID);
+global!(TARGET: &str = env::consts::OS, _get_TARGET);
+global!(ARCH: &str = env::consts::ARCH, _get_ARCH);
 global!(POINTER_ID: &str = "__ptr__", get_POINTER_ID);
 global!(RAW_ERRORS: bool = false, get_RAW_ERRORS);
 global!(INTROSPECTION_LOCATION: (usize, usize) = (usize::MAX, usize::MAX), get_INTROSPECTION_LOCATION);

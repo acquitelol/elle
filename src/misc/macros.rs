@@ -412,3 +412,43 @@ macro_rules! advance {
         }
     };
 }
+
+#[macro_export]
+macro_rules! cfg_attr {
+    ($self:expr, $should_compile:expr) => {{
+        $self.parser.advance();
+        $self.parser.expect_tokens(&[TokenKind::LeftParenthesis]);
+        $self.parser.advance();
+
+        while $self.parser.current_token().kind != TokenKind::RightParenthesis {
+            let directive_token = $self.parser.current_token();
+            let directive = $self.parser.get_identifier();
+            $self.parser.advance();
+            $self.parser.expect_tokens(&[TokenKind::Equal]);
+            $self.parser.advance();
+            let value = $self.parser.get(&[TokenKind::StringLiteral]);
+            let result = match directive.as_str() {
+                "target" => (unsafe { $crate::misc::constants::TARGET.unwrap() }) == &value,
+                "arch" => (unsafe { $crate::misc::constants::ARCH.unwrap() }) == &value,
+                _ => elle_error!(directive_token
+                    .location
+                    .borrow()
+                    .error(format!("Unknown conditional directive `{directive}`"))),
+            };
+
+            // only disable it if not already disabled
+            if *$should_compile && !result {
+                *$should_compile = false;
+            }
+
+            $self.parser.advance();
+
+            if $self.parser.current_token().kind != TokenKind::RightParenthesis {
+                $self.parser.expect_tokens(&[TokenKind::Comma]);
+                $self.parser.advance();
+            }
+        }
+
+        $self.parser.advance();
+    }};
+}
