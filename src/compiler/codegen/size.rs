@@ -24,7 +24,7 @@ impl Codegen<'_> for Size {
             }
 
             Err(value) => {
-                let (_, val) =
+                let (ty, val) =
                     value.compile(gen, ctx).unwrap_or_else(|| {
                         elle_error!(self.location.borrow().error(
                             "Unexpected error when trying to compile the size of an expression",
@@ -32,27 +32,27 @@ impl Codegen<'_> for Size {
                     });
 
                 let size = gen.new_temporary(Some("size"), true);
-                let ty = Type::UnsignedLong;
+                let res_ty = Type::UnsignedLong;
 
                 if ty.is_pointer()
                     && let Some((_, buf_val)) = gen.buf_metadata.get(&val)
                 {
                     ctx.func.borrow_mut().assign_instruction(
                         &size,
-                        &ty,
+                        &res_ty,
                         Instruction::Copy(buf_val.clone()),
                     );
 
-                    return Some((ty, size));
+                    return Some((res_ty, size));
                 }
 
                 ctx.func.borrow_mut().assign_instruction(
                     &size,
-                    &ty,
+                    &res_ty,
                     Instruction::Copy(Value::Const(String::new(), i128::from(ty.size(ctx.module)))),
                 );
 
-                Some((ty, size))
+                Some((res_ty, size))
             }
         }
     }
