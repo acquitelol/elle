@@ -452,3 +452,23 @@ macro_rules! cfg_attr {
         $self.parser.advance();
     }};
 }
+
+#[macro_export]
+macro_rules! os_arch_to_qbe_target {
+    () => {
+        match unsafe { $crate::misc::constants::ARCH.unwrap() } {
+            "x86_64" => match unsafe { $crate::misc::constants::TARGET.unwrap() } {
+                "macos" => "amd64_apple",
+                "linux" => "amd64_sysv",
+                other => panic!("Invalid target {other}"),
+            },
+            "aarch64" => match unsafe { $crate::misc::constants::TARGET.unwrap() } {
+                "macos" => "arm64_apple",
+                "linux" => "arm64",
+                other => panic!("Invalid target {other}"),
+            },
+            "riscv64" => "rv64",
+            other => panic!("Invalid arch {other}"),
+        }
+    };
+}

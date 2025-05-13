@@ -2,7 +2,7 @@ use std::{fs, path::Path, process::Command};
 
 use crate::{
     misc::{colors::*, constants::*},
-    EmitKind,
+    os_arch_to_qbe_target, EmitKind,
 };
 
 pub fn build(
@@ -20,7 +20,13 @@ pub fn build(
     let path_string = path.to_str().unwrap().to_string();
 
     let result = Command::new(qbe_path)
-        .args(["-o", &path_string, path_to_qbe_dist])
+        .args([
+            "-t",
+            os_arch_to_qbe_target!(),
+            "-o",
+            &path_string,
+            path_to_qbe_dist,
+        ])
         .output()
         .unwrap_or_else(|err| panic!("{}Failed to execute QBE: {err}{}", get_RED!(), get_RESET!()));
 
