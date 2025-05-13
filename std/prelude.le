@@ -3,6 +3,7 @@ use std/collections/tuple;
 use std/collections/array;
 use std/limits;
 use std/string;
+use std/types;
 use std/cast;
 use std/time;
 use std/core;

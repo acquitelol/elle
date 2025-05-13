@@ -1,0 +1,134 @@
+use std/io;
+global pub;
+
+struct Result<T, E> @nofmt {
+    bool __is_ok;
+    T __value;
+    E __error;
+};
+
+fn Result::__fmt__<T, E>(Result<T, E> self, i32 nesting) {
+    if self.is_ok() {
+        return "Ok({})".format(self.unwrap());
+    }
+
+    return "Err({})".format(self.__error);
+}
+
+fn Result::__equals__<T, E>(Result<T, E> self, Result<T, E> other) {
+    if self.__is_ok != other.__is_ok {
+        // Ok(x) == Err(y)
+        return false;
+    }
+
+    if self.__is_ok {
+        // Ok(x) == Ok(y)
+        return self.__value == other.__value;
+    } else {
+        // Err(x) == Err(y)
+        return self.__error == other.__error;
+    }
+}
+
+fn Result::Ok<T, E>(T value) -> Result<T, E> {
+    self := #alloc(Result<T, E>);
+    self.__is_ok = true;
+    self.__value = value;
+    return *self;
+}
+
+fn Result::Err<T, E>(E error) -> Result<T, E> {
+    self := #alloc(Result<T, E>);
+    self.__is_ok = false;
+    self.__error = error;
+    return *self;
+}
+
+!external fn __internal_result_throw<T, E>(Result<T, E> self, string message, ElleMeta meta) {
+    $eprintf("Function {} panicked at {}:{}:{}:\n{}{}{}",
+        meta.caller, meta.file, meta.line, meta.column,
+        message, message ? ": " : "", self.__error
+    );
+
+    libc::abort();
+}
+
+/// Returns the inner T if the result is ok, otherwise aborts with a custom message
+fn Result::expect<T, E>(ElleMeta meta, Result<T, E> self, string message) -> T {
+    if !self.__is_ok {
+        __internal_result_throw(self, message, meta);
+    }
+
+    return self.__value;
+}
+
+/// Returns the inner T if the result is ok, otherwise aborts
+fn Result::unwrap<T, E>(ElleMeta meta, Result<T, E> self) -> T {
+    if !self.__is_ok {
+        __internal_result_throw(self, "Called `Result::unwrap()` on a `Err()` value", meta);
+    }
+
+    return self.__value;
+}
+
+/// Returns the inner T if the result is ok, otherwise returns the fallback
+fn Result::unwrap_or<T, E>(Result<T, E> self, T fallback) -> T {
+    if !self.__is_ok {
+        return fallback;
+    }
+
+    return self.__value;
+}
+
+/// Returns true if the result has a value inside
+fn Result::is_ok<T, E>(Result<T, E> self) {
+    return self.__is_ok;
+}
+
+/// Returns true if the result has no value inside
+fn Result::is_err<T, E>(Result<T, E> self) {
+    return !self.is_ok();
+}
+
+fn Result::resolve<T, E>(Result<T, E> self, fn *if_some, fn *if_none) {
+    if self.is_ok() {
+        return if_some(self.unwrap());
+    }
+
+    return if_none();
+}
+
+fn Result::resolve_to<Out, T, E>(Result<T, E> self, fn *if_some, fn *if_none) {
+    if self.is_ok() {
+        return #cast(Out, if_some(self.unwrap()));
+    }
+
+    return #cast(Out, if_none());
+}
+
+// Result -> Nilable pointer (allows for `while x := y()`)
+fn Result::to_nilable<T, E>(Result<T, E> self) {
+    if self.is_ok() {
+        res := #alloc(T);
+        *res = self.unwrap();
+        return res;
+    }
+
+    return nil;
+}
+
+fn Result::is_ok_and<T, E>(Result<T, E> self, fn *cb) {
+    if self.is_ok() {
+        return #cast(bool, cb(self.__value));
+    }
+
+    return false;
+}
+
+fn Result::is_err_and<T, E>(Result<T, E> self, fn *cb) {
+    if self.is_ok() {
+        return false;
+    }
+
+    return #cast(bool, cb(self.__error));
+}
