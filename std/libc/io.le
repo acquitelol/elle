@@ -9,7 +9,15 @@ const FILE *stdin = __internal_stdin();
 const FILE *stdout = __internal_stdout();
 const FILE *stderr = __internal_stderr();
 
-const errno = *__error();
+!pub fn __internal_get_errno() @cfg(target = "macos") {
+    return __error();
+}
+
+!pub fn __internal_get_errno() @cfg(target = "linux") {
+    return __errno_location();
+}
+
+const errno = *__internal_get_errno();
 fn os_get_last_error() -> string {
     return strerror(errno);
 }

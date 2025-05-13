@@ -40,3 +40,4 @@ fn remove(string path) @alias(io::remove) -> i32;
 fn perror(string s);
 fn strerror(i32 errno) -> string;
 fn __error() -> i32 *;
+fn __errno_location() -> i32 *;

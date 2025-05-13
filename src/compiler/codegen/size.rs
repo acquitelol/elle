@@ -11,7 +11,7 @@ impl Codegen<'_> for Size {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         match self.value {
             Ok(ty) => {
-                let tmp_ty = Type::Long;
+                let tmp_ty = Type::UnsignedLong;
                 let temp = gen.new_temporary(Some("size"), true);
 
                 ctx.func.borrow_mut().assign_instruction(

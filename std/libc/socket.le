@@ -57,7 +57,7 @@ struct sockaddr {
 
 fn socket(AddressFamily domain, SocketType ty, i32 protocol) -> i32;
 fn htons(u16 host) -> u16;
-fn bind(i32 fd, sockaddr *addr, u64 len) -> i32;
+fn bind(i32 fd, sockaddr *addr, u32 addrlen) -> i32;
 fn listen(i32 fd, i32 backlog) -> i32;
 fn connect(i32 sockfd, sockaddr *addr, u32 addrlen) -> i32;
 fn accept(i32 sockfd, sockaddr *addr, u32 *addrlen) -> i32;
