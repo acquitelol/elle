@@ -57,24 +57,9 @@ impl fmt::Display for TypeDef {
             self.items
                 .iter()
                 .map(|(ty, count)| if *count > 1 {
-                    format!(
-                        "{} {}",
-                        if ty.is_struct() {
-                            ty.clone()
-                        } else {
-                            ty.clone().into_base()
-                        },
-                        count
-                    )
+                    format!("{} {}", ty.clone().into_signed(), count)
                 } else {
-                    format!(
-                        "{}",
-                        if ty.is_struct() {
-                            ty.clone()
-                        } else {
-                            ty.clone().into_base()
-                        }
-                    )
+                    format!("{}", ty.clone().into_signed())
                 })
                 .collect::<Vec<String>>()
                 .join(", "),
