@@ -16,10 +16,11 @@ impl Codegen<'_> for LogicalNot {
         });
 
         let temp = gen.new_temporary(Some("not"), true);
+        let return_ty = Type::Boolean;
 
         ctx.func.borrow_mut().assign_instruction(
             &temp,
-            &Type::Boolean,
+            &return_ty,
             Instruction::Compare(
                 Type::Boolean,
                 Comparison::Equal,
@@ -38,6 +39,6 @@ impl Codegen<'_> for LogicalNot {
             ),
         );
 
-        Some((ty, temp))
+        Some((return_ty, temp))
     }
 }
