@@ -391,7 +391,7 @@ impl fmt::Display for ValueKind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Position {
     pub row: usize,
     pub column: usize,
@@ -412,10 +412,10 @@ pub struct Location {
     // so we can report the import location instead
     // of the real location for errors that weren't
     // in the current file
-    pub alt_start: Rc<Position>,
-    pub alt_end: Rc<Position>,
-    pub start: Rc<Position>,
-    pub end: Rc<Position>,
+    pub alt_start: Position,
+    pub alt_end: Position,
+    pub start: Position,
+    pub end: Position,
     pub ctx: Rc<str>,
     pub above: Option<Rc<str>>,
     pub extra_info: Rc<str>,
@@ -429,7 +429,7 @@ impl Location {
     }
 
     pub fn contains(&self, pos: &Position) -> bool {
-        *self.start <= *pos && *pos <= *self.end
+        self.start <= *pos && *pos <= self.end
     }
 
     pub fn display(&self, is_warning: bool) -> String {
@@ -701,10 +701,10 @@ impl Location {
     pub fn default(file: String) -> Self {
         Self {
             file: Rc::from(file),
-            alt_start: Rc::new(Position { row: 0, column: 0 }),
-            alt_end: Rc::new(Position { row: 0, column: 1 }),
-            start: Rc::new(Position { row: 0, column: 0 }),
-            end: Rc::new(Position { row: 0, column: 1 }),
+            alt_start: Position { row: 0, column: 0 },
+            alt_end: Position { row: 0, column: 1 },
+            start: Position { row: 0, column: 0 },
+            end: Position { row: 0, column: 1 },
             ctx: Rc::from("_"),
             above: None,
             extra_info: Rc::from(""),
@@ -714,10 +714,10 @@ impl Location {
     pub fn base() -> Self {
         Self {
             file: Rc::from("_"),
-            alt_start: Rc::new(Position { row: 0, column: 0 }),
-            alt_end: Rc::new(Position { row: 0, column: 1 }),
-            start: Rc::new(Position { row: 0, column: 0 }),
-            end: Rc::new(Position { row: 0, column: 1 }),
+            alt_start: Position { row: 0, column: 0 },
+            alt_end: Position { row: 0, column: 1 },
+            start: Position { row: 0, column: 0 },
+            end: Position { row: 0, column: 1 },
             ctx: Rc::from("_"),
             above: None,
             extra_info: Rc::from(""),

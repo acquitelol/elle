@@ -520,16 +520,16 @@ impl Lexer<'_> {
     fn get_location(&self, start_row: usize, start_col: usize) -> Location {
         Location {
             file: Rc::from(self.file.clone()),
-            alt_start: Rc::new(Position { row: 0, column: 0 }),
-            alt_end: Rc::new(Position { row: 0, column: 1 }),
-            start: Rc::new(Position {
+            alt_start: Position { row: 0, column: 0 },
+            alt_end: Position { row: 0, column: 1 },
+            start: Position {
                 row: start_row,
                 column: start_col,
-            }),
-            end: Rc::new(Position {
+            },
+            end: Position {
                 row: self.row,
                 column: self.position - self.bol,
-            }),
+            },
             ctx: Rc::from(self.get_line(self.row).unwrap_or("")),
             above: if self.row == 0 {
                 None
@@ -828,6 +828,7 @@ impl Lexer<'_> {
                 'v' => '\x0B',
                 '0' => '\0',
                 '\'' => '\'',
+                '\\' => '\\',
                 _ => elle_error!(self
                     .get_location(start_row, start_col)
                     .error(format!("Invalid escape sequence: '{character}'"))),
