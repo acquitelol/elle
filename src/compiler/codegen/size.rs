@@ -24,7 +24,7 @@ impl Codegen<'_> for Size {
             }
 
             Err(value) => {
-                let (ty, val) =
+                let (_, val) =
                     value.compile(gen, ctx).unwrap_or_else(|| {
                         elle_error!(self.location.borrow().error(
                             "Unexpected error when trying to compile the size of an expression",
@@ -32,52 +32,27 @@ impl Codegen<'_> for Size {
                     });
 
                 let size = gen.new_temporary(Some("size"), true);
+                let ty = Type::UnsignedLong;
 
-                match &ty {
-                    &Type::Pointer(_) => {
-                        let ty = Type::Long;
+                if ty.is_pointer()
+                    && let Some((_, buf_val)) = gen.buf_metadata.get(&val)
+                {
+                    ctx.func.borrow_mut().assign_instruction(
+                        &size,
+                        &ty,
+                        Instruction::Copy(buf_val.clone()),
+                    );
 
-                        if let Some((_, buf_val)) = gen.buf_metadata.get(&val).cloned() {
-                            ctx.func.borrow_mut().assign_instruction(
-                                &size,
-                                &ty,
-                                Instruction::Copy(buf_val),
-                            );
-
-                            return Some((ty, size));
-                        }
-
-                        ctx.func.borrow_mut().assign_instruction(
-                            &size,
-                            &ty,
-                            Instruction::Copy(Value::Const(
-                                String::new(),
-                                i128::from(ty.size(ctx.module)),
-                            )),
-                        );
-
-                        Some((ty, size))
-                    }
-                    other => {
-                        ctx.func.borrow_mut().assign_instruction(
-                            &size,
-                            other,
-                            Instruction::Copy(Value::Const(
-                                if other.clone() == Type::Double {
-                                    "d_"
-                                } else if other.clone() == Type::Single {
-                                    "s_"
-                                } else {
-                                    ""
-                                }
-                                .into(),
-                                i128::from(ty.size(ctx.module)),
-                            )),
-                        );
-
-                        Some((other.to_owned(), size))
-                    }
+                    return Some((ty, size));
                 }
+
+                ctx.func.borrow_mut().assign_instruction(
+                    &size,
+                    &ty,
+                    Instruction::Copy(Value::Const(String::new(), i128::from(ty.size(ctx.module)))),
+                );
+
+                Some((ty, size))
             }
         }
     }

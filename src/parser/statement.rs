@@ -2041,7 +2041,7 @@ impl<'a> Statement<'a> {
 
         if self.current_token().tagged {
             elle_error!(format!(
-                "hover\n{}\n{}\n#size(T | expr) -> i32\n",
+                "hover\n{}\n{}\n#size(T | expr) -> u64\n",
                 self.current_token().location.borrow().display_plain(false),
                 self.current_token().location.borrow().display_plain(true),
             ));

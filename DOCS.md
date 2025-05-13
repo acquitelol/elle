@@ -1880,7 +1880,7 @@ The current existing directives are:
 | Name                | Description                                                                                                     | Usage                      |
 | ------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------- |
 | Static array length | Gives you the length of a static array allocated using `#[1, 2, 3]` syntax                                      | `#len(expr)`               |
-| Size expression     | Gives you the size of type `T` or expression `expr` in bytes                                                    | `#size(T or expr)`         |
+| Size expression     | Gives you the size of type `T` or expression `expr` in bytes as a u64                                           | `#size(T or expr)`         |
 | Index in foreach    | Gives you the iterator in a foreach loop given the current element being iterated                               | `#i(ident)`                |
 | Elle Environment    | Gives you a `ElleEnv *` which is a global environment structure                                                 | `#env`                     |
 | Allocate memory     | Allows you to allocate a specific type using the current allocator                                              | `#alloc(T, size?)`         |
