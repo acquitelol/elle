@@ -1,3 +1,5 @@
+use std::env;
+
 use crate::{
     misc::{
         colors::*,
@@ -35,6 +37,16 @@ pub fn print_help(program: &str) {
     let default_runtime_path = format!(
         "Pass a custom runtime path, the default is \"~/{}\"",
         get_RUNTIME_PATH!()
+    );
+
+    let default_target_os = format!(
+        "The operating system to target during compilation. The default is \"{}\"",
+        env::consts::OS
+    );
+
+    let default_arch = format!(
+        "The CPU architecture to target during compilation. The default is \"{}\"",
+        env::consts::ARCH
     );
 
     let help_message_options = vec![
@@ -186,6 +198,8 @@ pub fn print_help(program: &str) {
                 ),
                 ("-S, --std-path <path>", &default_std_path),
                 ("-R, --runtime-path <path>", &default_runtime_path),
+                ("--target <macos|linux>", &default_target_os),
+                ("--arch <x86_64|aarch64|riscv64>", &default_arch),
             ],
         ),
         (

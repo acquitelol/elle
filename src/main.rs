@@ -167,6 +167,18 @@ async fn main() -> ExitCode {
             "--asm" | "--emit-s" | "--emit-asm" => emit_asm = true,
             "--ast" | "--emit-ast" | "--emit-tree" => ast = true,
             "--lsp" | "--lsp-server" => lsp = true,
+            "--target" => {
+                if let Some(arg) = args.next() {
+                    let leaked: &'static mut str = Box::leak(arg.into_boxed_str());
+                    unsafe { TARGET = Some(leaked) };
+                }
+            }
+            "--arch" => {
+                if let Some(arg) = args.next() {
+                    let leaked: &'static mut str = Box::leak(arg.into_boxed_str());
+                    unsafe { ARCH = Some(leaked) };
+                }
+            }
             "-r" | "--release" => release_mode = true,
             "-e" | "--run" => run = true,
             "-i" | "--info_pos" => {
