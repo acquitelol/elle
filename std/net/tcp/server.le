@@ -1,0 +1,64 @@
+use std/libc/socket;
+use std/libc/errno;
+use std/libc/io;
+use std/result;
+
+use std/net/tcp/connection;
+global pub;
+
+struct TcpServer {
+    i32 fd;
+    u16 port;
+};
+
+fn TcpServer::bind(u16 port) -> Result<TcpServer, Errno> {
+    fd := socket(AddressFamily::INET, SocketType::STREAM, 0);
+
+    if fd < 0 {
+        return Result::Err(#cast(Errno, errno));
+    }
+
+    addr := sockaddr_in {
+        sin_family = AddressFamily::INET,
+        sin_port = htons(port),
+        sin_addr = in_addr { s_addr = InAddr::ANY },
+        _ = 0
+    };
+
+    if bind(fd, &addr, #size(addr)) < 0 {
+        TcpConnection::close(TcpConnection { fd = fd });
+        return Result::Err(#cast(Errno, errno));
+    }
+
+    if listen(fd, 0) < 0 {
+        TcpConnection::close(TcpConnection { fd = fd });
+        return Result::Err(#cast(Errno, errno));
+    }
+
+    return Result::Ok(TcpServer {
+        fd = fd,
+        port = port
+    });
+}
+
+fn TcpServer::accept(TcpServer self) -> Result<TcpConnection, Errno> {
+    fd := accept(self.fd, nil, nil);
+
+    if fd < 0 {
+        return Result::Err(#cast(Errno, errno));
+    }
+
+    return Result::Ok(TcpConnection {
+        fd = fd
+    });
+}
+
+fn TcpServer::close(TcpServer self) -> Result<void, Errno> {
+    res := close(self.fd);
+
+    if res < 0 {
+        return Result::Err(#cast(Errno, errno));
+    }
+
+    return Result::Ok(_);
+}

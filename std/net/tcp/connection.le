@@ -1,0 +1,61 @@
+use std/libc/socket;
+use std/libc/errno;
+use std/libc/io;
+use std/result;
+global pub;
+
+struct TcpConnection {
+    i32 fd;
+};
+
+fn TcpConnection::read_raw<T>(TcpConnection self, T *buffer, i32 size) -> Result<i64, Errno> {
+    res := recv(self.fd, buffer, size, 0);
+
+    if res < 0 {
+        return Result::Err(#cast(Errno, errno));
+    }
+
+    return Result::Ok(res);
+}
+
+fn TcpConnection::read<T>(TcpConnection self, T[] buffer) -> Result<i64, Errno> {
+    res := self.read_raw(buffer.elements, buffer.len() * #size(T));
+
+    /// Automatically set length when read
+    if res.is_ok() {
+        buffer.size = res.unwrap() / #size(T);
+    }
+
+    return res;
+}
+
+fn TcpConnection::write_raw<T>(TcpConnection self, T *buffer, i32 size) -> Result<i64, Errno> {
+    res := send(self.fd, buffer, size, 0);
+
+    if res < 0 {
+        return Result::Err(#cast(Errno, errno));
+    }
+
+    return Result::Ok(res);
+}
+
+fn TcpConnection::write<T>(TcpConnection self, T[] buffer) -> Result<i64, Errno> {
+    res := self.write_raw(buffer.elements, buffer.len() * #size(T));
+
+    /// Automatically set length when written
+    if res.is_ok() {
+        buffer.size = res.unwrap() / #size(T);
+    }
+
+    return res;
+}
+
+fn TcpConnection::close(TcpConnection self) -> Result<void, Errno> {
+    res := close(self.fd);
+
+    if res < 0 {
+        return Result::Err(#cast(Errno, errno));
+    }
+
+    return Result::Ok(_);
+}

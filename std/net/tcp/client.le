@@ -1,0 +1,45 @@
+use std/libc/socket;
+use std/libc/errno;
+use std/libc/io;
+use std/result;
+
+use std/net/tcp/connection;
+global pub;
+
+struct TcpClient {
+    i32 fd;
+};
+
+fn TcpClient::connect(string host, u16 port) -> Result<TcpConnection, Errno> {
+    fd := socket(AddressFamily::INET, SocketType::STREAM, 0);
+
+    if fd < 0 {
+        return Result::Err(#cast(Errno, errno));
+    }
+
+    addr := sockaddr_in {
+        sin_family = AddressFamily::INET,
+        sin_port = htons(port),
+        sin_addr = in_addr { s_addr = inet_addr(host) },
+        _ = 0
+    };
+
+    if connect(fd, &addr, #size(addr)) < 0 {
+        TcpConnection::close(TcpConnection { fd = fd });
+        return Result::Err(#cast(Errno, errno));
+    }
+
+    return Result::Ok(TcpConnection {
+        fd = fd
+    });
+}
+
+fn TcpClient::close(TcpClient self) -> Result<void, Errno> {
+    res := close(self.fd);
+
+    if res < 0 {
+        return Result::Err(#cast(Errno, errno));
+    }
+
+    return Result::Ok(_);
+}
