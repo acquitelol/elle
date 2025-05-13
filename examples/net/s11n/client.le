@@ -1,0 +1,24 @@
+use std/prelude;
+use std/net/tcp;
+use shared;
+
+const BUF_SIZE = 1024;
+
+fn main() {
+    port := 8080;
+    client := TcpClient::connect("127.0.0.1", port);
+
+    while client.is_err_and(fn(Errno err) err == Errno::ELOOP) {
+        port += 1;
+        client = TcpClient::connect("127.0.0.1", port);
+    }
+
+    client := client.unwrap();
+    defer client.close().unwrap();
+
+    buf := Array::with_capacity<u8>(BUF_SIZE).filled();
+    client.read(buf).unwrap();
+
+    foo := Foo::from_bytes(buf);
+    $printf("Received {}", foo);
+}

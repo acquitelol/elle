@@ -1,0 +1,31 @@
+use std/collections/array;
+global pub;
+
+pub struct Foo {
+    i32 x;
+    string y;
+    f64 z;
+};
+
+fn Foo::to_bytes(Foo self) -> u8[] {
+    res := [];
+
+    res.extend([self.x].to_bytes());
+    res.extend([self.y.len()].to_bytes());
+    res.extend(Array::from_string(self.y));
+    res.extend([self.z].to_bytes());
+
+    return res;
+}
+
+fn Foo::from_bytes(u8[] res) {
+    self := #alloc(Foo);
+    offset := 0;
+
+    self.x = res.read<i32>(&offset);
+    len := res.read<u64>(&offset);
+    self.y = res.slice(offset, offset += len).to_repr<char>().join("");
+    self.z = res.read<f64>(&offset);
+
+    return *self;
+}

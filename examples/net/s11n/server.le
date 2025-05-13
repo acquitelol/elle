@@ -1,0 +1,24 @@
+use std/prelude;
+use std/net/tcp;
+use shared;
+
+fn main() {
+    port := 8080;
+    server := TcpServer::bind(port);
+
+    while server.is_err_and(fn(Errno err) err == Errno::EADDRINUSE) {
+        port += 1;
+        server = TcpServer::bind(port);
+    }
+
+    server := server.unwrap();
+    defer server.close().unwrap();
+
+    connection := server.accept().unwrap();
+    defer connection.close().unwrap();
+
+    foo := Foo { x = 39, y = "Hello from the server", z = 4.2 };
+    $printf("Sending {}", foo);
+
+    connection.write(foo.to_bytes()).unwrap();
+}
