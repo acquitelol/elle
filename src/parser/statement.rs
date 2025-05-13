@@ -3870,7 +3870,13 @@ impl<'a> Statement<'a> {
                 self.advance();
                 self.parse_declare(Some(Some(Type::Infer)))
             }
-            TokenKind::LeftParenthesis => self.parse_wrapped_statement(),
+            TokenKind::LeftParenthesis => {
+                if self.is_type_contextually(0) {
+                    self.parse_declare(None)
+                } else {
+                    self.parse_wrapped_statement()
+                }
+            }
             TokenKind::Hashtag => {
                 self.advance();
 
