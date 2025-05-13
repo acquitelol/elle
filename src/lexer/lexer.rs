@@ -194,7 +194,7 @@ impl Lexer<'_> {
 
                     elle_error!(
                         self.get_location(start_row, start_col).error(
-                            "Invalid token: Elle does not support '--' decrementing.\nPlease use '-= 1' for incrementing instead."
+                            "Invalid token: Elle does not support '--' decrementing.\nPlease use '-= 1' for decrementing instead."
                         )
                     )
                 } else if self.is_unary_context() {
