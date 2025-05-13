@@ -8,3 +8,8 @@ global pub;
 const FILE *stdin = __internal_stdin();
 const FILE *stdout = __internal_stdout();
 const FILE *stderr = __internal_stderr();
+
+const errno = *__error();
+fn os_get_last_error() -> string {
+    return strerror(errno);
+}
