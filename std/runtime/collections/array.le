@@ -4,15 +4,15 @@ use std/core;
 global pub;
 
 struct Array<T> @nofmt {
-    i32 size;
-    i32 capacity;
+    u64 size;
+    u64 capacity;
     T *elements;
 };
 
-!pub fn __internal_array_bounds_check(string file, i32 line, i32 col, i64 i, i64 length) {
+!pub fn __internal_array_bounds_check(string file, i32 line, i32 col, u64 i, u64 length) {
     if i < 0 || i > length - 1 {
         io::cprintf(
-            "[%s:%d:%d] ERROR: Index %ld is out of bounds for array length %ld\n",
+            "[%s:%d:%d] ERROR: Index %lu is out of bounds for array length %lu\n",
             file, line, col, i, length
         );
 
@@ -35,22 +35,26 @@ fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
     return res;
 }
 
-fn Array::__load__<T>(ElleMeta meta, T[] self, i64 i) {
+fn Array::__load__<T>(ElleMeta meta, T[] self, u64 i) {
     __internal_array_bounds_check(meta.file, meta.line, meta.column, i, self.len());
     return self.elements[i];
 }
 
-fn Array::__load_ref__<T>(ElleMeta meta, T[] self, i64 i) -> T * {
+fn Array::__load_ref__<T>(ElleMeta meta, T[] self, u64 i) -> T * {
     __internal_array_bounds_check(meta.file, meta.line, meta.column, i, self.len());
     return &self.elements[i];
 }
 
-fn Array::__store__<T>(ElleMeta meta, T[] self, i64 i, T value) {
+fn Array::__store__<T>(ElleMeta meta, T[] self, u64 i, T value) {
     __internal_array_bounds_check(meta.file, meta.line, meta.column, i, self.len());
     self.elements[i] = value;
 }
 
-fn Array::__len__<T>(T[] self) -> i32 {
+fn Array::__len__<T>(T[] self) -> u64 {
+    return self.size;
+}
+
+fn Array::len<T>(T[] self) -> u64 {
     return self.size;
 }
 
@@ -80,10 +84,6 @@ fn Array::__equals__<T, U>(T[] self, U[] other) -> bool {
     }
 
     return true;
-}
-
-fn Array::len<T>(T[] self) -> i32 {
-    return self.size;
 }
 
 fn Array::is_empty<T>(T[] self) -> bool {
