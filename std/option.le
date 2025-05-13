@@ -1,42 +1,72 @@
-use std/libc/io;
-use std/libc/mem;
+use std/io;
 global pub;
 
-struct Option<T> {
+struct Option<T> @nofmt {
     T __value;
     bool __is_some;
 };
 
-!pub fn Option::new<T>(T value, bool is_some) {
-    let option = #alloc(Option<T>);
+fn Option::__fmt__<T>(Option<T> self, i32 nesting) {
+    if self.is_some() {
+        return "Some({})".format(self.unwrap());
+    }
 
-    option.__value = value;
-    option.__is_some = is_some;
+    return "None";
+}
 
-    return *option;
+fn Option::__equals__<T>(Option<T> self, Option<T> other) {
+    if self.__is_some != other.__is_some {
+        // Some(x) == None
+        return false;
+    }
+
+    if self.__is_some {
+        // Some(x) == Some(y)
+        return self.__value == other.__value;
+    }
+
+    // None == None
+    return true;
 }
 
 fn Option::Some<T>(T value) -> Option<T> {
-    return Option::new(value, true);
+    self := #alloc(Option<T>);
+    self.__value = value;
+    self.__is_some = true;
+    return *self;
 }
 
 fn Option::None<T>() -> Option<T> {
-    return Option::new(#cast(T, nil), false);
+    self := #alloc(Option<T>);
+    self.__is_some = false;
+    return *self;
+}
+
+!external fn __internal_option_throw<T>(Option<T> self, string message, ElleMeta meta) {
+    $eprintf("Function {} panicked at {}:{}:{}:\n{}{}{}",
+        meta.caller, meta.file, meta.line, meta.column,
+        message || "No further information was provided."
+    );
+
+    libc::abort();
 }
 
 // Returns the inner T if the option is some, otherwise aborts with a custom message
-fn Option::expect<T>(Option<T> self, string message) -> T {
+fn Option::expect<T>(ElleMeta meta, Option<T> self, string message) -> T {
     if !self.__is_some {
-        io::fprintf(stderr, "%s\n", message);
-        libc::abort();
+        __internal_option_throw(self, message, meta);
     }
 
     return self.__value;
 }
 
 // Returns the inner T if the option is some, otherwise aborts
-fn Option::unwrap<T>(Option<T> self) -> T {
-    return self.expect("Called `Option::unwrap()` on a `None` value");
+fn Option::unwrap<T>(ElleMeta meta, Option<T> self) -> T {
+    if !self.__is_some {
+        __internal_option_throw(self, "Called `Option::unwrap()` on a `None` value", meta);
+    }
+
+    return self.__value;
 }
 
 // Returns the inner T if the option is some, otherwise returns the fallback
@@ -64,4 +94,15 @@ fn Option::resolve<T>(Option<T> self, fn *if_some, fn *if_none) {
     }
 
     return if_none();
+}
+
+// Option -> Nilable pointer (allows for `while x := y()`)
+fn Option::to_nilable<T>(Option<T> self) {
+    if self.is_some() {
+        res := #alloc(T);
+        *res = self.unwrap();
+        return res;
+    }
+
+    return nil;
 }
