@@ -49,6 +49,10 @@
 "i16" @type
 "i32" @type
 "i64" @type
+"u8" @type
+"u16" @type
+"u32" @type
+"u64" @type
 "f32" @type
 "f64" @type
 "string" @type
