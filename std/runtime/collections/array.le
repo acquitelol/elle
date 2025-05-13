@@ -486,6 +486,7 @@ fn Array::slice<T>(T[] self, i32 _start, i32 _end) -> T[] {
     return temp;
 }
 
+/// Fills the array `T[] self`'s full capacity with `T element`
 fn Array::fill<T>(T[] self, T element) {
     self.size = self.capacity;
 
@@ -493,5 +494,11 @@ fn Array::fill<T>(T[] self, T element) {
         self[i] = element;
     }
 
+    return self;
+}
+
+/// Sets `self.size` to `self.capacity`, essentially filling `self` without setting any values
+fn Array::filled<T>(T[] self) {
+    self.size = self.capacity;
     return self;
 }

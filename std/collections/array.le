@@ -38,6 +38,24 @@ fn Array::range(i32 from, i32 to, bool included) -> i32[] {
     return array;
 }
 
+fn Array::slice_to<T>(u8[] self) -> T {
+    return *#cast(T *, self.elements);
+}
+
+fn Array::read<T>(u8[] self, i32 *offset) -> T {
+    return self.slice(*(offset || &0), *(offset || &0) += #size(T)).slice_to<T>();
+}
+
+fn Array::to_repr<T, U>(U[] self) -> T[] {
+    self.size *= #size(U) / #size(T);
+    self.capacity *= #size(U) / #size(T);
+    return #cast(T[], self);
+}
+
+fn Array::to_bytes<T>(T[] self) {
+    return self.to_repr<u8>();
+}
+
 // Functions emitted as a result of string::split monomorphization for the VLA
 // must be here so that the compiler doesn't re-monomorphize and cause duplicate symbols
 external fn `Array.with_capacity.0.2.15.1`(i32 capacity) -> string[];
