@@ -447,6 +447,27 @@ pub fn lex_and_parse(
 
         tree.insert(
             0,
+            Primitive::Constant(ConstantSource {
+                namespace_token: Token::from_ident(""),
+                name_token: Token::from_ident("_"),
+                name: "_".into(),
+                public: false,
+                usable: true,
+                imported: false,
+                // void *
+                r#type: Some(Type::Void),
+                value: Box::new(AstNode::Literal(Literal {
+                    kind: TokenKind::IntegerLiteral,
+                    value: ValueKind::Number(0),
+                    location: loc.clone(),
+                    tagged: false,
+                })),
+                location: loc.clone(),
+            }),
+        );
+
+        tree.insert(
+            0,
             Primitive::Function(FunctionSource {
                 namespace_token: Token::from_ident(get_POINTER_ID!()),
                 name_token: Token::from_ident(LEN_CONSTANT),
