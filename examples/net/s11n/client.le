@@ -8,7 +8,7 @@ fn main() {
     port := 8080;
     client := TcpClient::connect("127.0.0.1", port);
 
-    while client.is_err_and(fn(Errno err) err == Errno::ELOOP) {
+    while client.is_err_and(fn(Errno err) err == Errno::ELOOP || err == Errno::ECONNREFUSED) {
         port += 1;
         client = TcpClient::connect("127.0.0.1", port);
     }
