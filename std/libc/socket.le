@@ -1,0 +1,67 @@
+global pub, external;
+
+enum AddressFamily @repr(u16) @cfg(target = "linux") {
+    UNIX = 1,
+    INET,
+    INET6 = 10,
+    PACKET = 17,
+    LINK
+};
+
+enum SocketType @cfg(target = "linux") {
+    STREAM = 1,
+    DGRAM,
+    RAW,
+    RDM,
+    SEQPACKET,
+};
+
+enum AddressFamily @repr(u16) @cfg(target = "macos") {
+    UNIX = 1,
+    INET,
+    INET6 = 30,
+    LINK = 18,
+};
+
+enum SocketType @cfg(target = "macos") {
+    STREAM = 1,
+    DGRAM,
+    RAW,
+    SEQPACKET = 5,
+};
+
+enum InAddr {
+    ANY = 0x00000000,       // 0.0.0.0
+    LOOPBACK = 0x7f000001,  // 127.0.0.1
+    BROADCAST = 0xffffffff, // 255.255.255.255
+    NONE = 0xffffffff
+};
+
+struct in_addr {
+    InAddr s_addr;
+};
+
+struct sockaddr_in {
+    AddressFamily sin_family;
+    u16 sin_port;
+    in_addr sin_addr;
+    u64 _; // padding
+};
+
+struct sockaddr {
+    AddressFamily sa_family;
+    u64 sa_data0; // these collectively
+    u32 sa_data1; // take up 14 bytes
+    u16 sa_data2; // 8 + 4 + 2 = 14
+};
+
+fn socket(AddressFamily domain, SocketType ty, i32 protocol) -> i32;
+fn htons(u16 host) -> u16;
+fn bind(i32 fd, sockaddr *addr, u64 len) -> i32;
+fn listen(i32 fd, i32 backlog) -> i32;
+fn connect(i32 sockfd, sockaddr *addr, u32 addrlen) -> i32;
+fn accept(i32 sockfd, sockaddr *addr, u32 *addrlen) -> i32;
+fn recv(i32 sockfd, void *buf, u64 len, i32 flags) -> i64;
+fn send(i32 sockfd, void *buf, u64 len, i32 flags) -> i64;
+fn close(i32 fd) -> i32;
+fn inet_addr(string host) -> InAddr;
