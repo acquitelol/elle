@@ -1636,12 +1636,12 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((
                         position,
                         AstNode::MemoryOperation(MemoryOperation {
-                            left: left.clone(),
-                            right: right.clone(),
+                            left,
+                            right,
                             value: None,
-                            left_location: left_location.clone(),
-                            right_location: right_location.clone(),
-                            value_location: value_location.clone(),
+                            left_location,
+                            right_location,
+                            value_location,
                             is_deref: false,
                             addr_only: false,
                         }),
@@ -1652,12 +1652,12 @@ impl<'a> Statement<'a> {
                     expression = self.parse_offset_store(Some((
                         position,
                         AstNode::MemoryOperation(MemoryOperation {
-                            left: left.clone(),
-                            right: right.clone(),
+                            left,
+                            right,
                             value: None,
-                            left_location: left_location.clone(),
-                            right_location: right_location.clone(),
-                            value_location: value_location.clone(),
+                            left_location,
+                            right_location,
+                            value_location,
                             is_deref: false,
                             addr_only: false,
                         }),
@@ -2729,9 +2729,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_offset_store(Some((
                         position,
                         AstNode::FieldAccess(FieldAccess {
-                            left: left.clone(),
-                            right: right.clone(),
-                            value: value.clone(),
+                            left,
+                            right,
+                            value,
                             location: location.clone(),
                             addr_only: false, // dont take the address because if required it will now be taken here instead
                         }),

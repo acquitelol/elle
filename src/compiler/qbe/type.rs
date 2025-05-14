@@ -184,7 +184,7 @@ impl Type {
     }
 
     pub fn to_internal_id(&self) -> String {
-        fn ty_to_num(ty: &Type) -> u8 {
+        const fn ty_to_num(ty: &Type) -> u8 {
             match ty {
                 Type::UnsignedByte => 4,
                 Type::UnsignedHalfword => 5,
@@ -213,7 +213,7 @@ impl Type {
                 "{GENERIC_ENUM}.{}.{}",
                 name,
                 Option::as_ref(inner)
-                    .unwrap_or(&Type::Word)
+                    .unwrap_or(&Self::Word)
                     .to_internal_id()
             ),
             Self::Struct(name) => name.clone(),

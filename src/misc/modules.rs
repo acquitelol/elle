@@ -157,8 +157,8 @@ pub fn lex_and_parse(
     while let Some(token) = lexer.next_token() {
         // Give tokens an alt location so that this can be reported
         // instead, if the error happened in another file
-        token.location.borrow_mut().alt_start = import_location.borrow().start.clone();
-        token.location.borrow_mut().alt_end = import_location.borrow().end.clone();
+        token.location.borrow_mut().alt_start = import_location.borrow().start;
+        token.location.borrow_mut().alt_end = import_location.borrow().end;
 
         // Even though the lexer does provide us with comments, we don't care about them
         // so we can just ignore them and not pass them the parser

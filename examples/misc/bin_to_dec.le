@@ -1,7 +1,7 @@
 use std/prelude;
 
 fn main() {
-    while true {
+    for ;; {
         bin := Array::from_string(io::input("Enter a binary string: "));
 
         if !bin.every(fn(char x) "01".contains(x)) {
@@ -13,9 +13,7 @@ fn main() {
         res := 0;
 
         for c in bin {
-            // extremely insane expression
-            // im surprised this even works
-            c == '1' && (res += mult /= 2);
+            c == '1' && res += mult /= 2; // wtf
         }
 
         $dbg(res);
