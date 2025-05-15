@@ -468,22 +468,39 @@ impl<'a> Statement<'a> {
             tmp
         };
 
-        if self.current_token().kind == TokenKind::Semicolon || self.is_eof() {
+        if self.current_token().kind != TokenKind::LeftParenthesis {
             set_end!(location, self);
 
-            return AstNode::Literal(Literal {
+            let mut expression = AstNode::Literal(Literal {
                 kind: TokenKind::Identifier,
-                value: ValueKind::String(name),
-                location,
+                value: ValueKind::String(name.clone()),
+                location: location.clone(),
                 tagged: name_token.tagged,
             });
-        }
 
-        // Foo::X == Foo::Y
-        // doing binops to functions without calling them
-        if self.current_token().kind.is_arithmetic() {
-            self.position = position;
-            return self.parse_arithmetic();
+            if !self.is_eof() {
+                match self.current_token().kind {
+                    TokenKind::Dot => {
+                        expression =
+                            self.parse_field_access(Some((position, expression, location)));
+                    }
+                    TokenKind::LeftBlockBrace => {
+                        expression =
+                            self.parse_offset_store(Some((position, expression, location)));
+                    }
+                    TokenKind::Semicolon => {}
+                    other if other.is_ternary_start() => {
+                        return self.parse_ternary_node(expression, location);
+                    }
+                    other if other.is_arithmetic() => {
+                        self.position = position;
+                        return self.parse_arithmetic();
+                    }
+                    _ => expect_eot!(self.current_token()),
+                }
+            }
+
+            return expression;
         }
 
         self.expect_tokens(&[TokenKind::LeftParenthesis]);
@@ -1843,6 +1860,7 @@ impl<'a> Statement<'a> {
                 r#type: ty,
                 name,
                 no_fmt,
+                is_unused: false,
             });
         }
 
