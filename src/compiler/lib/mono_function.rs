@@ -220,7 +220,7 @@ pub fn create_monomorphized_function(
                 "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
                 this.generics
                     .iter()
-                    .map(|generic| { known_generics.get(generic).unwrap().to_internal_id() })
+                    .map(|generic| known_generics.get(generic).unwrap().to_internal_id())
                     .collect::<Vec<_>>()
                     .join(".")
             );
@@ -249,6 +249,7 @@ pub fn create_monomorphized_function(
                             known_generics,
                         ),
                         no_fmt: arg.no_fmt,
+                        is_unused: arg.is_unused,
                     })
                     .collect::<Vec<Argument>>();
 

@@ -622,4 +622,5 @@ pub struct Argument {
     pub name: String,
     pub r#type: Type,
     pub no_fmt: bool,
+    pub is_unused: bool,
 }

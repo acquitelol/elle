@@ -1907,6 +1907,7 @@ The current existing attributes are:
 | Format   | Puts every argument through its formatter before passing it to the function                         | Functions                          | `@fmt`                                      |
 | NoFormat | If on an argument, doesn't run it through its formatter, else doesn't generate an `__fmt__` method. | Structs, Enums, Function Arguments | `@nofmt`                                    |
 | Repr     | Uses a different type for the representation of this structure. Can be optional.                    | Enums                              | `@repr(T)`                                  |
+| Unused   | Does not report a warning when the field is not set in a struct literal. Useful for padding.        | Struct fields                      | `@unused`                                   |
 
 <hr />
 

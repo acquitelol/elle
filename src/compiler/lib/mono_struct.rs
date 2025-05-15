@@ -42,6 +42,7 @@ pub fn create_monomorphized_struct(
                 &parsed_generics,
             ),
             no_fmt: member.no_fmt,
+            is_unused: member.is_unused,
         })
         .collect::<Vec<Argument>>();
 

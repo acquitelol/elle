@@ -486,6 +486,7 @@ pub fn lex_and_parse(
                     name: "self".into(),
                     r#type: Type::Pointer(Box::new(Type::Unknown("T".into()))),
                     no_fmt: false,
+                    is_unused: false,
                 }],
                 r#return: Some(Type::Word),
                 body: vec![AstNode::Return(Return {

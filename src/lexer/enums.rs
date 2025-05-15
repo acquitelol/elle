@@ -771,6 +771,8 @@ pub enum Attribute {
     Repr,
     // Only compile if the thing inside is true
     Cfg,
+    // Suppresses the warning when a struct is initialized this field
+    Unused,
 }
 
 impl Token {
@@ -792,6 +794,7 @@ impl Token {
             "fmt" => Attribute::Format,
             "repr" => Attribute::Repr,
             "cfg" => Attribute::Cfg,
+            "unused" => Attribute::Unused,
             _ => todo!("more attributes: {attribute}"),
         }
     }

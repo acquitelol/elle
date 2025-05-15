@@ -80,18 +80,23 @@ impl Codegen<'_> for StructLiteral {
 
         let member_set: HashSet<_> = member_names.iter().cloned().collect();
         let value_set: HashSet<_> = self.values.iter().map(|value| value.0.clone()).collect();
-
         let diff: Vec<_> = member_set.difference(&value_set).collect();
 
         if gen.warnings.has_warning(Warning::StructFieldsMissing) {
             for member in diff {
-                eprintln!(
-                    "{}",
-                    self.location.borrow().warning(format!(
-                        "Declaring struct '{}' without field '{member}'",
-                        Type::Struct(plain_name.clone()).display(),
-                    ))
-                );
+                if members
+                    .iter()
+                    .find(|x| x.name == *member)
+                    .is_some_and(|member| !member.is_unused)
+                {
+                    eprintln!(
+                        "{}",
+                        self.location.borrow().warning(format!(
+                            "Declaring struct '{}' without field '{member}'",
+                            Type::Struct(plain_name.clone()).display(),
+                        ))
+                    );
+                }
             }
         }
 

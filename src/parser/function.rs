@@ -285,6 +285,7 @@ impl<'a> Function<'a> {
                     name,
                     r#type,
                     no_fmt,
+                    is_unused: false,
                 });
             }
         }

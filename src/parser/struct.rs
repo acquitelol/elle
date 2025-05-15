@@ -210,6 +210,7 @@ impl<'a> Struct<'a> {
                 name,
                 r#type: ty,
                 no_fmt: false,
+                is_unused,
             });
         }
 
@@ -365,11 +366,13 @@ impl<'a> Struct<'a> {
                             )
                         }),
                         no_fmt: false,
+                        is_unused: false,
                     },
                     Argument {
                         name: "nesting".into(),
                         r#type: Type::Word,
                         no_fmt: false,
+                        is_unused: false,
                     },
                 ],
                 r#return: Some(Type::Pointer(Box::new(Type::Char))),
