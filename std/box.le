@@ -1,0 +1,14 @@
+global pub;
+
+struct Box<T> {
+    T *value
+}
+
+fn Box::new<T>(T value) -> Box<T> {
+    ptr := #alloc(T);
+    *ptr = value;
+
+    return Box {
+        value = ptr
+    };
+}
