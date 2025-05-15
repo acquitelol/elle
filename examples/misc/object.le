@@ -6,40 +6,24 @@ struct Object {
     void *value,
 }
 
-fn Object::__load__(ElleMeta meta, Object *self, string key) {
-    if #cast(void *, self.entries) == nil {
+fn Object::ensure_init(Object *self, string key) {
+    if !self.entries {
         self.entries = HashMap::new();
     }
 
     if !self.entries.contains_key(key) {
-        self.entries[key] = Object::new();
+        self.entries[key] = #alloc(Object);
     }
-
-    entry := self.entries[key];
-
-    if entry.value == nil {
-        $panic("{} does not exist in the object.", key);
-    }
-
-    return entry;
 }
 
-fn Object::__store__<T>(ElleMeta meta, Object *self, string key, T value) {
-    if #cast(void *, self.entries) == nil {
-        self.entries = HashMap::new();
-    }
+fn Object::__load__(Object *self, string key) -> Object * {
+    self.ensure_init(key);
+    return self.entries[key];
+}
 
-    if !self.entries.contains_key(key) {
-        self.entries[key] = Object::new();
-    }
-
-    Object *child = self.entries[key];
-
-    value_ptr := #alloc(T);
-    *value_ptr = value;
-
-    child.value = value_ptr;
-    child.type = meta.types[2]; // the type of `T value`
+fn Object::__store__<T>(Object *self, string key, T value) {
+    self.ensure_init(key);
+    self.entries[key].value = Box::new(value).value;
 }
 
 fn Object::to<T>(Object *self) -> T {
@@ -47,19 +31,12 @@ fn Object::to<T>(Object *self) -> T {
 }
 
 fn main() {
-    obj := Object::new();
-    obj["foo"] = 42;
-    obj["bar"] = "a";
-    obj["baz"] = [1, 2, 3];
-
-    obj["a"] = Object::new();
-    obj["a"]["b"] = 1;
+    x := #alloc(Object);
+    x["foo"] = [1, 2, 3];
+    x["a"]["b"] = 1;
 
     $dbg(
-        obj["foo"].to<i32>(),
-        obj["bar"].to<string>(),
-        obj["baz"].to<i32[]>(),
-        obj["a"]["b"].to<i32>(),
-        obj
+        x["foo"].to<i32[]>(),
+        x["a"]["b"].to<i32>()
     );
 }
