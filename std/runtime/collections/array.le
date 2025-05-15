@@ -22,18 +22,21 @@ struct Array<T> @nofmt {
 }
 
 fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
-    string res = "[";
+    res := [string;];
 
     for i32 i = 0; i < self.len(); i += 1 {
-        res.extend(self[i].__fmt__(nesting));
-
-        if i < self.len() - 1 {
-            res.extend(", ");
-        }
+        res.push(self[i].__fmt__(nesting));
     }
 
-    res.push(']');
-    return res;
+    without_nl := res.join(", ");
+
+    if without_nl.len() < Array::MAX_INLINE_LENGTH {
+        return "[{}]".format(without_nl);
+    } else {
+        spacing := " ".repeat((nesting + 1) * 4);
+        delimeter := ",\n{}".format(spacing);
+        return "[\n{}{}\n]".format(spacing, res.join(delimeter));
+    }
 }
 
 fn Array::__load__<T>(ElleMeta meta, T[] self, u64 i) {
