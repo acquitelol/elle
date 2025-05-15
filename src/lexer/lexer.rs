@@ -21,12 +21,10 @@ pub struct Lexer<'a> {
 impl Lexer<'_> {
     pub fn new(file: String, input: &str, has_tagged: bool) -> Lexer {
         let mut line_starts = vec![0];
-        let mut char_index = 0;
 
-        for c in input.chars() {
-            char_index += 1;
-            if c == '\n' {
-                line_starts.push(char_index);
+        for (i, c) in input.bytes().enumerate() {
+            if c == b'\n' {
+                line_starts.push(i);
             }
         }
 
@@ -543,7 +541,6 @@ impl Lexer<'_> {
     fn get_line(&self, at: usize) -> Option<&str> {
         let start = *self.line_starts.get(at)?;
         let end = *self.line_starts.get(at + 1).unwrap_or(&self.input.len());
-
         let line = self.input.get(start..end)?;
 
         Some(
