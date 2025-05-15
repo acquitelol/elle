@@ -6,12 +6,12 @@ fn main() {
     io::assert(map.is_empty(), nil);
 
     map[1000] = "foo";
-    $assert(map.get(1000) == "foo", nil);
+    $assert(map.get(1000).is_some_and(fn(string x) x == "foo"), nil);
     $assert(map[1000] == "foo", nil);
     $assert(map.size() == 1, nil);
 
     map.put(1000, "abc");
-    $assert(map.get(1000) == "abc", nil);
+    $assert(map.get(1000).is_some_and(fn(string x) x == "abc"), nil);
     $assert(map[1000] == "abc", nil);
     $assert(map.size() == 1, nil);
 
