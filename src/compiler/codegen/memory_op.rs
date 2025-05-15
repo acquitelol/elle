@@ -7,7 +7,7 @@ use crate::{
     },
     elle_error, is_generic,
     lexer::enums::{Token, TokenKind, ValueKind},
-    misc::constants::LOAD_REF_CONSTANT,
+    misc::constants::{DEREF_LOAD_CONSTANT, DEREF_STORE_CONSTANT, LOAD_REF_CONSTANT},
     parser::enums::{AstNode, BinaryOperation, FunctionCall, Literal, MemoryOperation},
     LOAD_CONSTANT, STORE_CONSTANT,
 };
@@ -33,6 +33,29 @@ impl Codegen<'_> for MemoryOperation {
             )))
         });
 
+        macro_rules! exists {
+            ($struct_name:expr, $constant:expr) => {
+                ctx.module
+                    .borrow()
+                    .functions
+                    .get(&format!("{}.{}", $struct_name, $constant))
+                    .is_some()
+                    || (is_generic!($struct_name)
+                        && gen
+                            .generic_functions
+                            .get(&format!(
+                                "{}.{}",
+                                Type::from_internal_id(&$struct_name).0,
+                                $constant
+                            ))
+                            .is_some())
+                    || gen
+                        .generic_functions
+                        .get(&format!("{}.{}", $struct_name, $constant))
+                        .is_some() // The struct isn't generic but the function is
+            };
+        }
+
         if !self.is_deref
             && (left_ty.is_struct()
                 || left_ty.is_pointer() && left_ty.get_pointer_inner().unwrap().is_struct())
@@ -47,32 +70,9 @@ impl Codegen<'_> for MemoryOperation {
                     .unwrap()
             };
 
-            macro_rules! exists {
-                ($constant:expr) => {
-                    ctx.module
-                        .borrow()
-                        .functions
-                        .get(&format!("{struct_name}.{}", $constant))
-                        .is_some()
-                        || (is_generic!(struct_name)
-                            && gen
-                                .generic_functions
-                                .get(&format!(
-                                    "{}.{}",
-                                    Type::from_internal_id(&struct_name).0,
-                                    $constant
-                                ))
-                                .is_some())
-                        || gen
-                            .generic_functions
-                            .get(&format!("{struct_name}.{}", $constant))
-                            .is_some() // The struct isn't generic but the function is
-                };
-            }
-
-            if (self.value.is_some() && exists!(STORE_CONSTANT))
-                || (self.addr_only && exists!(LOAD_REF_CONSTANT))
-                || exists!(LOAD_CONSTANT)
+            if (self.value.is_some() && exists!(struct_name, STORE_CONSTANT))
+                || (self.addr_only && exists!(struct_name, LOAD_REF_CONSTANT))
+                || exists!(struct_name, LOAD_CONSTANT)
             {
                 let mut parameters = vec![
                     (self.left_location.clone(), *self.left),
@@ -120,6 +120,39 @@ impl Codegen<'_> for MemoryOperation {
                     }
                 )))
             });
+
+        if let Some(struct_name) = left_ty.get_struct_inner()
+            && if self.value.is_some() {
+                exists!(struct_name, DEREF_STORE_CONSTANT)
+            } else {
+                exists!(struct_name, DEREF_LOAD_CONSTANT)
+            }
+        {
+            let mut parameters = vec![(self.left_location.clone(), *self.left)];
+
+            if let Some(value) = self.value.clone() {
+                parameters.push((self.value_location, *value));
+            }
+
+            let constant = if self.value.is_some() {
+                DEREF_STORE_CONSTANT
+            } else {
+                DEREF_LOAD_CONSTANT
+            };
+
+            let node = AstNode::FunctionCall(FunctionCall {
+                namespace_token: Token::from_ident(""),
+                name_token: Token::from_ident(constant),
+                name: constant.into(),
+                generics: vec![],
+                parameters,
+                type_method: true,
+                ignore_no_def: false,
+                location: self.left_location,
+            });
+
+            return node.compile(gen, ctx);
+        }
 
         if !(matches!(left_ty, Type::Pointer(_)) || matches!(right_ty, Type::Pointer(_))) {
             elle_error!(self.left_location.borrow().error(format!(

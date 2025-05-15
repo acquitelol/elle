@@ -29,7 +29,7 @@
 | Custom Allocators        | Yes     | The allocator can be changed at runtime, but must be GC or Arena by default.                                 |
 | Lambdas (Closures)       | Partial | Lambdas exist, but don't capture their surrounding scopes.                                                   |
 | Pattern matching         | No      | Support planned in the future.                                                                               |
-| Operator overloading     | Partial | Can overload `x[y]`, `&x[y]`, `x[y] = z` `x == y`, aswell as length and hash.                                |
+| Operator overloading     | Partial | Can overload `x[y]`, `&x[y]`, `x[y] = z` `x == y`, `*x = y`, aswell as length and hash.                      |
 | First class functions    | Partial | Functions can be passed around, but decay to a fallback with no interface.                                   |
 | Generics                 | Partial | Generic functions and structs exist, generic enums do not currently exist but are planned.                   |
 | Type inference           | Yes     | The return type of functions is inferred. You can use `let x = 1` or `x := 1` to infer variable types.       |
