@@ -1,4 +1,4 @@
-use std/io;
+use std/runtime/libc/io;
 global pub;
 
 struct Option<T> @nofmt {
@@ -30,10 +30,10 @@ fn Option::__equals__<T>(Option<T> self, Option<T> other) {
 }
 
 fn Option::Some<T>(T value) -> Option<T> {
-    self := #alloc(Option<T>);
-    self.__value = value;
-    self.__is_some = true;
-    return *self;
+    return Option {
+        __value = value,
+        __is_some = true
+    };
 }
 
 fn Option::None<T>() -> Option<T> {
@@ -43,7 +43,7 @@ fn Option::None<T>() -> Option<T> {
 }
 
 !external fn __internal_option_throw<T>(Option<T> self, string message, ElleMeta meta) {
-    $eprintf("Function {} panicked at {}:{}:{}:\n{}{}{}",
+    io::fprintf(stderr, "Function %s panicked at %s:%d:%d:\n%s",
         meta.caller, meta.file, meta.line, meta.column,
         message || "No further information was provided."
     );
@@ -105,4 +105,20 @@ fn Option::to_nilable<T>(Option<T> self) {
     }
 
     return nil;
+}
+
+fn Option::is_some_and<T>(Option<T> self, fn *cb) {
+    if self.is_some() {
+        return #cast(bool, cb(self.__value));
+    }
+
+    return false;
+}
+
+fn Option::is_none_or<T>(Option<T> self, fn *cb) {
+    if self.is_some() {
+        return #cast(bool, cb(self.__value));
+    }
+
+    return true;
 }
