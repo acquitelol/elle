@@ -257,9 +257,9 @@ fn Array::extend<T>(T[] self, T[] other) {
     }
 }
 
-fn Array::remove<T>(T[] self, u64 index) -> T {
-    if index < 0 || index >= self.size {
-        return #cast(T, nil);
+fn Array::remove<T>(T[] self, u64 index) -> Option<T> {
+    if index >= self.size {
+        return Option::None();
     }
 
     T removedElement = self[index];
@@ -274,7 +274,7 @@ fn Array::remove<T>(T[] self, u64 index) -> T {
         self.resize(self.capacity / 2);
     }
 
-    return removedElement;
+    return Option::Some(removedElement);
 }
 
 fn Array::insert<T>(T[] self, u64 index, T element) {

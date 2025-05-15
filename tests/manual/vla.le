@@ -7,8 +7,8 @@ fn main() {
     a.push(39);
     a.push(-1);
 
-    io::assert(a.first() == 1, nil);
-    io::assert(a.last() == -1, nil);
+    io::assert(a.first().unwrap() == 1, nil);
+    io::assert(a.last().unwrap() == -1, nil);
 
     string[] b = [];
 
