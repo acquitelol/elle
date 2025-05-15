@@ -23,8 +23,8 @@ fn HashMap_Bucket::new<T, U>() {
 
 struct HashMap<T, U> {
     HashMap_Bucket<T, U> *[] table,
-    i32 size,
-    i32 capacity
+    u64 size,
+    u64 capacity
 }
 
 !pub fn __internal_key_exists_check<T, U>(HashMap<T, U> *self, T key, ElleMeta meta) {
@@ -53,9 +53,9 @@ fn HashMap::__store__<T, U>(HashMap<T, U> *self, T key, U value) {
 }
 
 fn HashMap::__fmt__<T, U>(HashMap<T, U> self, i32 nesting) {
-    let res = "{\n";
+    res := "{\n";
 
-    for i32 i = 0; i < self.table.len(); i += 1 {
+    for u64 i = 0; i < self.table.len(); i += 1 {
         key := self.table[i].key;
         value := self.table[i].value;
 
@@ -75,14 +75,14 @@ fn HashMap::__fmt__<T, U>(HashMap<T, U> self, i32 nesting) {
     return res;
 }
 
-fn HashMap::with_capacity<T, U>(i32 initial_capacity) -> HashMap<T, U> * {
-    let map = #alloc(HashMap<T, U>);
+fn HashMap::with_capacity<T, U>(u64 initial_capacity) -> HashMap<T, U> * {
+    map := #alloc(HashMap<T, U>);
 
     map.table = Array::with_capacity(initial_capacity);
     map.capacity = initial_capacity;
     map.size = 0;
 
-    for let i = 0; i < initial_capacity; i += 1 {
+    for u64 i = 0; i < initial_capacity; i += 1 {
         map.table.push(HashMap_Bucket::new<T, U>());
     }
 
@@ -95,7 +95,7 @@ fn HashMap::new<T, U>() -> HashMap<T, U> * {
 
 // first_key, first_value are to infer T and U
 fn HashMap::with_entries<T, U>(ElleMeta meta, T first_key, U first_value, ...args) -> HashMap<T, U> * {
-    let map = HashMap::with_capacity(4);
+    map := HashMap::with_capacity(4);
     map[first_key] = first_value;
 
     // subtract the first_key and first_value
@@ -116,8 +116,8 @@ fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
         self.resize(self.capacity * 2);
     }
 
-    i32 idx = key.__hash__(self.capacity);
-    let start_idx = idx;
+    u64 idx = key.__hash__(self.capacity);
+    start_idx := idx;
 
     while true {
         if !self.table[idx].full || self.table[idx].key == key {
@@ -144,8 +144,8 @@ fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
 external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) @alias(HashMap::set) -> bool;
 
 !pub fn __internal_hashmap_get<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
-    i32 idx = key.__hash__(self.capacity);
-    let start_idx = idx;
+    u64 idx = key.__hash__(self.capacity);
+    start_idx := idx;
 
     while self.table[idx].full {
         if self.table[idx].key == key {
@@ -183,8 +183,8 @@ fn HashMap::get<T, U>(HashMap<T, U> *self, T key) {
 }
 
 fn HashMap::remove<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
-    i32 idx = key.__hash__(self.capacity);
-    let start_idx = idx;
+    u64 idx = key.__hash__(self.capacity);
+    start_idx := idx;
 
     while self.table[idx].full {
         if self.table[idx].key == key {
@@ -205,8 +205,8 @@ fn HashMap::remove<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
 }
 
 fn HashMap::contains_key<T, U>(HashMap<T, U> *self, T key) -> bool {
-    i32 idx = key.__hash__(self.capacity);
-    let start_idx = idx;
+    u64 idx = key.__hash__(self.capacity);
+    start_idx := idx;
 
     while self.table[idx].full {
         if self.table[idx].key == key {
@@ -224,9 +224,9 @@ fn HashMap::contains_key<T, U>(HashMap<T, U> *self, T key) -> bool {
 }
 
 fn HashMap::keys<T, U>(HashMap<T, U> *self) -> T[] {
-    let array = Array::with_capacity<T>(self.size);
+    array := Array::with_capacity<T>(self.size);
 
-    for i32 i = 0; i < self.capacity; i += 1 {
+    for u64 i = 0; i < self.capacity; i += 1 {
         if self.table[i].full {
             array.push(self.table[i].key);
         }
@@ -236,9 +236,9 @@ fn HashMap::keys<T, U>(HashMap<T, U> *self) -> T[] {
 }
 
 fn HashMap::values<T, U>(HashMap<T, U> *self) -> U[] {
-    let array = Array::with_capacity<U>(self.size);
+    array := Array::with_capacity<U>(self.size);
 
-    for i32 i = 0; i < self.capacity; i += 1 {
+    for u64 i = 0; i < self.capacity; i += 1 {
         if self.table[i].full {
             array.push(self.table[i].value);
         }
@@ -248,9 +248,9 @@ fn HashMap::values<T, U>(HashMap<T, U> *self) -> U[] {
 }
 
 fn HashMap::entries<T, U>(HashMap<T, U> *self) {
-    let array = Array::with_capacity<(T, U)>(self.size);
+    array := Array::with_capacity<(T, U)>(self.size);
 
-    for i32 i = 0; i < self.capacity; i += 1 {
+    for u64 i = 0; i < self.capacity; i += 1 {
         if self.table[i].full {
             array.push($(
                 self.table[i].key,
@@ -262,18 +262,18 @@ fn HashMap::entries<T, U>(HashMap<T, U> *self) {
     return array;
 }
 
-fn HashMap::resize<T, U>(HashMap<T, U> *self, i32 new_capacity) {
-    HashMap_Bucket<T, U> *[] old_table = self.table;
+fn HashMap::resize<T, U>(HashMap<T, U> *self, u64 new_capacity) {
+    old_table := self.table;
 
     self.table = Array::with_capacity(new_capacity);
     self.capacity = new_capacity;
     self.size = 0;
 
-    for i32 i = 0; i < new_capacity; i += 1 {
+    for u64 i = 0; i < new_capacity; i += 1 {
         self.table.push(HashMap_Bucket::new<T, U>());
     }
 
-    for i32 i = 0; i < old_table.len(); i += 1 {
+    for u64 i = 0; i < old_table.len(); i += 1 {
         if old_table[i].full {
             self.put(
                 old_table[i].key,
@@ -294,7 +294,7 @@ fn HashMap::is_empty<T, U>(HashMap<T, U> *self) -> bool {
 fn HashMap::clear<T, U>(HashMap<T, U> *self) {
     self.size = 0;
 
-    for i32 i = 0; i < self.capacity; i += 1 {
+    for u64 i = 0; i < self.capacity; i += 1 {
         self.table[i].full = false;
     }
 }

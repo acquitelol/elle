@@ -5,28 +5,28 @@ namespace hash;
 global pub, external;
 
 !external fn hash::mod<T, U>(T self, U other) {
-    return (self % other + other) % other;
+    return #cast(u64, (self % other + other) % other);
 }
 
-!external fn __ptr__::__hash__<T>(T *self, i32 capacity) {
-    return hash::mod(#cast(i64, self), capacity);
+!external fn __ptr__::__hash__<T>(T *self, u64 capacity) {
+    return hash::mod(#cast(u64, self), capacity);
 }
 
-!external fn __clean_ptr__::__hash__<T>(T *self, i32 capacity) {
-    return hash::mod(#cast(i64, self), capacity);
+!external fn __clean_ptr__::__hash__<T>(T *self, u64 capacity) {
+    return hash::mod(#cast(u64, self), capacity);
 }
 
-fn string::__hash__(string self, i32 capacity) -> i64;
-fn __void_ptr__::__hash__(void *self, i32 capacity) -> i64;
-fn char::__hash__(char self, i32 capacity) -> i32;
-fn bool::__hash__(bool self, i32 capacity) -> i32;
-fn i8::__hash__(i8 self, i32 capacity) -> i32;
-fn i16::__hash__(i16 self, i32 capacity) -> i32;
-fn i32::__hash__(i32 self, i32 capacity) -> i32;
-fn i64::__hash__(i64 self, i32 capacity) -> i32;
-fn u8::__hash__(u8 self, i32 capacity) -> i32;
-fn u16::__hash__(u16 self, i32 capacity) -> i32;
-fn u32::__hash__(u32 self, i32 capacity) -> i32;
-fn u64::__hash__(u64 self, i32 capacity) -> i64;
-fn f32::__hash__(f32 self, i32 capacity) -> i32;
-fn f64::__hash__(f64 self, i32 capacity) -> i64;
+fn string::__hash__(string self, u64 capacity) -> u64;
+fn __void_ptr__::__hash__(void *self, u64 capacity) -> u64;
+fn char::__hash__(char self, u64 capacity) -> u64;
+fn bool::__hash__(bool self, u64 capacity) -> u64;
+fn i8::__hash__(i8 self, u64 capacity) -> u64;
+fn i16::__hash__(i16 self, u64 capacity) -> u64;
+fn i32::__hash__(i32 self, u64 capacity) -> u64;
+fn i64::__hash__(i64 self, u64 capacity) -> u64;
+fn u8::__hash__(u8 self, u64 capacity) -> u64;
+fn u16::__hash__(u16 self, u64 capacity) -> u64;
+fn u32::__hash__(u32 self, u64 capacity) -> u64;
+fn u64::__hash__(u64 self, u64 capacity) -> u64;
+fn f32::__hash__(f32 self, u64 capacity) -> u64;
+fn f64::__hash__(f64 self, u64 capacity) -> u64;

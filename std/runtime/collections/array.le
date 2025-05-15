@@ -91,7 +91,7 @@ fn Array::is_empty<T>(T[] self) -> bool {
     return self.size == 0;
 }
 
-fn Array::with_capacity<T>(i32 initialCapacity) -> T[] {
+fn Array::with_capacity<T>(u64 initialCapacity) -> T[] {
     T[] array = #alloc(Array<T>);
 
     array.elements = #alloc(T, initialCapacity);
@@ -152,15 +152,15 @@ fn Array::sort<T>(T[] self) {
     __internal_qsort(self.elements, 0, self.len() - 1);
 }
 
-!pub fn __internal_qsort<T>(T *array, i32 low, i32 high) {
+!pub fn __internal_qsort<T>(T *array, u64 low, u64 high) {
     if low >= high {
         return;
     }
 
     T pivot = array[high];
-    i32 i = low;
+    u64 i = low;
 
-    for i32 j = low; j < high; j += 1 {
+    for u64 j = low; j < high; j += 1 {
         if array[j] < pivot {
             T temp = array[i];
             array[i] = array[j];
@@ -198,7 +198,7 @@ fn Array::cartesian_product<T>(T[] self, i32 n) {
         return;
     }
 
-    for i32 i = 0; i < self.len(); i += 1 {
+    for u64 i = 0; i < self.len(); i += 1 {
         current.push(self[i]);
         __internal_cartesian_product_generate(self, current, n, results);
         current.pop();
@@ -208,7 +208,7 @@ fn Array::cartesian_product<T>(T[] self, i32 n) {
 fn Array::clone<T>(T[] self) -> T[] {
     T[] clone = Array::with_capacity(self.len());
 
-    for i32 i = 0; i < self.len(); i += 1 {
+    for u64 i = 0; i < self.len(); i += 1 {
         clone.push(self[i]);
     }
 
@@ -254,7 +254,7 @@ fn Array::extend<T>(T[] self, T[] other) {
     }
 }
 
-fn Array::remove<T>(T[] self, i32 index) -> T {
+fn Array::remove<T>(T[] self, u64 index) -> T {
     if index < 0 || index >= self.size {
         return #cast(T, nil);
     }
@@ -274,7 +274,7 @@ fn Array::remove<T>(T[] self, i32 index) -> T {
     return removedElement;
 }
 
-fn Array::insert<T>(T[] self, i32 index, T element) {
+fn Array::insert<T>(T[] self, u64 index, T element) {
     if index < 0 || index > self.size {
         io::cprintf(
             "Index %ld is out of bounds (must be between 0 and %ld inclusive)\n"
@@ -290,7 +290,7 @@ fn Array::insert<T>(T[] self, i32 index, T element) {
         self.resize((self.capacity || 1) * 2);
     }
 
-    for i32 i = self.size; i > index; i -= 1 {
+    for u64 i = self.size; i > index; i -= 1 {
         self.elements[i] = self.elements[i - 1];
     }
 
@@ -301,7 +301,7 @@ fn Array::insert<T>(T[] self, i32 index, T element) {
 fn Array::map_with<T, U>(U[] self, fn *mapping, void *arg) -> T[] {
     let new_self = Array::with_capacity<T>(self.len());
 
-    for let i = 0; i < self.len(); i += 1 {
+    for u64 i = 0; i < self.len(); i += 1 {
         new_self.push(#cast(T, mapping(self[i], arg, i, new_self)));
     }
 
@@ -315,7 +315,7 @@ fn Array::map<T, U>(U[] self, fn *mapping) -> T[] {
 fn Array::filter_with<T>(T[] self, fn *mapping, void *arg) -> T[] {
     let new_self = Array::with_capacity<T>(self.len());
 
-    for let i = 0; i < self.len(); i += 1 {
+    for u64 i = 0; i < self.len(); i += 1 {
         if #cast(bool, mapping(self[i], arg, i, new_self)) {
             new_self.push(self[i]);
         }
@@ -349,7 +349,7 @@ fn Array::any<T>(T[] self, fn *cb) {
 }
 
 fn Array::find<T>(T[] self, fn *cb, void *arg) -> Option<T> {
-    for let i = 0; i < self.len(); i += 1 {
+    for u64 i = 0; i < self.len(); i += 1 {
         if #cast(bool, cb(self[i], arg)) {
             return Option::Some(self[i]);
         }
@@ -359,7 +359,7 @@ fn Array::find<T>(T[] self, fn *cb, void *arg) -> Option<T> {
 }
 
 fn Array::includes<T>(T[] self, T element) {
-    for i32 i = 0; i < self.len(); i += 1 {
+    for u64 i = 0; i < self.len(); i += 1 {
         if self[i] == element {
             return true;
         }
@@ -369,7 +369,7 @@ fn Array::includes<T>(T[] self, T element) {
 }
 
 fn Array::index<T>(T[] self, T element) {
-    for i32 i = 0; i < self.len(); i += 1 {
+    for u64 i = 0; i < self.len(); i += 1 {
         if self[i] == element {
             return i;
         }
@@ -381,7 +381,7 @@ fn Array::index<T>(T[] self, T element) {
 fn Array::sum<T>(T[] self) {
     T sum = 0;
 
-    for i32 i = 0; i < self.len(); i += 1 {
+    for u64 i = 0; i < self.len(); i += 1 {
         sum += self.elements[i];
     }
 
@@ -391,7 +391,7 @@ fn Array::sum<T>(T[] self) {
 fn Array::product<T>(T[] self) {
     T sum = 0;
 
-    for i32 i = 0; i < self.len(); i += 1 {
+    for u64 i = 0; i < self.len(); i += 1 {
         sum *= self.elements[i];
     }
 
@@ -421,7 +421,7 @@ fn Array::max<T>(T[] self) -> T {
 
     T max = self[0];
 
-    for i32 i = 1; i < self.len(); i += 1 {
+    for u64 i = 1; i < self.len(); i += 1 {
         if self[i] > max {
             max = self[i];
         }
@@ -446,10 +446,7 @@ fn Array::min<T>(T[] self) -> T {
     return min;
 }
 
-fn Array::slice<T>(T[] self, i32 _start, i32 _end) -> T[] {
-    let start = _start;
-    let end = _end;
-
+fn Array::slice<T>(T[] self, i64 start, i64 end) -> T[] {
     if end == -1 {
         end = self.len();
     }
