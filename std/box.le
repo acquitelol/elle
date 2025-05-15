@@ -12,3 +12,35 @@ fn Box::new<T>(T value) -> Box<T> {
         value = ptr
     };
 }
+
+fn Box::__deref_load__<T>(Box<T> self) {
+    return *self.value;
+}
+
+fn Box::__deref_store__<T, U>(Box<T> self, U value) {
+    *self.value = value;
+}
+
+fn Box::__load__<T, U>(Box<T> self, U rhs) {
+    return self.value[rhs];
+}
+
+fn Box::__load_ref__<T, U>(Box<T> self, U rhs) {
+    return &self.value[rhs];
+}
+
+fn Box::__store__<T, U, V>(Box<T> self, U rhs, V value) {
+    self.value[rhs] = value;
+}
+
+fn Box::__len__<T>(Box<T> self) {
+    return 1; // There is only ever 1 element
+}
+
+fn Box::__equals__<T, U>(Box<T> self, Box<U> other) {
+    return *self.value == *other.value;
+}
+
+fn Box::__hash__<T>(Box<T> self, i32 capacity) {
+    return self.value.__hash__();
+}
