@@ -21,7 +21,7 @@ fn main() {
     rl::set_target_fps(60);
 
     while !rl::window_should_close() {
-        rl::update_camera(&camera, CameraMode::CAMERA_ORBITAL);
+        rl::update_camera(#cast(Camera *, &camera), CameraMode::CAMERA_ORBITAL);
 
         rl::begin_drawing();
             rl::clear_background(#cast(Color, &0xFF181818));

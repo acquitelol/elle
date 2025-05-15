@@ -141,7 +141,7 @@ async fn main() -> ExitCode {
     let mut no_alloc = false; // no arbitrary allocator
     let mut no_gc = false; // no gc uses arena by default instead, doesnt need --noalloc
     let mut no_fmt = false; // no primitive fmt methods
-    let mut pedantic = false; // extra checks in type conversions
+    let mut pedantic = true; // extra checks in type conversions
     let mut lsp = false; // LSP support for IDEs
     let mut expect_info = false;
     let mut release_mode = false; // enables dead code elimation
@@ -205,7 +205,7 @@ async fn main() -> ExitCode {
                 }
             }
             "-x" | "--diagnostic-only" => unsafe { RAW_ERRORS = Some(true) },
-            "-p" | "--pedantic" => pedantic = true,
+            "--nop" | "--no-pedantic" => pedantic = false,
             "-o" => output_path = args.next(),
             "-h" | "--help" => {
                 print_help(&program);
@@ -327,6 +327,7 @@ async fn main() -> ExitCode {
             // string[]
             r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
             no_fmt: false,
+            is_unused: false,
         },
         // Holds an array of the type of arguments passed into the function as strings
         Argument {
@@ -334,6 +335,7 @@ async fn main() -> ExitCode {
             // string[]
             r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
             no_fmt: false,
+            is_unused: false,
         },
         // Holds the number of arguments that were passed into a function
         Argument {
@@ -341,6 +343,7 @@ async fn main() -> ExitCode {
             // i32
             r#type: Type::Word,
             no_fmt: false,
+            is_unused: false,
         },
         // Holds the name of the caller method as a string
         Argument {
@@ -348,6 +351,7 @@ async fn main() -> ExitCode {
             // string
             r#type: Type::Pointer(Box::new(Type::Char)),
             no_fmt: false,
+            is_unused: false,
         },
         // The name of the file that the struct was generated in
         Argument {
@@ -355,6 +359,7 @@ async fn main() -> ExitCode {
             // string
             r#type: Type::Pointer(Box::new(Type::Char)),
             no_fmt: false,
+            is_unused: false,
         },
         // The line number that the struct was generated on
         Argument {
@@ -362,6 +367,7 @@ async fn main() -> ExitCode {
             // i32
             r#type: Type::Word,
             no_fmt: false,
+            is_unused: false,
         },
         // The column number that the struct was generated on
         Argument {
@@ -369,6 +375,7 @@ async fn main() -> ExitCode {
             // i32
             r#type: Type::Word,
             no_fmt: false,
+            is_unused: false,
         },
     ];
 
@@ -378,18 +385,21 @@ async fn main() -> ExitCode {
             name: "allocator".into(),
             r#type: Type::Pointer(Box::new(Type::Struct(ARBITRARY_ALLOCATOR_NAME.into()))),
             no_fmt: false,
+            is_unused: false,
         },
         // The pointer to the default allocator
         Argument {
             name: "default_allocator".into(),
             r#type: Type::Pointer(Box::new(Type::Struct(default_allocator.into()))),
             no_fmt: false,
+            is_unused: false,
         },
         // An approximation of the top of the stack
         Argument {
             name: "stack_top".into(),
             r#type: Type::Pointer(Box::new(Type::Void)),
             no_fmt: false,
+            is_unused: false,
         },
     ];
 
@@ -543,11 +553,13 @@ async fn main() -> ExitCode {
                     name: "argc".into(),
                     r#type: Type::Word,
                     no_fmt: false,
+                    is_unused: false,
                 },
                 Argument {
                     name: "argv".into(),
                     r#type: Type::Pointer(Box::new(Type::Pointer(Box::new(Type::Char)))),
                     no_fmt: false,
+                    is_unused: false,
                 },
             ],
             r#return: Some(Type::Word),

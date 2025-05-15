@@ -24,7 +24,7 @@ fn TcpServer::bind(u16 port) -> Result<TcpServer, Errno> {
         sin_addr = in_addr { s_addr = InAddr::ANY }
     };
 
-    if bind(fd, &addr, #size(addr)) < 0 {
+    if bind(fd, #cast(sockaddr *, &addr), #size(addr)) < 0 {
         TcpConnection::close(TcpConnection { fd = fd });
         return Result::Err(#cast(Errno, errno));
     }

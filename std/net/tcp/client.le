@@ -23,7 +23,7 @@ fn TcpClient::connect(string host, u16 port) -> Result<TcpConnection, Errno> {
         sin_addr = in_addr { s_addr = inet_addr(host) }
     };
 
-    if connect(fd, &addr, #size(addr)) < 0 {
+    if connect(fd, #cast(sockaddr *, &addr), #size(addr)) < 0 {
         TcpConnection::close(TcpConnection { fd = fd });
         return Result::Err(#cast(Errno, errno));
     }

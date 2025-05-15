@@ -67,10 +67,6 @@ pub fn print_help(program: &str) {
                     "Prints the current ellec version (along with extra information)",
                 ),
                 (
-                    "-p, --pedantic",
-                    "Enables extra validations/checks when performing type conversions",
-                ),
-                (
                     "-r, --release",
                     "Enables extra optimizations, but has longer compilation times",
                 ),
@@ -149,6 +145,10 @@ pub fn print_help(program: &str) {
                 (
                     "--nostd, --no-stdlib",
                     "Doesn't link with the Elle runtime library during compilation.",
+                ),
+                (
+                    "--nop, --no-pedantic",
+                    "Disables extra validations/checks when performing type conversions",
                 ),
                 (
                     "--noclr, --no-ansi",
