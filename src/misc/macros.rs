@@ -89,10 +89,35 @@ macro_rules! is_generic {
 }
 
 #[macro_export]
-macro_rules! is_unknown {
+macro_rules! has_unknown_part {
     ($name:expr $(,)?) => {
         $name.contains(&format!(".{}.", $crate::GENERIC_UNKNOWN))
     };
+}
+
+#[macro_export]
+macro_rules! is_unknown {
+    ($name:expr $(,)?) => {{
+        let mut nesting = 0;
+        let mut is_unknown = false;
+
+        for part in $name.split('.') {
+            if part == $crate::GENERIC_IDENTIFIER {
+                nesting += 1;
+            }
+
+            if part == $crate::GENERIC_END {
+                nesting -= 1;
+            }
+
+            if part == $crate::GENERIC_UNKNOWN && nesting == 1 {
+                is_unknown = true;
+                break;
+            }
+        }
+
+        is_unknown
+    }};
 }
 
 /// Removes a symbol (function, constant, struct) named [`name`]
