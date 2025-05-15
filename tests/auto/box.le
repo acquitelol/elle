@@ -1,0 +1,74 @@
+use std/prelude;
+
+struct Foo {
+    i32 x
+}
+
+fn Foo::__equals__(Foo self, Foo other) {
+    return self.x == other.x;
+}
+
+fn `basic`() {
+    x := Box::new(1);
+    $assert(*x == 1, nil);
+}
+
+fn `with.struct`() {
+    x := Box::new(Foo { x = 123 });
+    $assert((*x).x = 123, nil);
+}
+
+fn `length`() {
+    x := Box::new(39);
+    $assert(x.__len__() == 1, nil);
+}
+
+fn `deref.load`() {
+    x := Box::new(13);
+    $assert(*x == 13, nil);
+}
+
+fn `deref.store`() {
+    x := Box::new(14);
+    *x += 25;
+    $assert(*x == 39, nil);
+}
+
+fn `indexed.load`() {
+    x := Box::new(133);
+    $assert(x[0] == 133, nil);
+}
+
+fn `indexed_store`() {
+    x := Box::new(43);
+    x[0] += 6;
+    $assert(*x == 49, nil);
+}
+
+fn `ref.load`() {
+    x := Box::new(51);
+    y := &x[0];
+    *y += 1;
+    $assert(*x == 52, nil);
+}
+
+fn `equality`() {
+    $assert(Box::new(123) == Box::new(123), nil);
+    $assert(Box::new(123) != Box::new(39), nil);
+    $assert(Box::new(Foo { x = 123 }) == Box::new(Foo { x = 123 }), nil);
+    $assert(Box::new(Foo { x = 123 }) != Box::new(Foo { x = 39 }), nil);
+}
+
+fn main() {
+    `basic`();
+    `with.struct`();
+    `length`();
+    `deref.load`();
+    `deref.store`();
+    `indexed.load`();
+    `indexed_store`();
+    `ref.load`();
+    `equality`();
+
+    $println("All `Box` tests have passed!".color("green").reset());
+}
