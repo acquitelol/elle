@@ -258,6 +258,49 @@ impl<'a> Enum<'a> {
         }));
 
         if should_add_fmt_builtin {
+            let mut cases = variants
+                .iter()
+                .map(|x| {
+                    AstNode::IfStatement(IfStatement {
+                        condition: Box::new(AstNode::BinaryOperation(BinaryOperation {
+                            left: Box::new(AstNode::token_to_literal(Token::from_ident("self"))),
+                            right: Box::new(AstNode::Conversion(Conversion {
+                                r#type: ty.clone().or(Some(Type::Word)),
+                                value: Box::new(AstNode::token_to_literal(x.value.clone())),
+                                location: location.clone(),
+                                explicit: true,
+                            })),
+                            operator: TokenKind::EqualTo,
+                            treat_as_string: true,
+                            dunder_methods: true,
+                            location: location.clone(),
+                        })),
+                        body: vec![AstNode::Return(Return {
+                            value: Box::new(AstNode::Literal(Literal {
+                                kind: TokenKind::StringLiteral,
+                                value: ValueKind::String(x.name.clone()),
+                                location: location.clone(),
+                                tagged: false,
+                            })),
+                            location: location.clone(),
+                        })],
+                        elifs: vec![],
+                        else_body: vec![],
+                        location: location.clone(),
+                    })
+                })
+                .collect::<Vec<AstNode>>();
+
+            cases.push(AstNode::Return(Return {
+                value: Box::new(AstNode::Literal(Literal {
+                    kind: TokenKind::StringLiteral,
+                    value: ValueKind::String("Invalid".into()),
+                    location: location.clone(),
+                    tagged: false,
+                })),
+                location: location.clone(),
+            }));
+
             builtins.push(Primitive::Function(FunctionSource {
                 namespace_token: Token::from_ident(&name),
                 name_token: Token::from_ident(FORMAT_CONSTANT),
@@ -287,40 +330,7 @@ impl<'a> Enum<'a> {
                     },
                 ],
                 r#return: None,
-                body: variants
-                    .iter()
-                    .map(|x| {
-                        AstNode::IfStatement(IfStatement {
-                            condition: Box::new(AstNode::BinaryOperation(BinaryOperation {
-                                left: Box::new(AstNode::token_to_literal(Token::from_ident(
-                                    "self",
-                                ))),
-                                right: Box::new(AstNode::Conversion(Conversion {
-                                    r#type: ty.clone().or(Some(Type::Word)),
-                                    value: Box::new(AstNode::token_to_literal(x.value.clone())),
-                                    location: location.clone(),
-                                    explicit: true,
-                                })),
-                                operator: TokenKind::EqualTo,
-                                treat_as_string: true,
-                                dunder_methods: true,
-                                location: location.clone(),
-                            })),
-                            body: vec![AstNode::Return(Return {
-                                value: Box::new(AstNode::Literal(Literal {
-                                    kind: TokenKind::StringLiteral,
-                                    value: ValueKind::String(x.name.clone()),
-                                    location: location.clone(),
-                                    tagged: false,
-                                })),
-                                location: location.clone(),
-                            })],
-                            elifs: vec![],
-                            else_body: vec![],
-                            location: location.clone(),
-                        })
-                    })
-                    .collect::<Vec<AstNode>>(),
+                body: cases,
                 location: location.clone(),
                 return_location: location.clone(),
             }));
