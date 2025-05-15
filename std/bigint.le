@@ -160,7 +160,7 @@ fn BigInt::sub(BigInt *self, BigInt *other) -> BigInt * {
         result.digits.push(diff);
     }
 
-    while result.digits.len() > 1 && result.digits.last() == 0 {
+    while result.digits.len() > 1 && res := result.digits.last().unwrap() == 0 {
         result.digits.pop();
     }
 
@@ -194,7 +194,7 @@ fn BigInt::mul(BigInt *self, BigInt *other) -> BigInt * {
         }
     }
 
-    while result.digits.len() > 1 && result.digits.last() == 0 {
+    while result.digits.len() > 1 && res := result.digits.last().unwrap() == 0 {
         result.digits.pop();
     }
 

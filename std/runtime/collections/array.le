@@ -401,25 +401,25 @@ fn Array::product<T>(T[] self) {
     return sum;
 }
 
-fn Array::first<T>(T[] self) -> T {
+fn Array::first<T>(T[] self) -> Option<T> {
     if self.len() < 1 {
-        return #cast(T, nil);
+        return Option::None();
     }
 
-    return self[0];
+    return Option::Some(self[0]);
 }
 
-fn Array::last<T>(T[] self) -> T {
+fn Array::last<T>(T[] self) -> Option<T> {
     if self.len() < 1 {
-        return #cast(T, nil);
+        return Option::None();
     }
 
-    return #cast(T, self[self.len() - 1]);
+    return Option::Some(self[self.len() - 1]);
 }
 
-fn Array::max<T>(T[] self) -> T {
+fn Array::max<T>(T[] self) -> Option<T> {
     if self.len() == 0 {
-        return #cast(T, nil);
+        return Option::None();
     }
 
     T max = self[0];
@@ -430,12 +430,12 @@ fn Array::max<T>(T[] self) -> T {
         }
     }
 
-    return max;
+    return Option::Some(max);
 }
 
-fn Array::min<T>(T[] self) -> T {
+fn Array::min<T>(T[] self) -> Option<T> {
     if self.len() == 0 {
-        return #cast(T, nil);
+        return Option::None();
     }
 
     T min = self[0];
@@ -446,7 +446,7 @@ fn Array::min<T>(T[] self) -> T {
         }
     }
 
-    return min;
+    return Option::Some(min);
 }
 
 fn Array::slice<T>(T[] self, i64 start, i64 end) -> T[] {
