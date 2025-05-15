@@ -2,17 +2,17 @@ use std/collections/array;
 global pub;
 
 pub struct Foo {
-    i32 x;
-    string y;
-    f64 z;
-};
+    i32 x,
+    string y,
+    f64 z,
+}
 
 fn Foo::to_bytes(Foo self) -> u8[] {
     res := [];
 
     res.extend([self.x].to_bytes());
     res.extend([self.y.len()].to_bytes());
-    res.extend(Array::from_string(self.y));
+    res.extend(Array::from_string(self.y).to_bytes());
     res.extend([self.z].to_bytes());
 
     return res;

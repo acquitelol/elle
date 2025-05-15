@@ -1,9 +1,9 @@
 use std/prelude;
 
 struct Grid<T> {
-    T[] data;
-    i32 width;
-};
+    T[] data,
+    i32 width,
+}
 
 fn Grid::from_str(string input) -> Grid<char> {
     return Grid {

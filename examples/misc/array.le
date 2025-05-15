@@ -1,5 +1,4 @@
-use std/math;
-use std/io;
+use std/prelude;
 
 fn other(i64 *arr, i32 val, i32 size) {
     $dbg(arr[0], val, size);
@@ -11,7 +10,7 @@ fn len_in_other_fn(i64 *arr) {
 }
 
 fn main() {
-    let test = #[i64::max(), i64::min(), -39];
+    let test = #[i64::MAX, i64::MIN, -39];
 
     for item in test {
         io::printf("test[{}] = {}", #i(item), item);

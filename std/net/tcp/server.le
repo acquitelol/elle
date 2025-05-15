@@ -7,9 +7,9 @@ use std/net/tcp/connection;
 global pub;
 
 struct TcpServer {
-    i32 fd;
-    u16 port;
-};
+    i32 fd,
+    u16 port
+}
 
 fn TcpServer::bind(u16 port) -> Result<TcpServer, Errno> {
     fd := socket(AddressFamily::INET, SocketType::STREAM, 0);

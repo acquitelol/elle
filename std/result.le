@@ -2,10 +2,10 @@ use std/io;
 global pub;
 
 struct Result<T, E> @nofmt {
-    bool __is_ok;
-    T __value;
-    E __error;
-};
+    bool __is_ok,
+    T __value,
+    E __error
+}
 
 fn Result::__fmt__<T, E>(Result<T, E> self, i32 nesting) {
     if self.is_ok() {

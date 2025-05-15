@@ -2,10 +2,10 @@ use std/collections/array;
 use std/io;
 
 struct Object {
-    void *data;
-    bool marked;
-    i32 size;
-};
+    void *data,
+    bool marked,
+    i32 size,
+}
 
 fn Object::new(i32 size) {
     Object *obj = mem::malloc(#size(Object));
@@ -23,8 +23,8 @@ fn Object::free(Object *self) {
 }
 
 struct GC {
-    Object *[] heap;
-};
+    Object *[] heap
+}
 
 fn GC::new() {
     let gc = #alloc(GC);

@@ -4,9 +4,9 @@ use std/libc/io;
 global pub;
 
 struct BigInt {
-    i32[] digits; // Starts with least significant digit
-    bool is_negative;
-};
+    i32[] digits, // Starts with least significant digit
+    bool is_negative
+}
 
 fn BigInt::empty(bool is_negative) {
     let bigint = #alloc(BigInt);

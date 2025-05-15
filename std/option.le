@@ -2,9 +2,9 @@ use std/io;
 global pub;
 
 struct Option<T> @nofmt {
-    T __value;
-    bool __is_some;
-};
+    T __value,
+    bool __is_some
+}
 
 fn Option::__fmt__<T>(Option<T> self, i32 nesting) {
     if self.is_some() {

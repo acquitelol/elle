@@ -4,7 +4,7 @@ use std/raylib;
 enum Screen {
     WIDTH = 800,
     HEIGHT = 600
-};
+}
 
 fn main() {
     rl::init_window(Screen::WIDTH, Screen::HEIGHT, "Spinning Cube");

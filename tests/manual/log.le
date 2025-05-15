@@ -1,8 +1,8 @@
 use std/io;
 
 struct Foo {
-    i32 a;
-};
+    i32 a
+}
 
 fn main() {
     let foo = "this is a string";

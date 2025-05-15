@@ -19,7 +19,7 @@ enum StateKind {
     Draw,
     X,
     O
-};
+}
 
 fn StateKind::__fmt__(StateKind self, i32 nesting) {
     if self == StateKind::X { return "X"; }
@@ -28,15 +28,15 @@ fn StateKind::__fmt__(StateKind self, i32 nesting) {
 }
 
 struct State {
-    StateKind[] board;
-    StateKind current_player;
-    StateKind winner;
-};
+    StateKind[] board,
+    StateKind current_player,
+    StateKind winner,
+}
 
 struct Button {
-    i32 index;
-    fn *cb;
-};
+    i32 index,
+    fn *cb,
+}
 
 fn Button::new(i32 index, fn *cb) {
     self := #alloc(Button);

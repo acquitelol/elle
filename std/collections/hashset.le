@@ -9,10 +9,10 @@ const void *HashSet_NEVER_USED = i32::min();
 const void *HashSet_TOMBSTONE = i32::min() + 1;
 
 struct HashSet<T> {
-    T[] table;
-    i32 size;
-    i32 capacity;
-};
+    T[] table,
+    i32 size,
+    i32 capacity
+}
 
 fn HashSet::__fmt__<T>(HashSet<T> self, i32 nesting) {
     HashSet<T> temp = self;

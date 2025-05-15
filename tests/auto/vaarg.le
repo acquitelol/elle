@@ -1,8 +1,8 @@
 use std/prelude;
 
 struct Foo {
-    i32 x;
-};
+    i32 x
+}
 
 fn foo(ElleMeta meta, ...args) {
     $assert(meta.arity == 4, nil);

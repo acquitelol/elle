@@ -7,28 +7,28 @@ global pub;
 fn __internal_gc_noop(void *x) {}
 
 struct __internal_ElleGC_Header @nofmt {
-    bool marked;
-    i32 size;
-    void *data;
-};
+    bool marked,
+    i32 size,
+    void *data
+}
 
 struct __internal_ElleGC_HashNode @nofmt {
-    void *key;
-    __internal_ElleGC_Header *value;
-    __internal_ElleGC_HashNode *next;
-};
+    void *key,
+    __internal_ElleGC_Header *value,
+    __internal_ElleGC_HashNode *next
+}
 
 struct __internal_ElleGC_HashMap @nofmt {
-    __internal_ElleGC_HashNode **buckets;
-    i32 capacity;
-};
+    __internal_ElleGC_HashNode **buckets,
+    i32 capacity
+}
 
 struct GCAllocator @nofmt {
-    i32 total_size;                   // total allocated memory
-    i32 threshold;                    // threshold until collection
-    i32 objects;                      // number of allocated objects
-    __internal_ElleGC_HashMap *map;   // map to track allocations
-};
+    i32 total_size,                   // total allocated memory
+    i32 threshold,                    // threshold until collection
+    i32 objects,                      // number of allocated objects
+    __internal_ElleGC_HashMap *map   // map to track allocations
+}
 
 fn __internal_ElleGC_HashMap::new(i32 capacity) {
     __internal_ElleGC_HashMap *map = mem::malloc(#size(__internal_ElleGC_HashMap));

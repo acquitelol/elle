@@ -2,13 +2,13 @@ use std/libc/mem;
 global pub;
 
 struct Node<T> {
-    void *next;
-    T data;
-};
+    void *next,
+    T data
+}
 
 struct LinkedList<T> {
-    Node<T> *head;
-};
+    Node<T> *head
+}
 
 fn LinkedList::__fmt__<T>(LinkedList<T> self, i32 nesting) {
     res := "";

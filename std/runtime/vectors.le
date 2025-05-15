@@ -2,15 +2,15 @@ use std/runtime/math;
 global pub;
 
 struct Vector3 @nofmt {
-    f32 x;
-    f32 y;
-    f32 z;
-};
+    f32 x,
+    f32 y,
+    f32 z
+}
 
 struct Vector2 @nofmt {
-    f32 x;
-    f32 y;
-};
+    f32 x,
+    f32 y
+}
 
 // ----- Vector2 methods -----
 

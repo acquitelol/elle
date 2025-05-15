@@ -7,9 +7,9 @@ fn Tuple::capitalize((string, string) self) {
 }
 
 struct Info {
-    (string, string) name;
-    (string, string) data;
-};
+    (string, string) name,
+    (string, string) data,
+}
 
 fn Info::to_space_name(Info self) {
     let name = $(

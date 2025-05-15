@@ -3,9 +3,9 @@ use std/hashes;
 global pub;
 
 struct Tuple<T, U> {
-    T x;
-    U y;
-};
+    T x,
+    U y
+}
 
 fn Tuple::__fmt__<T, U>(Tuple<T, U> self, i32 nesting) {
     return string::format(

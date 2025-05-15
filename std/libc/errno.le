@@ -102,7 +102,7 @@ enum Errno @nofmt @cfg(target = "macos") {
     EPROTO,
     ETIME,
     EOPNOTSUPP
-};
+}
 
 enum Errno @nofmt @cfg(target = "linux") {
     EPERM = 1,
@@ -239,7 +239,7 @@ enum Errno @nofmt @cfg(target = "linux") {
     ERFKILL,
     EHWPOISON,
     ENOTSUP = 95
-};
+}
 
 fn Errno::__fmt__(Errno self, i32 nesting) {
     /// Binops cast out to the enum repr type :)

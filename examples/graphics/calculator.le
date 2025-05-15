@@ -15,16 +15,16 @@ const BUTTON_HOVER = rl::get_color(0x555555FF);
 const BACKGROUND = rl::get_color(0x181818FF);
 
 struct State {
-    string input;
-    string op;
-    i32 lhs;
-    i32 rhs;
-};
+    string input,
+    string op,
+    i32 lhs,
+    i32 rhs,
+}
 
 struct Button {
-    string kind;
-    fn *cb;
-};
+    string kind,
+    fn *cb,
+}
 
 fn Button::new(string kind, fn *cb) {
     self := #alloc(Button);

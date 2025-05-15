@@ -3,15 +3,15 @@ use std/math;
 global pub, external;
 
 struct Vector2 {
-    f32 x;
-    f32 y;
-};
+    f32 x,
+    f32 y
+}
 
 struct Vector3 {
-    f32 x;
-    f32 y;
-    f32 z;
-};
+    f32 x,
+    f32 y,
+    f32 z
+}
 
 fn Vector2::zero() -> Vector2;
 fn Vector2::clone(Vector2 self) -> Vector2;

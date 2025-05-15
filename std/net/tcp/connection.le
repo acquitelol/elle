@@ -5,8 +5,8 @@ use std/result;
 global pub;
 
 struct TcpConnection {
-    i32 fd;
-};
+    i32 fd
+}
 
 fn TcpConnection::read_raw<T>(TcpConnection self, T *buffer, i32 size) -> Result<i64, Errno> {
     res := recv(self.fd, buffer, size, 0);

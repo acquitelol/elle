@@ -1,17 +1,17 @@
 use std/io;
 
 struct Bar {
-    i32 meow;
-    i32 nya;
-};
+    i32 meow,
+    i32 nya,
+}
 
 struct Foo {
-    i64 a;
-    f64 *b;
-    i32 c;
-    Bar bar;
-    Bar *ptr;
-};
+    i64 a,
+    f64 *b,
+    i32 c,
+    Bar bar,
+    Bar *ptr,
+}
 
 fn other(Foo *a) {
     a.b[0] = 1.7113e2;

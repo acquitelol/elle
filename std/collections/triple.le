@@ -3,10 +3,10 @@ use std/hashes;
 global pub;
 
 struct Triple<T, U, V> {
-    T x;
-    U y;
-    V z;
-};
+    T x,
+    U y,
+    V z
+}
 
 fn Triple::__fmt__<T, U, V>(Triple<T, U, V> self, i32 nesting) {
     return string::format(

@@ -38,6 +38,9 @@ impl<'a> Struct<'a> {
                 {
                     self.parser.advance();
                 }
+
+                self.parser.expect_tokens(&[TokenKind::Semicolon]);
+                self.parser.advance();
             } else {
                 while self.parser.current_token().kind != TokenKind::RightCurlyBrace
                     && !self.parser.is_eof()
@@ -48,9 +51,6 @@ impl<'a> Struct<'a> {
                 self.parser.expect_tokens(&[TokenKind::RightCurlyBrace]);
                 self.parser.advance();
             }
-
-            self.parser.expect_tokens(&[TokenKind::Semicolon]);
-            self.parser.advance();
 
             return None;
         }
@@ -167,14 +167,44 @@ impl<'a> Struct<'a> {
                 break;
             }
 
+            let mut is_unused = false;
+            if self.parser.match_token(TokenKind::Attribute, false) {
+                while self.parser.current_token().kind == TokenKind::Attribute
+                    && !self.parser.is_eof()
+                {
+                    self.parser.advance();
+                    let attribute = self.parser.current_token().parse_attribute();
+
+                    #[allow(clippy::single_match_else)]
+                    match attribute {
+                        Attribute::Unused => {
+                            is_unused = true;
+                            self.parser.advance();
+                        }
+                        _ => elle_error!(self.parser.current_token().location.borrow().error(
+                            format!(
+                                "Unknown attribute for field '{}'",
+                                self.parser
+                                    .current_token()
+                                    .value
+                                    .get_string_inner()
+                                    .unwrap()
+                            )
+                        )),
+                    }
+                }
+            }
+
             let ty = self.parser.get_type(Some(&generics));
             self.parser.advance();
 
             let name = self.parser.get_identifier();
             self.parser.advance();
 
-            self.parser.expect_tokens(&[TokenKind::Semicolon]);
-            self.parser.advance();
+            if self.parser.current_token().kind != TokenKind::RightCurlyBrace {
+                self.parser.expect_tokens(&[TokenKind::Comma]);
+                self.parser.advance();
+            }
 
             members.push(Argument {
                 name,
@@ -184,9 +214,6 @@ impl<'a> Struct<'a> {
         }
 
         self.parser.expect_tokens(&[TokenKind::RightCurlyBrace]);
-        self.parser.advance();
-
-        self.parser.expect_tokens(&[TokenKind::Semicolon]);
         set_end!(location, self.parser);
         self.parser.advance();
 

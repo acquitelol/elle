@@ -3,16 +3,16 @@ global pub, external;
 const i64 CLOCKS_PER_SEC = 1_000_000;
 
 struct time_info {
-    i32 seconds; // Seconds [0, 60]
-    i32 minutes; // Minutes [0, 59]
-    i32 hours; // Hour [0, 23]
-    i32 days; // Day of the month [1, 31]
-    i32 months; // Month of the year [0, 11]
-    i32 years; // Years since 1900
-    i32 weekdays; // Day of week [0,6] (Sunday =0)
-    i32 yeardays; // Day of year [0,365].
-    i32 dst; // Daylight Savings flag.
-};
+    i32 seconds,  // Seconds [0, 60]
+    i32 minutes,  // Minutes [0, 59]
+    i32 hours,    // Hour [0, 23]
+    i32 days,     // Day of the month [1, 31]
+    i32 months,   // Month of the year [0, 11]
+    i32 years,    // Years since 1900
+    i32 weekdays, // Day of week [0,6] (Sunday =0)
+    i32 yeardays, // Day of year [0,365].
+    i32 dst       // Daylight Savings flag.
+}
 
 fn asctime(time_info *timeptr) -> string;
 fn asctime_r(time_info *restrict, string restrict) -> string;

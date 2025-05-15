@@ -1,9 +1,9 @@
 use std/io;
 
 struct Foo<T, U> {
-    T a;
-    U b;
-};
+    T a,
+    U b,
+}
 
 fn Foo::new<T, U>(T a, U b) -> Foo<T, U> {
     return Foo { a = a, b = b };

@@ -1,5 +1,5 @@
 use std/io;
-struct Counter { i32 value; };
+struct Counter { i32 value }
 
 fn Counter::increment(Counter *self) {
     self.value += 1;

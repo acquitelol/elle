@@ -7,8 +7,8 @@ use std/net/tcp/connection;
 global pub;
 
 struct TcpClient {
-    i32 fd;
-};
+    i32 fd
+}
 
 fn TcpClient::connect(string host, u16 port) -> Result<TcpConnection, Errno> {
     fd := socket(AddressFamily::INET, SocketType::STREAM, 0);

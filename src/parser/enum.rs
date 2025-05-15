@@ -39,9 +39,14 @@ impl<'a> Enum<'a> {
         self.parser.advance();
 
         if !should_parse {
-            self.parser.yield_tokens_wrapped_with_semi();
-            self.parser.advance();
+            while self.parser.current_token().kind != TokenKind::RightCurlyBrace
+                && !self.parser.is_eof()
+            {
+                self.parser.advance();
+            }
 
+            self.parser.expect_tokens(&[TokenKind::RightCurlyBrace]);
+            self.parser.advance();
             return None;
         }
 
@@ -193,11 +198,7 @@ impl<'a> Enum<'a> {
         }
 
         self.parser.expect_tokens(&[TokenKind::RightCurlyBrace]);
-        self.parser.advance();
-
         set_end!(location, self.parser);
-
-        self.parser.expect_tokens(&[TokenKind::Semicolon]);
         self.parser.advance();
 
         let mut builtins = vec![];

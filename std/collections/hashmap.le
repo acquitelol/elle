@@ -8,29 +8,20 @@ use std/math;
 
 global pub;
 
-const void *HashMap_EMPTY = i32::min();
-
-struct HashMap_Bucket {
-    void *key;
-    void *value;
-    bool full;
-};
-
-fn HashMap_Bucket::new(void *key, void *value, bool full) {
-    let bucket = #alloc(HashMap_Bucket);
-
-    bucket.key = key;
-    bucket.value = value;
-    bucket.full = full;
+struct HashMap_Bucket<T, U> {
+    T key,
+    U value,
+    bool full
+}
 
     return bucket;
 }
 
 struct HashMap<T, U> {
-    HashMap_Bucket *[] table;
-    i32 size;
-    i32 capacity;
-};
+    HashMap_Bucket<T, U> *[] table,
+    i32 size,
+    i32 capacity
+}
 
 !pub fn __internal_key_exists_check<T, U>(HashMap<T, U> *self, T key, ElleMeta meta) {
     if !self.contains_key(key) {

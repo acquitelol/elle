@@ -1,8 +1,8 @@
 use std/prelude;
 
 struct Foo {
-    i32 x;
-};
+    i32 x,
+}
 
 fn main() {
     // This test aims to ensure that storing struct copies inside of buffers does

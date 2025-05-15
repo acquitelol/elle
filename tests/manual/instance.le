@@ -1,8 +1,8 @@
 use std/io;
 
 struct Foo {
-    i32 a;
-};
+    i32 a
+}
 
 // `Foo`, only gets a copy of Foo
 fn Foo::add(Foo self, Foo other) {

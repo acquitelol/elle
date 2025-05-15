@@ -1,9 +1,9 @@
 use std/prelude;
 
 struct Foo {
-    i32 x;
-    i32[] y;
-};
+    i32 x,
+    i32[] y,
+}
 
 // Typical address of a variable
 fn `normal.addr`() {

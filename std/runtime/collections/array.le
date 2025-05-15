@@ -4,10 +4,10 @@ use std/core;
 global pub;
 
 struct Array<T> @nofmt {
-    u64 size;
-    u64 capacity;
-    T *elements;
-};
+    u64 size,
+    u64 capacity,
+    T *elements
+}
 
 !pub fn __internal_array_bounds_check(string file, i32 line, i32 col, u64 i, u64 length) {
     if i < 0 || i > length - 1 {

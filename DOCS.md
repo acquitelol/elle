@@ -294,14 +294,14 @@ This struct is not defined in Elle code, however its equivalent structure may lo
 
 ```rs
 struct ElleMeta {
-    string *exprs; // An array of every argument's expression passed to the function as a string
-    string *types; // An array of the type of every argument supplied to the function
-    i32 arity;     // The number of arguments. This does NOT include the ElleMeta argument.
-    string caller; // The caller of the function as a string
-    string file;   // The file where the function was called from
-    i32 line;      // The line number of the function call + 1
-    i32 column;    // The column number of the function call + 1
-};
+    string *exprs, // An array of every argument's expression passed to the function as a string
+    string *types, // An array of the type of every argument supplied to the function
+    i32 arity,     // The number of arguments. This does NOT include the ElleMeta argument.
+    string caller, // The caller of the function as a string
+    string file,   // The file where the function was called from
+    i32 line,      // The line number of the function call + 1
+    i32 column,    // The column number of the function call + 1
+}
 ```
 
 > [!IMPORTANT]
@@ -405,9 +405,9 @@ This structure is also not defined in Elle code (like `ElleMeta`), but its equiv
 
 ```rs
 struct ElleEnv {
-    ArbitraryAllocator *allocator;
-    TAllocator *allocator;
-};
+    ArbitraryAllocator *allocator,
+    TAllocator *default_allocator,
+}
 ```
 
 (where `TAllocator` is either `GCAllocator` or `ArenaAllocator` depending on your compilation configuration.)
@@ -453,8 +453,8 @@ Example of using dynamic memory allocation:
 
 ```rs
 struct Foo {
-    i32 a;
-};
+    i32 a
+}
 
 fn Foo::new(i32 a) {
     foo := #alloc(Foo);
@@ -501,8 +501,8 @@ Example usage:
 use std/prelude;
 
 struct Foo {
-    i32 a;
-};
+    i32 a
+}
 
 fn Foo::new(i32 a) {
     let foo = #alloc(Foo);
@@ -1390,20 +1390,20 @@ fn foo(); // implicitly public and external
 
 ### ♡ **Structs**
 
-Structs are allocations in memory with a defined layout. In Elle, these are defined using the `struct` keyword.
+Structs are allocations in memory with a defined layout. In Elle, these are defined using the `struct` keyword. Struct fields are seperated by commas (with an optional trailing comma). Struct definitions should not end in a semicolon.
 
 Example:
 
 ```rs
 struct Bar {
-    f32 myFloat;
-};
+    f32 myFloat
+}
 
 struct Foo {
-    i32 a;
-    Bar bar;
-    f64 baz;
-};
+    i32 a,
+    Bar bar,
+    f64 baz,
+}
 ```
 
 You can then create these structures like this:
@@ -1447,8 +1447,8 @@ fn main() {
 use std/io;
 
 struct Foo {
-    i32 a;
-};
+    i32 a
+}
 
 fn other(Foo *foo) {
     foo.a = 5;
@@ -1467,8 +1467,8 @@ You can also define methods on structs (and primitive types):
 use std/io;
 
 struct Foo {
-    i32 a;
-};
+    i32 a
+}
 
 fn Foo::add(Foo self, Foo other) {
     return Foo { a = self.a + other.a };
@@ -1518,8 +1518,8 @@ You may also specify that `self` is a `<ty> *` instead of a `<ty>` if you requir
 use std/io;
 
 struct Foo {
-    i32 a;
-};
+    i32 a
+}
 
 fn Foo::divideBy(Foo *self, i32 num) {
     self.a /= num;
@@ -1550,7 +1550,7 @@ enum Animal {
     Cat,
     Dog,
     Bird
-};
+}
 
 fn main() {
     my_animal := Animal::Cat;
@@ -1559,6 +1559,8 @@ fn main() {
 
 Enumerations in Elle are dictinct aliases to the type they represent. By default, every enum uses an underlying type of `i32` to represent its variants.
 
+Enum variants are seperated with commas (with an optional trailing comma). Enum definitions should not end in a semicolon.
+
 You can change this with the `@repr(T)` attribute. Here's an example:
 
 ```rs
@@ -1566,7 +1568,7 @@ enum Foo @repr(u8) {
     A,
     B,
     C
-};
+}
 
 fn main() {
     x := Foo::A; // x's memory representation is u8 internally
@@ -1580,7 +1582,7 @@ enum Foo @repr(u64) @nofmt {
     A,
     B,
     C
-};
+}
 
 fn Foo::__fmt__(Foo *self, i32 nesting) {
     // replace `u64` with the repr type of your enum
@@ -1596,7 +1598,7 @@ enum Foo @repr(u64) {
     A,
     B,
     C
-};
+}
 
 fn main() {
     x := #cast(u64, Foo::B); // 1
@@ -1624,7 +1626,7 @@ enum Languages {
     Js = "JavaScript",
     Py = "Python",
     Elle = "Elle"
-};
+}
 
 fn main() {
     $assert(Languages::Js != Languages::Elle, nil);
@@ -1639,7 +1641,7 @@ enum Foo {
     B, // = 14
     C, // = 15
     D  // = 16
-};
+}
 
 enum Bar {
     A = 4,
@@ -1648,7 +1650,7 @@ enum Bar {
     D = 1,
     E, // 2
     F  // 3
-};
+}
 ```
 
 Here is an example using character literals:
@@ -1660,7 +1662,7 @@ enum Char @repr(char) {
     C, // = 'c'
     D, // = 'd'
     E  // = 'e'
-};
+}
 
 enum Misc @repr(char) {
     LeftParen = '(',
@@ -1671,7 +1673,7 @@ enum Misc @repr(char) {
     Two,        // = '2'
     Three,      // = '3'
     Four        // = '4'
-};
+}
 ```
 
 > [!IMPORTANT]
@@ -1685,7 +1687,7 @@ use std/prelude;
 enum Foo {
     Bar,
     Baz
-};
+}
 
 fn Foo::from(i32 x) {
     return #cast(Foo, x);
@@ -1709,7 +1711,7 @@ fn main() {
 ```rs
 enum Foo {
     x
-};
+}
 
 fn Foo::x() {
     return 42;
@@ -1761,8 +1763,8 @@ Generic structs are created as follows:
 
 ```rs
 struct Foo<T> {
-    T a;
-};
+    T a
+}
 
 fn main() {
     Foo<i32> x = Foo { a = 1 };
@@ -1778,9 +1780,9 @@ This allows for almost rust-like declarations of generic structs and their metho
 use std/io;
 
 struct Foo<T, U> {
-    T a;
-    U b;
-};
+    T a,
+    U b,
+}
 
 fn Foo::new<T, U>(T a, U b) -> Foo<T, U> {
     return Foo { a = a, b = b };
@@ -1939,9 +1941,9 @@ Elle allows you to specify how your structs should be formatted. By default, str
 
 ```rs
 struct Foo<T> {
-    T a;
-    T b;
-};
+    T a,
+    T b,
+}
 
 fn Foo::__fmt__<T>(Foo<T> self, i32 nesting) {
     return string::format("{}", self.a + self.b);
@@ -1957,9 +1959,9 @@ If an automatically generated struct's format method is too much bloat and you n
 
 ```rs
 struct Foo<T> @nofmt {
-    T a;
-    T b;
-};
+    T a,
+    T b,
+}
 ```
 
 If you try to print Foo<T> however, you will get a compiler error.
@@ -2007,8 +2009,8 @@ You can also define a function which formats everything _except_ the arguments y
 use std/prelude;
 
 struct Foo {
-    i32 x;
-};
+    i32 x,
+}
 
 // ElleMeta is already not formatted
 fn Foo::format(ElleMeta meta, @nofmt Foo *self, ...args) @fmt {
@@ -2128,11 +2130,11 @@ external fn ClearBackground(Color color);
 
 ```rs
 struct Color {
-    u8 r;
-    u8 g;
-    u8 b;
-    u8 a;
-};
+    u8 r,
+    u8 g,
+    u8 b,
+    u8 a,
+}
 ```
 
 No `extern "C"` is necessary.

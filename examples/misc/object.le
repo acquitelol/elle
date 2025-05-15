@@ -2,13 +2,8 @@ use std/prelude;
 use std/collections/hashmap;
 
 struct Object {
-    HashMap<string, Object *> *entries;
-    string type; // for printing
-    void *value;
-};
-
-fn Object::new() {
-    return #alloc(Object);
+    HashMap<string, Object *> *entries,
+    void *value,
 }
 
 fn Object::__load__(ElleMeta meta, Object *self, string key) {

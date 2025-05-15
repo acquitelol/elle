@@ -8,11 +8,11 @@ const QUESTION_COUNT = 10;
 const LARGEST_INT = 12;
 
 struct Question {
-    string display;
-    i32 answer;
-    i32 input;
-    i32 index;
-};
+    string display,
+    i32 answer,
+    i32 input,
+    i32 index,
+}
 
 fn Question::new(Operation *[] operators, i32 index) {
     let self = #alloc(Question);
@@ -31,9 +31,9 @@ fn Question::new(Operation *[] operators, i32 index) {
 }
 
 struct Operation {
-    string display;
-    void *func;
-};
+    string display,
+    void *func,
+}
 
 fn Operation::new(string display, fn *func) {
     let op = #alloc(Operation);

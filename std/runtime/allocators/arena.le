@@ -6,17 +6,17 @@ global pub;
 }
 
 struct __internal_Arena @nofmt {
-    void *buffer;
-    i32 size;
-    i32 used;
-    __internal_Arena *next;
-};
+    void *buffer,
+    i32 size,
+    i32 used,
+    __internal_Arena *next
+}
 
 struct ArenaAllocator @nofmt {
-    __internal_Arena *current; // singly linked list
-    i32 chunk_size;
-    i32 min_chunk_size;
-};
+    __internal_Arena *current, // singly linked list
+    i32 chunk_size,
+    i32 min_chunk_size
+}
 
 fn __internal_Arena::new(i32 size) {
     __internal_Arena *arena = mem::malloc(#size(__internal_Arena));
