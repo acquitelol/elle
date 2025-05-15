@@ -562,7 +562,10 @@ impl Codegen<'_> for FunctionCall {
                 .len()
                 .saturating_sub(usize::from(add_meta))
                 .saturating_sub(usize::from(type_method));
-            let param_len = params.len().saturating_sub(usize::from(add_meta));
+            let param_len = params
+                .len()
+                .saturating_sub(usize::from(add_meta))
+                .saturating_sub(usize::from(type_method));
 
             elle_error!(call_location
                 .borrow()
