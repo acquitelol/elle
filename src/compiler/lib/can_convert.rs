@@ -26,6 +26,10 @@ pub fn can_convert_to_type(gen: &Compiler, first: &Type, second: &Type, explicit
         return true;
     }
 
+    if first.is_function() && second.is_function() {
+        return true;
+    }
+
     if ((first.is_pointer() && second.is_pointer())
         && first.get_pointer_inner().unwrap() != second.get_pointer_inner().unwrap())
         && !explicit

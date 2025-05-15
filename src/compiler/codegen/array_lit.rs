@@ -26,7 +26,7 @@ impl Codegen<'_> for ArrayLiteral {
                         gen,
                         &CodegenContext {
                             func: &RefCell::new(new_func),
-                            ..ctx.clone()
+                            ..ctx.to_nnf()
                         },
                     )
                     .unwrap_or_else(|| {
@@ -39,7 +39,7 @@ impl Codegen<'_> for ArrayLiteral {
             } else if !self.known_generics.is_empty() {
                 Some(self.known_generics.first().unwrap().clone())
             } else {
-                ctx.ty.clone()
+                None
             };
 
             let node = AstNode::FunctionCall(FunctionCall {

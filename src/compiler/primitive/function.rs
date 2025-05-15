@@ -3,6 +3,7 @@ use std::{cell::RefCell, collections::HashMap, fmt::Write, rc::Rc};
 use crate::{
     compiler::{
         compiler::{CodegenContext, Compiler},
+        lib::can_convert::can_convert_to_type,
         qbe::{
             function::Function, instruction::Instruction, linkage::Linkage, module::Module,
             r#type::Type, statement::Statement, value::Value,
@@ -169,48 +170,22 @@ pub fn generate_function(
 
     macro_rules! handle_inconsistent_types {
         ($return_type:expr, $first_type:expr, $location:expr $(,)?) => {
-            if $return_type != $first_type && !(maybe_void_pointer!($return_type, $first_type)) {
-                if maybe_generic!($return_type, $first_type) {
-                    let (a, a_parts) =
-                        Type::from_internal_id(&$return_type.get_struct_inner().unwrap());
-
-                    let (b, b_parts) =
-                        Type::from_internal_id(&$first_type.get_struct_inner().unwrap());
-
-                    if a != b || a_parts != b_parts {
-                        elle_error!(
-                            ty_err_message!(
-                                $return_type.display(),
-                                $first_type.display(),
-                                $location.borrow().with_extra_info(format!(
-                                    "This has the type '{}'",
-                                    $first_type.display()
-                                )),
-                                Some(
-                                    format!("This function's return type is {} but this statement returns {}",
-                                        $return_type.display(), $first_type.display()
-                                    )
-                                )
-                            )
-                        )
-                    }
-                } else {
-                    elle_error!(
-                        ty_err_message!(
-                            $return_type.display(),
-                            $first_type.display(),
-                            $location.borrow().with_extra_info(format!(
-                                "This has the type '{}'",
-                                $first_type.display()
-                            )),
-                            Some(
-                                format!("This error was caused because the return type is {} but this statement returns {}",
-                                    $return_type.display(), $first_type.display()
-                                )
+            if !can_convert_to_type(gen, $return_type, $first_type, false) {
+                elle_error!(
+                    ty_err_message!(
+                        $return_type.display(),
+                        $first_type.display(),
+                        $location.borrow().with_extra_info(format!(
+                            "This has the type '{}'",
+                            $first_type.display()
+                        )),
+                        Some(
+                            format!("This error was caused because the return type is {} but this statement returns {}",
+                                $return_type.display(), $first_type.display()
                             )
                         )
                     )
-                }
+                )
             }
         };
     }
@@ -222,7 +197,7 @@ pub fn generate_function(
                     first_ty = Some(ty.clone());
 
                     if let Some(real_return_type) = func_ref.borrow().return_type.clone() {
-                        handle_inconsistent_types!(real_return_type, ty, location);
+                        handle_inconsistent_types!(&real_return_type, &ty, location);
                     }
                 } else {
                     let return_type = &ty;
@@ -284,7 +259,7 @@ pub fn generate_function(
             let return_type = return_ty.unwrap();
             let first_type = first_ty.unwrap();
 
-            handle_inconsistent_types!(return_type, first_type, this.return_location);
+            handle_inconsistent_types!(&return_type, &first_type, this.return_location);
         }
     }
 

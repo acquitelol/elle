@@ -103,6 +103,10 @@ pub fn convert_to_type(
         return (second, val);
     }
 
+    if first.is_function() && second.is_function() {
+        return (second, val);
+    }
+
     if ((first.is_pointer() && second.is_pointer())
         && first.get_pointer_inner().unwrap() != second.get_pointer_inner().unwrap())
         && !explicit

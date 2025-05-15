@@ -20,8 +20,7 @@ fn TcpClient::connect(string host, u16 port) -> Result<TcpConnection, Errno> {
     addr := sockaddr_in {
         sin_family = AddressFamily::INET,
         sin_port = htons(port),
-        sin_addr = in_addr { s_addr = inet_addr(host) },
-        _ = 0
+        sin_addr = in_addr { s_addr = inet_addr(host) }
     };
 
     if connect(fd, &addr, #size(addr)) < 0 {

@@ -48,7 +48,7 @@ impl Codegen<'_> for FunctionCall {
                     .error("Tried to get the 0th parameter to parse struct call but failed"))
             });
 
-            let (mut ty, val) = parameter.1.clone().compile(gen, ctx)
+            let (mut ty, val) = parameter.1.clone().compile(gen, &ctx.to_nnf())
                 .unwrap_or_else(|| {
                     elle_error!(parameter
                         .0
@@ -181,7 +181,7 @@ impl Codegen<'_> for FunctionCall {
                                 gen,
                                 &CodegenContext {
                                     func: &RefCell::new(tmp_func),
-                                    ..ctx.clone()
+                                    ..ctx.to_nnf()
                                 },
                             ).unwrap_or_else(|| elle_error!(param.0.borrow().error(
                                 format!(

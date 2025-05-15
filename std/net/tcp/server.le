@@ -21,8 +21,7 @@ fn TcpServer::bind(u16 port) -> Result<TcpServer, Errno> {
     addr := sockaddr_in {
         sin_family = AddressFamily::INET,
         sin_port = htons(port),
-        sin_addr = in_addr { s_addr = InAddr::ANY },
-        _ = 0
+        sin_addr = in_addr { s_addr = InAddr::ANY }
     };
 
     if bind(fd, &addr, #size(addr)) < 0 {
