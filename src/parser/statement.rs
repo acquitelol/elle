@@ -3849,7 +3849,12 @@ impl<'a> Statement<'a> {
             self.shared,
             self.shared.generics,
             true
-        )
+        ) && self // ensures this does not return true in the case of (math::max())
+            .next_token_seek(start + 1)
+            .is_none_or(|token| token.kind != TokenKind::DoubleColon)
+            && self // ensures this does not return true in the case of (Foo {})
+                .next_token_seek(start + 1)
+                .is_none_or(|token| token.kind != TokenKind::LeftCurlyBrace)
     }
 
     fn parse_primary(&mut self) -> AstNode {
