@@ -24,7 +24,7 @@ impl Lexer<'_> {
 
         for (i, c) in input.bytes().enumerate() {
             if c == b'\n' {
-                line_starts.push(i);
+                line_starts.push(i + 1);
             }
         }
 

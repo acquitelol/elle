@@ -31,10 +31,10 @@ fn Array::from_string(string str) -> char[] {
 // Array::range(0, 4) -> [0, 1, 2, 3]
 // Array::range(0, 0) -> []
 // Array::range(2, 5) -> [2, 3, 4]
-fn Array::range(i32 from, i32 to, bool included) -> i32[] {
-    i32[] array = Array::with_capacity(to);
+fn Array::range(i64 from, i64 to, bool included) -> i64[] {
+    i64[] array = Array::with_capacity(to);
 
-    for i32 i = from; i < to + included; i += 1 {
+    for i64 i = from; i < to + included; i += 1 {
         array.push(i);
     }
 
