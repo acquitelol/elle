@@ -1,6 +1,6 @@
 global pub;
 
-struct Box<T> {
+struct Box<T> @nofmt {
     T *value
 }
 
@@ -11,6 +11,10 @@ fn Box::new<T>(T value) -> Box<T> {
     return Box {
         value = ptr
     };
+}
+
+fn Box::__fmt__<T>(Box<T> self, i32 nesting) {
+    return "Box({})".format(self.value.__fmt__(nesting));
 }
 
 fn Box::__deref_load__<T>(Box<T> self) {
@@ -43,4 +47,8 @@ fn Box::__equals__<T, U>(Box<T> self, Box<U> other) {
 
 fn Box::__hash__<T>(Box<T> self, i32 capacity) {
     return self.value.__hash__();
+}
+
+fn Box::to_ptr<T>(Box<T> self) {
+    return self.value;
 }
