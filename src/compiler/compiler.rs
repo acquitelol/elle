@@ -456,8 +456,11 @@ impl Compiler {
                 Primitive::Struct(this) => {
                     let td = generate_struct(this.clone(), &mut gen);
                     struct_hover!(this.name_token, this.ignore_empty, this.members);
+                    let types = module_ref.borrow().types.clone();
 
-                    if !module_ref.borrow().types.contains(&td) {
+                    if let Some(pos) = types.iter().position(|x| *x == td) {
+                        module_ref.borrow_mut().types[pos] = td;
+                    } else {
                         module_ref.borrow_mut().add_type(td);
                     }
                 }

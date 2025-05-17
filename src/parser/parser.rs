@@ -525,6 +525,7 @@ impl Parser {
 
         self.position = 0;
         let mut location = self.current_token().location;
+        let mut builtin_methods = vec![];
         let mut public = false;
         let mut local = false;
         let mut defined = false;
@@ -722,7 +723,7 @@ impl Parser {
                             global_public || public
                         },
                         false,
-                        do_only == &DoOnly::StructsAndEnums,
+                        do_only,
                         location.clone(),
                     );
 
@@ -730,7 +731,7 @@ impl Parser {
                         && should_compile
                     {
                         self.tree.borrow_mut().push(statement);
-                        self.tree.borrow_mut().append(&mut builtins);
+                        builtin_methods.append(&mut builtins);
                     }
 
                     clean!();
@@ -741,18 +742,13 @@ impl Parser {
                     }
 
                     let mut r#struct = Struct::new(self);
-                    let res = r#struct.parse(
-                        false,
-                        true,
-                        do_only == &DoOnly::StructsAndEnums,
-                        location.clone(),
-                    );
+                    let res = r#struct.parse(false, true, do_only, location.clone());
 
                     if let Some((statement, mut builtins, should_compile)) = res
                         && should_compile
                     {
                         self.tree.borrow_mut().push(statement);
-                        self.tree.borrow_mut().append(&mut builtins);
+                        builtin_methods.append(&mut builtins);
                         clean!();
                     }
                 }
@@ -768,7 +764,7 @@ impl Parser {
                         } else {
                             global_public || public
                         },
-                        do_only == &DoOnly::StructsAndEnums,
+                        do_only,
                         location.clone(),
                     );
 
@@ -776,7 +772,7 @@ impl Parser {
                         && should_compile
                     {
                         self.tree.borrow_mut().push(statement);
-                        self.tree.borrow_mut().append(&mut builtins);
+                        builtin_methods.append(&mut builtins);
                         clean!();
                     }
                 }
@@ -789,6 +785,8 @@ impl Parser {
 
         self.global_public = global_public;
         self.global_external = global_external;
+        self.tree.borrow_mut().append(&mut builtin_methods);
+
         return (
             self.tree.borrow_mut().to_owned(),
             self.struct_pool.borrow_mut().to_owned(),

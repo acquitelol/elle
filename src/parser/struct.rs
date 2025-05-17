@@ -12,7 +12,7 @@ use super::{
         Argument, AstNode, BinaryOperation, Declare, FieldAccess, FunctionCall, FunctionSource,
         Literal, Primitive, Return, StructSource,
     },
-    parser::Parser,
+    parser::{DoOnly, Parser},
 };
 
 pub struct Struct<'a> {
@@ -28,10 +28,10 @@ impl<'a> Struct<'a> {
         &mut self,
         public: bool,
         namespace: bool,
-        should_parse: bool,
+        do_only: &DoOnly,
         location: MutRc<Location>,
     ) -> Option<(Primitive, Vec<Primitive>, bool)> {
-        if !should_parse {
+        if ![DoOnly::StructsAndEnums, DoOnly::Imports].contains(do_only) {
             if namespace {
                 while self.parser.current_token().kind != TokenKind::Semicolon
                     && !self.parser.is_eof()
@@ -149,6 +149,63 @@ impl<'a> Struct<'a> {
                     ))),
                 }
             }
+        }
+
+        // Collect structs during the import pass
+        if *do_only == DoOnly::Imports {
+            self.parser
+                .struct_pool
+                .borrow_mut()
+                .insert(name.clone(), (generics, vec![], location.clone()));
+
+            if should_add_fmt_builtin {
+                self.parser
+                    .tree
+                    .borrow_mut()
+                    .push(Primitive::Function(FunctionSource {
+                        namespace_token: Token::from_ident(&name),
+                        name_token: Token::from_ident(FORMAT_CONSTANT),
+                        name: format!("{name}.{FORMAT_CONSTANT}"),
+                        public: true,
+                        usable: true,
+                        imported: true,
+                        variadic: false,
+                        external: true,
+                        builtin: true,
+                        volatile: false,
+                        format: false,
+                        unaliased: None,
+                        generics: vec![],
+                        arguments: vec![
+                            Argument {
+                                name: "self".into(),
+                                r#type: Type::Struct(name),
+                                is_unused: false,
+                                no_fmt: false,
+                            },
+                            Argument {
+                                name: "nesting".into(),
+                                r#type: Type::Word,
+                                is_unused: false,
+                                no_fmt: false,
+                            },
+                        ],
+                        r#return: Some(Type::Pointer(Box::new(Type::Char))),
+                        body: vec![],
+                        location: location.clone(),
+                        return_location: location,
+                    }))
+            }
+
+            while self.parser.current_token().kind != TokenKind::RightCurlyBrace
+                && !self.parser.is_eof()
+            {
+                self.parser.advance();
+            }
+
+            self.parser.expect_tokens(&[TokenKind::RightCurlyBrace]);
+            self.parser.advance();
+            return None;
         }
 
         self.parser.expect_tokens(&[TokenKind::LeftCurlyBrace]);
