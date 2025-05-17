@@ -1,0 +1,76 @@
+use std/prelude;
+
+// OBJECTIVE:
+// Given a tree:
+//      1
+//     / \
+//    2   3
+//   /   / \
+//  4   5   6
+//
+// Print each level on a new line:
+//
+// 1
+// 2 3
+// 4 5 6
+
+struct Node {
+    Box<Option<Node>> left,
+    Box<Option<Node>> right,
+    i32 value
+}
+
+fn Node::internal_recurse(Node *self, i32[][] levels, i32 nesting) {
+    while levels.len() < nesting + 1 {
+        levels.push([i32;]);
+    }
+
+    levels[nesting].push(self.value);
+
+    if left := self.left.to_ptr().to_nilable() {
+        left.internal_recurse(levels, nesting + 1);
+    }
+
+    if right := self.right.to_ptr().to_nilable() {
+        right.internal_recurse(levels, nesting + 1);
+    }
+
+    return levels;
+}
+
+fn Node::print_on_lines(Node *self) {
+    levels := self.internal_recurse([], 0);
+    return levels.map<string>(fn(i32[] level) level.join(" ")).join("\n");
+}
+
+fn main() {
+    root := Node {
+        left = Box::new(Option::Some(Node {
+            left = Box::new(Option::Some(Node {
+                left = Box::new(Option::None<Node>()),
+                right = Box::new(Option::None<Node>()),
+                value = 4
+            })),
+            right = Box::new(Option::None<Node>()),
+            value = 2
+        })),
+        right = Box::new(Option::Some(Node {
+            left = Box::new(Option::Some(Node {
+                left = Box::new(Option::None<Node>()),
+                right = Box::new(Option::None<Node>()),
+                value = 5
+            })),
+            right = Box::new(Option::Some(Node {
+                left = Box::new(Option::None<Node>()),
+                right = Box::new(Option::None<Node>()),
+                value = 6
+            })),
+            value = 3
+        })),
+        value = 1
+    };
+
+    $dbg(root);
+    $println();
+    $println(root.print_on_lines());
+}
