@@ -113,6 +113,7 @@ pub fn create_generic_struct(
 #[macro_export]
 macro_rules! get_type {
     ($self:expr, $generics:expr, $struct_pool:expr, $enum_pool:expr, $tree:expr) => {{
+        let position = $self.position;
         let mut is_fn_pointer = false;
         let mut is_struct = false;
         let mut tuple_imported = true;
@@ -291,6 +292,13 @@ macro_rules! get_type {
 
                         while $self.current_token().kind != TokenKind::GreaterThan
                             && !$self.is_eof() {
+                            if $self.current_token().kind == TokenKind::ShiftRight {
+                                $self.tokens[$self.position].kind = TokenKind::GreaterThan;
+                                $self.tokens.insert($self.position, $self.tokens[$self.position].clone());
+                                $self.position = position;
+                                return $self.get_type($generics);
+                            }
+
                             known_generics.push($self.get_type($generics));
                             $self.advance();
 
