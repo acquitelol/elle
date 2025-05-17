@@ -75,7 +75,7 @@ pub fn handle_short_circuiting_operation(
         &left_tmp,
         &Type::Boolean,
         Instruction::Compare(
-            Type::Boolean,
+            left_ty.clone(),
             Comparison::Equal,
             left_val.clone(),
             Value::Const(String::new(), 0),
@@ -104,7 +104,7 @@ pub fn handle_short_circuiting_operation(
 
     func.borrow_mut().add_block(right_label);
 
-    let (_, right_val) = right
+    let (right_ty, right_val) = right
         .compile(
             gen,
             &CodegenContext {
@@ -127,7 +127,7 @@ pub fn handle_short_circuiting_operation(
         &right_tmp,
         &Type::Boolean,
         Instruction::Compare(
-            Type::Boolean,
+            right_ty,
             Comparison::Equal,
             right_val.clone(),
             Value::Const(String::new(), 0),

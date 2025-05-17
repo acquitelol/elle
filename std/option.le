@@ -45,7 +45,7 @@ fn Option::None<T>() -> Option<T> {
 !external fn __internal_option_throw<T>(Option<T> self, string message, ElleMeta meta) {
     io::fprintf(stderr, "Function %s panicked at %s:%d:%d:\n%s",
         meta.caller, meta.file, meta.line, meta.column,
-        message || "No further information was provided."
+        message ?: "No further information was provided."
     );
 
     libc::abort();
