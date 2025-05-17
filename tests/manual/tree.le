@@ -15,8 +15,8 @@ use std/prelude;
 // 4 5 6
 
 struct Node {
-    Box<Option<Node>> left,
-    Box<Option<Node>> right,
+    Option<Box<Node>> left,
+    Option<Box<Node>> right,
     i32 value
 }
 
@@ -27,12 +27,12 @@ fn Node::internal_recurse(Node *self, i32[][] levels, i32 nesting) {
 
     levels[nesting].push(self.value);
 
-    if left := self.left.to_ptr().to_nilable() {
-        left.internal_recurse(levels, nesting + 1);
+    if left := self.left.to_nilable() {
+        left.to_ptr().internal_recurse(levels, nesting + 1);
     }
 
-    if right := self.right.to_ptr().to_nilable() {
-        right.internal_recurse(levels, nesting + 1);
+    if right := self.right.to_nilable() {
+        right.to_ptr().internal_recurse(levels, nesting + 1);
     }
 
     return levels;
@@ -45,24 +45,24 @@ fn Node::print_on_lines(Node *self) {
 
 fn main() {
     root := Node {
-        left = Box::new(Option::Some(Node {
-            left = Box::new(Option::Some(Node {
-                left = Box::new(Option::None<Node>()),
-                right = Box::new(Option::None<Node>()),
+        left = Option::Some(Box::new(Node {
+            left = Option::Some(Box::new(Node {
+                left = Option::None(),
+                right = Option::None(),
                 value = 4
             })),
-            right = Box::new(Option::None<Node>()),
+            right = Option::None(),
             value = 2
         })),
-        right = Box::new(Option::Some(Node {
-            left = Box::new(Option::Some(Node {
-                left = Box::new(Option::None<Node>()),
-                right = Box::new(Option::None<Node>()),
+        right = Option::Some(Box::new(Node {
+            left = Option::Some(Box::new(Node {
+                left = Option::None(),
+                right = Option::None(),
                 value = 5
             })),
-            right = Box::new(Option::Some(Node {
-                left = Box::new(Option::None<Node>()),
-                right = Box::new(Option::None<Node>()),
+            right = Option::Some(Box::new(Node {
+                left = Option::None(),
+                right = Option::None(),
                 value = 6
             })),
             value = 3
