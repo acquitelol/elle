@@ -170,7 +170,7 @@ impl Type {
             Self::Null => "null".into(),
             Self::Enum(name, ..) | Self::Unknown(name) => name.clone(),
             Self::Struct(..) | Self::Function(..) => self.display(),
-            _ => unreachable!(),
+            Self::Infer => unreachable!(),
         }
     }
 
@@ -438,7 +438,7 @@ impl Type {
                             usable: true,
                             imported: false,
                             generics: vec![],
-                            known_generics: parsed_generics.clone(),
+                            known_generics: parsed_generics,
                             members: parsed_members.clone(),
                             keyword_location: location.clone(),
                             location: location.clone(),
@@ -464,7 +464,7 @@ impl Type {
                     "{original_name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
                     parts
                         .iter()
-                        .map(|x| x.to_internal_id())
+                        .map(Self::to_internal_id)
                         .collect::<Vec<String>>()
                         .join(".")
                 );
@@ -510,7 +510,7 @@ impl Type {
                             usable: true,
                             imported: false,
                             generics: vec![],
-                            known_generics: parsed_generics.clone(),
+                            known_generics: parsed_generics,
                             members: parsed_members.clone(),
                             keyword_location: location.clone(),
                             location: location.clone(),

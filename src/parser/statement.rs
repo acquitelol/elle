@@ -473,7 +473,7 @@ impl<'a> Statement<'a> {
 
             let mut expression = AstNode::Literal(Literal {
                 kind: TokenKind::Identifier,
-                value: ValueKind::String(name.clone()),
+                value: ValueKind::String(name),
                 location: location.clone(),
                 tagged: name_token.tagged,
             });

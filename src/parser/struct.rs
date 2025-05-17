@@ -40,7 +40,6 @@ impl<'a> Struct<'a> {
                 }
 
                 self.parser.expect_tokens(&[TokenKind::Semicolon]);
-                self.parser.advance();
             } else {
                 while self.parser.current_token().kind != TokenKind::RightCurlyBrace
                     && !self.parser.is_eof()
@@ -49,9 +48,9 @@ impl<'a> Struct<'a> {
                 }
 
                 self.parser.expect_tokens(&[TokenKind::RightCurlyBrace]);
-                self.parser.advance();
             }
 
+            self.parser.advance();
             return None;
         }
 
@@ -194,7 +193,7 @@ impl<'a> Struct<'a> {
                         body: vec![],
                         location: location.clone(),
                         return_location: location,
-                    }))
+                    }));
             }
 
             while self.parser.current_token().kind != TokenKind::RightCurlyBrace
