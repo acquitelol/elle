@@ -7,8 +7,8 @@ struct Option<T> @nofmt {
 }
 
 fn Option::__fmt__<T>(Option<T> self, i32 nesting) {
-    if self.is_some() {
-        return "Some({})".format(self.unwrap());
+    if self.__is_some {
+        return "Some({})".format(self.unwrap().__fmt__(nesting));
     }
 
     return "None";
@@ -43,7 +43,7 @@ fn Option::None<T>() -> Option<T> {
 }
 
 !external fn __internal_option_throw<T>(Option<T> self, string message, ElleMeta meta) {
-    io::fprintf(stderr, "Function %s panicked at %s:%d:%d:\n%s",
+    io::fprintf(stderr, "Function %s panicked at %s:%d:%d:\n%s\n",
         meta.caller, meta.file, meta.line, meta.column,
         message ?: "No further information was provided."
     );

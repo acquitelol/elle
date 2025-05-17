@@ -14,7 +14,7 @@ fn Box::new<T>(T value) -> Box<T> {
 }
 
 fn Box::__fmt__<T>(Box<T> self, i32 nesting) {
-    return "Box({})".format(self.value.__fmt__(nesting));
+    return "Box({})".format((*self.value).__fmt__(nesting));
 }
 
 fn Box::__deref_load__<T>(Box<T> self) {
