@@ -384,6 +384,12 @@ impl Codegen<'_> for FunctionCall {
                         .functions
                         .get(&func_name)
                         .cloned()
+                        .map(|mut function| {
+                            if let Some(name) = function.unaliased.clone() {
+                                function.name = name;
+                            }
+                            function
+                        })
                         .unwrap_or_else(Function::default);
 
                     if is_generic!(struct_name) {
@@ -428,7 +434,13 @@ impl Codegen<'_> for FunctionCall {
                         .functions
                         .get(&func_name)
                         .cloned()
-                        .unwrap_or_else(Function::default);
+                        .map(|mut function| {
+                            if let Some(name) = function.unaliased.clone() {
+                                function.name = name;
+                            }
+                            function
+                        })
+                        .unwrap_or_default();
 
                     if gen.generic_functions.contains_key(&func_name) {
                         create_monomorphized_function(
@@ -478,7 +490,7 @@ impl Codegen<'_> for FunctionCall {
                     &fmt_tmp,
                     &fmt_ty,
                     Instruction::Call(
-                        Value::Global(func_name),
+                        Value::Global(tmp_function.name),
                         vec![
                             (ty.clone(), val.clone()),
                             (Type::Word, Value::Const(String::new(), 0)),
