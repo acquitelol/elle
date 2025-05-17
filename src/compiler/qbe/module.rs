@@ -104,10 +104,36 @@ impl Module {
     }
 }
 
+fn print_type_recursively(
+    f: &mut impl std::fmt::Write,
+    name: &str,
+    types: &Vec<TypeDef>,
+    printed: &mut HashSet<String>,
+) -> std::fmt::Result {
+    if printed.contains(name) {
+        return Ok(());
+    }
+
+    if let Some(r#type) = types.iter().find(|t| t.name == name) {
+        for item in &r#type.items {
+            if let Some(inner) = item.0.get_struct_inner() {
+                print_type_recursively(f, &inner, types, printed)?;
+            }
+        }
+
+        writeln!(f, "{type}")?;
+        printed.insert(name.to_string());
+    }
+
+    Ok(())
+}
+
 impl fmt::Display for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut printed = HashSet::new();
+
         for r#type in &self.types {
-            writeln!(f, "{type}")?;
+            print_type_recursively(f, &r#type.name, &self.types, &mut printed)?;
         }
 
         for data in &self.data {
