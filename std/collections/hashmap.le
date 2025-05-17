@@ -283,7 +283,7 @@ fn HashMap::resize<T, U>(HashMap<T, U> *self, u64 new_capacity) {
     }
 }
 
-fn HashMap::size<T, U>(HashMap<T, U> *self) -> i32 {
+fn HashMap::size<T, U>(HashMap<T, U> *self) {
     return self.size;
 }
 
