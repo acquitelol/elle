@@ -20,6 +20,7 @@ pub mod set_alloc;
 pub mod size;
 pub mod struct_lit;
 pub mod ternary;
+pub mod tuple_declare;
 pub mod vaarg;
 pub mod vastart;
 pub mod while_stmt;

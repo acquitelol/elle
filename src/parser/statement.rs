@@ -13,7 +13,7 @@ use super::enums::{
 use super::parser::{create_generic_struct, EnumPool, StructPool};
 use crate::compiler::qbe::r#type::Type;
 use crate::lexer::enums::{Attribute, MutRc};
-use crate::parser::enums::{BlockStatement, WhileLoopStatement};
+use crate::parser::enums::{BlockStatement, TupleDeclare, WhileLoopStatement};
 use crate::{
     elle_error, enum_hover, expect_eot, get_type, is_type, set_end, INTERNAL_IDX_FORMAT,
     INTERNAL_ITERATOR_FORMAT, LEN_CONSTANT,
@@ -190,6 +190,12 @@ impl<'a> Statement<'a> {
         self.expect_tokens(&[TokenKind::Identifier]);
         let name = self.current_token();
 
+        if let Some(next) = self.next_token()
+            && next.kind == TokenKind::Comma
+        {
+            return self.parse_tuple_declare(Some(r#type));
+        }
+
         self.advance();
 
         if self.current_token().kind == TokenKind::LeftBlockBrace {
@@ -286,6 +292,59 @@ impl<'a> Statement<'a> {
                 dunder_methods: true,
                 location: location.clone(),
             }))),
+            location,
+            value_location,
+        })
+    }
+
+    fn parse_tuple_declare(&mut self, existing_ty: Option<Option<Type>>) -> AstNode {
+        let location = self.current_token().location;
+        self.expect_tokens(&[TokenKind::Identifier]);
+        let first = self.current_token();
+        self.advance();
+
+        self.expect_tokens(&[TokenKind::Comma]);
+        self.advance();
+
+        self.expect_tokens(&[TokenKind::Identifier]);
+        let second = self.current_token();
+        self.advance();
+
+        let third = if self.current_token().kind == TokenKind::Comma {
+            self.advance();
+
+            self.expect_tokens(&[TokenKind::Identifier]);
+            let third = self.current_token();
+            self.advance();
+
+            Some(third)
+        } else {
+            None
+        };
+
+        let ty = if self.current_token().kind == TokenKind::Colon && existing_ty.is_none() {
+            self.advance();
+            Some(Type::Infer)
+        } else {
+            existing_ty.unwrap_or(None)
+        };
+
+        self.expect_tokens(&[TokenKind::Equal]);
+        self.advance();
+
+        let value_location = self.current_token().location;
+        let tokens = self.yield_tokens_wrapped_with_semi();
+        let value = Statement::new(tokens, 0, self.body, self.shared).parse().0;
+
+        set_end!(value_location, self);
+        set_end!(location, self);
+
+        AstNode::TupleDeclare(TupleDeclare {
+            first,
+            second,
+            third,
+            ty,
+            value: Box::new(value),
             location,
             value_location,
         })
@@ -3956,6 +4015,8 @@ impl<'a> Statement<'a> {
                         }
                     } else if next.kind == TokenKind::Equal {
                         self.parse_declare(Some(None))
+                    } else if next.kind == TokenKind::Comma {
+                        self.parse_tuple_declare(None)
                     } else if next.kind == TokenKind::Colon {
                         if self
                             .next_token_seek(2)

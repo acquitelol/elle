@@ -695,6 +695,148 @@ let foo = [(i32, string);];
 
 <hr />
 
+### ♡ **Destructuring syntax**
+
+Elle allows you to destructure various things (up to 3 elements):
+
+- `Tuple<T, U>`
+- `Triple<T, U, V>`
+- `Array<T>`
+- `Option<T>`
+- `Result<T, E>`
+- `Vector2`
+- `Vector3`
+
+... etc
+
+The syntax is as follows:
+
+```rs
+x, y := <tuple_expr>;
+let x, y = <tuple_expr>;
+T x, y = <tuple_expr>;
+```
+
+```rs
+x, y, z := <triple_expr>;
+let x, y, z = <triple_expr>;
+T x, y, z = <triple_expr>;
+```
+
+This is simply sugar for accessing the `x`, `y` (and optionally `z`) fields on the `<???_expr>`.
+
+This example:
+
+```rs
+x, y := $(1, "a");
+```
+
+is desugared to:
+
+```rs
+__internal_tuple.2314 := $(1, "a").__tuple__();
+x := __internal_tuple.2314.x;
+y := __internal_tuple.2314.y;
+```
+
+A tuple destructure is an **expression**. It evaluates to the left hand side of the tuple/triple:
+
+```rs
+foo := (x, y := $(1, "a")); // foo == 1
+```
+
+This is useful because it allows us to place optionals into control flow structures, like conditionals and loops:
+
+```rs
+if is_some, val := Option::Some(39) {
+    $dbg(val);
+}
+
+if is_some, val := Option::None<i32>() {
+    $dbg(val);
+}
+
+if is_ok, val := Result::Ok<i32, string>(42) {
+    $dbg(val);
+}
+
+if is_ok, val := Result::Err<i32, string>("oop") {
+    $dbg(val);
+}
+```
+
+`Option<T>` and `Result<T, E>`'s `x` field (the LHS of a tuple destructure) is `is_ok` or `is_some` depending on the structure, which allows us to do the above.
+
+Here are a few more examples of why this is useful:
+
+```rs
+// Runs until `next_token` returns None
+while _, current := lexer.next_token() {
+    tokens.push(current);
+}
+```
+
+```rs
+// Will not run if the `find` returns None
+if _, tmp_func := self.module.functions.find(
+    fn(QbeFunction x, string name) x.name == name,
+    funcall.name.encoded
+) {
+    ty = tmp_func.return_type;
+}
+```
+
+You can also destructure `Vector2`s and `Vector3`s as well as `Tuple`s and `Triple`s:
+
+```rs
+x, y := Vector2::new(1, 30);
+x, y, z := Vector3::new(3, 10, 39);
+x, y := $("a", 1);
+x, y, z := $$(1, 2, 3.0);
+```
+
+This is especially useful for traversal algorithms like BFS:
+
+```rs
+fn Node::print_on_lines(Node *self) {
+    i32[][] levels = [];
+    queue := [$(self, 0)];
+
+    while !queue.is_empty() {
+        node, level := queue.remove(0).unwrap();
+        ...
+    }
+    ...
+}
+```
+
+To create a destructure for your own data structures, you can implement the `__tuple__` and `__triple__` methods:
+
+```rs
+struct Foo {
+    i32 a,
+    string b,
+    f32 c
+}
+
+fn Foo::__tuple__(Foo self) {
+    return $(self.a, self.b);
+}
+
+fn Foo::__triple__(Foo self) {
+    return $$(self.a, self.b, self.c);
+}
+```
+
+where now, destructuring your struct will call these functions:
+
+```rs
+a, b := Foo { a = 1, b = "a" };
+a, b, c := Foo { a = 1, b = "a", c = 1.3 };
+```
+
+<hr />
+
 ### ♡ **Ranges**
 
 Ranges are ways you can define the start and end of a "`range`" of numbers. There are 2 kinds of ranges in elle: exclusive and inclusive.

@@ -52,14 +52,21 @@ pub static STORE_CONSTANT: &str = "__store__";
 pub static LEN_CONSTANT: &str = "__len__";
 pub static HASH_CONSTANT: &str = "__hash__";
 pub static EQUALS_CONSTANT: &str = "__equals__";
+pub static TUPLE_CONSTANT: &str = "__tuple__";
+pub static TRIPLE_CONSTANT: &str = "__triple__";
 pub static PTR_PRIORITY_CONSTANTS: &[&str] = &[FORMAT_CONSTANT];
 pub static DUNDER_CONSTANTS: &[&str] = &[
     FORMAT_CONSTANT,
     LOAD_CONSTANT,
+    LOAD_REF_CONSTANT,
+    DEREF_LOAD_CONSTANT,
+    DEREF_STORE_CONSTANT,
     STORE_CONSTANT,
     LEN_CONSTANT,
     HASH_CONSTANT,
     EQUALS_CONSTANT,
+    TUPLE_CONSTANT,
+    TRIPLE_CONSTANT,
 ];
 
 // Keywords

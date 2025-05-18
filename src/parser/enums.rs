@@ -21,6 +21,17 @@ pub struct Declare {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct TupleDeclare {
+    pub first: Token,
+    pub second: Token,
+    pub third: Option<Token>,
+    pub ty: Option<Type>,
+    pub value: Box<AstNode>,
+    pub location: MutRc<Location>,
+    pub value_location: MutRc<Location>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Return {
     pub value: Box<AstNode>,
     pub location: MutRc<Location>,
@@ -218,6 +229,8 @@ pub enum AstNode {
     Literal(Literal),
     /// A declaration of name `name` with type `r#type` to value `value`
     Declare(Declare),
+    /// A declaration of names `first`, `second`, and optionally `third` assigned to the members `x`, `y`, and optionally `z` of `value`
+    TupleDeclare(TupleDeclare),
     /// Allocates stack memory of size `valist`, assigns it to `name`, and calls `vastart` on it
     VariadicStart(VariadicStart),
     /// Yields a new argument of type `r#type` from `name`
@@ -477,7 +490,8 @@ fn modify_type_in_node(
         | AstNode::SetAllocator(SetAllocator { value, .. })
         | AstNode::ArrayLength(ArrayLength { value, .. })
         | AstNode::Return(Return { value, .. })
-        | AstNode::Address(Address { value, .. }) => {
+        | AstNode::Address(Address { value, .. })
+        | AstNode::TupleDeclare(TupleDeclare { value, .. }) => {
             let new_value =
                 modify_type_in_node(*value.clone(), generics, known_types, struct_pool, tree);
             *value = Box::new(new_value);
