@@ -50,7 +50,7 @@ fn GC::mark(GC *self, void *ptr) {
 fn GC::sweep(GC *self) {
     for obj in self.heap {
         if !obj.marked {
-            self.heap.remove(#i(obj)).free();
+            self.heap.remove(#i(obj)).unwrap().free();
         } else {
             obj.marked = false;
         }

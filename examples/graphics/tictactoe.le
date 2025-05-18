@@ -66,7 +66,7 @@ fn Button::draw(Button *self, State *state, string text, i32 font_size, i32 line
     rl::draw_text(text, text_x, text_y, font_size, WHITE);
 }
 
-fn Button::draw_contextual(Button *self, State *state, (i32, i32) offset) {
+fn Button::draw_contextual(Button *self, State *state, (i64, i64) offset) {
     scale_ratio := 40 * SCALING_FACTOR;
 
     button := Rectangle {

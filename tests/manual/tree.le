@@ -22,11 +22,10 @@ struct Node {
 
 fn Node::print_on_lines(Node *self) {
     i32[][] levels = [];
-    pq := [$(self, 0)];
+    queue := [$(self, 0)];
 
-    while !pq.is_empty() {
-        res := pq.remove(0).unwrap();
-        node := res.x; level := res.y;
+    while !queue.is_empty() {
+        node, level := queue.remove(0).unwrap();
 
         if levels.len() == level {
             levels.push([i32;]);
@@ -34,12 +33,12 @@ fn Node::print_on_lines(Node *self) {
 
         levels[level].push(node.value);
 
-        if left := node.left.to_nilable() {
-            pq.push($(left.to_ptr(), level + 1));
+        if _, left := node.left {
+            queue.push($(left.to_ptr(), level + 1));
         }
 
-        if right := node.right.to_nilable() {
-            pq.push($(right.to_ptr(), level + 1));
+        if _, right := node.right {
+            queue.push($(right.to_ptr(), level + 1));
         }
     }
 
@@ -76,6 +75,5 @@ fn main() {
     };
 
     $dbg(root);
-    $println();
-    $println(root.print_on_lines());
+    $println('\n', root.print_on_lines());
 }
