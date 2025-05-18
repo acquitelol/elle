@@ -10,15 +10,3 @@ fn Triple::__hash__<T, U, V>(Triple<T, U, V> self, i32 capacity) {
     u64 combined = (hash_x * 31 + hash_y) * 31 + hash_z;
     return hash::mod(combined, capacity);
 }
-
-fn Triple::new<T, U, V>(T x, U y, V z) {
-    let triple = #alloc(Triple<T, U, V>);
-
-    triple.x = x;
-    triple.y = y;
-    triple.z = z;
-
-    return triple;
-}
-
-external fn Triple::new<T, U, V>(T x, U y, V z) @alias($$) -> Triple<T, U, V> *;

@@ -22,3 +22,8 @@ fn Tuple::__tuple__<T, U>((T, U) self) {
     return self;
 }
 
+fn Tuple::new<T, U>(T x, U y) -> (T, U) {
+    return Tuple { x = x, y = y };
+}
+
+external fn Tuple::new<T, U>(T x, U y) @alias($) -> (T, U);

@@ -671,7 +671,7 @@ It's worth noting that the `T[]` type syntax is actually sugar for `Array<T> *`.
 
 Tuples and triples are distinct data structures in Elle. Tuples have 2 items inside, Triples have 3 items.
 
-Tuples have special sugar for their types, just like arrays. `(T, U)` is equivalent to `Tuple<T, U> *`. Triples have no sugar, simply `Triple<T, U, V> *`.
+Tuples have special sugar for their types, just like arrays. `(T, U)` is equivalent to `Tuple<T, U>`. Triples have no sugar, simply `Triple<T, U, V>`.
 
 To define a tuple, use `$(x, y)` or `Tuple::new(x, y)`.
 

@@ -177,7 +177,7 @@ macro_rules! get_type {
                 )
             }
 
-            Type::Pointer(Box::new(Type::Struct(generic_name)))
+            Type::Struct(generic_name)
         } else {
             is_fn_pointer = $self.current_token().kind == TokenKind::Function;
 

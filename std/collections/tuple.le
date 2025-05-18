@@ -9,14 +9,3 @@ fn Tuple::__hash__<T, U>((T, U) self, i32 capacity) {
     u64 combined = hash_x * 31 + hash_y;
     return hash::mod(combined, capacity);
 }
-
-fn Tuple::new<T, U>(T x, U y) {
-    let tuple = #alloc(Tuple<T, U>);
-
-    tuple.x = x;
-    tuple.y = y;
-
-    return tuple;
-}
-
-external fn Tuple::new<T, U>(T x, U y) @alias($) -> (T, U);
