@@ -1,3 +1,5 @@
+use std/runtime/collections/triple;
+use std/runtime/collections/tuple;
 use std/runtime/libc/io;
 use std/libc/mem;
 use std/option;
@@ -11,7 +13,7 @@ struct Array<T> @nofmt {
 }
 
 !pub fn __internal_array_bounds_check(string file, i32 line, i32 col, u64 i, u64 length) {
-    if i < 0 || i + 1 > length {
+    if i + 1 > length {
         io::cprintf(
             "[%s:%d:%d] ERROR: Index %lu is out of bounds for array length %lu\n",
             file, line, col, i, length
@@ -100,6 +102,14 @@ fn Array::__equals__<T, U>(T[] self, U[] other) -> bool {
     }
 
     return true;
+}
+
+fn Array::__tuple__<T>(T[] self) {
+    return $(self[0], self[1]);
+}
+
+fn Array::__triple__<T>(T[] self) {
+    return $$(self[0], self[1], self[2]);
 }
 
 fn Array::is_empty<T>(T[] self) -> bool {

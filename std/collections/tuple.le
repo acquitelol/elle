@@ -1,28 +1,12 @@
-use std/core;
+use std/runtime/collections/tuple;
 use std/hashes;
+use std/core;
 global pub;
 
-struct Tuple<T, U> {
-    T x,
-    U y
-}
-
-fn Tuple::__fmt__<T, U>(Tuple<T, U> self, i32 nesting) {
-    return string::format(
-        "({}, {})",
-        self.x.__fmt__(nesting),
-        self.y.__fmt__(nesting)
-    );
-}
-
-fn Tuple::__equals__<T, U>(Tuple<T, U> self, Tuple<T, U> other) {
-    return self.x == other.x && self.y == other.y;
-}
-
-fn Tuple::__hash__<T, U>(Tuple<T, U> self, i32 capacity) {
-    i64 hash_x = self.x.__hash__(capacity);
-    i64 hash_y = self.y.__hash__(capacity);
-    i64 combined = hash_x * 31 + hash_y;
+fn Tuple::__hash__<T, U>((T, U) self, i32 capacity) {
+    u64 hash_x = self.x.__hash__(capacity);
+    u64 hash_y = self.y.__hash__(capacity);
+    u64 combined = hash_x * 31 + hash_y;
     return hash::mod(combined, capacity);
 }
 

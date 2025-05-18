@@ -1,0 +1,24 @@
+use std/core;
+global pub;
+
+struct Tuple<T, U> {
+    T x,
+    U y
+}
+
+fn Tuple::__fmt__<T, U>((T, U) self, i32 nesting) {
+    return string::format(
+        "({}, {})",
+        self.x.__fmt__(nesting),
+        self.y.__fmt__(nesting)
+    );
+}
+
+fn Tuple::__equals__<T, U>((T, U) self, (T, U) other) {
+    return self.x == other.x && self.y == other.y;
+}
+
+fn Tuple::__tuple__<T, U>((T, U) self) {
+    return self;
+}
+

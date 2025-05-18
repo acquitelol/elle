@@ -15,6 +15,7 @@ struct Vector3 {
 
 fn Vector2::zero() -> Vector2;
 fn Vector2::clone(Vector2 self) -> Vector2;
+fn Vector2::clone(Vector2 self) @alias(Vector2::__tuple__) -> Vector2;
 fn Vector2::new(f32 x, f32 y) -> Vector2;
 fn Vector2::from(f32 scalar) -> Vector2;
 fn Vector2::dot(Vector2 self, Vector2 v2) -> f32;
@@ -31,6 +32,12 @@ fn Vector2::new(f32 x, f32 y) @alias(Vector2::xy) -> Vector2;
 
 fn Vector3::zero() -> Vector3;
 fn Vector3::clone(Vector3 self) -> Vector3;
+fn Vector3::clone(Vector3 self) @alias(Vector3::__triple__) -> Vector3;
+
+!external fn Vector3::__tuple__(Vector3 self) {
+    return Vector2 { x = self.x, y = self.y };
+}
+
 fn Vector3::new(f32 x, f32 y, f32 z) -> Vector3;
 fn Vector3::from(f32 scalar) -> Vector3;
 fn Vector3::dot(Vector3 self, Vector3 v2) -> f32;

@@ -1,9 +1,10 @@
+use std/runtime/collections/tuple;
 use std/runtime/libc/io;
 global pub;
 
 struct Option<T> @nofmt {
-    T __value,
-    bool __is_some
+    bool __is_some,
+    @unused T __value
 }
 
 fn Option::__fmt__<T>(Option<T> self, i32 nesting) {
@@ -29,6 +30,11 @@ fn Option::__equals__<T>(Option<T> self, Option<T> other) {
     return true;
 }
 
+// Option<T> -> `is_some, T`
+fn Option::__tuple__<T>(Option<T> self) {
+    return $(self.__is_some, self.__value);
+}
+
 fn Option::Some<T>(T value) -> Option<T> {
     return Option {
         __value = value,
@@ -37,9 +43,9 @@ fn Option::Some<T>(T value) -> Option<T> {
 }
 
 fn Option::None<T>() -> Option<T> {
-    self := #alloc(Option<T>);
-    self.__is_some = false;
-    return *self;
+    return Option {
+        __is_some = false
+    };
 }
 
 !external fn __internal_option_throw<T>(Option<T> self, string message, ElleMeta meta) {
@@ -94,17 +100,6 @@ fn Option::resolve<T>(Option<T> self, fn *if_some, fn *if_none) {
     }
 
     return if_none();
-}
-
-// Option -> Nilable pointer (allows for `while x := y()`)
-fn Option::to_nilable<T>(Option<T> self) {
-    if self.is_some() {
-        res := #alloc(T);
-        *res = self.unwrap();
-        return res;
-    }
-
-    return nil;
 }
 
 fn Option::is_some_and<T>(Option<T> self, fn *cb) {

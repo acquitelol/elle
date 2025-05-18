@@ -1,31 +1,13 @@
-use std/core;
+use std/runtime/collections/triple;
 use std/hashes;
+use std/core;
 global pub;
 
-struct Triple<T, U, V> {
-    T x,
-    U y,
-    V z
-}
-
-fn Triple::__fmt__<T, U, V>(Triple<T, U, V> self, i32 nesting) {
-    return string::format(
-        "({}, {}, {})",
-        self.x.__fmt__(nesting),
-        self.y.__fmt__(nesting),
-        self.z.__fmt__(nesting)
-    );
-}
-
-fn Triple::__equals__<T, U, V>(Triple<T, U, V> *self, Triple<T, U, V> *other) {
-    return (self.x == other.x) && (self.y == other.y) && (self.z == other.z);
-}
-
 fn Triple::__hash__<T, U, V>(Triple<T, U, V> self, i32 capacity) {
-    i64 hash_x = self.x.__hash__(capacity);
-    i64 hash_y = self.y.__hash__(capacity);
-    i64 hash_z = self.z.__hash__(capacity);
-    i64 combined = (hash_x * 31 + hash_y) * 31 + hash_z;
+    u64 hash_x = self.x.__hash__(capacity);
+    u64 hash_y = self.y.__hash__(capacity);
+    u64 hash_z = self.z.__hash__(capacity);
+    u64 combined = (hash_x * 31 + hash_y) * 31 + hash_z;
     return hash::mod(combined, capacity);
 }
 

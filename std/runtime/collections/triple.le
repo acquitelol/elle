@@ -1,0 +1,31 @@
+use std/runtime/collections/tuple;
+use std/core;
+global pub;
+
+struct Triple<T, U, V> {
+    T x,
+    U y,
+    V z
+}
+
+fn Triple::__fmt__<T, U, V>(Triple<T, U, V> self, i32 nesting) {
+    return string::format(
+        "({}, {}, {})",
+        self.x.__fmt__(nesting),
+        self.y.__fmt__(nesting),
+        self.z.__fmt__(nesting)
+    );
+}
+
+fn Triple::__equals__<T, U, V>(Triple<T, U, V> *self, Triple<T, U, V> *other) {
+    return (self.x == other.x) && (self.y == other.y) && (self.z == other.z);
+}
+
+fn Triple::__tuple__<T, U, V>(Triple<T, U, V> self) {
+    return $(self.x, self.y);
+}
+
+fn Triple::__triple__<T, U, V>(Triple<T, U, V> self) {
+    return self;
+}
+

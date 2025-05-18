@@ -1,10 +1,12 @@
+use std/runtime/collections/triple;
+use std/runtime/collections/tuple;
 use std/io;
 global pub;
 
 struct Result<T, E> @nofmt {
     bool __is_ok,
-    T __value,
-    E __error
+    @unused T __value,
+    @unused E __error
 }
 
 fn Result::__fmt__<T, E>(Result<T, E> self, i32 nesting) {
@@ -30,18 +32,26 @@ fn Result::__equals__<T, E>(Result<T, E> self, Result<T, E> other) {
     }
 }
 
+fn Result::__tuple__<T, E>(Result<T, E> self) {
+    return $(self.__is_ok, self.__value);
+}
+
+fn Result::__triple__<T, E>(Result<T, E> self) {
+    return $$(self.__is_ok, self.__value, self.__error);
+}
+
 fn Result::Ok<T, E>(T value) -> Result<T, E> {
-    self := #alloc(Result<T, E>);
-    self.__is_ok = true;
-    self.__value = value;
-    return *self;
+    return Result {
+        __is_ok = true,
+        __value = value
+    };
 }
 
 fn Result::Err<T, E>(E error) -> Result<T, E> {
-    self := #alloc(Result<T, E>);
-    self.__is_ok = false;
-    self.__error = error;
-    return *self;
+    return Result {
+        __is_ok = false,
+        __error = error
+    };
 }
 
 !external fn __internal_result_throw<T, E>(Result<T, E> self, string message, ElleMeta meta) {
