@@ -1,0 +1,27 @@
+use std/prelude;
+
+fn Array::print(bool[] board) {
+    $println(board.map<char>(fn(bool x) x ? '#' : '.').join(""));
+}
+
+fn main() {
+    for ;; {
+        n := i32::parse(io::input("Enter the depth of the Rule 110: "));
+        n = n >= 2 ? n : 2;
+
+        board := Array::with_capacity<bool>(n).fill(false);
+        board[n - 1] = 1;
+        board.print();
+
+        for _ in 0..n - 2 {
+            state := board[0] | board[1] << 1;
+
+            for i in 2..n {
+                state = ((state << 1) | board[i]) & 7;
+                board[i - 1] = (110 >> state) & 1;
+            }
+
+            board.print();
+        }
+    }
+}
