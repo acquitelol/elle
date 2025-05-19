@@ -77,11 +77,13 @@ impl Codegen<'_> for TupleDeclare {
             })};
         }
 
+        let x_gen = compile_part!(self.first, "x");
+        compile_part!(self.second, "y");
+
         if let Some(third) = self.third {
             compile_part!(third, "z");
         }
 
-        compile_part!(self.second, "y");
-        Some(compile_part!(self.first, "x"))
+        return Some(x_gen);
     }
 }

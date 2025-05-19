@@ -111,7 +111,8 @@ impl fmt::Display for Instruction {
             Self::Compare(ty, comparison, lhs, rhs) => {
                 assert!(
                     !matches!(ty, Type::Struct(..)),
-                    "Cannot compare struct types"
+                    "Cannot compare struct types ({})",
+                    ty
                 );
 
                 write!(
