@@ -150,19 +150,16 @@ fn Array::push<T>(T[] self, T element) {
     self.size += 1;
 }
 
-fn Array::pop<T>(T[] self) -> T {
+fn Array::pop<T>(T[] self) -> Option<T> {
     if self.is_empty() {
-        return #cast(T, nil);
+        return Option::None();
     }
 
-    T last = self.elements[#cast(i32, self.size - 1)];
+    last := self.elements[self.size - 1];
+    res := Option::Some(last);
     self.size -= 1;
 
-    if self.size < self.capacity / 4 {
-        self.resize(self.capacity / 2);
-    }
-
-    return last;
+    return res;
 }
 
 fn Array::clear<T>(T[] self) {
@@ -177,15 +174,15 @@ fn Array::sort<T>(T[] self) {
     __internal_qsort(self.elements, 0, self.len() - 1);
 }
 
-!pub fn __internal_qsort<T>(T *array, u64 low, u64 high) {
+!pub fn __internal_qsort<T>(T *array, i64 low, i64 high) {
     if low >= high {
         return;
     }
 
     T pivot = array[high];
-    u64 i = low;
+    i64 i = low;
 
-    for u64 j = low; j < high; j += 1 {
+    for i64 j = low; j < high; j += 1 {
         if array[j] < pivot {
             T temp = array[i];
             array[i] = array[j];
@@ -292,10 +289,6 @@ fn Array::remove<T>(T[] self, u64 index) -> Option<T> {
 
     self.size -= 1;
 
-    if self.size < self.capacity / 4 {
-        self.resize(self.capacity / 2);
-    }
-
     return Option::Some(removedElement);
 }
 
@@ -393,14 +386,14 @@ fn Array::includes<T>(T[] self, T element) {
     return false;
 }
 
-fn Array::index<T>(T[] self, T element) {
+fn Array::index<T>(T[] self, T element) -> Option<u64> {
     for u64 i = 0; i < self.len(); i += 1 {
         if self[i] == element {
-            return i;
+            return Option::Some(i);
         }
     }
 
-    return -1;
+    return Option::None();
 }
 
 fn Array::sum<T>(T[] self) {

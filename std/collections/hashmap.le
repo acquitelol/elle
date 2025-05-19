@@ -170,7 +170,7 @@ fn HashMap::unsafe_get<T, U>(ElleMeta meta, HashMap<T, U> *self, T key) {
 
 fn HashMap::get_or_insert<T, U>(HashMap<T, U> *self, T key, U value) {
     if self.contains_key(key) {
-        return self.get(key);
+        return self.unsafe_get(key);
     }
 
     self.set(key, value);

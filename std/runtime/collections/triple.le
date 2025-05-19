@@ -17,7 +17,7 @@ fn Triple::__fmt__<T, U, V>(Triple<T, U, V> self, i32 nesting) {
     );
 }
 
-fn Triple::__equals__<T, U, V>(Triple<T, U, V> *self, Triple<T, U, V> *other) {
+fn Triple::__equals__<T, U, V>(Triple<T, U, V> self, Triple<T, U, V> other) {
     return (self.x == other.x) && (self.y == other.y) && (self.z == other.z);
 }
 
