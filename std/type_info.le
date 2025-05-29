@@ -1,0 +1,19 @@
+namespace TypeInfo;
+global pub;
+
+fn TypeInfo::type_of_val<T>(ElleMeta meta, T _) {
+    return meta.types[0];
+}
+
+fn TypeInfo::type_of<T>() {
+    res := TypeInfo::type_of_val<T *>(nil);
+    return res.slice(0, res.len() - 1);
+}
+
+fn TypeInfo::size<T>() {
+    return #size(T);
+}
+
+fn TypeInfo::is_pointer<T>() {
+    return TypeInfo::type_of<T>().ends_with("*");
+}

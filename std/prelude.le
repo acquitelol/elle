@@ -1,5 +1,7 @@
 use std/unit;
+use std/type_info;
 use std/iter/iterator;
+
 use std/collections/hashmap;
 use std/collections/hashset;
 use std/collections/triple;
