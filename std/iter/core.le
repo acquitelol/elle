@@ -122,6 +122,66 @@ fn Iterator::single<T, Env>(
     };
 }
 
+fn Iterator::find_with<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T, U) -> bool predicate, U arg) {
+    while _, val := self.next() {
+        if predicate(val, arg) {
+            return Some(val);
+        }
+    }
+
+    return None<T>();
+}
+
+fn Iterator::find<T, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T) -> bool predicate) {
+    return self.find_with(fn(val, predicate) predicate(val), predicate);
+}
+
+fn Iterator::any_with<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T, U) -> bool predicate, U arg) {
+    while _, val := self.next() {
+        if predicate(val, arg) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+fn Iterator::any<T, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T) -> bool predicate) {
+    return self.any_with(fn(val, predicate) predicate(val), predicate);
+}
+
+fn Iterator::all_with<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T, U) -> bool predicate, U arg) {
+    while _, val := self.next() {
+        if !predicate(val, arg) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+fn Iterator::all<T, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T) -> bool predicate) {
+    return self.all_with(fn(val, predicate) predicate(val), predicate);
+}
+
+fn Iterator::position_with<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T, U) -> bool predicate, U arg) {
+    u64 i = 0;
+
+    while _, val := self.next() {
+        if predicate(val, arg) {
+            return Some(i);
+        }
+
+        i += 1;
+    }
+
+    return None<u64>();
+}
+
+fn Iterator::position<T, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T) -> bool predicate) {
+    return self.position_with(fn(val, predicate) predicate(val), predicate);
+}
+
 fn Iterator::__iter__<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
     return self;
 }

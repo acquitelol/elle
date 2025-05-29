@@ -96,6 +96,39 @@ fn `last.works`() {
     $assert((0..=0).last() == Some(0));
 }
 
+fn `find.works`() {
+    $assert((0..10).find(fn(x) x == 5) == Some(5));
+    $assert((0..10).find(fn(x) x % 2 == 0) == Some(0));
+    $assert((0..10).find(fn(x) x > 9) == None<i32>());
+    $assert([1, 2, 3].iter().find(fn(x) x > 2) == Some(3));
+    $assert([1, 2, 3].iter().find(fn(x) x < 0) == None<i32>());
+    $assert([i32;].iter().find(fn() true) == None<i32>());
+}
+
+fn `any.works`() {
+    $assert((0..5).any(fn(x) x == 3) == true);
+    $assert((0..5).any(fn(x) x == 10) == false);
+    $assert([1, 2, 3].iter().any(fn(x) x > 0) == true);
+    $assert([1, 2, 3].iter().any(fn(x) x < 0) == false);
+    $assert([i32;].iter().any(fn() true) == false);
+}
+
+fn `all.works`() {
+    $assert((0..5).all(fn(x) x < 5) == true);
+    $assert((0..5).all(fn(x) x < 4) == false);
+    $assert([2, 4, 6].iter().all(fn(x) x % 2 == 0) == true);
+    $assert([2, 4, 5].iter().all(fn(x) x % 2 == 0) == false);
+    $assert([i32;].iter().all(fn() false) == true);
+}
+
+fn `position.works`() {
+    $assert((0..5).position(fn(x) x == 2) == Some<u64>(2));
+    $assert((0..5).position(fn(x) x == 10) == None<u64>());
+    $assert([10, 20, 30].iter().position(fn(x) x == 20) == Some<u64>(1));
+    $assert([10, 20, 30].iter().position(fn(x) x == 40) == None<u64>());
+    $assert([i32;].iter().position(fn() true) == None<u64>());
+}
+
 fn `once.works`() {
     $assert(Iterator::once(1).next() == Some(1));
 
@@ -534,6 +567,10 @@ fn main() {
     `max.works`();
     `min.works`();
     `nth.works`();
+    `find.works`();
+    `any.works`();
+    `all.works`();
+    `position.works`();
     `once.works`();
     `range.works`();
     `iota.works`();
