@@ -27,7 +27,9 @@ pub fn can_convert_to_type(gen: &Compiler, first: &Type, second: &Type, explicit
     }
 
     if first.is_function() && second.is_function() {
-        return true;
+        if explicit || first.function_eq(second, None) {
+            return true;
+        }
     }
 
     if ((first.is_pointer() && second.is_pointer())
@@ -52,6 +54,8 @@ pub fn can_convert_to_type(gen: &Compiler, first: &Type, second: &Type, explicit
             || (first.is_enum() && second.is_enum() && first.get_enum_inner().unwrap() == second.get_enum_inner().unwrap())
             // Foo(T) -> Foo(T)
             || first == second
+            // (sub word) -> Foo(sub word -- word)
+            || first.weight() < second.weight()
     };
 
     weights_match || both_int_or_float || explicit_enum_cast

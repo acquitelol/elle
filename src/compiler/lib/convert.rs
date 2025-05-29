@@ -80,6 +80,9 @@ pub fn convert_to_type(
                 && second.is_enum()
                 && first.get_enum_inner().unwrap() == second.get_enum_inner().unwrap())
             || first == second
+            // (Foo(u32) >> char) should be allowed
+            // char will be casted up to a word
+            || first.weight() < second.weight()
             || explicit
         {
             return (second, val);
@@ -104,11 +107,18 @@ pub fn convert_to_type(
     }
 
     if first.is_function() && second.is_function() {
-        return (second, val);
+        if explicit || first.function_eq(&second, Some(&left_location)) {
+            return (second, val);
+        }
+
+        implicit_conversion_error!()
     }
 
     if ((first.is_pointer() && second.is_pointer())
-        && first.get_pointer_inner().unwrap() != second.get_pointer_inner().unwrap())
+        && !first
+            .get_pointer_inner()
+            .unwrap()
+            .function_eq(&second.get_pointer_inner().unwrap(), Some(left_location)))
         && !explicit
         && gen.pedantic
     {

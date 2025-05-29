@@ -716,6 +716,56 @@ impl Type {
         }
     }
 
+    pub fn contextual_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Pointer(lhs), Self::Pointer(rhs)) => {
+                lhs == rhs || lhs.is_void() || rhs.is_void()
+            }
+            (Self::Enum(lhs, _), Self::Enum(rhs, _)) => lhs == rhs,
+            (x, y) => x == y,
+        }
+    }
+
+    pub fn function_eq(&self, other: &Self, location: Option<&MutRc<Location>>) -> bool {
+        match (self, other) {
+            (Self::Function(a_inner), Self::Function(b_inner))
+                if let Some(lhs) = &**a_inner
+                    && let Some(rhs) = &**b_inner =>
+            {
+                if lhs.arguments.len() > rhs.arguments.len() {
+                    if let Some(location) = location {
+                        elle_error!(location
+                        .borrow()
+                        .with_extra_info("This callback takes too many arguments")
+                        .error(format!("Too many arguments were expected in this callback.\nThe function expects {GREEN}{}{RESET}, but this callback takes {RED}{}{RESET}.",
+                            rhs.arguments.len(),
+                            lhs.arguments.len(),
+                            RESET = get_RESET!(),
+                            GREEN = get_GREEN!(),
+                            RED = get_RED!(),
+                        )))
+                    } else {
+                        return false;
+                    }
+                }
+
+                for i in 0..lhs.arguments.len() {
+                    let ((lty, _), _) = &lhs.arguments[i];
+                    let ((rty, _), _) = &rhs.arguments[i];
+
+                    if !lty.function_eq(rty, location) {
+                        return false;
+                    }
+                }
+
+                let lreturn_ty = lhs.return_type.as_ref().unwrap_or(&Type::Void);
+                let rreturn_ty = rhs.return_type.as_ref().unwrap_or(&Type::Void);
+                lreturn_ty.function_eq(rreturn_ty, location) || lreturn_ty.contextual_eq(rreturn_ty)
+            }
+            (x, y) => x.contextual_eq(y),
+        }
+    }
+
     pub const fn is_pointer(&self) -> bool {
         matches!(self, Self::Pointer(_))
     }
