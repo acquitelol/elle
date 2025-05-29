@@ -255,7 +255,7 @@ impl<'a> Function<'a> {
                 self.parser.advance();
 
                 // fn foo(void) isn't supported
-                if r#type == Type::Void
+                if r#type.is_void()
                     && self.parser.current_token().kind == TokenKind::RightParenthesis
                 {
                     if self.parser.warnings.has_warning(Warning::CStyleVoid) {
@@ -445,6 +445,7 @@ impl<'a> Function<'a> {
                     generics: &generics,
                     known_generics: &vec![],
                     addr_only: false,
+                    tmp_counter: &RefCell::new(0),
                 },
             )
             .parse();

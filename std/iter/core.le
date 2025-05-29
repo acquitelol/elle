@@ -1,0 +1,127 @@
+use std/box;
+use std/option;
+use std/runtime/collections/array;
+use std/type_info;
+global pub;
+
+namespace SingleEnded;
+namespace DoubleEnded;
+
+struct Iterator<T, Env, TEnded> @nofmt {
+    Box<Env> env,
+    fn(Env *) -> Option<T> next,
+    // !! nil if iterator is not DoubleEnded !!
+    // unfortunately no good way to enforce this
+    // than to use an Option<T> but that has its
+    // own downsides and isnt always ideal
+    fn(Env *) -> Option<T> next_back
+}
+
+fn Iterator::__fmt__<T, Env, TEnded>(Iterator<T, Env, TEnded> self, i32 nesting) {
+    return "<Iterator({}) at {}>".format(
+        TypeInfo::type_of<T>(),
+        string::as_string(#cast(void *, self))
+    );
+}
+
+fn Iterator::next<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
+    cb := self.next;
+    return cb(self.env.to_ptr());
+}
+
+fn Iterator::next_back<T, Env>(Iterator<T, Env, DoubleEnded> self) {
+    cb := self.next_back;
+    return cb(self.env.to_ptr());
+}
+
+fn Iterator::count<T, Env, TEnded>(Iterator<T, Env, TEnded> self) -> u64 {
+    u64 n = 0;
+
+    while self.next().is_some() {
+        n += 1;
+    }
+
+    return n;
+}
+
+fn Iterator::fold<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, U initial, fn(U, T) -> U cb) {
+    while _, val := self.next() {
+        initial = cb(initial, val);
+    }
+
+    return initial;
+}
+
+fn Iterator::sum<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
+    return self.fold(0, fn(acc, cur) acc + cur);
+}
+
+fn Iterator::product<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
+    return self.fold(1, fn(acc, cur) acc * cur);
+}
+
+fn Iterator::max<T, Env, TEnded>(Iterator<T, Env, TEnded> self) -> Option<T> {
+    res := None<T>();
+
+    while _, val := self.next() {
+        is_some, cur := res;
+        if !is_some || val > cur { res = Some(val); }
+    }
+
+    return res;
+}
+
+fn Iterator::min<T, Env, TEnded>(Iterator<T, Env, TEnded> self) -> Option<T> {
+    res := None<T>();
+
+    while _, val := self.next() {
+        is_some, cur := res;
+        if !is_some || val < cur { res = Some(val); }
+    }
+
+    return res;
+}
+
+fn Iterator::nth<T, Env, TEnded>(Iterator<T, Env, TEnded> self, u64 n) {
+    for i := 0; i < n; i += 1 {
+        if self.next().is_none() {
+            return Option::None<T>();
+        }
+    }
+
+    return self.next();
+}
+
+fn Iterator::last<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
+    result := Option::None<T>();
+
+    while _, val := self.next() {
+        result = Option::Some(val);
+    }
+
+    return result;
+}
+
+fn Iterator::collect<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
+    res := [T;];
+
+    while _, val := self.next() {
+        res.push(val);
+    }
+
+    return res;
+}
+
+fn Iterator::single<T, Env>(
+    Iterator<T, Env, DoubleEnded> self
+) -> Iterator<T, Env, SingleEnded> {
+    return Iterator {
+        env = self.env,
+        next = self.next,
+        next_back = nil
+    };
+}
+
+fn Iterator::__iter__<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
+    return self;
+}

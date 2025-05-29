@@ -163,7 +163,8 @@ pub struct ArrayLength {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Lambda {
-    pub arguments: Vec<Argument>,
+    /// Either inferred variable name, or explicitly typed
+    pub arguments: Vec<Result<Token, Argument>>,
     pub value: Vec<AstNode>,
     pub return_ty: Option<Type>,
     pub location: MutRc<Location>,
@@ -335,7 +336,14 @@ fn modify_type_in_node(
             arguments, value, ..
         }) => {
             for arg in arguments {
-                arg.r#type = modify_type(&arg.r#type, generics, known_types, struct_pool, tree);
+                match arg {
+                    // Err holds our explicitly typed parameter
+                    Err(arg) => {
+                        arg.r#type =
+                            modify_type(&arg.r#type, generics, known_types, struct_pool, tree)
+                    }
+                    _ => {}
+                }
             }
 
             *value = modify_type_in_ast(value.clone(), generics, known_types, struct_pool, tree);
@@ -449,7 +457,15 @@ fn modify_type_in_node(
             }
             *body = modify_type_in_ast(body.clone(), generics, known_types, struct_pool, tree);
         }
-        AstNode::ArrayLiteral(ArrayLiteral { values, .. }) => {
+        AstNode::ArrayLiteral(ArrayLiteral {
+            values,
+            explicit_inner,
+            ..
+        }) => {
+            if let Some(ty) = explicit_inner {
+                *ty = modify_type(ty, generics, known_types, struct_pool, tree);
+            }
+
             for (_, value) in values {
                 let new_value =
                     modify_type_in_node(value.clone(), generics, known_types, struct_pool, tree);
@@ -615,13 +631,6 @@ pub enum Primitive {
     Function(FunctionSource),
     Constant(ConstantSource),
     Enum(EnumSource),
-}
-
-#[derive(Debug, Clone)]
-#[allow(unused)]
-pub struct Case {
-    pub condition: Vec<AstNode>,
-    pub body: Box<AstNode>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
