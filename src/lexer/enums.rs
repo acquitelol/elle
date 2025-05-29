@@ -102,7 +102,6 @@ pub enum TokenKind {
     Attribute,
     Namespace,
     Hashtag,
-    IndexOf,
     Let,
     Range,
     RangeEqual,
@@ -301,7 +300,6 @@ impl ValueKind {
         match self.clone() {
             Self::String(val) => match val.as_str() {
                 "string" => Some(Type::Pointer(Box::new(Type::Char))),
-                "any" => Some(Type::Pointer(Box::new(Type::Void))),
                 "i8" => Some(Type::Byte),
                 "u8" => Some(Type::UnsignedByte),
                 "i16" => Some(Type::Halfword),
@@ -316,7 +314,7 @@ impl ValueKind {
                 "bool" => Some(Type::Boolean),
                 // Arbitrary because it will be turned into `long` anyway when used as void*`
                 // Treat fn as void* so it becomes printable in structs
-                "void" | "fn" => Some(Type::Void),
+                "void" => Some(Type::Void),
                 other => Some(if is_struct {
                     Type::Struct(other.into())
                 } else if is_enum {

@@ -332,13 +332,49 @@ macro_rules! get_type {
                         ty = Type::Struct(generic_name);
                         $self.expect_tokens(&[TokenKind::GreaterThan]);
                     }
-                    // Crashes if it hasn't got at least 1 nested pointer for
-                    // function pointers, ie `fn main(fn a)` is invalid
-                    // you must have `fn main(fn *a)` instead.
-                    _ => ensure_fn_pointer!($self, is_fn_pointer, found_ptr),
+                    TokenKind::LeftParenthesis if is_fn_pointer => {
+                        $self.advance();
+                        $self.advance();
+
+                        let mut args = vec![];
+
+                        while $self.current_token().kind != TokenKind::RightParenthesis {
+                            args.push($self.get_type($generics));
+                            $self.advance();
+
+                            if $self.current_token().kind == TokenKind::Comma {
+                                $self.advance();
+                            }
+                        }
+
+                        $self.expect_tokens(&[TokenKind::RightParenthesis]);
+
+                        let return_type = if let Some(next) = $self.next_token() && next.kind == TokenKind::RightArrow {
+                            $self.advance();
+                            $self.advance();
+                            Some($self.get_type($generics))
+                        } else {
+                            None
+                        };
+
+                        ty = Type::Function(Box::new(Some(crate::compiler::qbe::function::Function {
+                            variadic: false,
+                            external: true,
+                            builtin: false,
+                            volatile: false,
+                            format: false,
+                            lambda: true,
+                            usable: true,
+                            imported: true,
+                            arguments: args.iter().enumerate().map(|(i, x)| ((x.clone(), crate::compiler::qbe::value::Value::Temporary(format!("_{i}"))), false)).collect::<Vec<_>>(),
+                            return_type,
+                            ..Default::default()
+                        })));
+                    }
+                    _ => break,
                 }
             } else {
-                ensure_fn_pointer!($self, is_fn_pointer, found_ptr)
+                elle_error!($self.current_token().location.borrow().error(format!("Failed to parse type: got end of stream")))
             }
         }
 
