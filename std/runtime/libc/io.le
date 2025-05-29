@@ -8,7 +8,7 @@ fn fdopen(i64 descriptor, string mode) @alias(libc::fdopen) -> FILE *;
 fn printf(string formatter, ...) @alias(io::cprintf) -> i32;
 fn fprintf(FILE *fd, string formatter, ...) @alias(io::fprintf) -> i32;
 fn sprintf(string str, string formatter, ...) @alias(io::sprintf) -> i32;
-fn snprintf(string str, i32 size, string formatter, ...) @alias(io::snprintf);
+fn snprintf(string str, i32 size, string formatter, ...) @alias(io::snprintf) -> i32;
 
 fn fscanf(FILE *stream, string format, ...) @alias(io::fscanf) -> i32;
 fn scanf(string format, ...) @alias(io::scanf) -> i32;

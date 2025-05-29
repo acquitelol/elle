@@ -127,12 +127,15 @@ fn io::unimplemented(ElleMeta meta) {
 }
 
 
-fn io::assert(ElleMeta meta, bool condition, string message) {
+fn io::assert(ElleMeta meta, bool condition, ...args) {
     if !condition {
-        let parsed = message ?: "No additional information was specified.";
+        let parsed = meta.arity >= 2
+            ? args.yield(string)
+            : "No additional information was specified.";
 
-        io::eprintln(
-            meta.caller, ": Assertion '", meta.exprs[0], "' failed.\n",
+        io::eprintf(
+            "[{}:{}:{}] in function `{}`:\nAssertion `{}` failed.\n{}",
+            meta.file, meta.line, meta.column, meta.caller, meta.exprs[0],
             parsed.color("italic").reset()
         );
 

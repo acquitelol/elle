@@ -52,7 +52,7 @@ fn TcpServer::accept(TcpServer self) -> Result<TcpConnection, Errno> {
     });
 }
 
-fn TcpServer::close(TcpServer self) -> Result<void, Errno> {
+fn TcpServer::close(TcpServer self) -> Result<Unit, Errno> {
     res := close(self.fd);
 
     if res < 0 {

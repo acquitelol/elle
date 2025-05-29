@@ -11,5 +11,5 @@ fn isprint(char arg) @alias(char::is_printable) -> bool;
 fn ispunct(char arg) @alias(char::is_punctuation) -> bool;
 fn isspace(char arg) @alias(char::is_whitespace) -> bool;
 fn isxdigit(char arg) @alias(char::is_hexdigit) -> bool;
-fn tolower(char arg) @alias(char::to_lowercase) -> bool;
-fn toupper(char arg) @alias(char::to_uppercase) -> bool;
+fn tolower(char arg) @alias(char::to_lowercase) -> char;
+fn toupper(char arg) @alias(char::to_uppercase) -> char;

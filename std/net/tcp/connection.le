@@ -2,15 +2,17 @@ use std/libc/socket;
 use std/libc/errno;
 use std/libc/io;
 use std/result;
+use std/unit;
 global pub;
 
 struct TcpConnection {
     i32 fd
 }
 
-fn TcpConnection::read_raw<T>(TcpConnection self, T *buffer, i32 size) -> Result<i64, Errno> {
+fn TcpConnection::read_raw<T>(TcpConnection self, T *buffer, u64 size) -> Result<i64, Errno> {
     res := recv(self.fd, buffer, size, 0);
 
+    $dbg(self.fd, buffer, size, res);
     if res < 0 {
         return Result::Err(#cast(Errno, errno));
     }
@@ -29,7 +31,7 @@ fn TcpConnection::read<T>(TcpConnection self, T[] buffer) -> Result<i64, Errno> 
     return res;
 }
 
-fn TcpConnection::write_raw<T>(TcpConnection self, T *buffer, i32 size) -> Result<i64, Errno> {
+fn TcpConnection::write_raw<T>(TcpConnection self, T *buffer, u64 size) -> Result<i64, Errno> {
     res := send(self.fd, buffer, size, 0);
 
     if res < 0 {
@@ -50,7 +52,7 @@ fn TcpConnection::write<T>(TcpConnection self, T[] buffer) -> Result<i64, Errno>
     return res;
 }
 
-fn TcpConnection::close(TcpConnection self) -> Result<void, Errno> {
+fn TcpConnection::close(TcpConnection self) -> Result<Unit, Errno> {
     res := close(self.fd);
 
     if res < 0 {

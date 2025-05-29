@@ -17,7 +17,7 @@ fn io::panic(ElleMeta meta, string fmt, ...) @fmt;
 fn io::die(ElleMeta meta);
 fn io::todo(ElleMeta meta, string message);
 fn io::unimplemented(ElleMeta meta);
-fn io::assert(ElleMeta meta, bool condition, string message);
+fn io::assert(ElleMeta meta, bool condition, ...);
 
 // These functions shouldn't have aliases because they're not as common
 fn io::input(string message) -> string;
@@ -35,4 +35,4 @@ fn io::panic(ElleMeta meta, string fmt, ...) @fmt @alias($panic);
 fn io::die(ElleMeta meta) @alias($die);
 fn io::todo(ElleMeta meta, string message) @alias($todo);
 fn io::unimplemented(ElleMeta meta) @alias($unimplemented);
-fn io::assert(ElleMeta meta, bool condition, string message) @alias($assert);
+fn io::assert(ElleMeta meta, bool condition, ...) @alias($assert);

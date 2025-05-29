@@ -33,7 +33,7 @@ fn TcpClient::connect(string host, u16 port) -> Result<TcpConnection, Errno> {
     });
 }
 
-fn TcpClient::close(TcpClient self) -> Result<void, Errno> {
+fn TcpClient::close(TcpClient self) -> Result<Unit, Errno> {
     res := close(self.fd);
 
     if res < 0 {

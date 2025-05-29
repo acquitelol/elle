@@ -1,0 +1,3 @@
+global pub;
+enum Unit @repr(u8) { _ }
+const _ = Unit::_;
