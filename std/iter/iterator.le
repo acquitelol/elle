@@ -1,1 +1,17 @@
 use std/iter/core;
+use std/iter/adapters/once;
+use std/iter/adapters/range;
+use std/iter/adapters/iota;
+use std/iter/adapters/filter;
+use std/iter/adapters/map;
+use std/iter/adapters/rev;
+use std/iter/adapters/take;
+use std/iter/adapters/chunks;
+use std/iter/adapters/windows;
+use std/iter/adapters/cycle;
+use std/iter/adapters/intersperse;
+use std/iter/adapters/skip;
+use std/iter/adapters/enumerate;
+use std/iter/adapters/zip;
+use std/iter/adapters/chain;
+use std/iter/adapters/peekable;

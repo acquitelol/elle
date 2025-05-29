@@ -1,0 +1,41 @@
+use std/iter/core;
+global pub;
+
+struct Range<T> {
+    T from,
+    T to,
+    bool inclusive
+}
+
+fn Iterator::range<T>(
+    T from,
+    T to,
+    bool inclusive
+) -> Iterator<T, Range<T>, DoubleEnded> {
+    Range<T> range = Range {
+        from = from,
+        to = to,
+        inclusive = inclusive
+    };
+
+    return Iterator {
+        env = Box::new(range),
+        next = fn(env) {
+            if env.from < env.to + env.inclusive {
+                let current = env.from;
+                env.from += 1;
+                return Option::Some(current);
+            } else {
+                return Option::None<T>();
+            }
+        },
+        next_back = fn(env) {
+            if env.from < env.to + env.inclusive {
+                env.to -= 1;
+                return Option::Some(env.to + env.inclusive);
+            } else {
+                return Option::None<T>();
+            }
+        }
+    };
+}

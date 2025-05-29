@@ -1,0 +1,32 @@
+use std/iter/core;
+global pub;
+
+struct Enumerate<T, Env, TEnded> {
+    Iterator<T, Env, TEnded> base,
+    u64 count,
+}
+
+fn Iterator::enumerate<T, Env, TEnded>(
+    Iterator<T, Env, TEnded> self
+) -> Iterator<(u64, T), Enumerate<T, Env, TEnded>, SingleEnded> {
+    Enumerate<T, Env, TEnded> enumerate_iter = Enumerate {
+        base = self,
+        count = 0,
+    };
+
+    return Iterator {
+        env = Box::new(enumerate_iter),
+        next = fn(env) {
+            val := env.base.next();
+
+            if val.is_none() {
+                return Option::None<(u64, T)>();
+            }
+
+            result := $(env.count, val.unwrap());
+            env.count += 1;
+            return Option::Some(result);
+        },
+        next_back = nil,
+    };
+}

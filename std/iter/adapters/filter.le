@@ -1,0 +1,50 @@
+use std/iter/core;
+global pub;
+
+struct Filter<T, Env, TEnded> {
+    Iterator<T, Env, TEnded> base,
+    fn(T) -> bool predicate
+}
+
+fn Iterator::filter<T, Env, TEnded>(
+    Iterator<T, Env, TEnded> self,
+    fn(T) -> bool predicate
+) -> Iterator<T, Filter<T, Env, TEnded>, TEnded> {
+    Filter<T, Env, TEnded> filter = Filter {
+        base = self,
+        predicate = predicate,
+    };
+
+    return Iterator {
+        env = Box::new(filter),
+        next = fn(env) {
+            for ;; {
+                val := env.base.next();
+
+                if val.is_none() {
+                    return Option::None<T>();
+                }
+
+                cb := env.predicate;
+                if cb(val.unwrap()) {
+                    return val;
+                }
+            }
+        },
+        next_back = self.next_back ? fn(env) {
+            for ;; {
+                base := *#cast(Iterator<T, Env, DoubleEnded> *, &env.base);
+                val := base.next_back();
+
+                if val.is_none() {
+                    return Option::None<T>();
+                }
+
+                cb := env.predicate;
+                if cb(val.unwrap()) {
+                    return val;
+                }
+            }
+        } : nil
+    };
+}

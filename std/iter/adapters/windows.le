@@ -1,0 +1,44 @@
+use std/iter/core;
+global pub;
+
+struct Windows<T, Env, TEnded> {
+    Iterator<T, Env, TEnded> base,
+    u64 n,
+    T[] buf
+}
+
+fn Iterator::windows<T, Env, TEnded>(
+    Iterator<T, Env, TEnded> self,
+    u64 n
+) -> Iterator<T[], Windows<T, Env, TEnded>, SingleEnded> {
+    Windows<T, Env, TEnded> windows = Windows {
+        base = self,
+        n = n,
+        buf = [T;]
+    };
+
+    return Iterator {
+        env = Box::new(windows),
+        next = fn(env) {
+            while env.buf.len() < env.n {
+                if _, item := env.base.next() {
+                    env.buf.push(item);
+                } else {
+                    return Option::None<T[]>();
+                }
+            }
+
+            out := env.buf.clone();
+
+            if _, item := env.base.next() {
+                env.buf.remove(0);
+                env.buf.push(item);
+            } else {
+                env.buf.clear();
+            }
+
+            return Option::Some(out);
+        },
+        next_back = nil // windows cant be DoubleEnded without full buffering
+    };
+}

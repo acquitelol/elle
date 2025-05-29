@@ -1,0 +1,46 @@
+use std/iter/core;
+global pub;
+
+struct Intersperse<T, Env, TEnded> {
+    Iterator<T, Env, TEnded> base,
+    Option<T> next,
+    T separator,
+    bool emit
+}
+
+fn Iterator::intersperse<T, Env, TEnded>(
+    Iterator<T, Env, TEnded> self,
+    T separator
+) -> Iterator<T, Intersperse<T, Env, TEnded>, SingleEnded> {
+    Intersperse<T, Env, TEnded> intersperse = Intersperse {
+        base = self,
+        next = Option::None(),
+        separator = separator,
+        emit = false
+    };
+
+    return Iterator {
+        env = Box::new(intersperse),
+        next = fn(env) {
+            if env.emit {
+                env.emit = !env.emit;
+                env.next = env.base.next();
+
+                return env.next.is_some()
+                    ? Option::Some(env.separator)
+                    : Option::None<T>();
+            }
+
+            val := env.next
+                .or_else_with(fn(env) env.base.next(), env);
+
+            if val.is_some() {
+                env.emit = !env.emit;
+                env.next = Option::None();
+            }
+
+            return val;
+        },
+        next_back = nil
+    };
+}

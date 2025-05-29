@@ -1,0 +1,47 @@
+use std/iter/core;
+global pub;
+
+struct Chain<T, TEnv, UEnv, TEnded> {
+    Iterator<T, TEnv, TEnded> a,
+    Iterator<T, UEnv, TEnded> b,
+    bool exhausted,
+}
+
+fn Iterator::chain<T, TEnv, UEnv, TEnded>(
+    Iterator<T, TEnv, TEnded> a,
+    Iterator<T, UEnv, TEnded> b
+) -> Iterator<T, Chain<T, TEnv, UEnv, TEnded>, TEnded> {
+    Chain<T, TEnv, UEnv, TEnded> chain = Chain {
+        a = a,
+        b = b,
+        exhausted = false
+    };
+
+    return Iterator {
+        env = Box::new(chain),
+        next = fn(env) {
+            if !env.exhausted {
+                val := env.a.next();
+
+                if val.is_some() {
+                    return val;
+                }
+
+                env.exhausted = true;
+            }
+
+            return env.b.next();
+        },
+        next_back = a.next_back && b.next_back ? fn(env) {
+            a := *#cast(Iterator<T, TEnv, DoubleEnded> *, &env.a);
+            b := *#cast(Iterator<T, UEnv, DoubleEnded> *, &env.b);
+            val := b.next_back();
+
+            if val.is_some() {
+                return val;
+            }
+
+            return a.next_back();
+        } : nil
+    };
+}

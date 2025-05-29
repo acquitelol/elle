@@ -1,0 +1,15 @@
+use std/iter/core;
+global pub;
+
+fn Iterator::skip<T, Env, TEnded>(
+    Iterator<T, Env, TEnded> self,
+    u64 n
+) -> Iterator<T, Env, TEnded> {
+    for i := 0; i < n; i += 1 {
+        if self.next().is_none() {
+            break;
+        }
+    }
+
+    return self;
+}

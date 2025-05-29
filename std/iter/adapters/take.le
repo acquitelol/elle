@@ -1,0 +1,48 @@
+use std/iter/core;
+global pub;
+
+struct Take<T, Env, TEnded> {
+    Iterator<T, Env, TEnded> base,
+    u64 n
+}
+
+fn Iterator::take<T, Env, TEnded>(
+    Iterator<T, Env, TEnded> self,
+    u64 n
+) -> Iterator<T, Take<T, Env, TEnded>, TEnded> {
+    Take<T, Env, TEnded> take = Take {
+        base = self,
+        n = n
+    };
+
+    return Iterator {
+        env = Box::new(take),
+        next = fn(env) {
+            if env.n == 0 {
+                return Option::None<T>();
+            }
+
+            val := env.base.next();
+
+            if val.is_some() {
+                env.n -= 1;
+            }
+
+            return val;
+        },
+        next_back = self.next_back ? fn(env) {
+            if env.n == 0 {
+                return Option::None<T>();
+            }
+
+            base := *#cast(Iterator<T, Env, DoubleEnded> *, &env.base);
+            val := base.next_back();
+
+            if val.is_some() {
+                env.n -= 1;
+            }
+
+            return val;
+        } : nil
+    };
+}

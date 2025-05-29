@@ -1,0 +1,27 @@
+use std/iter/core;
+global pub;
+
+struct Once<T> {
+    T value,
+    bool consumed
+}
+
+fn Iterator::once<T>(T value) -> Iterator<T, Once<T>, SingleEnded> {
+    Once<T> once = Once {
+        value = value,
+        consumed = false
+    };
+
+    return Iterator {
+        env = Box::new(once),
+        next = fn(env) {
+            if env.consumed {
+                return Option::None<T>();
+            } else {
+                env.consumed = !env.consumed;
+                return Option::Some(env.value);
+            }
+        },
+        next_back = nil
+    };
+}

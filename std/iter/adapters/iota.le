@@ -1,0 +1,14 @@
+use std/iter/core;
+global pub;
+
+fn Iterator::iota<T>(T start) -> Iterator<T, T, SingleEnded> {
+    return Iterator {
+        env = Box::new(start),
+        next = fn(env) {
+            val := *env;
+            *env += 1;
+            return Option::Some(val);
+        },
+        next_back = nil
+    };
+}

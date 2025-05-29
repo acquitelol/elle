@@ -1,0 +1,37 @@
+use std/iter/core;
+global pub;
+
+struct Cycle<T, Env, TEnded> {
+    Iterator<T, Env, TEnded> current,
+    fn() -> Iterator<T, Env, TEnded> gen
+}
+
+fn Iterator::cycle<T, Env, TEnded>(
+    Iterator<T, Env, TEnded> self,
+    fn() -> Iterator<T, Env, TEnded> gen
+) -> Iterator<T, Cycle<T, Env, TEnded>, SingleEnded> {
+    Cycle<T, Env, TEnded> cycle = Cycle {
+        current = self,
+        gen = gen,
+    };
+
+    return Iterator {
+        env = Box::new(cycle),
+        next = fn(env) {
+            if _, val := env.current.next() {
+                return Option::Some(val);
+            }
+
+            cb := env.gen;
+            iter := cb();
+
+            if _, val := iter.next() {
+                env.current = iter;
+                return Option::Some(val);
+            }
+
+            return Option::None<T>();
+        },
+        next_back = nil
+    };
+}

@@ -1,0 +1,39 @@
+use std/iter/iterator;
+global pub;
+
+struct Peekable<T, Env, TEnded> {
+    Iterator<T, Env, TEnded> base,
+    Box<Option<T>> peeked
+}
+
+fn Iterator::peekable<T, Env, TEnded>(
+    Iterator<T, Env, TEnded> self
+) -> Iterator<T, Peekable<T, Env, TEnded>, TEnded> {
+    Peekable<T, Env, TEnded> peek = Peekable {
+        base = self,
+        peeked = Box::new(Option::None<T>())
+    };
+
+    return Iterator {
+        env = Box::new(peek),
+        next = fn(env) {
+            if (*env.peeked).is_some() {
+                val := *env.peeked;
+                *env.peeked = Option::None<T>();
+                return val;
+            }
+
+            return env.base.next();
+        },
+        next_back = nil
+    };
+}
+
+fn Iterator::peek<T, Env, TEnded>(
+    Iterator<T, Peekable<T, Env, TEnded>, TEnded> self
+) -> Option<T> {
+    if (*(*self.env).peeked).is_none() {
+        *(*self.env).peeked = (*self.env).base.next();
+    }
+    return *(*self.env).peeked;
+}

@@ -1,0 +1,12 @@
+use std/iter/core;
+global pub;
+
+fn Iterator::rev<T, Env>(
+    Iterator<T, Env, DoubleEnded> self
+) -> Iterator<T, Env, DoubleEnded> {
+    return Iterator {
+        env = self.env,
+        next = self.next_back,
+        next_back = self.next
+    };
+}
