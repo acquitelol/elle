@@ -141,8 +141,8 @@ Please keep in mind that you also have access to the `break` and `continue` keyw
 
 - A foreach loop is an expression that has 2 main parts:
 
-1. Variable declaration - Declaring a variable for each element
-2. Iterator - The iterator value (which must have a `__len__` function defined on its type)
+1. Variable declaration - Declaring a variable for each element (which may be a tuple destructure)
+2. Iterator - The iterator value (which must have an `__iter__` function defined on its type)
 
 - Example:
 
@@ -164,20 +164,11 @@ for i in 0..100 {
 }
 ```
 
-You can also access the current index during a `foreach` loop, no enumeration necessary:
+You can also access the current index during a `foreach` loop:
 
 ```rs
-for x in [1, 2, 3] {
+for i, x in [1, 2, 3].iter().enumerate() {
     $dbg(#i(x), x);
-}
-```
-
-You can also assign to this variable if you need to (such as stepping by 2):
-
-```rs
-for x in [1, 2, 3, 4] {
-    $dbg(#i(x), #i(x) + 1, x);
-    #i(x) += 1; // Will now increment by 2 because there is an implicit increment each iteration
 }
 ```
 
@@ -879,7 +870,7 @@ Here are basic examples of how you can use them:
 use std/prelude;
 
 fn main() {
-    let arr = [1, 2, 3].map<i32>(fn(i32 x) x * 2);
+    let arr = [1, 2, 3].iter().map(fn(x) x * 2);
     io::println(arr); // <[2, 4, 6] at 0xdeadbeef>
 }
 ```
@@ -897,11 +888,34 @@ fn main() {
 }
 ```
 
+Functions can have their signature expressed through the type system, which includes generics:
+
+```rs
+fn foo(fn(i32) -> i32 cb) {
+    return cb(39);
+}
+
+fn main() {
+    $dbg(foo(fn(x) x * 2));
+}
+```
+
+```rs
+// Will automatically infer U here based on what the lambda returns
+fn foo<T, U>(fn(T) -> U cb) {
+    return cb(39);
+}
+
+fn main() {
+    // x = i32 must be specified explicitly here
+    $dbg(foo(fn(i32 x) "{}".format(x)));
+}
+```
+
 Please note the following:
 
 - These lambdas do **not** capture surrounding variables
 - They are not automatically passed ElleMeta by the compiler (because there is not enough context to do so)
-- You cannot declare the interface for a lambda on the type level
 
 This means that these examples won't work:
 
@@ -913,20 +927,11 @@ fn main() {
     let a = 5;
 
     // The compiler will throw an error here
-    let arr_doubled = arr.map<i32>(fn(i32 x) x * a);
+    let arr_doubled = arr.iter().map(fn(x) x * a);
     io::println(arr_doubled);
-}
-```
 
-```rs
-use std/prelude;
-
-fn main() {
-    let arr = [1, 2, 3];
-
-    // The program will segfault here (for now)
-    // due to not being passed ElleMeta
-    let arr_doubled = arr.map<i32>(io::println);
+    // Settle for this instead
+    let arr_doubled = arr.map_with(fn(x, a) x * a, a);
     io::println(arr_doubled);
 }
 ```
@@ -1149,10 +1154,9 @@ These are the mappings of types in Elle:
 - `i64` - A signed integer of the size specified by your computer's architecture, up to 64-bit.
 - `f32` - A 32-bit signed floating point number.
 - `f64` - A 64-bit signed floating point number, providing double the precision of `f32`.
-- `fn` - A type that maps to a `byte`. This is intended to be used as a pointer to the first byte of a function definition.
 - `pointer` - Denoted by `<type> *` -> As pointers are just a number, an address in memory, a pointer in Elle is just an `i64` that holds extra context by holding another type so that it can use its size to calculate an offset when indexing its memory.
 - `string` - A mapping to a `char *`, which is essentially an array of characters, or a "c-string".
-- `any` - A mapping to `void *`. This is **TEMPORARY**.
+- `fn((type)*) (-> type)?` - A type representing a function pointer. As it's a pointer, it can be `nil`.
 
 <hr />
 
@@ -2025,7 +2029,6 @@ The current existing directives are:
 | ------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------- |
 | Static array length | Gives you the length of a static array allocated using `#[1, 2, 3]` syntax                                      | `#len(expr)`               |
 | Size expression     | Gives you the size of type `T` or expression `expr` in bytes as a u64                                           | `#size(T or expr)`         |
-| Index in foreach    | Gives you the iterator in a foreach loop given the current element being iterated                               | `#i(ident)`                |
 | Elle Environment    | Gives you a `ElleEnv *` which is a global environment structure                                                 | `#env`                     |
 | Allocate memory     | Allows you to allocate a specific type using the current allocator                                              | `#alloc(T, size?)`         |
 | Reallocate memory   | Allows you to reallocate a pointer with a specific type using the current allocator                             | `#realloc(expr, T, size?)` |
@@ -2343,3 +2346,59 @@ int main() {
 ♡ **Functions in Elle are callable from C, but not if they're namespaced:**
 
 A namespaced function `foo::bar` internally creates `foo.bar`, which isn't importable from C. You can just make wrappers for these cases.
+
+<hr />
+
+### ♡ **Lazy Iterators**
+
+Elle allows you to define and use lazy iterators, which allow you to yield values lazily:
+
+```rs
+fn main() {
+    x := 1..10;
+
+    $dbg(x.next()); // Some(1)
+    $dbg(x.next()); // Some(2)
+}
+```
+
+```rs
+fn main() {
+    x := (8..=10).rev();
+
+    $dbg(x.next()); // Some(10)
+    $dbg(x.next()); // Some(9)
+    $dbg(x.next()); // Some(8)
+}
+```
+
+```rs
+fn main() {
+    x := Iterator::once(42);
+
+    $dbg(x.next()); // Some(42)
+    $dbg(x.next()); // None
+
+    gen := fn() Iterator::once(42);
+    x := gen().cycle(gen);
+
+    $dbg(x.next()); // Some(42)
+    $dbg(x.next()); // Some(42)
+    $dbg(x.next()); // Some(42)
+    $dbg(x.next()); // Some(42)
+}
+```
+
+The iterator abstraction is also used in `foreach` loops:
+
+```rs
+for x in 1..10 {
+    $dbg(x);
+}
+```
+
+```rs
+for i, x in (1..10).enumerate() {
+    $dbg(x);
+}
+```
