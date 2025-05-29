@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
     compiler::qbe::r#type::Type,
-    elle_error, ensure_fn_pointer,
+    elle_error,
     lexer::enums::{Location, MutRc, Token, TokenKind, ValueKind},
     misc::colors::*,
     parser::{constant::Constant, function::Function, r#enum::Enum, r#struct::Struct},
@@ -39,7 +39,17 @@ pub fn create_generic_struct(
 
     if generics.len() != known_generics.len() {
         if generics.len() < known_generics.len() {
-            todo!("the user passed too many generics");
+            elle_error!(location.borrow().with_extra_info(format!("When monomorphizing {name}")).error(
+                format!(
+                    "Attempted to monomorphize with too many generics.\nExpected {GREEN}{}{RESET} generic{} but got {RED}{}{RESET} instead",
+                    generics.len(),
+                    if generics.len() != 1 { "s" } else { "" },
+                    known_generics.len(),
+                    GREEN = get_GREEN!(),
+                    RED = get_RED!(),
+                    RESET = get_RESET!(),
+                )
+            ));
         }
 
         let unknown = generics
@@ -116,16 +126,12 @@ macro_rules! get_type {
         let position = $self.position;
         let mut is_fn_pointer = false;
         let mut is_struct = false;
-        let mut tuple_imported = true;
-        let name;
+        let name: String;
 
         let location = $self.current_token().location;
 
-        let mut ty = if $self.current_token().kind == TokenKind::LeftParenthesis {
-            if !$struct_pool.borrow().contains_key("Tuple") {
-                tuple_imported = false;
-            }
-
+        let mut ty = 'block: {
+            if $self.current_token().kind == TokenKind::LeftParenthesis {
             $self.advance(); // Skip left parenthesis
 
             let mut types = vec![];
@@ -140,7 +146,22 @@ macro_rules! get_type {
                 }
             }
 
-            name = "Tuple".into();
+            if types.len() > 3 {
+                elle_error!(location.borrow().error(
+                    format!(
+                        "This tuple holds too many types ({})\n.Tuples may only hold 2-3 types",
+                        types.len()
+                    )
+                ))
+            }
+
+            name = if types.len() == 2 { "Tuple" } else { "Triple" }.into();
+
+            if types.len() == 1 {
+                $self.expect_tokens(&[TokenKind::RightParenthesis]);
+                break 'block types[0].clone();
+            }
+
             let generic_name = format!(
                 "{name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
                 types
@@ -153,13 +174,14 @@ macro_rules! get_type {
             $self.expect_tokens(&[TokenKind::RightParenthesis]);
             $crate::set_end!(location, $self);
 
-            if !tuple_imported {
-                let import_text = "use std/collections/tuple;";
+            if !$struct_pool.borrow().contains_key(&name) {
+                let lower_name = name.to_lowercase();
+                let import_text = format!("use std/collections/{lower_name};");
 
                 elle_error!(
                     location.borrow().error(
                         format!(
-                            "The tuple module is not imported. Please import it to use tuples.\n\n`{}`",
+                            "The {lower_name} module is not imported. Please import it to use {lower_name}s.\n\n`{}`",
                             import_text
                         )
                     )
@@ -168,7 +190,7 @@ macro_rules! get_type {
 
             if !$struct_pool.borrow().contains_key(&generic_name) {
                 create_generic_struct(
-                    "Tuple",
+                    &name,
                     &generic_name,
                     &location,
                     &types,
@@ -208,7 +230,7 @@ macro_rules! get_type {
             if is_struct && $self.current_token().tagged {
                 let pool = $struct_pool.borrow();
                 let struct_def = pool.get(&name).unwrap();
-                $crate::struct_hover!($self.current_token(), struct_def.1.is_empty(), struct_def.1);
+                $crate::struct_hover!($self.current_token(), struct_def.1.is_empty(), struct_def.0, struct_def.1);
             }
 
             if is_enum && $self.current_token().tagged {
@@ -231,17 +253,14 @@ macro_rules! get_type {
             ValueKind::String(name.clone())
                 .to_type_string(is_struct, is_enum, $enum_pool.borrow().get(&name).map(|x| x.1.clone()).unwrap_or(None))
                 .unwrap()
-        };
-
-        let mut found_ptr = false;
+        }};
 
         while !$self.is_eof() {
             let tmp = $self.next_token();
 
-            if tmp.is_some() {
-                match tmp.unwrap().kind {
+            if let Some(token) = tmp {
+                match token.kind {
                     TokenKind::Multiply | TokenKind::Deref => {
-                        found_ptr = true;
                         ty = Type::Pointer(Box::new(ty));
                         $self.advance();
                     }
