@@ -1,0 +1,9 @@
+// `no_deiter` == `No DoubleEnded Iterator`
+//
+// This test aims to ensure that trying to apply operations that
+// require DoubleEnded iterators to SingleEnded iterators fails
+//
+// This may mean something like `Iterator::iota(0).rev()`
+fn main() {
+    Iterator::iota(0).rev(); // This should fail
+}
