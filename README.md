@@ -13,9 +13,13 @@
 
 # ♡ **FAQ**
 
-### ✩ I _heavily_ recommend reading the [FAQ](https://github.com/acquitelol/elle/blob/rewrite/FAQ.md) before trying the language. ✩
+### ✩ It is _heavily_ recommended to read the [FAQ](https://github.com/acquitelol/elle/blob/rewrite/FAQ.md) before trying the language. ✩
 
 It will allow you to grasp the strengths and weaknesses of the language at a glance and quickly learn whether this language is one you would be comfortable using.
+
+# ♡ **Documentation**
+
+### ✩ You can view the Elle documentation/reference [here](https://github.com/acquitelol/elle/blob/rewrite/DOCS.md). ✩
 
 ### ✩ _If you like this project, consider giving it a star!_ ✩
 
