@@ -76,6 +76,8 @@ impl Codegen<'_> for BinaryOperation {
             return Some((ty, val));
         }
 
+        let cloned_func = ctx.func.borrow_mut().to_owned();
+
         let (mut left_ty, left_val_unparsed) =
             self.left.clone().compile(gen, ctx).unwrap_or_else(|| {
                 elle_error!(self.location.borrow().error(
@@ -161,6 +163,8 @@ impl Codegen<'_> for BinaryOperation {
             && [TokenKind::EqualTo, TokenKind::NotEqualTo].contains(&self.operator)
             && self.dunder_methods
         {
+            *ctx.func.borrow_mut() = cloned_func;
+
             let mut node = AstNode::FunctionCall(FunctionCall {
                 namespace_token: Token::from_ident(""),
                 name_token: Token::from_ident(EQUALS_CONSTANT),
