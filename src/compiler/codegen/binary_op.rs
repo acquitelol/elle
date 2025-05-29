@@ -34,9 +34,9 @@ impl Codegen<'_> for BinaryOperation {
 
         if matches!(self.operator, TokenKind::Range | TokenKind::RangeEqual) {
             let node = AstNode::FunctionCall(FunctionCall {
-                namespace_token: Token::from_ident("Array"),
+                namespace_token: Token::from_ident("Iterator"),
                 name_token: Token::from_ident("range"),
-                name: "Array.range".into(),
+                name: "Iterator.range".into(),
                 generics: vec![],
                 parameters: vec![
                     (self.location.clone(), *self.left),
