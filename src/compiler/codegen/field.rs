@@ -34,6 +34,7 @@ impl Codegen<'_> for FieldAccess {
                     gen,
                     &CodegenContext {
                         ty: Some(field_ty.clone()),
+                        is_return: false,
                         ..ctx.clone()
                     },
                 )

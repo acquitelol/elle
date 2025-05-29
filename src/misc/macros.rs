@@ -110,9 +110,8 @@ macro_rules! is_unknown {
                 nesting -= 1;
             }
 
-            if part == $crate::GENERIC_UNKNOWN && nesting == 1 {
-                is_unknown = true;
-                break;
+            if part == $crate::GENERIC_UNKNOWN {
+                is_unknown = nesting == 1;
             }
         }
 
@@ -281,7 +280,7 @@ macro_rules! bool_hover {
 
 #[macro_export]
 macro_rules! struct_hover {
-    ($token:expr, $is_namespace:expr, $members:expr) => {
+    ($token:expr, $is_namespace:expr, $generics:expr, $members:expr) => {
         if $token.tagged {
             if $is_namespace {
                 elle_error!(format!(
@@ -293,10 +292,15 @@ macro_rules! struct_hover {
             }
 
             elle_error!(format!(
-                "hover\n{}\n{}\nstruct {} {{\n{}\n}};",
+                "hover\n{}\n{}\nstruct {}{} {{\n{}\n}};",
                 $token.location.borrow().display_plain(false),
                 $token.location.borrow().display_plain(true),
                 Type::Struct($token.value.get_string_inner().unwrap()).display(),
+                if $generics.is_empty() {
+                    "".into()
+                } else {
+                    format!("<{}>", $generics.join(", "))
+                },
                 $members
                     .iter()
                     .map(|x| format!("\t{} {};", x.r#type.display(), x.name))
@@ -397,30 +401,6 @@ macro_rules! token_to_node {
                 location: $token.location.clone(),
                 tagged: $token.tagged,
             }),
-        }
-    };
-}
-
-/// Throws an error if [`is_fn_pointer`] is true
-/// and [`found_ptr`] is false.
-///
-/// This asserts in `get_type()` variants that the type is a
-/// function *pointer* not just a function type
-///
-/// [`is_fn_pointer`]: $is_fn_pointer:expr
-/// [`found_ptr`]: $found_ptr:expr
-#[macro_export]
-macro_rules! ensure_fn_pointer {
-    ($self:expr, $is_fn_pointer:expr, $found_ptr:expr $(,)?) => {
-        if $is_fn_pointer && !$found_ptr {
-            panic!(
-                "{}",
-                $self.current_token().location.borrow().error(
-                    "Expected function pointer, got just 'fn'.\nTry 'fn *' instead of 'fn'."
-                )
-            );
-        } else {
-            break;
         }
     };
 }

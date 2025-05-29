@@ -111,9 +111,10 @@ pub fn process_field_access(
 
                     if tagged {
                         elle_error!(format!(
-                            "hover\n{}\n{}\n{struct_name}.{field}: {}",
+                            "hover\n{}\n{}\n{}.{field}: {}",
                             location.borrow().display_plain(false),
                             location.borrow().display_plain(true),
+                            Type::Struct(struct_name).display(),
                             res.0.display()
                         ));
                     }
@@ -132,9 +133,10 @@ pub fn process_field_access(
 
                 if tagged {
                     elle_error!(format!(
-                        "hover\n{}\n{}\n{struct_name}.{field}: {}",
+                        "hover\n{}\n{}\n{}.{field}: {}",
                         location.borrow().display_plain(false),
                         location.borrow().display_plain(true),
+                        Type::Struct(struct_name).display(),
                         res.0.display()
                     ));
                 }

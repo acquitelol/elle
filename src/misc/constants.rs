@@ -78,6 +78,7 @@ pub static RESERVED_KEYWORDS: &[&str] = &[
 pub static VA_LIST_SIZE_BYTES: usize = 32;
 pub static DEAD_CODE_ELIMINATION_PASSES: usize = 6;
 pub static DIVIDER_SIZE: usize = 50;
+pub static DISPLAY_NESTING_MAX: usize = 3;
 
 #[macro_export]
 macro_rules! INTERNAL_IDX_FORMAT {

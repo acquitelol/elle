@@ -45,6 +45,35 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn display_nested(&self, nesting: usize) -> String {
+        match self {
+            Self::Struct(td) => {
+                if is_generic!(td) {
+                    let (name, parts) = Self::from_internal_id(td);
+
+                    let mapped = if nesting >= DISPLAY_NESTING_MAX {
+                        "...".into()
+                    } else {
+                        parts
+                            .iter()
+                            .map(|x| x.display_nested(nesting + 1))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    };
+
+                    match name.as_str() {
+                        "Array" => format!("{mapped}[]"),
+                        "Tuple" | "Triple" => format!("({mapped})"),
+                        _ => format!("{name}<{mapped}>"),
+                    }
+                } else {
+                    td.into()
+                }
+            }
+            _ => self.display(),
+        }
+    }
+
     pub fn display(&self) -> String {
         match self {
             Self::Byte => "i8".into(),
@@ -60,6 +89,20 @@ impl Type {
             Self::Pointer(inner) => {
                 if *inner.as_ref() == Self::Char {
                     "string".into()
+                // TODO: this is bad. arrays should just be normal structs
+                } else if inner.is_struct() {
+                    let td = inner.get_struct_inner().unwrap();
+
+                    if is_generic!(td) {
+                        let (name, _) = Self::from_internal_id(&td);
+
+                        match name.as_str() {
+                            "Array" => inner.display(),
+                            _ => format!("{}*", inner.display()),
+                        }
+                    } else {
+                        format!("{}*", inner.display())
+                    }
                 } else {
                     format!("{}*", inner.display())
                 }
@@ -70,27 +113,15 @@ impl Type {
             Self::Null => "null".into(),
             Self::Enum(name, ty) => Option::as_ref(ty)
                 .map_or_else(|| name.into(), |ty| format!("{name}({})", ty.display())),
-            Self::Struct(td, ..) => {
-                if is_generic!(td) {
-                    let (name, parts) = Self::from_internal_id(td);
-
-                    format!(
-                        "{name}<{}>",
-                        parts
-                            .iter()
-                            .map(Self::display)
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    )
-                } else {
-                    td.into()
-                }
-            }
+            Self::Struct(..) => self.display_nested(0),
             Self::Function(inner) => {
                 if let Some(inner) = *inner.to_owned() {
                     format!(
-                        "fn {}({}{}){}",
-                        {
+                        "fn{}{}({}{}){}",
+                        if inner.lambda { "" } else { " " },
+                        if inner.lambda {
+                            "".into()
+                        } else {
                             let namespaced = inner
                                 .name
                                 .split('.')
@@ -101,7 +132,7 @@ impl Type {
                                 let generic_name = if namespaced {
                                     inner.name.replacen('.', "::", 1)
                                 } else {
-                                    inner.name
+                                    inner.name.clone()
                                 };
 
                                 let (name, parts) = Self::from_internal_id(&generic_name);
@@ -109,11 +140,15 @@ impl Type {
                                 format!(
                                     "{}<{}>",
                                     name,
-                                    parts
-                                        .iter()
-                                        .map(Self::display)
-                                        .collect::<Vec<_>>()
-                                        .join(", ")
+                                    if has_unknown_part!(inner.name) {
+                                        parts
+                                            .iter()
+                                            .map(Self::display)
+                                            .collect::<Vec<_>>()
+                                            .join(", ")
+                                    } else {
+                                        "...".into()
+                                    }
                                 )
                             } else {
                                 inner.name.replace('.', "::")
@@ -123,15 +158,22 @@ impl Type {
                             .arguments
                             .iter()
                             .map(|arg| format!(
-                                "{} {}",
+                                "{}{}",
                                 arg.0 .0.display(),
-                                arg.0
-                                     .1
-                                    .get_string_inner()
-                                    .replace('%', "")
-                                    .split('.')
-                                    .nth(0)
-                                    .unwrap()
+                                if inner.lambda {
+                                    "".into()
+                                } else {
+                                    format!(
+                                        " {}",
+                                        arg.0
+                                             .1
+                                            .get_string_inner()
+                                            .replace('%', "")
+                                            .split('.')
+                                            .nth(0)
+                                            .unwrap()
+                                    )
+                                }
                             ))
                             .collect::<Vec<_>>()
                             .join(", "),
@@ -161,19 +203,12 @@ impl Type {
             Self::UnsignedHalfword => "u16".into(),
             Self::UnsignedWord => "u32".into(),
             Self::UnsignedLong => "u64".into(),
-            Self::Pointer(inner) => {
-                if *inner.as_ref() == Self::Char {
-                    "string".into()
-                } else {
-                    format!("{}*", inner.id())
-                }
-            }
             Self::Single => "f32".into(),
             Self::Double => "f64".into(),
             Self::Void => "void".into(),
             Self::Null => "null".into(),
             Self::Enum(name, ..) | Self::Unknown(name) => name.clone(),
-            Self::Struct(..) | Self::Function(..) => self.display(),
+            Self::Pointer(..) | Self::Struct(..) | Self::Function(..) => self.display(),
             Self::Infer => unreachable!(),
         }
     }

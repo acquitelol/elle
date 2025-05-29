@@ -119,7 +119,8 @@ impl Codegen<'_> for StructLiteral {
         for (member_name, value) in self.values.iter().cloned() {
             if !member_names.contains(&member_name) {
                 elle_error!(self.location.borrow().error(format!(
-                    "Struct named '{plain_name}' has no field named '{member_name}'. Did you spell it correctly?",
+                    "Struct named '{}' has no field named '{member_name}'. Did you spell it correctly?",
+                    Type::Struct(plain_name.clone()).display()
                 )));
             }
 
@@ -137,7 +138,10 @@ impl Codegen<'_> for StructLiteral {
                 })
                 .unwrap_or_else(||
                     elle_error!(self.location.borrow().error(
-                        format!("Unexpected error when trying to compile the value of a field '{member_name}' in struct '{plain_name}'")
+                        format!(
+                            "Unexpected error when trying to compile the value of a field '{member_name}' in struct '{}'",
+                            Type::Struct(plain_name.clone()).display()
+                        )
                     )
                 ));
 
@@ -181,7 +185,7 @@ impl Codegen<'_> for StructLiteral {
             }
         }
 
-        struct_hover!(self.name, members.is_empty(), members);
+        struct_hover!(self.name, members.is_empty(), struct_def.0, members);
         Some((ty, alloc_tmp))
     }
 }
