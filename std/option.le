@@ -48,6 +48,9 @@ fn Option::None<T>() -> Option<T> {
     };
 }
 
+external fn Option::Some<T>(T value) @alias(Some) -> Option<T>;
+external fn Option::None<T>() @alias(None) -> Option<T>;
+
 !external fn __internal_option_throw<T>(Option<T> self, string message, ElleMeta meta) {
     io::fprintf(stderr, "Function %s panicked at %s:%d:%d:\n%s\n",
         meta.caller, meta.file, meta.line, meta.column,
@@ -84,6 +87,30 @@ fn Option::unwrap_or<T>(Option<T> self, T fallback) -> T {
     return self.__value;
 }
 
+fn Option::or_else<T>(Option<T> self, fn() -> Option<T> fallback) -> Option<T> {
+    if !self.__is_some {
+        return fallback();
+    }
+
+    return self;
+}
+
+fn Option::or_else_with<T, U>(Option<T> self, fn(U) -> Option<T> fallback, U arg) -> Option<T> {
+    if !self.__is_some {
+        return fallback(arg);
+    }
+
+    return self;
+}
+
+fn Option::or<T>(Option<T> self, Option<T> fallback) -> Option<T> {
+    if !self.__is_some {
+        return fallback;
+    }
+
+    return self;
+}
+
 // Returns true if the option has a value inside
 fn Option::is_some<T>(Option<T> self) {
     return self.__is_some;
@@ -94,26 +121,46 @@ fn Option::is_none<T>(Option<T> self) {
     return !self.is_some();
 }
 
-fn Option::resolve<T>(Option<T> self, fn *if_some, fn *if_none) {
+fn Option::resolve_with<T, U, Out>(Option<T> self, fn(T, U) -> Out if_some, fn(U) -> Out if_none, U arg) {
     if self.is_some() {
-        return if_some(self.unwrap());
+        return if_some(self.__value, arg);
+    } else {
+        return if_none(arg);
     }
-
-    return if_none();
 }
 
-fn Option::is_some_and<T>(Option<T> self, fn *cb) {
+fn Option::resolve<T, Out>(Option<T> self, fn(T) -> Out if_some, fn() -> Out if_none) {
     if self.is_some() {
-        return #cast(bool, cb(self.__value));
+        return if_some(self.__value);
+    } else {
+        return if_none();
     }
-
-    return false;
 }
 
-fn Option::is_none_or<T>(Option<T> self, fn *cb) {
+fn Option::is_some_and<T>(Option<T> self, fn(T) -> bool cb) {
     if self.is_some() {
-        return #cast(bool, cb(self.__value));
+        return cb(self.__value);
+    } else {
+        return false;
     }
+}
 
-    return true;
+fn Option::is_none_or<T>(Option<T> self, fn(T) -> bool cb) {
+    if self.is_some() {
+        return cb(self.__value);
+    } else {
+        return true;
+    }
+}
+
+fn Option::map_with<T, U, Out>(Option<T> self, fn(T, U) -> Out cb, U arg) {
+    if self.is_some() {
+        return Option::Some(cb(self.__value, arg));
+    } else {
+        return Option::None<Out>();
+    }
+}
+
+fn Option::map<T, Out>(Option<T> self, fn(T) -> Out cb) {
+    return self.map_with(fn(val, cb) cb(val), cb);
 }

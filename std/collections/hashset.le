@@ -1,25 +1,26 @@
 use std/collections/array;
+use std/iter/iterator;
 use std/limits;
 use std/hashes;
 use std/math;
 
 global pub;
 
-struct HashSet_Bucket<T> {
+struct HashSetBucket<T> {
     T value,
     bool full,
     bool deleted
 }
 
-fn HashSet_Bucket::new<T>() {
-    let bucket = #alloc(HashSet_Bucket<T>);
+fn HashSetBucket::new<T>() {
+    let bucket = #alloc(HashSetBucket<T>);
     bucket.full = false;
     bucket.deleted = false;
     return bucket;
 }
 
 struct HashSet<T> {
-    HashSet_Bucket<T> *[] table,
+    HashSetBucket<T> *[] table,
     u64 size,
     u64 capacity
 }
@@ -28,7 +29,7 @@ fn HashSet::__fmt__<T>(HashSet<T> self, i32 nesting) {
     let values = self.values();
     let res = "{";
 
-    for i32 i = 0; i < values.len(); i += 1 {
+    for u64 i = 0; i < values.len(); i += 1 {
         res <>= values[i].__fmt__(0);
 
         if i < values.len() - 1 {
@@ -49,14 +50,14 @@ fn HashSet::with_capacity<T>(u64 initial_capacity) -> HashSet<T> * {
     set.size = 0;
 
     for u64 i = 0; i < capacity; i += 1 {
-        set.table.push(HashSet_Bucket::new<T>());
+        set.table.push(HashSetBucket::new<T>());
     }
 
     return set;
 }
 
 fn HashSet::with_entries<T>(ElleMeta meta, T first, ...args) -> HashSet<T> * {
-    let set = HashSet::with_capacity(4);
+    let set = HashSet::with_capacity<T>(4);
     set.add(first);
 
     for i32 i = 0; i < meta.arity - 1; i += 1 {
@@ -160,26 +161,14 @@ fn HashSet::resize<T>(HashSet<T> *self, u64 new_capacity) {
     self.size = 0;
 
     for u64 i = 0; i < self.capacity; i += 1 {
-        self.table.push(HashSet_Bucket::new<T>());
+        self.table.push(HashSetBucket::new<T>());
     }
 
     for u64 i = 0; i < old_table.len(); i += 1 {
         if old_table[i].full {
-            $assert(self.add(old_table[i].value), nil);
+            $assert(self.add(old_table[i].value));
         }
     }
-}
-
-fn HashSet::values<T>(HashSet<T> *self) -> T[] {
-    let result = Array::with_capacity(self.size);
-
-    for i32 i = 0; i < self.capacity; i += 1 {
-        if self.table[i].full {
-            result.push(self.table[i].value);
-        }
-    }
-
-    return result;
 }
 
 fn HashSet::clear<T>(HashSet<T> *self) {
@@ -196,7 +185,7 @@ fn HashSet::clone<T>(HashSet<T> *self) -> HashSet<T> * {
 
     for u64 i = 0; i < self.capacity; i += 1 {
         if self.table[i].full {
-            $assert(new_set.add(self.table[i].value), nil);
+            $assert(new_set.add(self.table[i].value));
         }
     }
 
@@ -206,9 +195,40 @@ fn HashSet::clone<T>(HashSet<T> *self) -> HashSet<T> * {
 fn HashSet::from<T>(T[] array) -> HashSet<T> * {
     let set = HashSet::new();
 
-    for v in array {
-        set.add(v);
+    for i := 0; i < array.len(); i += 1 {
+        set.add(array[i]);
     }
 
     return set;
 }
+
+struct HashSetEnv<T> {
+    HashSet<T> *base,
+    u64 i
+}
+
+fn HashSet::__iter__<T>(HashSet<T> *self) -> Iterator<T, HashSetEnv<T>, SingleEnded> {
+    HashSetEnv<T> env = HashSetEnv { base = self, i = 0 };
+
+    return Iterator {
+        env = Box::new(env),
+        next = fn(env) {
+            while env.i < env.base.table.len() {
+                if env.base.table[env.i].full {
+                    value := env.base.table[env.i].value;
+                    env.i += 1;
+                    return Option::Some(value);
+                }
+                env.i += 1;
+            }
+            return Option::None<T>();
+        },
+        next_back = nil
+    };
+}
+
+external fn HashSet::__iter__<T>(HashSet<T> *self) @alias(HashSet::iter)
+    -> Iterator<T, HashSetEnv<T>, SingleEnded>;
+
+external fn HashSet::__iter__<T>(HashSet<T> *self) @alias(HashSet::values)
+    -> Iterator<T, HashSetEnv<T>, SingleEnded>;

@@ -1,4 +1,5 @@
 use std/runtime/collections/array;
+use std/iter/iterator;
 use std/math;
 global pub;
 
@@ -6,11 +7,11 @@ global pub;
 const Array::MAX_INLINE_LENGTH = 40;
 
 fn Array::truncate(i64[] self) {
-    return self.map<i32>(i64::truncate);
+    return self.map(i64::truncate);
 }
 
 fn Array::promote(i32[] self) {
-    return self.map<i64>(i32::promote);
+    return self.map(i32::promote);
 }
 
 // Creates a new sized array from a null terminated string
@@ -20,22 +21,6 @@ fn Array::from_string(string str) -> char[] {
 
     for i32 i = 0; i < length; i += 1 {
         array.push(str[i]);
-    }
-
-    return array;
-}
-
-// from is inclusive, to is exclusive
-//
-// example:
-// Array::range(0, 4) -> [0, 1, 2, 3]
-// Array::range(0, 0) -> []
-// Array::range(2, 5) -> [2, 3, 4]
-fn Array::range(i64 from, i64 to, bool included) -> i64[] {
-    i64[] array = Array::with_capacity(to);
-
-    for i64 i = from; i < to + included; i += 1 {
-        array.push(i);
     }
 
     return array;
@@ -57,6 +42,75 @@ fn Array::to_repr<T, U>(U[] self) -> T[] {
 
 fn Array::to_bytes<T>(T[] self) {
     return self.to_repr<u8>();
+}
+
+fn Array::bytes(u64 capacity) {
+    return Array::with_capacity<u8>(capacity).filled();
+}
+
+struct ArrayEnv<T> {
+    T[] base,
+    u64 start,
+    u64 end
+}
+
+fn Array::__iter__<T>(T[] self) -> Iterator<T, ArrayEnv<T>, DoubleEnded> {
+    ArrayEnv<T> env = ArrayEnv { base = self, start = 0, end = self.len() };
+
+    return Iterator {
+        env = Box::new(env),
+        next = fn(env) {
+            if (from := env.start) < env.end {
+                env.start += 1;
+                return Option::Some(env.base[from]);
+            } else {
+                return Option::None<T>();
+            }
+        },
+        next_back = fn(env) {
+            if env.start < env.end {
+                env.end -= 1;
+                return Option::Some(env.base[env.end]);
+            } else {
+                return Option::None<T>();
+            }
+        }
+    };
+}
+
+external fn Array::__iter__<T>(T[] self) @alias(Array::iter)
+    -> Iterator<T, ArrayEnv<T>, DoubleEnded>;
+
+fn Array::iter_ref<T>(T[] self) -> Iterator<T *, ArrayEnv<T>, DoubleEnded> {
+    ArrayEnv<T> env = ArrayEnv { base = self, start = 0, end = self.len() };
+
+    return Iterator {
+        env = Box::new(env),
+        next = fn(env) {
+            if (from := env.start) < env.end {
+                env.start += 1;
+                return Option::Some(&env.base[from]);
+            } else {
+                return Option::None<T *>();
+            }
+        },
+        next_back = fn(env) {
+            if env.start < env.end {
+                env.end -= 1;
+                return Option::Some(&env.base[env.end]);
+            } else {
+                return Option::None<T *>();
+            }
+        }
+    };
+}
+
+fn Array::chunks<T>(T[] self, u64 size) {
+    return self.iter().chunks(size);
+}
+
+fn Array::windows<T>(T[] self, u64 size) {
+    return self.iter().windows(size);
 }
 
 // Functions emitted as a result of string::split monomorphization for the VLA

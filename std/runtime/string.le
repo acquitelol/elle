@@ -106,11 +106,13 @@ fn string::default(string self, string default) {
 fn string::to_upper(string self) {
     let out = #alloc(char, self.len() + 1);
 
-    for c in self {
+    for i := 0; i < self.len(); i += 1 {
+        c := self[i];
+
         if c >= 'a' && c <= 'z' {
-            out[#i(c)] = c - ('a' - 'A');
+            out[i] = c - ('a' - 'A');
         } else {
-            out[#i(c)] = c;
+            out[i] = c;
         }
     }
 
@@ -120,11 +122,13 @@ fn string::to_upper(string self) {
 fn string::to_lower(string self) {
     let out = #alloc(char, self.len() + 1);
 
-    for c in self {
+    for i := 0; i < self.len(); i += 1 {
+        c := self[i];
+
         if c >= 'A' && c <= 'Z' {
-            out[#i(c)] = c + ('a' - 'A');
+            out[i] = c + ('a' - 'A');
         } else {
-            out[#i(c)] = c;
+            out[i] = c;
         }
     }
 
@@ -270,7 +274,7 @@ fn string::capitalize(string self) {
 }
 
 fn string::split(string self, string delimiter) -> string[] {
-    let parts = Array::with_capacity(10);
+    let parts = Array::with_capacity<string>(10);
 
     if self == "" || delimiter.len() == 0 {
         return parts;
@@ -441,9 +445,9 @@ fn string::push(string *self, char c) {
     *self = result;
 }
 
-fn __internal_to_string<T, U>(i64 args, string fmt, fn *cb) {
+fn __internal_to_string<T, U, V>(i64 args, string fmt, fn(T *) -> V cb) {
     T arg = args.yield(U);
-    cb && cb(&arg);
+    if cb { cb(&arg); }
 
     let length = io::snprintf(nil, 0, fmt, arg);
     let res = #alloc(char, length);
@@ -454,10 +458,10 @@ fn __internal_to_string<T, U>(i64 args, string fmt, fn *cb) {
 
 // !! Do not use this unless you know what you're doing !!
 // If you want to turn a value of arbitrary type to a string
-// please use string::as_string or string::as_string_wrapped
+// please use "{}".format()
 fn __to_string(string ty, i64 args, bool wrap) {
     if ty.contains("*") {
-        return __internal_to_string<i64, i64>(args, "%p", nil);
+        return __internal_to_string<i64, i64, void>(args, "%p", nil);
     }
 
     if ty.starts_with("string") {
@@ -471,19 +475,19 @@ fn __to_string(string ty, i64 args, bool wrap) {
     }
 
     if ty.starts_with("i8") {
-        return __internal_to_string<i8, i8>(args, "%d", fn(i8 *self) self & 0xFF);
+        return __internal_to_string<i8, i8>(args, "%d", fn(i8 *self) (*self &= 0xFF));
     }
 
     if ty.starts_with("i16") {
-        return __internal_to_string<i16, i16>(args, "%d", fn(i16 *self) self & 0xFFFF);
+        return __internal_to_string<i16, i16>(args, "%d", fn(i16 *self) (*self &= 0xFFFF));
     }
 
     if ty.starts_with("i32") {
-        return __internal_to_string<i32, i32>(args, "%d", nil);
+        return __internal_to_string<i32, i32, void>(args, "%d", nil);
     }
 
     if ty.starts_with("i64") {
-        return __internal_to_string<i64, i64>(args, "%ld", nil);
+        return __internal_to_string<i64, i64, void>(args, "%ld", nil);
     }
 
     if ty.starts_with("u8") {
@@ -491,27 +495,27 @@ fn __to_string(string ty, i64 args, bool wrap) {
     }
 
     if ty.starts_with("u16") {
-        return __internal_to_string<i32, u16>(args, "%u", fn(u16 *self) self & 0xFFFF);
+        return __internal_to_string<u16, u16>(args, "%u", fn(u16 *self) (*self &= 0xFFFF));
     }
 
     if ty.starts_with("u32") {
-        return __internal_to_string<i32, u32>(args, "%u", nil);
+        return __internal_to_string<u32, u32, void>(args, "%u", nil);
     }
 
     if ty.starts_with("u64") {
-        return __internal_to_string<i64, u64>(args, "%lu", nil);
+        return __internal_to_string<u64, u64, void>(args, "%lu", nil);
     }
 
     if ty.starts_with("f32") {
-        return __internal_to_string<f64, f32>(args, "%f", nil);
+        return __internal_to_string<f64, f32, void>(args, "%f", nil);
     }
 
     if ty.starts_with("f64") {
-        return __internal_to_string<f64, f64>(args, "%f", nil);
+        return __internal_to_string<f64, f64, void>(args, "%f", nil);
     }
 
     if ty.starts_with("char") {
-        return __internal_to_string<char, char>(args, wrap ? "'%c'" : "%c", nil);
+        return __internal_to_string<char, char, void>(args, wrap ? "'%c'" : "%c", nil);
     }
 
     if ty.starts_with("bool") {
@@ -545,7 +549,9 @@ fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
     let is_open = false;
     let wrapped = false;
 
-    for c in fmt {
+    for i := 0; i < fmt.len(); i += 1 {
+        c := fmt[i];
+
         if is_open {
             // Allow for escaping { using {{}
             if c == '{' {
@@ -567,13 +573,13 @@ fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
             arg += 1;
 
             if c != '}' {
-                io::fprintf(__internal_stderr, "Invalid format for argument '%d' at position '%d' (%c)\n", arg, #i(c), c);
+                io::fprintf(__internal_stderr, "Invalid format for argument '%d' at position '%d' (%c)\n", arg, i, c);
                 return "";
             }
 
 
             if arg >= meta.arity {
-                io::fprintf(__internal_stderr, "Failed to format argument '%d' at position '%d': Ran out of arguments (%c)\n", arg, #i(c), c);
+                io::fprintf(__internal_stderr, "Failed to format argument '%d' at position '%d': Ran out of arguments (%c)\n", arg, i, c);
                 libc::abort();
             }
 

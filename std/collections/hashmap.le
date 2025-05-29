@@ -1,5 +1,6 @@
 use std/collections/array;
 use std/collections/tuple;
+use std/iter/iterator;
 use std/libc/io;
 use std/hashes;
 use std/limits;
@@ -9,20 +10,20 @@ use std/math;
 
 global pub;
 
-struct HashMap_Bucket<T, U> {
+struct HashMapBucket<T, U> {
     T key,
     U value,
     bool full
 }
 
-fn HashMap_Bucket::new<T, U>() {
-    let bucket = #alloc(HashMap_Bucket<T, U>);
-    bucket.full = false;
-    return bucket;
+fn HashMapBucket::new<T, U>() {
+    self := #alloc(HashMapBucket<T, U>);
+    self.full = false;
+    return self;
 }
 
 struct HashMap<T, U> {
-    HashMap_Bucket<T, U> *[] table,
+    HashMapBucket<T, U> *[] table,
     u64 size,
     u64 capacity
 }
@@ -83,7 +84,7 @@ fn HashMap::with_capacity<T, U>(u64 initial_capacity) -> HashMap<T, U> * {
     map.size = 0;
 
     for u64 i = 0; i < initial_capacity; i += 1 {
-        map.table.push(HashMap_Bucket::new<T, U>());
+        map.table.push(HashMapBucket::new<T, U>());
     }
 
     return map;
@@ -94,21 +95,20 @@ fn HashMap::new<T, U>() -> HashMap<T, U> * {
 }
 
 // first_key, first_value are to infer T and U
-fn HashMap::with_entries<T, U>(ElleMeta meta, T first_key, U first_value, ...args) -> HashMap<T, U> * {
-    map := HashMap::with_capacity(4);
-    map[first_key] = first_value;
+fn HashMap::with_entries<T, U>(ElleMeta meta, (T, U) first, ...args) -> HashMap<T, U> * {
+    map := HashMap::with_capacity<T, U>(4);
+    map[first.x] = first.y;
 
-    // subtract the first_key and first_value
-    for let i = 0; i < meta.arity - 2; i += 2 {
-        key := args.yield(T);
-        value := args.yield(U);
+    // subtract the first
+    for u64 i = 0; i < meta.arity - 1; i += 1 {
+        key, value := args.yield((T, U));
         map[key] = value;
     }
 
     return map;
 }
 
-external fn HashMap::with_entries<T, U>(ElleMeta meta, T first_key, U first_value, ...)
+external fn HashMap::with_entries<T, U>(ElleMeta meta, (T, U) first, ...)
     @alias(HashMap::from_entries) -> HashMap<T, U> *;
 
 fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
@@ -223,45 +223,6 @@ fn HashMap::contains_key<T, U>(HashMap<T, U> *self, T key) -> bool {
     return false;
 }
 
-fn HashMap::keys<T, U>(HashMap<T, U> *self) -> T[] {
-    array := Array::with_capacity<T>(self.size);
-
-    for u64 i = 0; i < self.capacity; i += 1 {
-        if self.table[i].full {
-            array.push(self.table[i].key);
-        }
-    }
-
-    return array;
-}
-
-fn HashMap::values<T, U>(HashMap<T, U> *self) -> U[] {
-    array := Array::with_capacity<U>(self.size);
-
-    for u64 i = 0; i < self.capacity; i += 1 {
-        if self.table[i].full {
-            array.push(self.table[i].value);
-        }
-    }
-
-    return array;
-}
-
-fn HashMap::entries<T, U>(HashMap<T, U> *self) {
-    array := Array::with_capacity<(T, U)>(self.size);
-
-    for u64 i = 0; i < self.capacity; i += 1 {
-        if self.table[i].full {
-            array.push($(
-                self.table[i].key,
-                self.table[i].value
-            ));
-        }
-    }
-
-    return array;
-}
-
 fn HashMap::resize<T, U>(HashMap<T, U> *self, u64 new_capacity) {
     old_table := self.table;
 
@@ -270,7 +231,7 @@ fn HashMap::resize<T, U>(HashMap<T, U> *self, u64 new_capacity) {
     self.size = 0;
 
     for u64 i = 0; i < new_capacity; i += 1 {
-        self.table.push(HashMap_Bucket::new<T, U>());
+        self.table.push(HashMapBucket::new<T, U>());
     }
 
     for u64 i = 0; i < old_table.len(); i += 1 {
@@ -298,3 +259,75 @@ fn HashMap::clear<T, U>(HashMap<T, U> *self) {
         self.table[i].full = false;
     }
 }
+
+struct HashMapEnv<T, U> {
+    HashMap<T, U> *base,
+    u64 i
+}
+
+fn HashMap::keys<T, U>(HashMap<T, U> *self) -> Iterator<T, HashMapEnv<T, U>, SingleEnded> {
+    HashMapEnv<T, U> env = HashMapEnv { base = self, i = 0 };
+
+    return Iterator {
+        env = Box::new(env),
+        next = fn(env) {
+            while env.i < env.base.table.len() {
+                if env.base.table[env.i].full {
+                    key := env.base.table[env.i].key;
+                    env.i += 1;
+                    return Option::Some(key);
+                }
+                env.i += 1;
+            }
+            return Option::None<U>();
+        },
+        next_back = nil
+    };
+}
+
+fn HashMap::values<T, U>(HashMap<T, U> *self) -> Iterator<U, HashMapEnv<T, U>, SingleEnded> {
+    HashMapEnv<T, U> env = HashMapEnv { base = self, i = 0 };
+
+    return Iterator {
+        env = Box::new(env),
+        next = fn(env) {
+            while env.i < env.base.table.len() {
+                if env.base.table[env.i].full {
+                    value := env.base.table[env.i].value;
+                    env.i += 1;
+                    return Option::Some(value);
+                }
+                env.i += 1;
+            }
+            return Option::None<U>();
+        },
+        next_back = nil
+    };
+}
+
+fn HashMap::__iter__<T, U>(HashMap<T, U> *self) -> Iterator<(T, U), HashMapEnv<T, U>, SingleEnded> {
+    HashMapEnv<T, U> env = HashMapEnv { base = self, i = 0 };
+
+    return Iterator {
+        env = Box::new(env),
+        next = fn(env) {
+            while env.i < env.base.table.len() {
+                if env.base.table[env.i].full {
+                    key := env.base.table[env.i].key;
+                    value := env.base.table[env.i].value;
+                    env.i += 1;
+                    return Option::Some($(key, value));
+                }
+                env.i += 1;
+            }
+            return Option::None<(T, U)>();
+        },
+        next_back = nil
+    };
+}
+
+external fn HashMap::__iter__<T, U>(HashMap<T, U> *self) @alias(HashMap::iter)
+    -> Iterator<(T, U), HashMapEnv<T, U>, SingleEnded>;
+
+external fn HashMap::__iter__<T, U>(HashMap<T, U> *self) @alias(HashMap::entries)
+    -> Iterator<(T, U), HashMapEnv<T, U>, SingleEnded>;

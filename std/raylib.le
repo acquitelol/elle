@@ -811,7 +811,6 @@ enum NPatchLayout {
 // WARNING: These callbacks are intended for advance users
 //
 // NOTE from Rosie: I'm not sure what to do with these as Elle doesn't have typedefs
-// I'll just ignore them for now as function pointers have no interface anyway
 //
 // typedef void (*TraceLogCallback)(int logLevel, const char *text, va_list args);  // Logging: Redirect trace log messages
 // typedef unsigned char *(*LoadFileDataCallback)(const char *fileName, int *dataSize);    // FileIO: Load binary data
@@ -983,11 +982,11 @@ fn MemFree(void *ptr)                                                     @alias
 
 // Set custom callbacks
 // WARNING: Callbacks setup is intended for advance users
-fn SetTraceLogCallback(fn *callback)                                      @alias(rl::set_trace_log_callback);                    // Set custom trace log
-fn SetLoadFileDataCallback(fn *callback)                                  @alias(rl::set_load_file_data_callback);               // Set custom file binary data loader
-fn SetSaveFileDataCallback(fn *callback)                                  @alias(rl::set_save_file_data_callback);               // Set custom file binary data saver
-fn SetLoadFileTextCallback(fn *callback)                                  @alias(rl::set_load_file_text_callback);               // Set custom file text data loader
-fn SetSaveFileTextCallback(fn *callback)                                  @alias(rl::set_save_file_text_callback);               // Set custom file text data saver
+fn SetTraceLogCallback(fn(i32, string, void *) callback)                                      @alias(rl::set_trace_log_callback);                    // Set custom trace log
+fn SetLoadFileDataCallback(fn(string, i32 *) -> u8 *callback)                                  @alias(rl::set_load_file_data_callback);               // Set custom file binary data loader
+fn SetSaveFileDataCallback(fn(string, void *, i32) -> bool callback)                                  @alias(rl::set_save_file_data_callback);               // Set custom file binary data saver
+fn SetLoadFileTextCallback(fn(string) -> string callback)                                  @alias(rl::set_load_file_text_callback);               // Set custom file text data loader
+fn SetSaveFileTextCallback(fn(string, string) -> bool callback)                                  @alias(rl::set_save_file_text_callback);               // Set custom file text data saver
 
 // Files management functions
 fn LoadFileData(string fileName, u32 *dataSize)                           @alias(rl::load_file_data)            -> u8 *;         // Load file data as byte array (read)
@@ -1551,10 +1550,10 @@ fn SetAudioStreamVolume(AudioStream stream, f32 volume)              @alias(rl::
 fn SetAudioStreamPitch(AudioStream stream, f32 pitch)                @alias(rl::set_audio_stream_pitch);                      // Set pitch for audio stream (1.0 is base level)
 fn SetAudioStreamPan(AudioStream stream, f32 pan)                    @alias(rl::set_audio_stream_pan);                        // Set pan for audio stream (0.5 is centered)
 fn SetAudioStreamBufferSizeDefault(i32 size)                         @alias(rl::set_audio_stream_buffer_size_default);        // Default size for new audio streams
-fn SetAudioStreamCallback(AudioStream stream, fn *callback)          @alias(rl::set_audio_stream_callback);                   // Audio thread callback to request new data
+fn SetAudioStreamCallback(AudioStream stream, fn(void *, u32) callback)          @alias(rl::set_audio_stream_callback);                   // Audio thread callback to request new data
 
-fn AttachAudioStreamProcessor(AudioStream stream, fn *processor)     @alias(rl::attach_audio_stream_processor);               // Attach audio stream processor to stream, receives the samples as <float>s
-fn DetachAudioStreamProcessor(AudioStream stream, fn *processor)     @alias(rl::detach_audio_stream_processor);               // Detach audio stream processor from stream
+fn AttachAudioStreamProcessor(AudioStream stream, fn(void *, u32) processor)     @alias(rl::attach_audio_stream_processor);               // Attach audio stream processor to stream, receives the samples as <float>s
+fn DetachAudioStreamProcessor(AudioStream stream, fn(void *, u32) processor)     @alias(rl::detach_audio_stream_processor);               // Detach audio stream processor from stream
 
-fn AttachAudioMixedProcessor(fn *processor)                          @alias(rl::attach_audio_mixed_processor);                // Attach audio stream processor to the entire audio pipeline, receives the samples as <float>s
-fn DetachAudioMixedProcessor(fn *processor)                          @alias(rl::detach_audio_mixed_processor);                // Detach audio stream processor from the entire audio pipeline
+fn AttachAudioMixedProcessor(fn(void *, u32) processor)                          @alias(rl::attach_audio_mixed_processor);                // Attach audio stream processor to the entire audio pipeline, receives the samples as <float>s
+fn DetachAudioMixedProcessor(fn(void *, u32) processor)                          @alias(rl::detach_audio_mixed_processor);                // Detach audio stream processor from the entire audio pipeline

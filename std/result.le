@@ -54,6 +54,9 @@ fn Result::Err<T, E>(E error) -> Result<T, E> {
     };
 }
 
+external fn Result::Ok<T, E>(T value) @alias(Ok) -> Result<T, E>;
+external fn Result::Err<T, E>(E error) @alias(Err) -> Result<T, E>;
+
 !external fn __internal_result_throw<T, E>(Result<T, E> self, string message, ElleMeta meta) {
     $eprintf("Function {} panicked at {}:{}:{}:\n{}{}{}",
         meta.caller, meta.file, meta.line, meta.column,
@@ -100,45 +103,83 @@ fn Result::is_err<T, E>(Result<T, E> self) {
     return !self.is_ok();
 }
 
-fn Result::resolve<T, E>(Result<T, E> self, fn *if_some, fn *if_none) {
+fn Result::resolve_with<T, E, U, Out>(
+    Result<T, E> self,
+    fn(T, U) -> Out if_ok,
+    fn(E, U) -> Out if_err,
+    U arg
+) {
     if self.is_ok() {
-        return if_some(self.unwrap());
+        return if_ok(self.__value, arg);
+    } else {
+        return if_err(self.__error, arg);
     }
-
-    return if_none();
 }
 
-fn Result::resolve_to<Out, T, E>(Result<T, E> self, fn *if_some, fn *if_none) {
+fn Result::resolve<T, E, Out>(
+    Result<T, E> self,
+    fn(T) -> Out if_ok,
+    fn(E) -> Out if_err
+) {
     if self.is_ok() {
-        return #cast(Out, if_some(self.unwrap()));
+        return if_ok(self.__value);
+    } else {
+        return if_err(self.__error);
     }
-
-    return #cast(Out, if_none());
 }
 
-// Result -> Nilable pointer (allows for `while x := y()`)
-fn Result::to_nilable<T, E>(Result<T, E> self) {
+fn Result::is_ok_and<T, E>(Result<T, E> self, fn(T) -> bool cb) {
     if self.is_ok() {
-        res := #alloc(T);
-        *res = self.unwrap();
-        return res;
-    }
-
-    return nil;
-}
-
-fn Result::is_ok_and<T, E>(Result<T, E> self, fn *cb) {
-    if self.is_ok() {
-        return #cast(bool, cb(self.__value));
-    }
-
-    return false;
-}
-
-fn Result::is_err_and<T, E>(Result<T, E> self, fn *cb) {
-    if self.is_ok() {
+        return cb(self.__value);
+    } else {
         return false;
     }
+}
 
-    return #cast(bool, cb(self.__error));
+fn Result::is_ok_or<T, E>(Result<T, E> self, fn(E) -> bool cb) {
+    if self.is_ok() {
+        return true;
+    } else {
+        return cb(self.__error);
+    }
+}
+
+fn Result::is_err_and<T, E>(Result<T, E> self, fn(E) -> bool cb) {
+    if self.is_ok() {
+        return false;
+    } else {
+        return cb(self.__error);
+    }
+}
+
+fn Result::is_err_or<T, E>(Result<T, E> self, fn(T) -> bool cb) {
+    if self.is_ok() {
+        return cb(self.__value);
+    } else {
+        return true;
+    }
+}
+
+fn Result::map_with<T, E, U, Out>(Result<T, E> self, fn(T, U) -> Out cb, U arg) {
+    if self.is_ok() {
+        return Result::Ok<Out, E>(cb(self.__value, arg));
+    } else {
+        return Result::Err<Out, E>(self.__error);
+    }
+}
+
+fn Result::map<T, E, Out>(Result<T, E> self, fn(T) -> Out cb) {
+    return self.map_with(fn(val, cb) cb(val), cb);
+}
+
+fn Result::map_err_with<T, E, U, Out>(Result<T, E> self, fn(E, U) -> Out cb, U arg) {
+    if !self.is_ok() {
+        return Result::Err<T, Out>(cb(self.__error, arg));
+    } else {
+        return self;
+    }
+}
+
+fn Result::map_err<T, E, Out>(Result<T, E> self, fn(E) -> Out cb) {
+    return self.map_err_with(fn(err, cb) cb(err), cb);
 }
