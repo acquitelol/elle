@@ -1,0 +1,9 @@
+// This test aims to ensure that passing lambdas which accept
+// more arguments than the parameter expects, fail.
+fn foo(fn(i32) -> i32 cb) {
+    return cb(39);
+}
+
+fn main() {
+    foo(fn(x, i32 y) x + y); // This should throw an error
+}

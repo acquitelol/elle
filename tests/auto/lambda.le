@@ -1,17 +1,109 @@
 use std/prelude;
 
-fn main() {
-    let exclaim = fn(string x) x <> "!";
-    let whisper = fn(string x) x.to_lower();
+fn `basic.inline`() {
+    exclaim := fn(string x) x <> "!";
+    whisper := fn(string x) x.to_lower();
 
-    $assert(exclaim("Hello, world") == "Hello, world!", nil);
-    $assert(whisper("Hello, world") == "hello, world", nil);
+    $assert(exclaim("Hello, world") == "Hello, world!");
+    $assert(whisper("Hello, world") == "hello, world");
 
-    let multiline = fn(f32 x) {
+    multiline := fn(f32 x) {
         let foo = math::sqrt(x) * E;
         return #cast(i32, foo / 4);
     };
 
-    $assert(multiline(81) == 6, nil);
+    $assert(multiline(81) == 6);
+}
+
+fn `contravariance.1`(fn(i32, i32) -> i32 x) {
+    return x(39, 42);
+}
+
+fn `contravariance.2`(fn(string, string, string) -> string x) {
+    return x("a", "b", "c");
+}
+
+fn `contravariance.works`() {
+    $assert(`contravariance.1`(fn(x) x) == 39);
+    $assert(`contravariance.1`(fn(x, y) x + y) == 81);
+
+    $assert(`contravariance.2`(fn(x) x) == "a");
+    $assert(`contravariance.2`(fn(x, y) x <> y) == "ab");
+    $assert(`contravariance.2`(fn(x, y, z) x <> y <> z) == "abc");
+}
+
+fn `any.return.1`<T>(fn(i32) -> T x) {
+    return x(39);
+}
+
+fn `any.return.works`() {
+    $assert(`any.return.1`(fn(x) x) == 39);
+    $assert(`any.return.1`(fn(x) string::as_string(x)) == "39");
+    $assert(`any.return.1`(fn(x) {}) == nil);
+}
+
+fn `generic.args.1`<T>(fn(T) -> T x) {
+    return x(39);
+}
+
+fn `arg.ret.different`<T, U>(fn(T) -> U x) {
+    return x(39);
+}
+
+fn `T.infer.before.lambda`<T>(T x, fn(T) -> T cb) {
+    return cb(x);
+}
+
+fn `T.infer.after.lambda`<T>(fn(T) -> T cb, T x) {
+    return cb(x);
+}
+
+fn `T.U.infer.both`<T, U>(T x, fn(T, U) -> T cb, U y) {
+    return cb(x, y);
+}
+
+fn `T.U.V.all.different`<T, U, V>(T x, fn(T, U) -> V cb, U y) {
+    return cb(x, y);
+}
+
+fn `generic.args.works`() {
+    $assert(`generic.args.1`(fn(i32 x) x) == 39);
+    $assert(`arg.ret.different`(fn(i32 x) "{}".format(x)) == "39");
+    $assert(`T.infer.before.lambda`(39, fn(x) x + 1) == 40);
+    $assert(`T.infer.after.lambda`(fn(x) x + 1, 39) == 40);
+    $assert(`T.U.infer.both`(#cast(u8, 1), fn(x, y) x + y, 39) == 40);
+    $assert(`T.U.V.all.different`(#cast(u8, 1), fn(x, y) "{}".format(x + y), 39) == "40");
+}
+
+struct Testing @nofmt {
+    fn(i32) -> i32 cb
+}
+
+struct GenericTesting<T> @nofmt {
+    fn(T) -> T cb
+}
+
+fn `in.struct.works`() {
+    testing := Testing {
+        cb = fn(x) x * 2
+    };
+
+    cb := testing.cb;
+    $assert(cb(14) == 28);
+
+    GenericTesting<string> testing = GenericTesting {
+        cb = fn(x) x.to_lower()
+    };
+
+    cb := testing.cb;
+    $assert(cb("Hello, World!") == "hello, world!");
+}
+
+fn main() {
+    `basic.inline`();
+    `contravariance.works`();
+    `any.return.works`();
+    `generic.args.works`();
+    `in.struct.works`();
     $println("All `lambda` tests have passed!".color("green").reset());
 }
