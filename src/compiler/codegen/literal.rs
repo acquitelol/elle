@@ -86,18 +86,21 @@ impl Codegen<'_> for Literal {
                 ValueKind::Number(val) => {
                     #[allow(clippy::match_same_arms)]
                     let num_ty = match self.kind {
-                        TokenKind::BoolLiteral => Type::Boolean,
+                        // prevents -1 or 65535 from being interpreted as bools
+                        TokenKind::BoolLiteral if [0, 1].contains(&val) => Type::Boolean,
                         TokenKind::IntegerLiteral => Type::Word,
                         TokenKind::FloatLiteral => Type::Single,
                         TokenKind::LongLiteral => Type::Long,
                         _ => Type::Word,
                     };
 
-                    let mut final_ty = if ctx
-                        .ty
-                        .clone()
-                        .is_some_and(|ty| !ty.is_pointer() && ty.is_strictly_number())
-                    {
+                    let mut final_ty = if ctx.ty.clone().is_some_and(|ty| {
+                        !ty.is_pointer()
+                            && !ty.is_unknown()
+                            && ty.is_strictly_number()
+                            // prevents -1 or 65535 from being interpreted as bools
+                            && (ty.is_bool() && [0, 1].contains(&val))
+                    }) {
                         ctx.ty.clone().unwrap_or(num_ty)
                     } else {
                         num_ty
