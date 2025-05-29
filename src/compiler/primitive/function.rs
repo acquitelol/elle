@@ -277,7 +277,6 @@ pub fn generate_function(
     gen.scopes.pop();
 
     let mut owned_func = func_ref.borrow_mut().to_owned();
-    owned_func.return_type.get_or_insert(Type::Word);
 
     // If there are statements after a return in the very last block
     // QBE will throw an error. This simply gets rid of statements

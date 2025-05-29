@@ -500,6 +500,10 @@ impl Compiler {
         module_ref.borrow_mut().remove_generics();
         module_ref.borrow_mut().remove_empty_structs();
 
+        for func in module_ref.borrow_mut().functions.values_mut() {
+            func.return_type.get_or_insert(Type::Word);
+        }
+
         // Specifically remove methods defined in std/string.le
         // These methods will be found at runtime by the primary
         // file which actually produces an executable
