@@ -13,6 +13,7 @@
     clippy::cast_possible_truncation
 )]
 #![feature(let_chains)]
+#![feature(if_let_guard)]
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::remove_file;
@@ -150,7 +151,6 @@ async fn main() -> ExitCode {
     let mut exec_args = vec![]; // args to be passed to executable if ran with --run
 
     let mut object_files: Vec<String> = vec![];
-
     let mut linker_flags = vec![];
     let mut linker_path = "cc".into();
     let mut qbe_path = "qbe".into();
@@ -320,6 +320,14 @@ async fn main() -> ExitCode {
         PRIMARY_ALOCATOR_NAME
     };
 
+    let Some(input_path) = input_path else {
+        eprintln!("ERROR: no input is provided");
+        eprintln!("Usage: {program} <main.l | main.elle>");
+        return ExitCode::FAILURE;
+    };
+
+    let loc = Rc::new(RefCell::new(Location::default(input_path.clone())));
+
     let meta_members = vec![
         // Holds an array of expressions passed into the function in plain text
         Argument {
@@ -402,14 +410,6 @@ async fn main() -> ExitCode {
             is_unused: false,
         },
     ];
-
-    let Some(input_path) = input_path else {
-        eprintln!("ERROR: no input is provided");
-        eprintln!("Usage: {program} <main.l | main.elle>");
-        return ExitCode::FAILURE;
-    };
-
-    let loc = Rc::new(RefCell::new(Location::default(input_path.clone())));
 
     struct_pool.insert(
         META_STRUCT_NAME.into(),
