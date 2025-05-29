@@ -2,8 +2,12 @@ use core::fmt;
 use std::{cell::RefCell, collections::HashMap, iter::Peekable, mem, num::ParseIntError};
 
 use crate::{
-    elle_error, get_POINTER_ID, has_unknown_part, hashmap, is_generic, is_unknown,
-    lexer::enums::{Location, Token},
+    elle_error, get_POINTER_ID, has_unknown_part, hashmap, is_generic,
+    lexer::enums::{Location, MutRc, Token},
+    misc::{
+        colors::{get_GREEN, get_RED, get_RESET, GREEN, RED, RESET},
+        constants::{DISPLAY_NESTING_MAX, GENERIC_FUNCTION},
+    },
     parser::{
         enums::{Argument, Primitive, StructSource},
         parser::StructPool,
@@ -200,7 +204,6 @@ impl Type {
                 Type::Char => 15,
                 Type::Void => 16,
                 Type::Null => 17,
-                Type::Function(_) => 18,
                 _ => 100, // Invalid
             }
         }
@@ -216,6 +219,18 @@ impl Type {
                     .unwrap_or(&Self::Word)
                     .to_internal_id()
             ),
+            Self::Function(inner) if let Some(inner) = (**inner).clone() => {
+                format!(
+                    "{GENERIC_FUNCTION}.{GENERIC_IDENTIFIER}.{}.{}.{GENERIC_END}",
+                    inner
+                        .arguments
+                        .iter()
+                        .map(|((ty, _), _)| ty.to_internal_id())
+                        .collect::<Vec<_>>()
+                        .join("."),
+                    inner.return_type.unwrap_or(Type::Void).to_internal_id()
+                )
+            }
             Self::Struct(name) => name.clone(),
             Self::Unknown(name) => format!("{GENERIC_UNKNOWN}.{name}"),
             _ => num.to_string(),
@@ -232,6 +247,7 @@ impl Type {
                 GENERIC_POINTER,
                 GENERIC_UNKNOWN,
                 GENERIC_ENUM,
+                GENERIC_FUNCTION,
             ]
             .contains(&id)
             {
@@ -259,7 +275,6 @@ impl Type {
                     15 => Type::Char,
                     16 => Type::Void,
                     17 => Type::Null,
-                    18 => Type::Function(Box::new(None)),
                     _ => todo!("{id}"),
                 },
             )
@@ -299,6 +314,59 @@ impl Type {
                         let name = parts.next().unwrap();
                         let ty = id_to_ty(parts.next().unwrap());
                         Some(Type::Enum(name.to_string(), Box::new(Some(ty))))
+                    } else if part == GENERIC_FUNCTION {
+                        assert_eq!(parts.next().unwrap(), GENERIC_IDENTIFIER);
+                        let mut res = vec![];
+                        let mut nesting = 0;
+
+                        loop {
+                            if parts.peek().is_some_and(|part| *part == GENERIC_IDENTIFIER) {
+                                nesting += 1;
+                            }
+
+                            if parts.peek().is_some_and(|part| *part == GENERIC_END) {
+                                if nesting > 0 {
+                                    nesting -= 1;
+                                } else {
+                                    parts.next();
+                                    break;
+                                }
+                            }
+
+                            res.push(internal_match(parts).unwrap());
+                        }
+
+                        let return_type = res.pop();
+
+                        Some(Type::Function(Box::new(Some(
+                            crate::compiler::qbe::function::Function {
+                                variadic: false,
+                                external: true,
+                                builtin: false,
+                                volatile: false,
+                                format: false,
+                                lambda: true,
+                                usable: true,
+                                imported: true,
+                                arguments: res
+                                    .into_iter()
+                                    .enumerate()
+                                    .map(|(i, ty)| {
+                                        (
+                                            (
+                                                ty,
+                                                crate::compiler::qbe::value::Value::Temporary(
+                                                    format!("_{i}"),
+                                                ),
+                                            ),
+                                            false,
+                                        )
+                                    })
+                                    .collect::<Vec<_>>(),
+                                return_type,
+                                ..Default::default()
+                            },
+                        ))))
                     } else if part == GENERIC_UNKNOWN {
                         Some(Type::Unknown(parts.next().unwrap().to_string()))
                     } else if part == GENERIC_END {
