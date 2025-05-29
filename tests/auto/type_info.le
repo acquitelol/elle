@@ -1,0 +1,40 @@
+use std/prelude;
+
+fn `type_of_val.works`() {
+    $assert(TypeInfo::type_of_val(39) == "i32");
+    $assert(TypeInfo::type_of_val("foo") == "string");
+    $assert(TypeInfo::type_of_val([1, 2, 3]) == "i32[]");
+    $assert(TypeInfo::type_of_val(["a"]) == "string[]");
+    $assert(TypeInfo::type_of_val($(1, 2)) == "(i32, i32)");
+    $assert(TypeInfo::type_of_val([$(1, 2)]) == "(i32, i32)[]");
+    $assert(TypeInfo::type_of_val($$(1, 2, "a")) == "(i32, i32, string)");
+    $assert(TypeInfo::type_of_val([$$(1, 2, "a")]) == "(i32, i32, string)[]");
+    $assert(TypeInfo::type_of_val(HashMap::with_entries($("a", 1))) == "HashMap<string, i32>*");
+}
+
+fn `type_of.works`() {
+    $assert(TypeInfo::type_of<i32>() == "i32");
+    $assert(TypeInfo::type_of<i32[]>() == "i32[]");
+    $assert(TypeInfo::type_of<(i32, string)>() == "(i32, string)");
+    $assert(TypeInfo::type_of<u8>() == "u8");
+    $assert(TypeInfo::type_of<void>() == "void");
+    $assert(TypeInfo::type_of<(i32, u8, string)>() == "(i32, u8, string)");
+    $assert(TypeInfo::type_of<(string, u64, string)>() == "(string, u64, string)");
+    $assert(TypeInfo::type_of<TypeInfo>() == "TypeInfo");
+}
+
+fn `is_pointer.works`() {
+    $assert(TypeInfo::is_pointer<i32>() == false);
+    $assert(TypeInfo::is_pointer<i32*>());
+    $assert(TypeInfo::is_pointer<(u32, u32)>() == false);
+    $assert(TypeInfo::is_pointer<string[]>() == false);
+    $assert(TypeInfo::is_pointer<string>() == false);
+    $assert(TypeInfo::is_pointer<(u32, u64)*>());
+}
+
+fn main() {
+    `type_of_val.works`();
+    `type_of.works`();
+    `is_pointer.works`();
+    $println("All `TypeInfo` tests have passed!".color("green").reset());
+}
