@@ -124,6 +124,7 @@ impl<'a> Constant<'a> {
                 generics: &vec![],
                 known_generics: &vec![],
                 addr_only: false,
+                tmp_counter: &RefCell::new(0),
             },
         )
         .parse()

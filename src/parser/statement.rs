@@ -782,10 +782,6 @@ impl<'a> Statement<'a> {
 
         raw_right.remove(0); // Get rid of the operator
 
-        let right_end_index = raw_right
-            .iter()
-            .position(|token| token.kind == TokenKind::Semicolon || token.kind.is_ternary_start())
-            .map_or(raw_right.len(), |index| {
         let mut paren_nesting = 0;
         let mut block_nesting = 0;
         let mut curly_nesting = 0;
@@ -1211,10 +1207,6 @@ impl<'a> Statement<'a> {
 
         if self.current_token().kind == TokenKind::In {
             self.position = position;
-
-            if self
-                .next_token_seek(usize::from(self.current_token().kind == TokenKind::Address) + 1)
-                .is_some_and(|token| token.kind == TokenKind::In)
             return self.parse_foreach_statement(location);
         }
 
@@ -1342,10 +1334,6 @@ impl<'a> Statement<'a> {
     }
 
     /// for x in [1, 2, 3] {}
-    fn parse_foreach_statement(
-        &mut self,
-        ty: Type,
-        name: Token,
     fn parse_foreach_statement(&mut self, location: MutRc<Location>) -> AstNode {
         self.expect_tokens(&[TokenKind::Identifier]);
         let first = self.current_token();
@@ -1391,13 +1379,8 @@ impl<'a> Statement<'a> {
             false
         });
 
-        let mut new_shared = *self.shared;
-        let known_generics = if ty == Type::Infer {
-            vec![]
-        } else {
         let iterator = Statement::new(tokens, 0, self.body, self.shared).parse().0;
 
-            INTERNAL_IDX_FORMAT!(),
         let mut iter_value = first.clone();
         iter_value.value = ValueKind::String(format!(
             INTERNAL_VALUE_FORMAT!(),
@@ -1411,6 +1394,7 @@ impl<'a> Statement<'a> {
         iter.value = ValueKind::String(format!(
             INTERNAL_ITERATOR_FORMAT!(),
             first.value.get_string_inner().unwrap(),
+            self.shared.tmp_counter.borrow()
         ));
         iter.tagged = false;
         *self.shared.tmp_counter.borrow_mut() += 1;
@@ -1420,32 +1404,26 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let mut body = self.yield_block(false); // Foreach is a statement
-
         self.position -= 1;
+        let mut statements = vec![];
 
-        let iterator_node = token_to_node!(&iter, self);
-        let element_access = AstNode::MemoryOperation(MemoryOperation {
         statements.push(AstNode::Declare(Declare {
             name: iter.clone(),
             r#type: Some(Type::Infer),
             value: Some(Box::new(AstNode::FunctionCall(FunctionCall {
                 namespace_token: Token::from_ident(""),
                 name_token: Token::from_ident(ITER_CONSTANT),
+                name: ITER_CONSTANT.into(),
                 generics: vec![],
                 parameters: vec![(location.clone(), iterator)],
                 type_method: true,
                 ignore_no_def: false,
                 location: location.clone(),
-            operator: TokenKind::LessThan,
-            treat_as_string: false,
-            dunder_methods: true,
             }))),
             location: location.clone(),
             value_location: location.clone(),
+        }));
 
-        let mut statements = vec![];
-
-            value: Some(Box::new(AstNode::Literal(Literal {
         let next_node = AstNode::FunctionCall(FunctionCall {
             namespace_token: Token::from_ident(""),
             name_token: Token::from_ident("next"),
@@ -1457,7 +1435,12 @@ impl<'a> Statement<'a> {
             location: location.clone(),
         });
 
-            value: Some(Box::new(iterator)),
+        let condition = AstNode::TupleDeclare(TupleDeclare {
+            first: Token::from_ident(""),
+            second: iter_value.clone(),
+            third: None,
+            ty: Some(Type::Infer),
+            value: Box::new(next_node),
             location: location.clone(),
             value_location: location.clone(),
         });
@@ -2949,79 +2932,6 @@ impl<'a> Statement<'a> {
         })
     }
 
-    fn parse_indexof(&mut self) -> AstNode {
-        let location = self.current_token().location;
-        let position = self.position;
-
-        if self.current_token().tagged {
-            elle_error!(format!(
-                "hover\n{}\n{}\n#i(identifier) -> i32\n",
-                self.current_token().location.borrow().display_plain(false),
-                self.current_token().location.borrow().display_plain(true),
-            ));
-        }
-
-        self.advance();
-        self.expect_tokens(&[TokenKind::LeftParenthesis]);
-        self.advance();
-
-        self.expect_tokens(&[TokenKind::Identifier]);
-        let name = self.current_token();
-
-        self.advance();
-        self.expect_tokens(&[TokenKind::RightParenthesis]);
-        set_end!(location, self);
-
-        let mut fmt = name.clone();
-        fmt.value = ValueKind::String(format!(
-            INTERNAL_IDX_FORMAT!(),
-            name.value.get_string_inner().unwrap()
-        ));
-
-        let mut expression = token_to_node!(&fmt, self);
-
-        if let Some(token) = self.advance_opt() {
-            match token.kind {
-                TokenKind::Equal => {
-                    self.advance();
-                    let value_tokens = self.yield_tokens_wrapped_with_semi();
-                    set_end!(location, self);
-
-                    expression = AstNode::Declare(Declare {
-                        name: fmt,
-                        r#type: None,
-                        value: Some(Box::new(
-                            Statement::new(value_tokens, 0, self.body, self.shared)
-                                .parse()
-                                .0,
-                        )),
-                        location: location.clone(),
-                        value_location: location,
-                    });
-                }
-                other if other.is_declarative() => {
-                    expression = AstNode::Declare(Declare {
-                        name: fmt,
-                        r#type: None,
-                        value: Some(Box::new(self.parse_declarative_node(expression))),
-                        location: location.clone(),
-                        value_location: location,
-                    });
-                }
-                other if other.is_ternary_start() => {
-                    expression = self.parse_ternary_node(expression, location);
-                }
-                other if other.is_arithmetic() => {
-                    self.position = position;
-                    expression = self.parse_arithmetic();
-                }
-                _ => expect_eot!(token),
-            }
-        }
-
-        expression
-    }
-
     fn parse_env(&mut self) -> AstNode {
         let location = self.current_token().location;
         let position = self.position;
@@ -4002,7 +3912,6 @@ impl<'a> Statement<'a> {
             TokenKind::Address => self.parse_address(),
             TokenKind::Size => self.parse_size(),
             TokenKind::ArrayLength => self.parse_array_length(),
-            TokenKind::IndexOf => self.parse_indexof(),
             TokenKind::Environment => self.parse_env(),
             TokenKind::Alloc => self.parse_alloc(),
             TokenKind::Realloc => self.parse_realloc(),

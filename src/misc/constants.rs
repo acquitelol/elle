@@ -35,6 +35,7 @@ pub static GENERIC_IDENTIFIER: &str = "0"; // Start of a generic
 pub static GENERIC_END: &str = "1"; // Allowing for nested generic structs
 pub static GENERIC_POINTER: &str = "2"; // Pointer to another type
 pub static GENERIC_UNKNOWN: &str = "3"; // Unknown type T
+pub static GENERIC_FUNCTION: &str = "98"; // Callback encoded in the type system
 pub static GENERIC_ENUM: &str = "99"; // Enum with another repr type
 
 // Extensions
@@ -54,6 +55,7 @@ pub static HASH_CONSTANT: &str = "__hash__";
 pub static EQUALS_CONSTANT: &str = "__equals__";
 pub static TUPLE_CONSTANT: &str = "__tuple__";
 pub static TRIPLE_CONSTANT: &str = "__triple__";
+pub static ITER_CONSTANT: &str = "__iter__";
 pub static PTR_PRIORITY_CONSTANTS: &[&str] = &[FORMAT_CONSTANT];
 pub static DUNDER_CONSTANTS: &[&str] = &[
     FORMAT_CONSTANT,
@@ -67,6 +69,7 @@ pub static DUNDER_CONSTANTS: &[&str] = &[
     EQUALS_CONSTANT,
     TUPLE_CONSTANT,
     TRIPLE_CONSTANT,
+    ITER_CONSTANT,
 ];
 
 // Keywords
@@ -81,15 +84,15 @@ pub static DIVIDER_SIZE: usize = 50;
 pub static DISPLAY_NESTING_MAX: usize = 3;
 
 #[macro_export]
-macro_rules! INTERNAL_IDX_FORMAT {
+macro_rules! INTERNAL_VALUE_FORMAT {
     () => {
-        "__internal_{}_idx"
+        "__internal_{}_value{}"
     };
 }
 
 #[macro_export]
 macro_rules! INTERNAL_ITERATOR_FORMAT {
     () => {
-        "__internal_{}_iterator"
+        "__internal_{}_iterator{}"
     };
 }

@@ -433,7 +433,6 @@ impl Lexer<'_> {
                             ValueKind::String(val) => match val.as_str() {
                                 "size" => (TokenKind::Size, ValueKind::Nil),
                                 "len" => (TokenKind::ArrayLength, ValueKind::Nil),
-                                "i" => (TokenKind::IndexOf, ValueKind::Nil),
                                 "env" => (TokenKind::Environment, ValueKind::Nil),
                                 "alloc" => (TokenKind::Alloc, ValueKind::Nil),
                                 "realloc" => (TokenKind::Realloc, ValueKind::Nil),
