@@ -43,7 +43,7 @@ fn Node::print_on_lines(Node *self) {
     }
 
     return levels
-        .map<string>(fn(i32[] level) level.join(" "))
+        .map(fn(level) level.join(" "))
         .join("\n");
 }
 

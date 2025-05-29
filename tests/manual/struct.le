@@ -7,7 +7,7 @@ struct Bar {
 
 struct Foo {
     i64 a,
-    f64 *b,
+    f32 *b,
     i32 c,
     Bar bar,
     Bar *ptr,

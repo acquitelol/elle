@@ -1,6 +1,6 @@
 use std/io;
 
-fn loop(string str, fn *callback) -> void {
+fn loop(string str, fn(char) callback) -> void {
     for c in str {
         callback(c);
     }
@@ -14,7 +14,7 @@ fn main() {
     let test = "Hello World!";
 
     // Expected result: "H e l l o   W o r l d !"
-    loop(test, fn(char character) io::print(character, " "));
+    loop(test, fn(c) io::print(c, " "));
     io::print('\n');
 
     loop(test, formattedPrint);

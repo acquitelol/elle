@@ -105,10 +105,10 @@ fn `index.field.index.addr`() {
 fn `owned.foreach`() {
     xs := [1, 2, 3];
 
-    for x in xs {
+    for i, x in xs.iter().enumerate() {
         x *= 5;
         // Does mutate local copy of x
-        $assert(x == xs[#i(x)] * 5, nil);
+        $assert(x == xs[i] * 5, nil);
     }
 
     // Does NOT mutate original xs
@@ -118,10 +118,10 @@ fn `owned.foreach`() {
 fn `addr.foreach`() {
     xs := [1, 2, 3];
 
-    for &x in xs {
+    for i, x in xs.iter_ref().enumerate() {
         *x *= 5;
         // This x pointer should be identical to taking the address
-        $assert(x == &xs[#i(x)], nil);
+        $assert(x == &xs[i], nil);
     }
 
     // Does mutate original xs
@@ -131,10 +131,10 @@ fn `addr.foreach`() {
 fn `field.owned.foreach`() {
     foo := Foo { x = 42, y = [1, 2, 3] };
 
-    for x in foo.y {
+    for i, x in foo.y.iter().enumerate() {
         x *= 5;
         // Does mutate local copy of x
-        $assert(x == foo.y[#i(x)] * 5, nil);
+        $assert(x == foo.y[i] * 5, nil);
     }
 
     // Does NOT mutate original xs
@@ -144,10 +144,10 @@ fn `field.owned.foreach`() {
 fn `field.addr.foreach`() {
     foo := Foo { x = 42, y = [1, 2, 3] };
 
-    for &x in foo.y {
+    for i, x in foo.y.iter_ref().enumerate() {
         *x *= 5;
         // This x pointer should be identical to taking the address
-        $assert(x == &foo.y[#i(x)], nil);
+        $assert(x == &foo.y[i], nil);
     }
 
     // Does mutate original xs
