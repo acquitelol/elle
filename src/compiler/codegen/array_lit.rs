@@ -12,7 +12,12 @@ use crate::{
 
 impl Codegen<'_> for ArrayLiteral {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let inner_ty = ctx.ty.clone().and_then(|ty| ty.get_pointer_inner());
+        let inner_ty = ctx
+            .ty
+            .clone()
+            .and_then(|ty| ty.get_pointer_inner())
+            // Don't infer T when this value isnt being assigned to a variable
+            .and_then(|x| if ctx.value.is_some() { Some(x) } else { None });
 
         if self.dynamic {
             let new_func = ctx.func.borrow_mut().to_owned();
