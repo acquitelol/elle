@@ -3,14 +3,14 @@ use std::{
     fmt,
 };
 
-use super::{data::Data, function::Function, r#type::Type, statement::Statement, typedef::TypeDef};
+use super::{data::Data, function::Function, statement::Statement, typedef::TypeDef};
 use crate::{get_MAIN_ID, hashmap, DEAD_CODE_ELIMINATION_PASSES, MAIN_ID};
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Module {
     pub functions: HashMap<String, Function>,
     pub types: Vec<TypeDef>,
-    pub data: Vec<Data>,
+    pub data: HashMap<String, Data>,
 }
 
 impl Module {
@@ -18,7 +18,7 @@ impl Module {
         Self {
             functions: hashmap![],
             types: vec![],
-            data: vec![],
+            data: hashmap![],
         }
     }
 
@@ -30,8 +30,8 @@ impl Module {
         self.types.push(def);
     }
 
-    pub fn add_data(&mut self, data: Data) {
-        self.data.push(data);
+    pub fn add_data(&mut self, (name, data): (String, Data)) {
+        self.data.insert(name, data);
     }
 
     pub fn remove_unused_functions(&mut self, object_output: bool) {
@@ -76,7 +76,7 @@ impl Module {
                 for statement in &block.statements {
                     match statement {
                         Statement::Assign(_, _, instr) | Statement::Volatile(instr) => {
-                            for data in &self.data {
+                            for (_, data) in &self.data {
                                 if instr.is_global_used(&data.name) {
                                     used_data_sections.insert(data.name.clone());
                                 }
@@ -88,15 +88,12 @@ impl Module {
         }
 
         self.data
-            .retain(|data| used_data_sections.contains(&data.name));
+            .retain(|_, data| used_data_sections.contains(&data.name));
     }
 
     pub fn remove_generics(&mut self) {
-        self.types.retain(|ty: &TypeDef| {
-            !ty.items
-                .iter()
-                .any(|item| Type::Void.has_generic_type(&item.0))
-        });
+        self.types
+            .retain(|ty: &TypeDef| !ty.items.iter().any(|item| item.0.has_generic_type()));
     }
 
     pub fn remove_empty_structs(&mut self) {
@@ -136,7 +133,7 @@ impl fmt::Display for Module {
             print_type_recursively(f, &r#type.name, &self.types, &mut printed)?;
         }
 
-        for data in &self.data {
+        for (_, data) in &self.data {
             writeln!(f, "{data}")?;
         }
 
