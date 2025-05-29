@@ -43,6 +43,7 @@ pub fn handle_short_circuiting_operation(
                 ty: ty.clone(),
                 value: None,
                 is_return,
+                is_generic: false,
             },
         )
         .unwrap_or_else(|| {
@@ -113,6 +114,7 @@ pub fn handle_short_circuiting_operation(
                 ty,
                 value: None,
                 is_return,
+                is_generic: false,
             },
         )
         .unwrap_or_else(|| {
