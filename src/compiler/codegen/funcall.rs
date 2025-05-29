@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::fmt::Write;
 
 use crate::{
@@ -169,28 +168,7 @@ impl Codegen<'_> for FunctionCall {
                 imported: false,
                 generics: vec![],
                 known_generics: hashmap![],
-                // TODO: Allow the function declaration to specify a real signature instead of just `fn *`
-                arguments: parameters
-                    .iter()
-                    .map(|param| {
-                        let mut tmp_func = Function::default();
-                        tmp_func.add_block("start");
-
-                        (
-                            param.1.clone().compile(
-                                gen,
-                                &CodegenContext {
-                                    func: &RefCell::new(tmp_func),
-                                    ..ctx.to_nnf()
-                                },
-                            ).unwrap_or_else(|| elle_error!(param.0.borrow().error(
-                                format!(
-                                    "Unexpected error when trying to generate a statement for a parameter in a function called '{name}'"
-                                )))),
-                            false,
-                        )
-                    })
-                    .collect(),
+                arguments: vec![],
                 return_type: Some(declarative_ty.clone()),
                 blocks: vec![],
             };
@@ -205,7 +183,7 @@ impl Codegen<'_> for FunctionCall {
                         fallback
                     } else if ty.is_function() {
                         is_callback = true;
-                        ty.get_function_inner().unwrap().unwrap()
+                        ty.get_function_inner().unwrap()
                     } else {
                         unknown_function!(call_location, name, ctx.module)
                     }
@@ -254,13 +232,14 @@ impl Codegen<'_> for FunctionCall {
                 &call_location,
                 &mut tmp_function,
                 ctx.ty.clone(),
+                ctx.is_return,
             );
         }
 
         if namespace_token.tagged {
             let plain_name = namespace_token.value.get_string_inner().unwrap();
-            let (_, members, _) = gen.struct_pool.get(&plain_name).unwrap();
-            struct_hover!(namespace_token, members.is_empty(), members);
+            let (generics, members, _) = gen.struct_pool.get(&plain_name).unwrap();
+            struct_hover!(namespace_token, members.is_empty(), generics, members);
         }
 
         if name_token.tagged {
@@ -322,6 +301,7 @@ impl Codegen<'_> for FunctionCall {
             } else {
                 parameter.1.compile(gen, &CodegenContext {
                     ty: param_ty.clone(),
+                    is_generic: false,
                     ..ctx.to_nnf()
                 })
                 .unwrap_or_else(|| elle_error!(parameter.0.borrow().error(
@@ -420,6 +400,7 @@ impl Codegen<'_> for FunctionCall {
                                 &call_location,
                                 &mut tmp_function,
                                 None,
+                                false,
                             );
                         }
                     }
@@ -466,6 +447,7 @@ impl Codegen<'_> for FunctionCall {
                             &call_location,
                             &mut tmp_function,
                             None,
+                            false,
                         );
                     }
                 }
@@ -478,12 +460,27 @@ impl Codegen<'_> for FunctionCall {
                     elle_error!(
                         call_location.borrow().error(format!(
                             "The method \"{}\" returns {}{RESET} but it should return {GREEN}string{RESET}.\nThis method's implementation must be changed to return {GREEN}string{RESET}.",
-                            func_name,
+                            Type::Function(Box::new(Some(tmp_function.clone()))).display(),
                             tmp_function.return_type.unwrap_or_else(|| Type::Unknown("_".into())).display(),
                             GREEN = get_GREEN!(),
                             RESET = get_RESET!(),
                         ))
                     )
+                }
+
+                if tmp_function
+                    .arguments
+                    .get(0)
+                    .is_some_and(|((ty, _), _)| *ty == Type::Struct(META_STRUCT_NAME.into()))
+                {
+                    elle_error!(call_location.borrow().error(
+                        format!(
+                            "Failed to compile formatting in {}:\nCannot accept the {GREEN}ElleMeta{RESET} parameter on formatter methods.\nConsider calling another method for it.",
+                            Type::Function(Box::new(Some(tmp_function))).display(),
+                            GREEN = get_GREEN!(),
+                            RESET = get_RESET!()
+                        )
+                    ));
                 }
 
                 ctx.func.borrow_mut().assign_instruction(
