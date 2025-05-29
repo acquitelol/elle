@@ -29,6 +29,7 @@ pub struct CodegenContext<'a> {
     pub ty: Option<Type>,
     pub value: Option<Value>,
     pub is_return: bool,
+    pub is_generic: bool,
 }
 
 impl CodegenContext<'_> {
@@ -61,7 +62,7 @@ pub struct VariableInfo {
 pub struct Compiler {
     pub tmp_counter: u32,
     pub scopes: Vec<HashMap<String, (Type, Value)>>,
-    pub data_sections: Vec<Data>,
+    pub data_sections: HashMap<String, Data>,
     pub generic_functions: HashMap<String, Primitive>,
     // Struct Name => ((Field Name, Field Type)[], (Known Generic)[])
     pub struct_pool: StructPool,
@@ -254,11 +255,11 @@ impl Compiler {
                 let global = tmp_module
                     .data
                     .iter()
-                    .find(|item| item.name == name.clone());
+                    .find(|(_, item)| item.name == name.clone());
 
                 global.map_or_else(
                     || undefined_error!(),
-                    |item| Some((Type::Long, Value::Global(item.name.clone()))),
+                    |(_, item)| Some((Type::Long, Value::Global(item.name.clone()))),
                 )
             }
         }
@@ -277,7 +278,7 @@ impl Compiler {
         let mut gen = Self {
             tmp_counter: 0,
             scopes: vec![],
-            data_sections: vec![],
+            data_sections: hashmap![],
             generic_functions: hashmap![],
             struct_pool: hashmap![],
             loop_labels: vec![],
@@ -349,8 +350,13 @@ impl Compiler {
 
                     if this.namespace_token.tagged {
                         let plain_name = this.namespace_token.value.get_string_inner().unwrap();
-                        if let Some((_, members, _)) = gen.struct_pool.get(&plain_name) {
-                            struct_hover!(this.namespace_token, members.is_empty(), members);
+                        if let Some((generics, members, _)) = gen.struct_pool.get(&plain_name) {
+                            struct_hover!(
+                                this.namespace_token,
+                                members.is_empty(),
+                                generics,
+                                members
+                            );
                         } else {
                             let ty = ValueKind::String(plain_name)
                                 .to_type_string(false, false, None)
@@ -394,8 +400,13 @@ impl Compiler {
 
                         if namespace_token.tagged {
                             let plain_name = namespace_token.value.get_string_inner().unwrap();
-                            if let Some((_, members, _)) = gen.struct_pool.get(&plain_name) {
-                                struct_hover!(namespace_token, members.is_empty(), members);
+                            if let Some((generics, members, _)) = gen.struct_pool.get(&plain_name) {
+                                struct_hover!(
+                                    namespace_token,
+                                    members.is_empty(),
+                                    generics,
+                                    members
+                                );
                             } else {
                                 let ty = ValueKind::String(plain_name)
                                     .to_type_string(false, false, None)
@@ -455,7 +466,13 @@ impl Compiler {
                 }
                 Primitive::Struct(this) => {
                     let td = generate_struct(this.clone(), &mut gen);
-                    struct_hover!(this.name_token, this.ignore_empty, this.members);
+                    struct_hover!(
+                        this.name_token,
+                        this.ignore_empty,
+                        this.generics,
+                        this.members
+                    );
+
                     let types = module_ref.borrow().types.clone();
 
                     if let Some(pos) = types.iter().position(|x| *x == td) {

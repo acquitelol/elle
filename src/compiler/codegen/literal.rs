@@ -23,7 +23,7 @@ impl Codegen<'_> for Literal {
                         &self.location,
                     );
 
-                    if self.tagged {
+                    if self.tagged && res.as_ref().is_some_and(|(ty, _)| !ty.has_generic_type()) {
                         if res.clone().unwrap().0.is_function() {
                             elle_error!(format!(
                                 "hover\n{}\n{}\n{}",
@@ -143,18 +143,25 @@ impl Codegen<'_> for Literal {
                     gen.tmp_counter += 1;
                     let name = gen
                         .tmp_name_with_debug_assertions(&ctx.func.borrow_mut().name.clone(), true);
+                    let escaped = val.replace('\n', "\\n");
 
-                    gen.data_sections.push(Data::new(
-                        Linkage::private(),
-                        name.clone(),
-                        None,
-                        vec![
-                            (Type::Byte, DataItem::String(val.replace('\n', "\\n"))),
-                            (Type::Byte, DataItem::Const(0)),
-                        ],
-                    ));
+                    let data = gen
+                        .data_sections
+                        .entry(escaped.clone())
+                        .or_insert(Data::new(
+                            Linkage::private(),
+                            name.clone(),
+                            None,
+                            vec![
+                                (Type::Byte, DataItem::String(escaped)),
+                                (Type::Byte, DataItem::Const(0)),
+                            ],
+                        ));
 
-                    let res = (Type::Pointer(Box::new(Type::Char)), Value::Global(name));
+                    let res = (
+                        Type::Pointer(Box::new(Type::Char)),
+                        Value::Global(data.name.clone()),
+                    );
 
                     if self.tagged {
                         elle_error!(format!(
@@ -186,12 +193,15 @@ impl Codegen<'_> for Literal {
                     let name = gen
                         .tmp_name_with_debug_assertions(&ctx.func.borrow_mut().name.clone(), true);
 
-                    gen.data_sections.push(Data::new(
-                        Linkage::private(),
+                    gen.data_sections.insert(
                         name.clone(),
-                        None,
-                        vec![(Type::Byte, DataItem::Const(0))],
-                    ));
+                        Data::new(
+                            Linkage::private(),
+                            name.clone(),
+                            None,
+                            vec![(Type::Byte, DataItem::Const(0))],
+                        ),
+                    );
 
                     Some((Type::Long, Value::Global(name)))
                 }

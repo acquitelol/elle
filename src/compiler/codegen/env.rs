@@ -14,13 +14,16 @@ use crate::{
 impl Codegen<'_> for Environment {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         if let Some(value) = self.value {
-            if !gen.data_sections.iter().any(|data| data.name == ENV_ID) {
-                gen.data_sections.push(Data {
-                    linkage: Linkage::public(),
-                    name: ENV_ID.into(),
-                    align: None,
-                    items: vec![(Type::Long, DataItem::Const(0))],
-                });
+            if !gen.data_sections.contains_key(ENV_ID) {
+                gen.data_sections.insert(
+                    ENV_ID.into(),
+                    Data {
+                        linkage: Linkage::public(),
+                        name: ENV_ID.into(),
+                        align: None,
+                        items: vec![(Type::Long, DataItem::Const(0))],
+                    },
+                );
             }
 
             let (ty, val) = value.compile(gen, ctx).unwrap_or_else(|| {

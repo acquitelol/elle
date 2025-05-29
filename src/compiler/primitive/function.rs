@@ -68,6 +68,7 @@ pub fn generate_function(
         ty: None,
         value: None,
         is_return: false,
+        is_generic: false,
     };
 
     for argument in &this.arguments {
