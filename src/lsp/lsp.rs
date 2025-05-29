@@ -72,12 +72,6 @@ impl LanguageServer for Backend {
         self.try_report_diagnostics(uri).await;
     }
 
-    async fn did_change(&self, params: DidChangeTextDocumentParams) {
-        let uri = &params.text_document.uri;
-        dbg!("File modified", uri);
-        self.try_report_diagnostics(uri).await;
-    }
-
     async fn hover(&self, params: HoverParams) -> Result<Option<Hover>, Error> {
         dbg!(
             "Detected hover",
