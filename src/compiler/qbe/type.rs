@@ -629,9 +629,9 @@ impl Type {
         }
     }
 
-    pub fn get_function_inner(&self) -> Option<Option<Function>> {
+    pub fn get_function_inner(&self) -> Option<Function> {
         match self {
-            Self::Function(val) => Some(*val.clone()),
+            Self::Function(val) => Some(val.clone().unwrap()),
             _ => None,
         }
     }
@@ -682,8 +682,13 @@ impl Type {
         !self.is_float()
     }
 
+    pub const fn is_bool(&self) -> bool {
+        matches!(self, Self::Boolean)
+    }
+
     pub fn is_strictly_number(&self) -> bool {
         !self.is_string()
+            && !self.is_void()
             && !self.is_void_pointer()
             && !self.is_struct()
             && !self.is_function()
@@ -709,9 +714,6 @@ impl Type {
     pub fn is_function(&self) -> bool {
         match self {
             Self::Function(inner) => inner.is_some(),
-            Self::Pointer(inner) => {
-                matches!(**inner, Self::Void | Self::Function(..))
-            }
             _ => false,
         }
     }
@@ -806,9 +808,10 @@ impl Type {
             | Self::UnsignedByte
             | Self::Halfword
             | Self::UnsignedHalfword
-            | Self::UnsignedWord
             | Self::Boolean
-            | Self::Char => true,
+            | Self::Char
+            | Self::Word
+            | Self::UnsignedWord => true,
             Self::Enum(_, inner) => Option::as_ref(inner).is_some_and(Self::is_map_to_int),
             _ => false,
         }
@@ -838,17 +841,15 @@ impl Type {
 
     pub fn weight(&self) -> u8 {
         match self {
-            Self::Double => 4,
-            Self::Single => 3,
-            Self::Void
-            | Self::Long
-            | Self::UnsignedLong
-            | Self::Pointer(..)
-            | Self::Function(..) => 2,
-            Self::Word => 1,
-            Self::Enum(_, inner) => inner.clone().unwrap_or(Self::Word).weight(),
-            other if other.is_map_to_int() => 1,
-            _ => 0,
+            Self::Struct(_) => 7,
+            Self::Double => 6,
+            Self::Single => 5,
+            Self::Long | Self::UnsignedLong | Self::Pointer(..) | Self::Function(..) => 4,
+            Self::Word | Self::UnsignedWord => 3,
+            Self::Halfword | Self::UnsignedHalfword => 2,
+            Self::Boolean | Self::Byte | Self::UnsignedByte | Self::Char => 1,
+            Self::Enum(_, inner) => Option::as_ref(inner).unwrap_or(&Self::Word).weight(),
+            Self::Void | Self::Null | Self::Infer | Self::Unknown(_) => 0,
         }
     }
 
@@ -861,11 +862,9 @@ impl Type {
             Self::Double => 8,
             // Returns 4 on 32-bit and 8 on 64-bit
             // Functions are just pointers to the start of them
-            Self::Void
-            | Self::UnsignedLong
-            | Self::Long
-            | Self::Pointer(..)
-            | Self::Function(..) => mem::size_of::<usize>() as u64,
+            Self::UnsignedLong | Self::Long | Self::Pointer(..) | Self::Function(..) => {
+                mem::size_of::<usize>() as u64
+            }
             _ => 0,
         }
     }
@@ -899,7 +898,7 @@ impl fmt::Display for Type {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Boolean | Self::Byte | Self::Char => write!(formatter, "b"),
-            Self::Word => write!(formatter, "w"),
+            Self::Word | Self::Void => write!(formatter, "w"),
             Self::UnsignedByte => write!(formatter, "ub"),
             Self::Halfword => write!(formatter, "h"),
             Self::UnsignedHalfword => write!(formatter, "uh"),
@@ -916,7 +915,7 @@ impl fmt::Display for Type {
                     Option::as_ref(inner).unwrap_or(&Self::Word)
                 )
             }
-            Self::Pointer(..) | Self::Long | Self::Void | Self::Function(_) => {
+            Self::Pointer(..) | Self::Long | Self::Function(_) => {
                 write!(formatter, "l")
             }
             Self::Unknown(name) => elle_error!(Location::internal_error(format!(
