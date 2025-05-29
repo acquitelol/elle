@@ -1905,6 +1905,21 @@ impl<'a> Statement<'a> {
                 }
             }
 
+            if self.current_token().kind == TokenKind::Identifier
+                && let Some(next) = self.next_token()
+                && [TokenKind::Comma, TokenKind::RightParenthesis].contains(&next.kind)
+            {
+                let name = self.current_token();
+
+                self.advance();
+                if self.current_token().kind == TokenKind::Comma {
+                    self.advance();
+                }
+
+                arguments.push(Ok(name));
+                continue;
+            }
+
             let ty = self.get_type(Some(self.shared.generics));
             self.advance();
 
@@ -1915,12 +1930,12 @@ impl<'a> Statement<'a> {
                 self.advance();
             }
 
-            arguments.push(Argument {
+            arguments.push(Err(Argument {
                 r#type: ty,
                 name,
                 no_fmt,
                 is_unused: false,
-            });
+            }));
         }
 
         self.expect_tokens(&[TokenKind::RightParenthesis]);
