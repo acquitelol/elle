@@ -440,87 +440,116 @@ impl Type {
                 known_generics,
             ))),
             Self::Unknown(name) => {
-                if generics.contains(name) {
+                if generics.contains(name) && known_generics.contains_key(name) {
                     known_generics.get(name).unwrap().to_owned()
                 } else {
                     self.clone()
                 }
             }
-            Self::Struct(name) if is_unknown!(name) => {
-                let (original_name, parts) = Self::from_internal_id(name);
-
-                let generic_name = format!(
-                    "{original_name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
-                    parts
-                        .iter()
-                        .filter_map(Self::get_unknown_inner)
-                        .map(|generic| known_generics.get(&generic).unwrap().to_internal_id())
-                        .collect::<Vec<String>>()
-                        .join(".")
-                );
-
-                if struct_pool.is_some()
-                    && tree.is_some()
-                    && !struct_pool.unwrap().borrow().contains_key(&generic_name)
-                {
-                    let (generics, members, location) = struct_pool
-                        .unwrap()
-                        .borrow()
-                        .get(&original_name)
-                        .unwrap()
-                        .clone();
-
-                    let parsed_generics = generics
-                        .iter()
-                        .enumerate()
-                        .map(|(i, generic)| {
+            Self::Function(inner) if let Some(inner) = (**inner).clone() => {
+                let parsed_arguments = inner
+                    .arguments
+                    .into_iter()
+                    .map(|((ty, val), no_fmt)| {
+                        (
                             (
-                                generic.clone(),
-                                known_generics[&parts[i].clone().get_unknown_inner().unwrap()]
-                                    .clone(),
-                            )
-                        })
-                        .collect::<HashMap<_, _>>();
-
-                    let parsed_members = members
-                        .iter()
-                        .map(|member| Argument {
-                            name: member.name.clone(),
-                            r#type: member.r#type.clone().unknown_to_known(
-                                struct_pool,
-                                tree,
-                                &generics,
-                                &parsed_generics,
+                                ty.unknown_to_known(struct_pool, tree, generics, known_generics),
+                                val,
                             ),
-                            no_fmt: member.no_fmt,
-                            is_unused: member.is_unused,
-                        })
-                        .collect::<Vec<_>>();
+                            no_fmt,
+                        )
+                    })
+                    .collect::<Vec<_>>();
 
-                    tree.unwrap()
-                        .borrow_mut()
-                        .push(Primitive::Struct(StructSource {
-                            name_token: Token::from_ident(&generic_name),
-                            name: generic_name.clone(),
-                            public: false,
-                            usable: true,
-                            imported: false,
-                            generics: vec![],
-                            known_generics: parsed_generics,
-                            members: parsed_members.clone(),
-                            keyword_location: location.clone(),
-                            location: location.clone(),
-                            ignore_empty: false,
-                        }));
+                let parsed_return_ty = inner
+                    .return_type
+                    .map(|ty| ty.unknown_to_known(struct_pool, tree, generics, known_generics));
 
-                    struct_pool
-                        .unwrap()
-                        .borrow_mut()
-                        .insert(generic_name.clone(), (vec![], parsed_members, location));
-                }
-
-                Self::Struct(generic_name)
+                Self::Function(Box::new(Some(Function {
+                    arguments: parsed_arguments,
+                    return_type: parsed_return_ty,
+                    ..inner
+                })))
             }
+            // Self::Struct(name) if is_unknown!(name) => {
+            //     let (original_name, parts) = Self::from_internal_id(name);
+
+            //     dbg!(&name, &parts, &known_generics, &generics);
+
+            //     let generic_name = format!(
+            //         "{original_name}.{GENERIC_IDENTIFIER}.{}.{GENERIC_END}",
+            //         parts
+            //             .iter()
+            //             .filter_map(Self::get_unknown_inner)
+            //             .map(|generic| known_generics.get(&generic).unwrap().to_internal_id())
+            //             .collect::<Vec<String>>()
+            //             .join(".")
+            //     );
+
+            //     if struct_pool.is_some()
+            //         && tree.is_some()
+            //         && !struct_pool.unwrap().borrow().contains_key(&generic_name)
+            //     {
+            //         let (generics, members, location) = struct_pool
+            //             .unwrap()
+            //             .borrow()
+            //             .get(&original_name)
+            //             .unwrap()
+            //             .clone();
+
+            //         let parsed_generics = generics
+            //             .iter()
+            //             .enumerate()
+            //             .filter_map(|(i, _)| parts[i].clone().get_unknown_inner())
+            //             .enumerate()
+            //             .map(|(i, generic)| {
+            //                 (
+            //                     generic.clone(),
+            //                     known_generics[&parts[i].clone().get_unknown_inner().unwrap()]
+            //                         .clone(),
+            //                 )
+            //             })
+            //             .collect::<HashMap<_, _>>();
+
+            //         let parsed_members = members
+            //             .iter()
+            //             .map(|member| Argument {
+            //                 name: member.name.clone(),
+            //                 r#type: member.r#type.clone().unknown_to_known(
+            //                     struct_pool,
+            //                     tree,
+            //                     &generics,
+            //                     &parsed_generics,
+            //                 ),
+            //                 no_fmt: member.no_fmt,
+            //                 is_unused: member.is_unused,
+            //             })
+            //             .collect::<Vec<_>>();
+
+            //         tree.unwrap()
+            //             .borrow_mut()
+            //             .push(Primitive::Struct(StructSource {
+            //                 name_token: Token::from_ident(&generic_name),
+            //                 name: generic_name.clone(),
+            //                 public: false,
+            //                 usable: true,
+            //                 imported: false,
+            //                 generics: vec![],
+            //                 known_generics: parsed_generics,
+            //                 members: parsed_members.clone(),
+            //                 keyword_location: location.clone(),
+            //                 location: location.clone(),
+            //                 ignore_empty: false,
+            //             }));
+
+            //         struct_pool
+            //             .unwrap()
+            //             .borrow_mut()
+            //             .insert(generic_name.clone(), (vec![], parsed_members, location));
+            //     }
+
+            //     Self::Struct(generic_name)
+            // }
             Self::Struct(name) if is_generic!(name) && has_unknown_part!(name) => {
                 let (original_name, mut parts) = Self::from_internal_id(name);
 
@@ -598,26 +627,81 @@ impl Type {
     }
 
     #[allow(clippy::only_used_in_recursion)]
-    pub fn has_generic_type(&self, ty: &Self) -> bool {
-        match ty {
-            Self::Pointer(inner) => self.has_generic_type(inner),
+    pub fn has_generic_type(&self) -> bool {
+        match self {
+            Self::Pointer(inner) => inner.has_generic_type(),
             Self::Unknown(_) => true,
-            Self::Struct(name) => is_unknown!(name),
+            Self::Function(f) => {
+                if let Some(f) = (**f).clone() {
+                    f.arguments.iter().any(|x| x.0 .0.has_generic_type())
+                        || f.return_type.is_some_and(|x| x.has_generic_type())
+                } else {
+                    false
+                }
+            }
+            Self::Struct(name) => has_unknown_part!(name),
             _ => false,
         }
     }
 
     #[allow(clippy::only_used_in_recursion)]
-    pub fn deduce_generic_type(&self, generic_type: &Self) -> Option<HashMap<String, Self>> {
+    pub fn deduce_generic_type(
+        &self,
+        generic_type: &Self,
+        location: &MutRc<Location>,
+    ) -> Option<HashMap<String, Self>> {
         match (self, generic_type) {
             (Self::Pointer(known_inner), Self::Pointer(generic_inner)) => {
-                known_inner.deduce_generic_type(generic_inner)
+                known_inner.deduce_generic_type(generic_inner, location)
+            }
+            (Self::Function(known_inner), Self::Function(generic_inner)) => {
+                let mut map = hashmap![];
+
+                if let Some(known_inner) = (**known_inner).clone()
+                    && let Some(generic_inner) = (**generic_inner).clone()
+                {
+                    for i in 0..if known_inner.arguments.len() < generic_inner.arguments.len() {
+                        known_inner.arguments.len()
+                    } else {
+                        generic_inner.arguments.len()
+                    } {
+                        if let Some(new_map) = known_inner.arguments[i]
+                            .0
+                             .0
+                            .deduce_generic_type(&generic_inner.arguments[i].0 .0, location)
+                        {
+                            map.extend(
+                                new_map
+                                    .into_iter()
+                                    .filter(|x| !x.1.is_unknown())
+                                    .collect::<HashMap<_, _>>(),
+                            );
+                        }
+                    }
+
+                    let known_return_ty = known_inner.return_type.unwrap_or(Type::Void);
+                    let generic_return_ty = generic_inner.return_type.unwrap_or(Type::Void);
+                    if let Some(new_map) =
+                        known_return_ty.deduce_generic_type(&generic_return_ty, location)
+                    {
+                        map.extend(
+                            new_map
+                                .into_iter()
+                                .filter(|x| !x.1.is_unknown())
+                                .collect::<HashMap<_, _>>(),
+                        );
+                    }
+                } else {
+                    return None;
+                }
+
+                Some(map)
             }
             (known, Self::Pointer(other)) if known.is_struct() && other.is_struct() => {
-                known.deduce_generic_type(other)
+                known.deduce_generic_type(other, location)
             }
             (Self::Pointer(known), other) if known.is_struct() && other.is_struct() => {
-                known.deduce_generic_type(other)
+                known.deduce_generic_type(other, location)
             }
             (known, Self::Unknown(name)) => Some(hashmap![name.clone() => known.clone()]),
             // Struct<(known)> vs Struct<T>
@@ -628,35 +712,29 @@ impl Type {
                 let (struct_name, unknown_parts) = Self::from_internal_id(name);
 
                 if original_name != struct_name {
-                    todo!()
+                    elle_error!(location.borrow().error(
+                        format!(
+                            "Mismatched types when trying to deduce a generic:\nExpected '{GREEN}{}{RESET}' but got '{RED}{}{RESET}' instead",
+                            generic_type.display(),
+                            self.display(),
+                            GREEN = get_GREEN!(),
+                            RED = get_RED!(),
+                            RESET = get_RESET!()
+                        )
+                    ));
                 }
 
-                // assert_eq!(known_parts.len(), unknown_parts.len());
+                let mut res = hashmap![];
 
-                Some(
-                    unknown_parts
-                        .iter()
-                        .enumerate()
-                        .map(|(i, v)| {
-                            if !matches!(v, Self::Unknown(_)) {
-                                if let Some(new) = known_parts[i].deduce_generic_type(v) {
-                                    if new.is_empty() {
-                                        return (None, known_parts[i].clone());
-                                    }
+                for (i, v) in unknown_parts.iter().enumerate() {
+                    if v.has_generic_type()
+                        && let Some(new) = known_parts[i].deduce_generic_type(v, location)
+                    {
+                        res.extend(new);
+                    }
+                }
 
-                                    return (
-                                        new.keys().nth(0).cloned(),
-                                        new.values().nth(0).cloned().unwrap(),
-                                    );
-                                }
-                            }
-
-                            (v.get_unknown_inner(), known_parts[i].clone())
-                        })
-                        .filter(|(unknown, _)| unknown.is_some())
-                        .map(|(unknown, known)| (unknown.unwrap(), known))
-                        .collect::<HashMap<_, _>>(),
-                )
+                Some(res)
             }
             _ => None,
         }
