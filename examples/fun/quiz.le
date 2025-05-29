@@ -1,8 +1,4 @@
-use std/collections/array;
-use std/io;
-use std/rand;
-use std/time;
-use std/cast;
+use std/prelude;
 
 const QUESTION_COUNT = 10;
 const LARGEST_INT = 12;
@@ -10,54 +6,47 @@ const LARGEST_INT = 12;
 struct Question {
     string display,
     i32 answer,
-    i32 input,
     i32 index,
+    @unused i32 input,
 }
 
-fn Question::new(Operation *[] operators, i32 index) {
-    let self = #alloc(Question);
-    let lhs = rand::random(1, LARGEST_INT);
-    let rhs = rand::random(1, LARGEST_INT);
-    let operator = rand::random(0, operators.len() - 1);
+fn Question::new(Operation[] operators, i32 index) {
+    lhs, rhs := $(
+        rand::random(1, LARGEST_INT),
+        rand::random(1, LARGEST_INT)
+    );
 
-    let operation = operators[operator];
-    fn *func = operation.func;
+    operator := rand::random(0, operators.len() - 1);
+    operation := operators[operator];
+    cb := operation.cb;
 
-    self.display = "What is {} {} {}? -> ".format(lhs, operation.display, rhs);
-    self.answer = func(lhs, rhs);
-    self.index = index;
-
-    return self;
+    return Question {
+        display = "What is {} {} {}? -> ".format(lhs, operation.kind, rhs),
+        answer = cb(lhs, rhs),
+        index = index
+    };
 }
 
-struct Operation {
-    string display,
-    void *func,
-}
-
-fn Operation::new(string display, fn *func) {
-    let op = #alloc(Operation);
-    op.display = display;
-    op.func = func;
-
-    return op;
+struct Operation @nofmt {
+    string kind,
+    fn(i32, i32) -> i32 cb,
 }
 
 fn main() {
     rand::seed(time(nil));
-    Question *[] incorrect = [];
+    incorrect := [Question;];
 
-    let operations = [
-        Operation::new("+", fn(i32 a, i32 b) a + b),
-        Operation::new("-", fn(i32 a, i32 b) a - b),
-        Operation::new("*", fn(i32 a, i32 b) a * b),
-        Operation::new("/", fn(i32 a, i32 b) a / b)
+    operations := [
+        Operation { kind = "+", cb = fn(a, b) a + b },
+        Operation { kind = "-", cb = fn(a, b) a - b },
+        Operation { kind = "*", cb = fn(a, b) a * b },
+        Operation { kind = "/", cb = fn(a, b) a / b }
     ];
 
-    for let i = 0; i < QUESTION_COUNT; i += 1 {
-        let question = Question::new(operations, i);
-        let input = io::input("({}/{}) {}".format(i + 1, QUESTION_COUNT, question.display));
-        let answer = 0;
+    for i := 0; i < QUESTION_COUNT; i += 1 {
+        question := Question::new(operations, i);
+        input := io::input("({}/{}) {}".format(i + 1, QUESTION_COUNT, question.display));
+        answer := 0;
 
         if !i32::try_parse(input, &answer) || answer != question.answer {
             question.input = answer;
@@ -65,7 +54,7 @@ fn main() {
         }
     }
 
-    let correct = QUESTION_COUNT - incorrect.len();
+    correct := QUESTION_COUNT - incorrect.len();
     io::printf("\nYou answered {}/{} questions correctly!", correct, QUESTION_COUNT);
     io::printf(
         "That's {}%. Congrats!",

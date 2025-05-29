@@ -5,20 +5,17 @@ use shared;
 const BUF_SIZE = 1024;
 
 fn main() {
-    port := 8080;
-    client := TcpClient::connect("127.0.0.1", port);
+    client := TcpClient::connect("127.0.0.1", port := 8080);
 
-    while client.is_err_and(fn(Errno err) err == Errno::ELOOP || err == Errno::ECONNREFUSED) {
-        port += 1;
-        client = TcpClient::connect("127.0.0.1", port);
+    while client.is_err_and(fn(err) [Errno::ELOOP, Errno::ECONNREFUSED].contains(err)) {
+        client = TcpClient::connect("127.0.0.1", port += 1);
     }
 
     client := client.unwrap();
     defer client.close().unwrap();
 
-    buf := Array::with_capacity<u8>(BUF_SIZE).filled();
+    buf := Array::bytes(BUF_SIZE);
     client.read(buf).unwrap();
-
     foo := Foo::from_bytes(buf);
     $printf("Received {}", foo);
 }

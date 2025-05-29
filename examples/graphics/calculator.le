@@ -21,16 +21,16 @@ struct State {
     i32 rhs,
 }
 
-struct Button {
+struct Button @nofmt {
     string kind,
-    fn *cb,
+    fn(Button *, State *) cb,
 }
 
-fn Button::new(string kind, fn *cb) {
-    self := #alloc(Button);
-    self.kind = kind;
-    self.cb = cb;
-    return self;
+fn Button::new<T>(string kind, fn(Button *, State *) -> T cb) {
+    return Button {
+        kind = kind,
+        cb = #cast(fn(Button *, State *), cb)
+    };
 }
 
 fn Button::draw(Button *self, State *state, (i32, i32) offset) {
@@ -47,7 +47,7 @@ fn Button::draw(Button *self, State *state, (i32, i32) offset) {
     button_color := hovering ? BUTTON_HOVER : BUTTON_UNHOVER;
 
     if hovering && rl::is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
-        fn *cb = self.cb;
+        cb := self.cb;
         cb(self, state);
     }
 
@@ -80,8 +80,8 @@ fn State::perform_computation(State *self) {
         self.rhs = i32::parse(self.input);
     }
 
-    fn *cb = mapping[self.op];
-    res := #cast(i32, cb(self));
+    cb := mapping[self.op];
+    res := cb(self);
     self.lhs = res;
     self.input = "{}".format(res);
 }
@@ -116,28 +116,28 @@ fn State::clear(State *self) {
 fn State::draw_buttons(State *self) {
     button_map := [
         [
-            Button::new("1", fn(Button *self, State *state) state.input <>= self.kind),
-            Button::new("2", fn(Button *self, State *state) state.input <>= self.kind),
-            Button::new("3", fn(Button *self, State *state) state.input <>= self.kind),
-            Button::new("+", fn(Button *self, State *state) state.handle_operation(self)),
+            Button::new("1", fn(self, state) state.input <>= self.kind),
+            Button::new("2", fn(self, state) state.input <>= self.kind),
+            Button::new("3", fn(self, state) state.input <>= self.kind),
+            Button::new("+", fn(self, state) state.handle_operation(self)),
         ],
         [
-            Button::new("4", fn(Button *self, State *state) state.input <>= self.kind),
-            Button::new("5", fn(Button *self, State *state) state.input <>= self.kind),
-            Button::new("6", fn(Button *self, State *state) state.input <>= self.kind),
-            Button::new("-", fn(Button *self, State *state) state.handle_operation(self)),
+            Button::new("4", fn(self, state) state.input <>= self.kind),
+            Button::new("5", fn(self, state) state.input <>= self.kind),
+            Button::new("6", fn(self, state) state.input <>= self.kind),
+            Button::new("-", fn(self, state) state.handle_operation(self)),
         ],
         [
-            Button::new("7", fn(Button *self, State *state) state.input <>= self.kind),
-            Button::new("8", fn(Button *self, State *state) state.input <>= self.kind),
-            Button::new("9", fn(Button *self, State *state) state.input <>= self.kind),
-            Button::new("*", fn(Button *self, State *state) state.handle_operation(self)),
+            Button::new("7", fn(self, state) state.input <>= self.kind),
+            Button::new("8", fn(self, state) state.input <>= self.kind),
+            Button::new("9", fn(self, state) state.input <>= self.kind),
+            Button::new("*", fn(self, state) state.handle_operation(self)),
         ],
         [
-            Button::new("x", fn(Button *self, State *state) state.clear()),
-            Button::new("0", fn(Button *self, State *state) state.input <>= self.kind),
-            Button::new("=", fn(Button *self, State *state) state.perform_computation()),
-            Button::new("/", fn(Button *self, State *state) state.handle_operation(self)),
+            Button::new("x", fn(self, state) state.clear()),
+            Button::new("0", fn(self, state) state.input <>= self.kind),
+            Button::new("=", fn(self, state) state.perform_computation()),
+            Button::new("/", fn(self, state) state.handle_operation(self)),
         ],
     ];
 

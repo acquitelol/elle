@@ -1,7 +1,7 @@
 use std/prelude;
 
 fn Array::print(bool[] board) {
-    $println(board.map<char>(fn(bool x) x ? '#' : '.').join(""));
+    $println(board.map(fn(x) x ? '#' : '.').join(""));
 }
 
 fn main() {

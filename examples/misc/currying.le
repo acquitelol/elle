@@ -1,20 +1,17 @@
-use std/io;
+use std/prelude;
 
-struct Env { i32 a }
-struct Function { Env env, void *func }
+struct FnEnv { i32 a }
+struct Function @nofmt { FnEnv env, fn(FnEnv, i32) -> i32 func }
 
 fn add(i32 a) {
-    let env = Env { a = a };
-    let func = fn(Env env, i32 b) env.a + b;
-
     return Function {
-        func = func,
-        env = env
+        env = FnEnv { a = a },
+        func = fn(env, b) env.a + b
     };
 }
 
 fn main() {
-    let res = add(13);
-    fn *curried = res.func;
-    $dbg(#cast(i32, curried(res.env, 26)));
+    res := add(13);
+    curried := res.func;
+    $dbg(curried(res.env, 26));
 }

@@ -8,7 +8,7 @@ pub struct Foo {
 }
 
 fn Foo::to_bytes(Foo self) -> u8[] {
-    res := [];
+    res := [u8;];
 
     res.extend([self.x].to_bytes());
     res.extend([self.y.len()].to_bytes());

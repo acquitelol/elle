@@ -1,22 +1,25 @@
 use std/prelude;
 use std/net/tcp;
 
-const PORT = 8080;
-const BUFFER_SIZE = 1024;
+const BUF_SIZE = 1024;
 
 fn main() {
-    server := TcpServer::bind(PORT).expect("Failed to bind server");
-    defer server.close().expect("Failed to close server");
+    server := TcpServer::bind(port := 8080);
 
-    $printf("Server is listening on port {}", PORT);
+    while server.is_err_and(fn(err) err == Errno::EADDRINUSE) {
+        server = TcpServer::bind(port += 1);
+    }
 
-    buffer := Array::with_capacity<char>(BUFFER_SIZE).filled();
-    connection := server.accept().expect("Failed to accept connection");
-    defer connection.close().expect("Failed to close connection");
+    server := server.unwrap();
+    defer server.close().unwrap();
+    $printf("Server is listening on port {}", port);
 
-    while (_, received := connection.read(buffer)) && received != 0 {
-        slice := buffer.slice(0, received);
-        $printf("Received {} bytes: {}", received, slice.join("").replace("\n", ""));
-        connection.write(slice).expect("Failed to send response");
+    connection := server.accept().unwrap();
+    defer connection.close().unwrap();
+    buf := Array::bytes(BUF_SIZE);
+
+    while (_, received := connection.read(buf)) && received != 0 {
+        $printf("Received {} bytes: {}", received, buf.join("").replace("\n", ""));
+        connection.write(buf).expect("Failed to send response");
     }
 }

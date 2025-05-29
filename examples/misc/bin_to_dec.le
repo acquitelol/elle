@@ -4,7 +4,7 @@ fn main() {
     for ;; {
         bin := Array::from_string(io::input("Enter a binary string: "));
 
-        if !bin.every(fn(char x) "01".contains(x)) {
+        if !bin.every(fn(x) "01".contains(x)) {
             $eprintf("Invalid string: {}", bin);
             continue;
         }

@@ -7,7 +7,7 @@ const BUTTON_UNHOVER = rl::get_color(0x777777FF);
 const BUTTON_HOVER = rl::get_color(0x555555FF);
 const BACKGROUND = rl::get_color(0x333333FF);
 
-fn render_button(string text, f32 y_offset, Vector2 mouse_pos, i32 *counter, fn *action) {
+fn render_button<T, U>(string text, f32 y_offset, Vector2 mouse_pos, U counter, fn(U) -> T action) {
     button := Rectangle {
         x = (SCREEN_WIDTH - rl::measure_text(text, 20) - 30) / 2,
         y = (SCREEN_HEIGHT - 40 * 2 * y_offset) / 2.0,
@@ -41,9 +41,9 @@ fn main() {
         rl::clear_background(BACKGROUND);
         mouse_pos := rl::get_mouse_position();
 
-        render_button("Increment", 1, mouse_pos, &counter, fn(i32 *counter) { *counter += 1; });
-        render_button("Decrement", -0.35, mouse_pos, &counter, fn(i32 *counter) { *counter -= 1; });
-        render_button("Reset", -1.7, mouse_pos, &counter, fn(i32 *counter) { *counter = 0; });
+        render_button("Increment", 1,     mouse_pos, &counter, fn(counter) { return *counter += 1; });
+        render_button("Decrement", -0.35, mouse_pos, &counter, fn(counter) { return *counter -= 1; });
+        render_button("Reset",     -1.7,  mouse_pos, &counter, fn(counter) { return *counter = 0;  });
 
         count := "Counter: {}".format(counter);
         rl::draw_text(count, (SCREEN_WIDTH - rl::measure_text(count, 40)) / 2, 100, 40, WHITE);

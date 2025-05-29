@@ -33,16 +33,16 @@ struct State {
     StateKind winner,
 }
 
-struct Button {
+struct Button @nofmt {
     i32 index,
-    fn *cb,
+    fn(Button *, State *) cb,
 }
 
-fn Button::new(i32 index, fn *cb) {
-    self := #alloc(Button);
-    self.index = index;
-    self.cb = cb;
-    return self;
+fn Button::new(i32 index, fn(Button *, State *) cb) {
+    return Button {
+        index = index,
+        cb = #cast(fn(Button *, State *), cb)
+    };
 }
 
 fn Button::draw(Button *self, State *state, string text, i32 font_size, i32 line_thickness, Rectangle button) {
@@ -52,7 +52,7 @@ fn Button::draw(Button *self, State *state, string text, i32 font_size, i32 line
     button_color := hovering ? BUTTON_HOVER : BUTTON_UNHOVER;
 
     if hovering && rl::is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
-        fn *cb = self.cb;
+        cb := self.cb;
         cb(self, state);
     }
 
@@ -101,7 +101,7 @@ fn State::check_winner(State *self) {
         }
     }
 
-    if self.board.every(fn(StateKind x) x != StateKind::Empty)
+    if self.board.every(fn(x) x != StateKind::Empty)
         && self.winner == StateKind::Empty
     {
         self.winner = StateKind::Draw;
@@ -123,7 +123,7 @@ fn State::make_move(State *self, Button *button) {
 
 fn State::draw_board(State *self) {
     for i in 0..9 {
-        btn := Button::new(i, fn(Button *self, State *state) state.make_move(self));
+        btn := Button::new(i, fn(self, state) { state.make_move(self); });
         btn.draw_contextual(self, $(i % 3, i / 3));
     }
 
@@ -137,7 +137,7 @@ fn State::draw_board(State *self) {
             TEXT_SIZE, WHITE
         );
 
-        new_game := Button::new(-1, fn(Button *self, State *state) {
+        new_game := Button::new(-1, fn(self, state) {
             state.board.fill(StateKind::Empty);
             state.current_player = StateKind::X;
             state.winner = StateKind::Empty;
