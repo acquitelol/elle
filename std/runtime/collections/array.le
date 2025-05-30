@@ -271,7 +271,7 @@ fn Array::contains<T>(T[] self, T element) {
 
 // Take all the elements of another Array<T> and push them into this Array<T>
 fn Array::extend<T>(T[] self, T[] other) {
-    for i := 0; i < self.len(); i += 1 {
+    for i := 0; i < other.len(); i += 1 {
         self.push(other[i]);
     }
 }
