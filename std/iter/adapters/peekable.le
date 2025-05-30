@@ -23,7 +23,10 @@ fn Iterator::peekable<T, AnyEnded>(Iterator<T, AnyEnded> self) -> Iterator<T, An
 
             return env.base.next();
         },
-        next_back = nil
+        next_back = self.next_back ? fn(Peekable<T, AnyEnded> *env) {
+            base := *#cast(Iterator<T, DoubleEnded> *, &env.base);
+            return base.next_back();
+        } : nil
     };
 }
 
