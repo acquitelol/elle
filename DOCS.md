@@ -2402,3 +2402,62 @@ for i, x in (1..10).enumerate() {
     $dbg(x);
 }
 ```
+
+You can also iterate over types that implement the `__iter__` method. Some of these include:
+
+- `Array<T>`
+- `HashSet<T>`
+- `HashMap<T, U>`
+- `string`
+
+Iterators can be both `SingleEnded` or `DoubleEnded` (can be yielded from the back of the iterator). This is enforced with a Type-based phantom generic on the `Iterator<T, AnyEnded>` type.
+
+A method which returns `AnyEnded` may accept both a `SingleEnded` or a `DoubleEnded` iterator. The result will be the same type as the one that was passed in.
+
+Iterators have some base methods which mutate or consume the iterator. These (as of 0.68.0) include:
+
+| Method        | `???Ended`  | Description                                                                                         |
+| ------------- | ----------- | --------------------------------------------------------------------------------------------------- |
+| next          | AnyEnded    | Yields the next value from the front of the iterator.                                               |
+| next_back     | DoubleEnded | Yields the next value from the back of the iterator, if it is `DoubleEnded`.                        |
+| count         | AnyEnded    | Counts however many items are left in the iterator, consuming it.                                   |
+| fold          | AnyEnded    | Reduces the iterator to a single value by calling it with an accumulator and current value.         |
+| sum           | AnyEnded    | Adds together all of the values inside of the iterator into a single number.                        |
+| product       | AnyEnded    | Multiplies together all of the values inside of the iterator into a single number.                  |
+| max           | AnyEnded    | Finds the largest value in the iterator, consuming it. If no value is found, returns None.          |
+| min           | AnyEnded    | Finds the smallest value in the iterator, consuming it. If no value is found, returns None.         |
+| nth           | AnyEnded    | Skips `n` elements from the iterator provided, then returns the next value from it.                 |
+| last          | AnyEnded    | Returns the last value from the iterator provided, consuming it.                                    |
+| collect       | AnyEnded    | Collects the iterator's values into an array of the same type, consuming it.                        |
+| single        | DoubleEnded | Turns a DoubleEnded iterator into a SingleEnded one.                                                |
+| find_with     | AnyEnded    | Attempts to find the value in the iterator provided with the predicate and arg provided.            |
+| find          | AnyEnded    | Attempts to find the value in the iterator provided with the predicate.                             |
+| any_with      | AnyEnded    | Returns true if the predicate holds true for any value in the iterator, with an arg passed to it.   |
+| any           | AnyEnded    | Returns true if the predicate holds true for any value in the iterator.                             |
+| all_with      | AnyEnded    | Returns true if the predicate holds true for all values in the iterator, with an arg passed to it.  |
+| all           | AnyEnded    | Returns true if the predicate holds true for all values in the iterator.                            |
+| position_with | AnyEnded    | Returns the index of the first occurence when the predicate returns true, with an arg passed to it. |
+| position      | AnyEnded    | Returns the index of the first occurence when the predicate returns true.                           |
+
+Iterators are powerful in that they can have adapters applied to them, to perform many operations lazily.
+
+These (as of 0.68.0) include:
+
+| Adapter     | `???Ended`  | Description                                                                                                                                          |
+| ----------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| once        | SingleEnded | Takes a value and yields it lazily a single time.                                                                                                    |
+| range       | DoubleEnded | Creates an iterable range between 2 values, optionally including the end. There is also syntax sugar for this in the form of `x..y` and `x..=y`.     |
+| iota        | SingleEnded | Yields infinitely from the `start` parameter provided.                                                                                               |
+| filter      | AnyEnded    | Filters the values from the iterator passed in with the predicate provided.                                                                          |
+| map         | AnyEnded    | Projects the values from the iterator passed in with the callback provided.                                                                          |
+| rev         | DoubleEnded | Switches `next` with `next_back`, essentially allowing for yielding from the back of the iterator.                                                   |
+| take        | AnyEnded    | Takes `n` elements from the iterator provided. If the iterator has less than `n` elements in it, `Take` will yield however many elements are left.   |
+| chunks      | AnyEnded    | Splits the elements from the iterator into `n` sized collected arrays of `T`. If there isn't an even split, the last array will have `< n` items.    |
+| windows     | AnyEnded    | Returns a sliding window over the iterator of size `n`. If `n` is larger than the length of the iterator, this will yield nothing.                   |
+| cycle       | SingleEnded | Accepts any `Iterator<T, AnyEnded>` and a generator for any `Iterator<T, AnyEnded>. Replaces old iterator once it runs out by calling the generator. |
+| intersperse | SingleEnded | Accepts any `Iterator<T, AnyEnded>` and yields the value provided each odd yield. `(0..3).intersperse(99).collect()` == `[0, 99, 1, 99, 2]`.         |
+| skip        | AnyEnded    | Returns a new iterator which skips `n` elements from the iterator provided.                                                                          |
+| enumerate   | SingleEnded | Accepts any iterator and yields values from it along with an index, in a tuple. `["a", "b"].iter().enumerate().collect()` == `[(0, a), (1, b)]`.     |
+| zip         | AnyEnded    | Accepts any 2 iterators which may yield different values and yields a tuple of a value from each one. Stops whenever one has no values left.         |
+| chain       | AnyEnded    | Accepts any 2 iterators which yield the same type and yields iterators from the second iterator once the first has no values left.                   |
+| peekable    | AnyEnded    | Accepts any iterator and allows peeking values from the front of it.                                                                                 |
