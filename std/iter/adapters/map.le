@@ -1,25 +1,25 @@
 use std/iter/core;
 global pub;
 
-struct Map<T, U, Env, TEnded> {
-    Iterator<T, Env, TEnded> base,
+struct Map<T, U, AnyEnded> {
+    Iterator<T, AnyEnded> base,
     fn(T) -> U cb
 }
 
-fn Iterator::map<T, U, Env, TEnded>(
-    Iterator<T, Env, TEnded> self,
+fn Iterator::map<T, U, AnyEnded>(
+    Iterator<T, AnyEnded> self,
     fn(T) -> U cb
-) -> Iterator<U, Map<T, U, Env, TEnded>, TEnded> {
-    Map<T, U, Env, TEnded> map = Map {
+) -> Iterator<U, AnyEnded> {
+    Map<T, U, AnyEnded> map = Map {
         base = self,
         cb = cb
     };
 
     return Iterator {
-        env = Box::new(map),
-        next = fn(env) env.base.next().map(env.cb),
-        next_back = self.next_back ? fn(env) {
-            base := *#cast(Iterator<T, Env, DoubleEnded> *, &env.base);
+        env = Box::new(map).to_ptr(),
+        next = fn(Map<T, U, AnyEnded> *env) env.base.next().map(env.cb),
+        next_back = self.next_back ? fn(Map<T, U, AnyEnded> *env) {
+            base := *#cast(Iterator<T, DoubleEnded> *, &env.base);
             return base.next_back().map(env.cb);
         } : nil
     };

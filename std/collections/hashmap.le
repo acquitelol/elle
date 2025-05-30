@@ -265,12 +265,12 @@ struct HashMapEnv<T, U> {
     u64 i
 }
 
-fn HashMap::keys<T, U>(HashMap<T, U> *self) -> Iterator<T, HashMapEnv<T, U>, SingleEnded> {
+fn HashMap::keys<T, U>(HashMap<T, U> *self) -> Iterator<T, SingleEnded> {
     HashMapEnv<T, U> env = HashMapEnv { base = self, i = 0 };
 
     return Iterator {
-        env = Box::new(env),
-        next = fn(env) {
+        env = Box::new(env).to_ptr(),
+        next = fn(HashMapEnv<T, U> *env) {
             while env.i < env.base.table.len() {
                 if env.base.table[env.i].full {
                     key := env.base.table[env.i].key;
@@ -285,12 +285,12 @@ fn HashMap::keys<T, U>(HashMap<T, U> *self) -> Iterator<T, HashMapEnv<T, U>, Sin
     };
 }
 
-fn HashMap::values<T, U>(HashMap<T, U> *self) -> Iterator<U, HashMapEnv<T, U>, SingleEnded> {
+fn HashMap::values<T, U>(HashMap<T, U> *self) -> Iterator<U, SingleEnded> {
     HashMapEnv<T, U> env = HashMapEnv { base = self, i = 0 };
 
     return Iterator {
-        env = Box::new(env),
-        next = fn(env) {
+        env = Box::new(env).to_ptr(),
+        next = fn(HashMapEnv<T, U> *env) {
             while env.i < env.base.table.len() {
                 if env.base.table[env.i].full {
                     value := env.base.table[env.i].value;
@@ -305,12 +305,12 @@ fn HashMap::values<T, U>(HashMap<T, U> *self) -> Iterator<U, HashMapEnv<T, U>, S
     };
 }
 
-fn HashMap::__iter__<T, U>(HashMap<T, U> *self) -> Iterator<(T, U), HashMapEnv<T, U>, SingleEnded> {
+fn HashMap::__iter__<T, U>(HashMap<T, U> *self) -> Iterator<(T, U), SingleEnded> {
     HashMapEnv<T, U> env = HashMapEnv { base = self, i = 0 };
 
     return Iterator {
-        env = Box::new(env),
-        next = fn(env) {
+        env = Box::new(env).to_ptr(),
+        next = fn(HashMapEnv<T, U> *env) {
             while env.i < env.base.table.len() {
                 if env.base.table[env.i].full {
                     key := env.base.table[env.i].key;
@@ -326,8 +326,5 @@ fn HashMap::__iter__<T, U>(HashMap<T, U> *self) -> Iterator<(T, U), HashMapEnv<T
     };
 }
 
-external fn HashMap::__iter__<T, U>(HashMap<T, U> *self) @alias(HashMap::iter)
-    -> Iterator<(T, U), HashMapEnv<T, U>, SingleEnded>;
-
-external fn HashMap::__iter__<T, U>(HashMap<T, U> *self) @alias(HashMap::entries)
-    -> Iterator<(T, U), HashMapEnv<T, U>, SingleEnded>;
+external fn HashMap::__iter__<T, U>(HashMap<T, U> *self) @alias(HashMap::iter) -> Iterator<(T, U), SingleEnded>;
+external fn HashMap::__iter__<T, U>(HashMap<T, U> *self) @alias(HashMap::entries) -> Iterator<(T, U), SingleEnded>;

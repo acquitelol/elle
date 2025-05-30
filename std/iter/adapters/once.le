@@ -6,20 +6,20 @@ struct Once<T> {
     bool consumed
 }
 
-fn Iterator::once<T>(T value) -> Iterator<T, Once<T>, SingleEnded> {
+fn Iterator::once<T>(T value) -> Iterator<T, SingleEnded> {
     Once<T> once = Once {
         value = value,
         consumed = false
     };
 
     return Iterator {
-        env = Box::new(once),
-        next = fn(env) {
+        env = Box::new(once).to_ptr(),
+        next = fn(Once<T> *env) {
             if env.consumed {
-                return Option::None<T>();
+                return None<T>();
             } else {
                 env.consumed = !env.consumed;
-                return Option::Some(env.value);
+                return Some(env.value);
             }
         },
         next_back = nil

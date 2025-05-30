@@ -1,9 +1,9 @@
 use std/prelude;
 
 fn `next.works`() {
-    Iterator<i32, i32, SingleEnded> iter = Iterator {
-        env = Box::new(0),
-        next = fn(env) Option::Some(*env += 1),
+    Iterator<i32, SingleEnded> iter = Iterator {
+        env = Box::new(0).to_ptr(),
+        next = fn(i32 *env) Option::Some(*env += 1),
         next_back = nil
     };
 
@@ -14,10 +14,10 @@ fn `next.works`() {
 }
 
 fn `next_back.works`() {
-    Iterator<i32, i32, DoubleEnded> iter = Iterator {
-        env = Box::new(0),
-        next = fn(env) Option::Some(*env += 1),
-        next_back = fn(env) Option::Some(*env += 2)
+    Iterator<i32, DoubleEnded> iter = Iterator {
+        env = Box::new(0).to_ptr(),
+        next = fn(i32 *env) Option::Some(*env += 1),
+        next_back = fn(i32 *env) Option::Some(*env += 2)
     };
 
     // This is not how an iterator works, but for

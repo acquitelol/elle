@@ -1,13 +1,13 @@
 use std/iter/core;
 global pub;
 
-fn Iterator::iota<T>(T start) -> Iterator<T, T, SingleEnded> {
+fn Iterator::iota<T>(T start) -> Iterator<T, SingleEnded> {
     return Iterator {
-        env = Box::new(start),
-        next = fn(env) {
+        env = Box::new(start).to_ptr(),
+        next = fn(T *env) {
             val := *env;
             *env += 1;
-            return Option::Some(val);
+            return Some(val);
         },
         next_back = nil
     };

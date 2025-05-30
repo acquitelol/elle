@@ -1,29 +1,29 @@
 use std/iter/core;
 global pub;
 
-struct Chunks<T, Env, TEnded> {
-    Iterator<T, Env, TEnded> base,
+struct Chunks<T, AnyEnded> {
+    Iterator<T, AnyEnded> base,
     u64 n
 }
 
-fn Iterator::chunks<T, Env, TEnded>(
-    Iterator<T, Env, TEnded> self,
+fn Iterator::chunks<T, AnyEnded>(
+    Iterator<T, AnyEnded> self,
     u64 n
-) -> Iterator<T[], Chunks<T, Env, TEnded>, TEnded> {
-    Chunks<T, Env, TEnded> chunks = Chunks {
+) -> Iterator<T[], AnyEnded> {
+    Chunks<T, AnyEnded> chunks = Chunks {
         base = self,
         n = n
     };
 
     return Iterator {
-        env = Box::new(chunks),
-        next = fn(env) {
+        env = Box::new(chunks).to_ptr(),
+        next = fn(Chunks<T, AnyEnded> *env) {
             res := env.base.take(env.n).collect();
-            return res.is_empty() ? Option::None<T[]>() : Option::Some(res);
+            return res.is_empty() ? None<T[]>() : Some(res);
         },
-        next_back = self.next_back ? fn(env) {
+        next_back = self.next_back ? fn(Chunks<T, AnyEnded> *env) {
             res := env.base.take(env.n).collect();
-            return res.is_empty() ? Option::None<T[]>() : Option::Some(res);
+            return res.is_empty() ? None<T[]>() : Some(res);
         } : nil
     };
 }

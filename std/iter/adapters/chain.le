@@ -1,25 +1,25 @@
 use std/iter/core;
 global pub;
 
-struct Chain<T, TEnv, UEnv, TEnded> {
-    Iterator<T, TEnv, TEnded> a,
-    Iterator<T, UEnv, TEnded> b,
+struct Chain<T, AnyEnded> {
+    Iterator<T, AnyEnded> a,
+    Iterator<T, AnyEnded> b,
     bool exhausted,
 }
 
-fn Iterator::chain<T, TEnv, UEnv, TEnded>(
-    Iterator<T, TEnv, TEnded> a,
-    Iterator<T, UEnv, TEnded> b
-) -> Iterator<T, Chain<T, TEnv, UEnv, TEnded>, TEnded> {
-    Chain<T, TEnv, UEnv, TEnded> chain = Chain {
+fn Iterator::chain<T, AnyEnded>(
+    Iterator<T, AnyEnded> a,
+    Iterator<T, AnyEnded> b
+) -> Iterator<T, AnyEnded> {
+    Chain<T, AnyEnded> chain = Chain {
         a = a,
         b = b,
         exhausted = false
     };
 
     return Iterator {
-        env = Box::new(chain),
-        next = fn(env) {
+        env = Box::new(chain).to_ptr(),
+        next = fn(Chain<T, AnyEnded> *env) {
             if !env.exhausted {
                 val := env.a.next();
 
@@ -32,9 +32,9 @@ fn Iterator::chain<T, TEnv, UEnv, TEnded>(
 
             return env.b.next();
         },
-        next_back = a.next_back && b.next_back ? fn(env) {
-            a := *#cast(Iterator<T, TEnv, DoubleEnded> *, &env.a);
-            b := *#cast(Iterator<T, UEnv, DoubleEnded> *, &env.b);
+        next_back = a.next_back && b.next_back ? fn(Chain<T, AnyEnded> *env) {
+            a := *#cast(Iterator<T, DoubleEnded> *, &env.a);
+            b := *#cast(Iterator<T, DoubleEnded> *, &env.b);
             val := b.next_back();
 
             if val.is_some() {

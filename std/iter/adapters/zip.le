@@ -1,41 +1,41 @@
 use std/iter/core;
 global pub;
 
-struct Zip<T, U, TEnv, UEnv, TEnded> {
-    Iterator<T, TEnv, TEnded> a,
-    Iterator<U, UEnv, TEnded> b,
+struct Zip<T, U, AnyEnded> {
+    Iterator<T, AnyEnded> a,
+    Iterator<U, AnyEnded> b,
 }
 
-fn Iterator::zip<T, U, TEnv, UEnv, TEnded>(
-    Iterator<T, TEnv, TEnded> a,
-    Iterator<U, UEnv, TEnded> b
-) -> Iterator<(T, U), Zip<T, U, TEnv, UEnv, TEnded>, TEnded> {
-    Zip<T, U, TEnv, UEnv, TEnded> zip = Zip {
+fn Iterator::zip<T, U, AnyEnded>(
+    Iterator<T, AnyEnded> a,
+    Iterator<U, AnyEnded> b
+) -> Iterator<(T, U), AnyEnded> {
+    Zip<T, U, AnyEnded> zip = Zip {
         a = a,
         b = b,
     };
 
     return Iterator {
-        env = Box::new(zip),
-        next = fn(env) {
+        env = Box::new(zip).to_ptr(),
+        next = fn(Zip<T, U, AnyEnded> *env) {
             val_a, val_b := $(env.a.next(), env.b.next());
 
             if val_a.is_none() || val_b.is_none() {
-                return Option::None<(T, U)>();
+                return None<(T, U)>();
             }
 
             return Option::Some($(val_a.unwrap(), val_b.unwrap()));
         },
-        next_back = a.next_back && b.next_back ? fn(env) {
-            a := *#cast(Iterator<T, TEnv, DoubleEnded> *, &env.a);
-            b := *#cast(Iterator<U, UEnv, DoubleEnded> *, &env.b);
-            val_a, val_b := $(a.next_back(), b.next_back());
+        next_back = a.next_back && b.next_back ? fn(Zip<T, U, AnyEnded> *env) {
+            a := *#cast(Iterator<T, DoubleEnded> *, &env.a);
+            b := *#cast(Iterator<U, DoubleEnded> *, &env.b);
+            a, b := $(a.next_back(), b.next_back());
 
-            if val_a.is_none() || val_b.is_none() {
-                return Option::None<(T, U)>();
+            if a.is_none() || b.is_none() {
+                return None<(T, U)>();
             }
 
-            return Option::Some($(val_a.unwrap(), val_b.unwrap()));
+            return Option::Some($(a.unwrap(), b.unwrap()));
         } : nil
     };
 }

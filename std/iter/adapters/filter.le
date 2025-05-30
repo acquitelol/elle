@@ -1,28 +1,28 @@
 use std/iter/core;
 global pub;
 
-struct Filter<T, Env, TEnded> {
-    Iterator<T, Env, TEnded> base,
+struct Filter<T, AnyEnded> {
+    Iterator<T, AnyEnded> base,
     fn(T) -> bool predicate
 }
 
-fn Iterator::filter<T, Env, TEnded>(
-    Iterator<T, Env, TEnded> self,
+fn Iterator::filter<T, AnyEnded>
+    (Iterator<T, AnyEnded> self,
     fn(T) -> bool predicate
-) -> Iterator<T, Filter<T, Env, TEnded>, TEnded> {
-    Filter<T, Env, TEnded> filter = Filter {
+) -> Iterator<T, AnyEnded> {
+    Filter<T, AnyEnded> filter = Filter {
         base = self,
         predicate = predicate,
     };
 
     return Iterator {
-        env = Box::new(filter),
-        next = fn(env) {
+        env = Box::new(filter).to_ptr(),
+        next = fn(Filter<T, AnyEnded> *env) {
             for ;; {
                 val := env.base.next();
 
                 if val.is_none() {
-                    return Option::None<T>();
+                    return None<T>();
                 }
 
                 cb := env.predicate;
@@ -31,13 +31,13 @@ fn Iterator::filter<T, Env, TEnded>(
                 }
             }
         },
-        next_back = self.next_back ? fn(env) {
+        next_back = self.next_back ? fn(Filter<T, AnyEnded> *env) {
             for ;; {
-                base := *#cast(Iterator<T, Env, DoubleEnded> *, &env.base);
+                base := *#cast(Iterator<T, DoubleEnded> *, &env.base);
                 val := base.next_back();
 
                 if val.is_none() {
-                    return Option::None<T>();
+                    return None<T>();
                 }
 
                 cb := env.predicate;

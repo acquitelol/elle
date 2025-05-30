@@ -7,34 +7,36 @@ global pub;
 namespace SingleEnded;
 namespace DoubleEnded;
 
-struct Iterator<T, Env, TEnded> @nofmt {
-    Box<Env> env,
-    fn(Env *) -> Option<T> next,
+struct Iterator<T, AnyEnded> @nofmt {
+    // type erasure to prevent super nested chains
+    // of iterators having really long generics
+    void *env,
+    fn(void *) -> Option<T> next,
     // !! nil if iterator is not DoubleEnded !!
     // unfortunately no good way to enforce this
     // than to use an Option<T> but that has its
     // own downsides and isnt always ideal
-    fn(Env *) -> Option<T> next_back
+    fn(void *) -> Option<T> next_back
 }
 
-fn Iterator::__fmt__<T, Env, TEnded>(Iterator<T, Env, TEnded> self, i32 nesting) {
+fn Iterator::__fmt__<T, AnyEnded>(Iterator<T, AnyEnded> self, i32 nesting) {
     return "<Iterator({}) at {}>".format(
         TypeInfo::type_of<T>(),
         string::as_string(#cast(void *, self))
     );
 }
 
-fn Iterator::next<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
+fn Iterator::next<T, AnyEnded>(Iterator<T, AnyEnded> self) {
     cb := self.next;
-    return cb(self.env.to_ptr());
+    return cb(self.env);
 }
 
-fn Iterator::next_back<T, Env>(Iterator<T, Env, DoubleEnded> self) {
+fn Iterator::next_back<T>(Iterator<T, DoubleEnded> self) {
     cb := self.next_back;
-    return cb(self.env.to_ptr());
+    return cb(self.env);
 }
 
-fn Iterator::count<T, Env, TEnded>(Iterator<T, Env, TEnded> self) -> u64 {
+fn Iterator::count<T, AnyEnded>(Iterator<T, AnyEnded> self) -> u64 {
     u64 n = 0;
 
     while self.next().is_some() {
@@ -44,7 +46,7 @@ fn Iterator::count<T, Env, TEnded>(Iterator<T, Env, TEnded> self) -> u64 {
     return n;
 }
 
-fn Iterator::fold<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, U initial, fn(U, T) -> U cb) {
+fn Iterator::fold<T, U, AnyEnded>(Iterator<T, AnyEnded> self, U initial, fn(U, T) -> U cb) {
     while _, val := self.next() {
         initial = cb(initial, val);
     }
@@ -52,15 +54,15 @@ fn Iterator::fold<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, U initial, f
     return initial;
 }
 
-fn Iterator::sum<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
+fn Iterator::sum<T, AnyEnded>(Iterator<T, AnyEnded> self) {
     return self.fold(0, fn(acc, cur) acc + cur);
 }
 
-fn Iterator::product<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
+fn Iterator::product<T, AnyEnded>(Iterator<T, AnyEnded> self) {
     return self.fold(1, fn(acc, cur) acc * cur);
 }
 
-fn Iterator::max<T, Env, TEnded>(Iterator<T, Env, TEnded> self) -> Option<T> {
+fn Iterator::max<T, AnyEnded>(Iterator<T, AnyEnded> self) -> Option<T> {
     res := None<T>();
 
     while _, val := self.next() {
@@ -71,7 +73,7 @@ fn Iterator::max<T, Env, TEnded>(Iterator<T, Env, TEnded> self) -> Option<T> {
     return res;
 }
 
-fn Iterator::min<T, Env, TEnded>(Iterator<T, Env, TEnded> self) -> Option<T> {
+fn Iterator::min<T, AnyEnded>(Iterator<T, AnyEnded> self) -> Option<T> {
     res := None<T>();
 
     while _, val := self.next() {
@@ -82,27 +84,27 @@ fn Iterator::min<T, Env, TEnded>(Iterator<T, Env, TEnded> self) -> Option<T> {
     return res;
 }
 
-fn Iterator::nth<T, Env, TEnded>(Iterator<T, Env, TEnded> self, u64 n) {
+fn Iterator::nth<T, AnyEnded>(Iterator<T, AnyEnded> self, u64 n) {
     for i := 0; i < n; i += 1 {
         if self.next().is_none() {
-            return Option::None<T>();
+            return None<T>();
         }
     }
 
     return self.next();
 }
 
-fn Iterator::last<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
-    result := Option::None<T>();
+fn Iterator::last<T, AnyEnded>(Iterator<T, AnyEnded> self) {
+    result := None<T>();
 
     while _, val := self.next() {
-        result = Option::Some(val);
+        result = Some(val);
     }
 
     return result;
 }
 
-fn Iterator::collect<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
+fn Iterator::collect<T, AnyEnded>(Iterator<T, AnyEnded> self) {
     res := [T;];
 
     while _, val := self.next() {
@@ -112,9 +114,7 @@ fn Iterator::collect<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
     return res;
 }
 
-fn Iterator::single<T, Env>(
-    Iterator<T, Env, DoubleEnded> self
-) -> Iterator<T, Env, SingleEnded> {
+fn Iterator::single<T>(Iterator<T, DoubleEnded> self) -> Iterator<T, SingleEnded> {
     return Iterator {
         env = self.env,
         next = self.next,
@@ -122,7 +122,7 @@ fn Iterator::single<T, Env>(
     };
 }
 
-fn Iterator::find_with<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T, U) -> bool predicate, U arg) {
+fn Iterator::find_with<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, U) -> bool predicate, U arg) {
     while _, val := self.next() {
         if predicate(val, arg) {
             return Some(val);
@@ -132,11 +132,11 @@ fn Iterator::find_with<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T, U
     return None<T>();
 }
 
-fn Iterator::find<T, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T) -> bool predicate) {
+fn Iterator::find<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> bool predicate) {
     return self.find_with(fn(val, predicate) predicate(val), predicate);
 }
 
-fn Iterator::any_with<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T, U) -> bool predicate, U arg) {
+fn Iterator::any_with<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, U) -> bool predicate, U arg) {
     while _, val := self.next() {
         if predicate(val, arg) {
             return true;
@@ -146,11 +146,11 @@ fn Iterator::any_with<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T, U)
     return false;
 }
 
-fn Iterator::any<T, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T) -> bool predicate) {
+fn Iterator::any<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> bool predicate) {
     return self.any_with(fn(val, predicate) predicate(val), predicate);
 }
 
-fn Iterator::all_with<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T, U) -> bool predicate, U arg) {
+fn Iterator::all_with<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, U) -> bool predicate, U arg) {
     while _, val := self.next() {
         if !predicate(val, arg) {
             return false;
@@ -160,11 +160,11 @@ fn Iterator::all_with<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T, U)
     return true;
 }
 
-fn Iterator::all<T, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T) -> bool predicate) {
+fn Iterator::all<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> bool predicate) {
     return self.all_with(fn(val, predicate) predicate(val), predicate);
 }
 
-fn Iterator::position_with<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T, U) -> bool predicate, U arg) {
+fn Iterator::position_with<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, U) -> bool predicate, U arg) {
     u64 i = 0;
 
     while _, val := self.next() {
@@ -178,10 +178,10 @@ fn Iterator::position_with<T, U, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(
     return None<u64>();
 }
 
-fn Iterator::position<T, Env, TEnded>(Iterator<T, Env, TEnded> self, fn(T) -> bool predicate) {
+fn Iterator::position<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> bool predicate) {
     return self.position_with(fn(val, predicate) predicate(val), predicate);
 }
 
-fn Iterator::__iter__<T, Env, TEnded>(Iterator<T, Env, TEnded> self) {
+fn Iterator::__iter__<T, AnyEnded>(Iterator<T, AnyEnded> self) {
     return self;
 }

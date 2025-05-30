@@ -207,12 +207,12 @@ struct HashSetEnv<T> {
     u64 i
 }
 
-fn HashSet::__iter__<T>(HashSet<T> *self) -> Iterator<T, HashSetEnv<T>, SingleEnded> {
+fn HashSet::__iter__<T>(HashSet<T> *self) -> Iterator<T, SingleEnded> {
     HashSetEnv<T> env = HashSetEnv { base = self, i = 0 };
 
     return Iterator {
-        env = Box::new(env),
-        next = fn(env) {
+        env = Box::new(env).to_ptr(),
+        next = fn(HashSetEnv<T> *env) {
             while env.i < env.base.table.len() {
                 if env.base.table[env.i].full {
                     value := env.base.table[env.i].value;
@@ -227,8 +227,5 @@ fn HashSet::__iter__<T>(HashSet<T> *self) -> Iterator<T, HashSetEnv<T>, SingleEn
     };
 }
 
-external fn HashSet::__iter__<T>(HashSet<T> *self) @alias(HashSet::iter)
-    -> Iterator<T, HashSetEnv<T>, SingleEnded>;
-
-external fn HashSet::__iter__<T>(HashSet<T> *self) @alias(HashSet::values)
-    -> Iterator<T, HashSetEnv<T>, SingleEnded>;
+external fn HashSet::__iter__<T>(HashSet<T> *self) @alias(HashSet::iter) -> Iterator<T, SingleEnded>;
+external fn HashSet::__iter__<T>(HashSet<T> *self) @alias(HashSet::values) -> Iterator<T, SingleEnded>;

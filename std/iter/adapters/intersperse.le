@@ -1,18 +1,18 @@
 use std/iter/core;
 global pub;
 
-struct Intersperse<T, Env, TEnded> {
-    Iterator<T, Env, TEnded> base,
+struct Intersperse<T, AnyEnded> {
+    Iterator<T, AnyEnded> base,
     Option<T> next,
     T separator,
     bool emit
 }
 
-fn Iterator::intersperse<T, Env, TEnded>(
-    Iterator<T, Env, TEnded> self,
+fn Iterator::intersperse<T, AnyEnded>(
+    Iterator<T, AnyEnded> self,
     T separator
-) -> Iterator<T, Intersperse<T, Env, TEnded>, SingleEnded> {
-    Intersperse<T, Env, TEnded> intersperse = Intersperse {
+) -> Iterator<T, SingleEnded> {
+    Intersperse<T, AnyEnded> intersperse = Intersperse {
         base = self,
         next = Option::None(),
         separator = separator,
@@ -20,15 +20,15 @@ fn Iterator::intersperse<T, Env, TEnded>(
     };
 
     return Iterator {
-        env = Box::new(intersperse),
-        next = fn(env) {
+        env = Box::new(intersperse).to_ptr(),
+        next = fn(Intersperse<T, AnyEnded> *env) {
             if env.emit {
                 env.emit = !env.emit;
                 env.next = env.base.next();
 
                 return env.next.is_some()
-                    ? Option::Some(env.separator)
-                    : Option::None<T>();
+                    ? Some(env.separator)
+                    : None<T>();
             }
 
             val := env.next
@@ -36,7 +36,7 @@ fn Iterator::intersperse<T, Env, TEnded>(
 
             if val.is_some() {
                 env.emit = !env.emit;
-                env.next = Option::None();
+                env.next = None();
             }
 
             return val;

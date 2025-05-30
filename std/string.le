@@ -83,12 +83,12 @@ struct StringEnv {
     u64 end
 }
 
-!external fn string::__iter__(string self) -> Iterator<char, StringEnv, DoubleEnded> {
+!external fn string::__iter__(string self) -> Iterator<char, DoubleEnded> {
     env := StringEnv { base = self, start = 0, end = self.len() };
 
     return Iterator {
-        env = Box::new(env),
-        next = fn(env) {
+        env = Box::new(env).to_ptr(),
+        next = fn(StringEnv *env) {
             if (from := env.start) < env.end {
                 env.start += 1;
                 return Option::Some(env.base[from]);
@@ -96,7 +96,7 @@ struct StringEnv {
                 return Option::None<char>();
             }
         },
-        next_back = fn(env) {
+        next_back = fn(StringEnv *env) {
             if env.start < env.end {
                 env.end -= 1;
                 return Option::Some(env.base[env.end]);
@@ -107,5 +107,4 @@ struct StringEnv {
     };
 }
 
-external fn string::__iter__(string self) @alias(string::iter)
-    -> Iterator<char, StringEnv, DoubleEnded>;
+external fn string::__iter__(string self) @alias(string::iter) -> Iterator<char, DoubleEnded>;

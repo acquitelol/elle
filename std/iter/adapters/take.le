@@ -1,25 +1,22 @@
 use std/iter/core;
 global pub;
 
-struct Take<T, Env, TEnded> {
-    Iterator<T, Env, TEnded> base,
+struct Take<T, AnyEnded> {
+    Iterator<T, AnyEnded> base,
     u64 n
 }
 
-fn Iterator::take<T, Env, TEnded>(
-    Iterator<T, Env, TEnded> self,
-    u64 n
-) -> Iterator<T, Take<T, Env, TEnded>, TEnded> {
-    Take<T, Env, TEnded> take = Take {
+fn Iterator::take<T, AnyEnded>(Iterator<T, AnyEnded> self, u64 n) -> Iterator<T, AnyEnded> {
+    Take<T, AnyEnded> take = Take {
         base = self,
         n = n
     };
 
     return Iterator {
-        env = Box::new(take),
-        next = fn(env) {
+        env = Box::new(take).to_ptr(),
+        next = fn(Take<T, AnyEnded> *env) {
             if env.n == 0 {
-                return Option::None<T>();
+                return None<T>();
             }
 
             val := env.base.next();
@@ -30,12 +27,12 @@ fn Iterator::take<T, Env, TEnded>(
 
             return val;
         },
-        next_back = self.next_back ? fn(env) {
+        next_back = self.next_back ? fn(Take<T, AnyEnded> *env) {
             if env.n == 0 {
-                return Option::None<T>();
+                return None<T>();
             }
 
-            base := *#cast(Iterator<T, Env, DoubleEnded> *, &env.base);
+            base := *#cast(Iterator<T, DoubleEnded> *, &env.base);
             val := base.next_back();
 
             if val.is_some() {

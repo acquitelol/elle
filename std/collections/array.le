@@ -54,12 +54,12 @@ struct ArrayEnv<T> {
     u64 end
 }
 
-fn Array::__iter__<T>(T[] self) -> Iterator<T, ArrayEnv<T>, DoubleEnded> {
+fn Array::__iter__<T>(T[] self) -> Iterator<T, DoubleEnded> {
     ArrayEnv<T> env = ArrayEnv { base = self, start = 0, end = self.len() };
 
     return Iterator {
-        env = Box::new(env),
-        next = fn(env) {
+        env = Box::new(env).to_ptr(),
+        next = fn(ArrayEnv<T> *env) {
             if (from := env.start) < env.end {
                 env.start += 1;
                 return Option::Some(env.base[from]);
@@ -67,7 +67,7 @@ fn Array::__iter__<T>(T[] self) -> Iterator<T, ArrayEnv<T>, DoubleEnded> {
                 return Option::None<T>();
             }
         },
-        next_back = fn(env) {
+        next_back = fn(ArrayEnv<T> *env) {
             if env.start < env.end {
                 env.end -= 1;
                 return Option::Some(env.base[env.end]);
@@ -78,15 +78,14 @@ fn Array::__iter__<T>(T[] self) -> Iterator<T, ArrayEnv<T>, DoubleEnded> {
     };
 }
 
-external fn Array::__iter__<T>(T[] self) @alias(Array::iter)
-    -> Iterator<T, ArrayEnv<T>, DoubleEnded>;
+external fn Array::__iter__<T>(T[] self) @alias(Array::iter) -> Iterator<T, DoubleEnded>;
 
-fn Array::iter_ref<T>(T[] self) -> Iterator<T *, ArrayEnv<T>, DoubleEnded> {
+fn Array::iter_ref<T>(T[] self) -> Iterator<T *, DoubleEnded> {
     ArrayEnv<T> env = ArrayEnv { base = self, start = 0, end = self.len() };
 
     return Iterator {
-        env = Box::new(env),
-        next = fn(env) {
+        env = Box::new(env).to_ptr(),
+        next = fn(ArrayEnv<T> *env) {
             if (from := env.start) < env.end {
                 env.start += 1;
                 return Option::Some(&env.base[from]);
@@ -94,7 +93,7 @@ fn Array::iter_ref<T>(T[] self) -> Iterator<T *, ArrayEnv<T>, DoubleEnded> {
                 return Option::None<T *>();
             }
         },
-        next_back = fn(env) {
+        next_back = fn(ArrayEnv<T> *env) {
             if env.start < env.end {
                 env.end -= 1;
                 return Option::Some(&env.base[env.end]);

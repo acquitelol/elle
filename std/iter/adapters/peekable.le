@@ -1,25 +1,23 @@
 use std/iter/iterator;
 global pub;
 
-struct Peekable<T, Env, TEnded> {
-    Iterator<T, Env, TEnded> base,
+struct Peekable<T, AnyEnded> {
+    Iterator<T, AnyEnded> base,
     Box<Option<T>> peeked
 }
 
-fn Iterator::peekable<T, Env, TEnded>(
-    Iterator<T, Env, TEnded> self
-) -> Iterator<T, Peekable<T, Env, TEnded>, TEnded> {
-    Peekable<T, Env, TEnded> peek = Peekable {
+fn Iterator::peekable<T, AnyEnded>(Iterator<T, AnyEnded> self) -> Iterator<T, AnyEnded> {
+    Peekable<T, AnyEnded> peek = Peekable {
         base = self,
-        peeked = Box::new(Option::None<T>())
+        peeked = Box::new(None<T>())
     };
 
     return Iterator {
-        env = Box::new(peek),
-        next = fn(env) {
+        env = Box::new(peek).to_ptr(),
+        next = fn(Peekable<T, AnyEnded> *env) {
             if (*env.peeked).is_some() {
                 val := *env.peeked;
-                *env.peeked = Option::None<T>();
+                *env.peeked = None<T>();
                 return val;
             }
 
@@ -29,11 +27,12 @@ fn Iterator::peekable<T, Env, TEnded>(
     };
 }
 
-fn Iterator::peek<T, Env, TEnded>(
-    Iterator<T, Peekable<T, Env, TEnded>, TEnded> self
-) -> Option<T> {
-    if (*(*self.env).peeked).is_none() {
-        *(*self.env).peeked = (*self.env).base.next();
+fn Iterator::peek<T, AnyEnded>(Iterator<T, AnyEnded> self) -> Option<T> {
+    env := #cast(Peekable<T, AnyEnded> *, self.env);
+
+    if (*env.peeked).is_none() {
+        *env.peeked = env.base.next();
     }
-    return *(*self.env).peeked;
+
+    return *env.peeked;
 }

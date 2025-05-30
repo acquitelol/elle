@@ -7,11 +7,7 @@ struct Range<T> {
     bool inclusive
 }
 
-fn Iterator::range<T>(
-    T from,
-    T to,
-    bool inclusive
-) -> Iterator<T, Range<T>, DoubleEnded> {
+fn Iterator::range<T>(T from, T to, bool inclusive) -> Iterator<T, DoubleEnded> {
     Range<T> range = Range {
         from = from,
         to = to,
@@ -19,22 +15,22 @@ fn Iterator::range<T>(
     };
 
     return Iterator {
-        env = Box::new(range),
-        next = fn(env) {
+        env = Box::new(range).to_ptr(),
+        next = fn(Range<T> *env) {
             if env.from < env.to + env.inclusive {
                 let current = env.from;
                 env.from += 1;
-                return Option::Some(current);
+                return Some(current);
             } else {
-                return Option::None<T>();
+                return None<T>();
             }
         },
-        next_back = fn(env) {
+        next_back = fn(Range<T> *env) {
             if env.from < env.to + env.inclusive {
                 env.to -= 1;
-                return Option::Some(env.to + env.inclusive);
+                return Some(env.to + env.inclusive);
             } else {
-                return Option::None<T>();
+                return None<T>();
             }
         }
     };
