@@ -1,15 +1,42 @@
 use std/iter/core;
 global pub;
 
-fn Iterator::skip<T, Env, TEnded>(
-    Iterator<T, Env, TEnded> self,
+struct Skip<T, AnyEnded> {
+    Iterator<T, AnyEnded> base,
     u64 n
-) -> Iterator<T, Env, TEnded> {
-    for i := 0; i < n; i += 1 {
-        if self.next().is_none() {
-            break;
-        }
-    }
+}
 
-    return self;
+fn Iterator::skip<T, AnyEnded>(Iterator<T, AnyEnded> self, u64 n) -> Iterator<T, AnyEnded> {
+    Skip<T, AnyEnded> state = Skip {
+        base = self,
+        n = n
+    };
+
+    return Iterator {
+        env = Box::new(state).to_ptr(),
+        next = fn(Skip<T, AnyEnded> *env) {
+            while env.n > 0 {
+                if env.base.next().is_none() {
+                    return None<T>();
+                }
+
+                env.n -= 1;
+            }
+
+            return env.base.next();
+        },
+        next_back = self.next_back ? fn(Skip<T, AnyEnded> *env) {
+            while env.n > 0 {
+                // this SHOULD be next
+                if env.base.next().is_none() {
+                    return None<T>();
+                }
+
+                env.n -= 1;
+            }
+
+            base := *#cast(Iterator<T, DoubleEnded> *, &env.base);
+            return base.next_back();
+        } : nil
+    };
 }
