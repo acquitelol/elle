@@ -380,7 +380,7 @@ fn Array::filter<T, U>(T[] self, fn(T, u64, T[]) -> bool mapping) -> U[] {
 
 fn Array::every<T>(T[] self, fn(T, u64, T[]) -> bool cb) {
     for u64 i = 0; i < self.len(); i += 1 {
-        if cb(self[i], i, self) {
+        if !cb(self[i], i, self) {
             return false;
         }
     }
