@@ -3,7 +3,7 @@ use std/hashes;
 use std/core;
 global pub;
 
-fn Triple::__hash__<T, U, V>(Triple<T, U, V> self, i32 capacity) {
+fn Triple::__hash__<T, U, V>(Triple<T, U, V> self, u64 capacity) {
     u64 hash_x = self.x.__hash__(capacity);
     u64 hash_y = self.y.__hash__(capacity);
     u64 hash_z = self.z.__hash__(capacity);

@@ -3,7 +3,7 @@ use std/hashes;
 use std/core;
 global pub;
 
-fn Tuple::__hash__<T, U>((T, U) self, i32 capacity) {
+fn Tuple::__hash__<T, U>((T, U) self, u64 capacity) {
     u64 hash_x = self.x.__hash__(capacity);
     u64 hash_y = self.y.__hash__(capacity);
     u64 combined = hash_x * 31 + hash_y;
