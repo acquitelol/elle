@@ -769,8 +769,8 @@ while _, current := lexer.next_token() {
 
 ```rs
 // Will not run if the `find` returns None
-if _, tmp_func := self.module.functions.find(
-    fn(QbeFunction x, string name) x.name == name,
+if _, tmp_func := self.module.functions.find_with(
+    fn(x, name) x.name == name,
     funcall.name.encoded
 ) {
     ty = tmp_func.return_type;
@@ -830,14 +830,12 @@ a, b, c := Foo { a = 1, b = "a", c = 1.3 };
 
 ### ♡ **Ranges**
 
-Ranges are ways you can define the start and end of a "`range`" of numbers. There are 2 kinds of ranges in elle: exclusive and inclusive.
+Ranges are ways you can define the start and end of a "`range`" of numbers. There are 2 kinds of ranges in elle: exclusive and inclusive. These ranges create lazy double ended iterators.
 
 Exclusive ranges are defined with `x..y`, where `x` and `y` are expressions.
 Inclusive ranges are defined with `x..=y`, where `x` and `y` are expressions.
 
 An exclusive range means that `x` is inclusive but `y` is exclusive. An inclusive range means both are inclusive.
-
-At the moment, ranges are just aliases for `Array::range(x, y, inclusive)`. This means they are not lazy, they create dynamic arrays of the specified range.
 
 They can be used in `foreach` loops however, because they're arrays:
 
