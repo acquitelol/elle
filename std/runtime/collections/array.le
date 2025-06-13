@@ -68,6 +68,22 @@ fn Array::__store__<T>(ElleMeta meta, T[] self, u64 i, T value) {
     self.elements[i] = value;
 }
 
+fn Array::get<T>(ElleMeta meta, T[] self, u64 i) -> Option<T> {
+    if i + 1 > self.size {
+        return None();
+    }
+
+    return Some(self.elements[i]);
+}
+
+fn Array::get_ref<T>(ElleMeta meta, T[] self, u64 i) -> Option<T *> {
+    if i + 1 > self.size {
+        return None();
+    }
+
+    return Some(&self.elements[i]);
+}
+
 fn Array::__len__<T>(T[] self) -> u64 {
     return self.size;
 }
@@ -166,12 +182,14 @@ fn Array::clear<T>(T[] self) {
     self.size = 0;
 }
 
+// Sorts in-place and returns the sorted array
 fn Array::sort<T>(T[] self) {
     if self.is_empty() || self.len() <= 1 {
-        return;
+        return self;
     }
 
     __internal_qsort(self.elements, 0, self.len() - 1);
+    return self;
 }
 
 !pub fn __internal_qsort<T>(T *array, i64 low, i64 high) {
