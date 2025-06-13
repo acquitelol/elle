@@ -77,12 +77,12 @@ impl<'a> Constant<'a> {
             if !(self.parser.struct_pool.borrow().contains_key(&name)
                 // TODO: If I ever find out a way to allow namespaced
                 // constants but only for lambda defs, uncomment this:
-                // || self.parser.enum_pool.borrow().contains_key(&name)
+                || self.parser.enum_pool.borrow().contains_key(&name)
                 || ValueKind::String(name.clone()).is_base_type())
             {
                 elle_error!(
                     name_token.location.borrow().error(format!(
-                        "Cannot create a namespaced constant for '{name}' because it isn't a struct or primitive type.\n{}",
+                        "Cannot create a namespaced constant for '{name}' because it isn't a struct, enum or primitive type.\n{}",
                         ValueKind::similar_mapping(&name)
                             .map_or_else(
                                 || format!("Are you sure you spelt '{name}' correctly?"),

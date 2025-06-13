@@ -347,7 +347,7 @@ impl Type {
                         })
                     } else if part == GENERIC_ENUM {
                         let name = parts.next().unwrap();
-                        let ty = id_to_ty(parts.next().unwrap());
+                        let ty = internal_match(parts).unwrap();
                         Some(Type::Enum(name.to_string(), Box::new(Some(ty))))
                     } else if part == GENERIC_FUNCTION {
                         assert_eq!(parts.next().unwrap(), GENERIC_IDENTIFIER);
