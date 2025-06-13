@@ -982,11 +982,11 @@ fn MemFree(void *ptr)                                                     @alias
 
 // Set custom callbacks
 // WARNING: Callbacks setup is intended for advance users
-fn SetTraceLogCallback(fn(i32, string, void *) callback)                                      @alias(rl::set_trace_log_callback);                    // Set custom trace log
-fn SetLoadFileDataCallback(fn(string, i32 *) -> u8 *callback)                                  @alias(rl::set_load_file_data_callback);               // Set custom file binary data loader
-fn SetSaveFileDataCallback(fn(string, void *, i32) -> bool callback)                                  @alias(rl::set_save_file_data_callback);               // Set custom file binary data saver
-fn SetLoadFileTextCallback(fn(string) -> string callback)                                  @alias(rl::set_load_file_text_callback);               // Set custom file text data loader
-fn SetSaveFileTextCallback(fn(string, string) -> bool callback)                                  @alias(rl::set_save_file_text_callback);               // Set custom file text data saver
+fn SetTraceLogCallback(fn(i32, string, void *) callback)                  @alias(rl::set_trace_log_callback);                    // Set custom trace log
+fn SetLoadFileDataCallback(fn(string, i32 *) -> u8 *callback)             @alias(rl::set_load_file_data_callback);               // Set custom file binary data loader
+fn SetSaveFileDataCallback(fn(string, void *, i32) -> bool callback)      @alias(rl::set_save_file_data_callback);               // Set custom file binary data saver
+fn SetLoadFileTextCallback(fn(string) -> string callback)                 @alias(rl::set_load_file_text_callback);               // Set custom file text data loader
+fn SetSaveFileTextCallback(fn(string, string) -> bool callback)           @alias(rl::set_save_file_text_callback);               // Set custom file text data saver
 
 // Files management functions
 fn LoadFileData(string fileName, u32 *dataSize)                           @alias(rl::load_file_data)            -> u8 *;         // Load file data as byte array (read)

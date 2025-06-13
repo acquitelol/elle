@@ -155,9 +155,9 @@ fn Option::is_none_or<T>(Option<T> self, fn(T) -> bool cb) {
 
 fn Option::map_with<T, U, Out>(Option<T> self, fn(T, U) -> Out cb, U arg) {
     if self.is_some() {
-        return Option::Some(cb(self.__value, arg));
+        return Some(cb(self.__value, arg));
     } else {
-        return Option::None<Out>();
+        return None<Out>();
     }
 }
 

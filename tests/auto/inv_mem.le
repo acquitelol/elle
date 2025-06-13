@@ -2,8 +2,8 @@ use std/prelude;
 
 fn main() {
     i32 x[42];
-    (42[x] = 39)[x] = 42;
-    $assert(x[x[x[42[x]][x]][x][x]] == 39, nil);
+    (41[x] = 39)[x] = 41;
+    $assert(x[x[x[41[x]][x]][x][x]] == 39, nil);
 
     i32 y[10];
     4[y] = 39;
