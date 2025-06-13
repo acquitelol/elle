@@ -25,14 +25,10 @@ fn Iterator::intersperse<T, AnyEnded>(
             if env.emit {
                 env.emit = !env.emit;
                 env.next = env.base.next();
-
-                return env.next.is_some()
-                    ? Some(env.separator)
-                    : None<T>();
+                return env.next.map_with(fn(_, env) env.separator, env);
             }
 
-            val := env.next
-                .or_else_with(fn(env) env.base.next(), env);
+            val := env.next.or_else_with(fn(env) env.base.next(), env);
 
             if val.is_some() {
                 env.emit = !env.emit;

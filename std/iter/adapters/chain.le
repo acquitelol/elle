@@ -3,8 +3,7 @@ global pub;
 
 struct Chain<T, AnyEnded> {
     Iterator<T, AnyEnded> a,
-    Iterator<T, AnyEnded> b,
-    bool exhausted,
+    Iterator<T, AnyEnded> b
 }
 
 fn Iterator::chain<T, AnyEnded>(
@@ -13,21 +12,16 @@ fn Iterator::chain<T, AnyEnded>(
 ) -> Iterator<T, AnyEnded> {
     Chain<T, AnyEnded> chain = Chain {
         a = a,
-        b = b,
-        exhausted = false
+        b = b
     };
 
     return Iterator {
         env = Box::new(chain).to_ptr(),
         next = fn(Chain<T, AnyEnded> *env) {
-            if !env.exhausted {
-                val := env.a.next();
+            val := env.a.next();
 
-                if val.is_some() {
-                    return val;
-                }
-
-                env.exhausted = true;
+            if val.is_some() {
+                return val;
             }
 
             return env.b.next();
