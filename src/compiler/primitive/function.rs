@@ -151,24 +151,6 @@ pub fn generate_function(
         }};
     }
 
-    macro_rules! maybe_void_pointer {
-        ($first:expr, $second:expr $(,)?) => {
-            $first.is_pointer()
-                && $second.is_pointer()
-                && ($first.get_pointer_inner().unwrap().is_void()
-                    || $second.get_pointer_inner().unwrap().is_void())
-        };
-    }
-
-    macro_rules! maybe_generic {
-        ($first:expr, $second:expr $(,)?) => {
-            $first.is_struct()
-                && $second.is_struct()
-                && is_generic!($first.get_struct_inner().unwrap())
-                && is_generic!($second.get_struct_inner().unwrap())
-        };
-    }
-
     macro_rules! handle_inconsistent_types {
         ($return_type:expr, $first_type:expr, $location:expr $(,)?) => {
             if !can_convert_to_type(gen, $return_type, $first_type, false) {
@@ -210,41 +192,22 @@ pub fn generate_function(
 
                     if return_type != first_type
                         && !matches!(val, Value::Const(_, _))
-                        && !(maybe_void_pointer!(return_type, first_type))
+                        && !return_type.function_eq(first_type, Some(&location))
                     {
-                        if maybe_generic!(return_type, first_type) {
-                            let (a, a_parts) =
-                                Type::from_internal_id(&return_type.get_struct_inner().unwrap());
-
-                            let (b, b_parts) =
-                                Type::from_internal_id(&first_type.get_struct_inner().unwrap());
-
-                            if a != b || a_parts != b_parts {
-                                elle_error!(
-                                    ty_err_message!(
-                                        return_type.display(),
-                                        first_type.display(),
-                                        location.borrow().with_extra_info(format!(
-                                            "This has the type '{}'",
-                                            return_type.display()
-                                        )),
-                                        Some(format!(
-                                            "This error was caused because you returned {} elsewhere, but returned {} here.",
-                                            first_type.display(), return_type.display()
-                                        ))
-                                    )
-                                )
-                            }
-                        } else {
-                            elle_error!(
-                                ty_err_message!(
-                                    ty.display(),
-                                    first_type.display(),
-                                    location.borrow(),
-                                    Some(format!("This error was caused because you returned '{}' elsewhere, but not here.", first_type.display()))
-                                )
+                        elle_error!(
+                            ty_err_message!(
+                                return_type.display(),
+                                first_type.display(),
+                                location.borrow().with_extra_info(format!(
+                                    "This has the type '{}'",
+                                    return_type.display()
+                                )),
+                                Some(format!(
+                                    "This error was caused because you returned {} elsewhere, but returned {} here.",
+                                    first_type.display(), return_type.display()
+                                ))
                             )
-                        }
+                        )
                     }
                 }
             }
