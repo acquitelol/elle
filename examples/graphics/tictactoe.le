@@ -122,8 +122,19 @@ fn State::draw_board(State *self) {
         btn := Button::new(i, fn(self, state) { state.make_move(self); });
         btn.draw_contextual(self, $(i % 3, i / 3));
     }
+}
 
-    if self.winner != StateKind::Empty {
+fn State::draw_turn(State *self) {
+    if self.winner == StateKind::Empty {
+        turn_text := "{}'s turn".format(self.current_player);
+
+        rl::draw_text(
+            turn_text,
+            (SCREEN_WIDTH - rl::measure_text(turn_text, TEXT_SIZE)) / 2,
+            SCREEN_HEIGHT - TEXT_SIZE - PADDING,
+            TEXT_SIZE, WHITE
+        );
+    } else {
         winner_text := self.winner == StateKind::Draw ? "Draw!" : "{} wins!".format(self.winner);
 
         rl::draw_text(
@@ -151,15 +162,6 @@ fn State::draw_board(State *self) {
                 y = SCREEN_HEIGHT - new_game_height - PADDING
             }
         );
-    } else {
-        turn_text := "{}'s turn".format(self.current_player);
-
-        rl::draw_text(
-            turn_text,
-            (SCREEN_WIDTH - rl::measure_text(turn_text, TEXT_SIZE)) / 2,
-            SCREEN_HEIGHT - TEXT_SIZE - PADDING,
-            TEXT_SIZE, WHITE
-        );
     }
 }
 
@@ -179,6 +181,7 @@ fn main() {
         rl::begin_drawing();
             rl::clear_background(BACKGROUND);
             state.draw_board();
+            state.draw_turn();
         rl::end_drawing();
     }
 }

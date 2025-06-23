@@ -24,7 +24,7 @@ fn main() {
     rl::init_audio_device();
     defer rl::close_audio_device();
 
-    let sound = rl::load_sound("./examples/resources/hit.wav");
+    let sound = rl::load_sound("examples/resources/hit.wav");
     defer rl::unload_sound(sound);
 
     rl::set_target_fps(60);

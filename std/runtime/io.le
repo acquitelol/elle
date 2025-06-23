@@ -106,7 +106,6 @@ fn io::die(ElleMeta meta) {
 }
 
 fn io::todo(ElleMeta meta, string message) {
-    io::cprintf("%ld", message);
     let parsed = message ? ": {}".format(message) : "";
 
     io::eprintf(

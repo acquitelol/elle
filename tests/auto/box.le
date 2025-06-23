@@ -18,11 +18,6 @@ fn `with.struct`() {
     $assert((*x).x = 123, nil);
 }
 
-fn `length`() {
-    x := Box::new(39);
-    $assert(x.__len__() == 1, nil);
-}
-
 fn `deref.load`() {
     x := Box::new(13);
     $assert(*x == 13, nil);
@@ -62,7 +57,6 @@ fn `equality`() {
 fn main() {
     `basic`();
     `with.struct`();
-    `length`();
     `deref.load`();
     `deref.store`();
     `indexed.load`();

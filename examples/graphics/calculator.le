@@ -33,7 +33,7 @@ fn Button::new<T>(string kind, fn(Button *, State *) -> T cb) {
     };
 }
 
-fn Button::draw(Button *self, State *state, (i32, i32) offset) {
+fn Button::draw(Button *self, State *state, (u64, u64) offset) {
     scale_ratio := 30 * SCALING_FACTOR;
 
     button := Rectangle {
@@ -70,10 +70,10 @@ fn State::handle_operation(State *self, Button *btn) {
 
 fn State::perform_computation(State *self) {
     mapping := HashMap::from_entries(
-        "+", fn(State *self) self.lhs + self.rhs,
-        "-", fn(State *self) self.lhs - self.rhs,
-        "*", fn(State *self) self.lhs * self.rhs,
-        "/", fn(State *self) self.lhs / self.rhs,
+        $("+", fn(State *self) self.lhs + self.rhs),
+        $("-", fn(State *self) self.lhs - self.rhs),
+        $("*", fn(State *self) self.lhs * self.rhs),
+        $("/", fn(State *self) self.lhs / self.rhs),
     );
 
     if self.rhs == 0 {
@@ -141,10 +141,10 @@ fn State::draw_buttons(State *self) {
         ],
     ];
 
-    for row in button_map {
-        for btn in row {
+    for i, row in button_map.iter().enumerate() {
+        for j, btn in row.iter().enumerate() {
             // always render 1 unit down to account for input
-            btn.draw(self, $(#i(btn), #i(row) + 1));
+            btn.draw(self, $(i, j + 1));
         }
     }
 }

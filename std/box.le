@@ -37,10 +37,6 @@ fn Box::__store__<T, U, V>(Box<T> self, U rhs, V value) {
     self.value[rhs] = value;
 }
 
-fn Box::__len__<T>(Box<T> self) {
-    return 1; // There is only ever 1 element
-}
-
 fn Box::__equals__<T, U>(Box<T> self, Box<U> other) {
     return *self.value == *other.value;
 }
