@@ -182,6 +182,12 @@ fn Iterator::position<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> bool pre
     return self.position_with(fn(val, predicate) predicate(val), predicate);
 }
 
+fn Iterator::flat_map<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> U cb) {
+    res := self.map(cb);
+    val := res.next().unwrap();
+    return res.fold(val, fn(acc, it) acc.chain(it));
+}
+
 fn Iterator::__iter__<T, AnyEnded>(Iterator<T, AnyEnded> self) {
     return self;
 }

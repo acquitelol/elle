@@ -2436,6 +2436,7 @@ Iterators have some base methods which mutate or consume the iterator. These (as
 | `all`           | `AnyEnded`    | Returns true if the predicate holds true for all values in the iterator.                            |
 | `position_with` | `AnyEnded`    | Returns the index of the first occurence when the predicate returns true, with an arg passed to it. |
 | `position`      | `AnyEnded`    | Returns the index of the first occurence when the predicate returns true.                           |
+| `flat_map`      | `AnyEnded`    | Maps the values into some iterator then flattens all of the iterators into a single iterator.       |
 
 Iterators are powerful in that they can have adapters applied to them, to perform many operations lazily.
 
