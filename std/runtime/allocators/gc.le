@@ -12,63 +12,52 @@ struct __internal_ElleGC_Header @nofmt {
     void *data
 }
 
-struct __internal_ElleGC_HashNode @nofmt {
-    void *key,
-    __internal_ElleGC_Header *value,
-    __internal_ElleGC_HashNode *next
-}
-
-struct __internal_ElleGC_HashMap @nofmt {
-    __internal_ElleGC_HashNode **buckets,
-    i32 capacity
+struct __internal_ElleGC_HeaderNode @nofmt {
+    __internal_ElleGC_Header *header,
+    __internal_ElleGC_HeaderNode *next
 }
 
 struct GCAllocator @nofmt {
-    i32 total_size,                   // total allocated memory
-    i32 threshold,                    // threshold until collection
-    i32 objects,                      // number of allocated objects
-    __internal_ElleGC_HashMap *map   // map to track allocations
+    u64 total_size,                    // total allocated memory
+    u64 threshold,                     // threshold until collection
+    u64 objects,                       // number of allocated objects
+    __internal_ElleGC_HeaderNode *head // linked list to track allocations
 }
 
-fn __internal_ElleGC_HashMap::new(i32 capacity) {
-    __internal_ElleGC_HashMap *map = mem::malloc(#size(__internal_ElleGC_HashMap));
+const GCAllocator::MIN_THRESHOLD = 32 * 1024;
+const GCAllocator::GROWTH_FACTOR = 2;
 
-    map.buckets = mem::malloc(capacity * #size(__internal_ElleGC_HashNode *));
-    map.capacity = capacity;
+fn __internal_ElleGC_Header::new(i32 size) {
+    __internal_ElleGC_Header *self = mem::malloc(#size(__internal_ElleGC_Header));
 
-    return map;
+    self.marked = false;
+    self.size = size;
+    self.data = mem::malloc(size);
+
+    return self;
 }
 
-fn __internal_ElleGC_HashMap::hash(__internal_ElleGC_HashMap *self, void *key) {
-    return (key ^ (key >> 16)) % self.capacity;
+fn GCAllocator::new() {
+    GCAllocator *self = mem::malloc(#size(GCAllocator));
+
+    self.total_size = 0;
+    // start with a threshold bigger than minimum
+    // allow the gc to bring it down to min if necessary
+    self.threshold = GCAllocator::MIN_THRESHOLD * 4;
+    self.objects = 0;
+    self.head = nil;
+
+    return self;
 }
 
-fn __internal_ElleGC_HashMap::insert(__internal_ElleGC_HashMap *self, void *key, __internal_ElleGC_Header *value) {
-    let hash = self.hash(key);
-    let current = self.buckets[hash];
+!pub fn GCAllocator::find(GCAllocator *self, void *ptr) {
+    current := self.head;
 
     while current {
-        if current.key == key {
-            return;
-        }
+        data := current.header.data;
 
-        current = current.next;
-    }
-
-    __internal_ElleGC_HashNode *node = mem::malloc(#size(__internal_ElleGC_HashNode));
-    node.key = key;
-    node.value = value;
-    node.next = self.buckets[hash];
-    self.buckets[hash] = node;
-}
-
-fn __internal_ElleGC_HashMap::find(__internal_ElleGC_HashMap *self, void *key) {
-    let hash = self.hash(key);
-    let current = self.buckets[hash];
-
-    while current {
-        if current.key == key {
-            return current.value;
+        if ptr >= data && ptr < data + current.header.size {
+            return current.header;
         }
 
         current = current.next;
@@ -77,76 +66,13 @@ fn __internal_ElleGC_HashMap::find(__internal_ElleGC_HashMap *self, void *key) {
     return nil;
 }
 
-fn __internal_ElleGC_HashMap::remove(__internal_ElleGC_HashMap *self, void *key) {
-    let hash = self.hash(key);
-    let current = self.buckets[hash];
-    __internal_ElleGC_HashNode *prev = nil;
-
-    while current {
-        if current.key == key {
-            if prev {
-                prev.next = current.next;
-            } else {
-                self.buckets[hash] = current.next;
-            }
-
-            mem::free(current);
-            return;
-        }
-
-        prev = current;
-        current = current.next;
-    }
-}
-
-fn __internal_ElleGC_HashMap::free_self(__internal_ElleGC_HashMap *self) {
-    for i32 i = 0; i < self.capacity; i += 1 {
-        let current = self.buckets[i];
-
-        while current {
-            let next = current.next;
-            mem::free(current.value.data);
-            mem::free(current.value);
-            mem::free(current);
-            current = next;
-        }
-    }
-
-    mem::free(self.buckets);
-    mem::free(self);
-}
-
-fn __internal_ElleGC_Header::new(i32 size) {
-    __internal_ElleGC_Header *header = mem::malloc(#size(__internal_ElleGC_Header));
-
-    header.marked = false;
-    header.size = size;
-    header.data = mem::malloc(size);
-
-    return header;
-}
-
-fn GCAllocator::new() {
-    GCAllocator *gc = mem::malloc(#size(GCAllocator));
-
-    gc.total_size = 0;
-    gc.threshold = 32 * 1024 * 1024;
-    gc.objects = 0;
-    gc.map = __internal_ElleGC_HashMap::new(64 * 1024);
-
-    return gc;
-}
-
 !pub fn GCAllocator::__internal_mark_region(GCAllocator *self, void **start, void **end) {
-    let current = start;
-    let end_ptr = end;
+    while start < end {
+        ptr := *start;
 
-    while current < end_ptr {
-        let ptr = *current;
-
-        // not nil && is a multiple of ptrsize && isnt clearly invalid
-        if (ptr % #size(void *)) == 0 && ptr && ptr > 0x1000  {
-            let block = self.map.find(ptr);
+        // pointers tend to be pretty large; this is not a vm
+        if #cast(bool, ptr) && ptr > 0x1000000  {
+            block := self.find(ptr);
 
             // only mark if not already marked because
             // recursively marking more is expensive
@@ -160,19 +86,15 @@ fn GCAllocator::new() {
             }
         }
 
-        current += #size(void *);
+        start += 1; // to mitigate potential misalignment
     }
 }
 
 fn GCAllocator::mark(GCAllocator *self) {
-    for i32 i = 0; i < self.map.capacity; i += 1 {
-        let current = self.map.buckets[i];
-
-        // unmark all
-        while current {
-            current.value.marked = false;
-            current = current.next;
-        }
+    let current = self.head;
+    while current {
+        current.header.marked = false;
+        current = current.next;
     }
 
     // scan the stack for roots
@@ -180,38 +102,35 @@ fn GCAllocator::mark(GCAllocator *self) {
 }
 
 fn GCAllocator::sweep(GCAllocator *self) {
-    for i32 i = 0; i < self.map.capacity; i += 1 {
-        let node = self.map.buckets[i];
-        __internal_ElleGC_HashNode *prev = nil;
+    __internal_ElleGC_HeaderNode *prev = nil;
+    __internal_ElleGC_HeaderNode *node = self.head;
 
-        while node {
-            if !node.value.marked {
-                // if not marked then unlink and free
-                if prev {
-                    prev.next = node.next;
-                } else {
-                    self.map.buckets[i] = node.next;
-                }
-
-                self.total_size -= node.value.size;
-                self.objects -= 1;
-
-                mem::free(node.value.data);
-                mem::free(node.value);
-
-                let next_node = node.next;
-                mem::free(node);
-                node = next_node;
+    while node {
+        if !node.header.marked {
+            if prev {
+                prev.next = node.next;
             } else {
-                // else just continue
-                prev = node;
-                node = node.next;
+                self.head = node.next;
             }
+
+            self.total_size -= node.header.size;
+            self.objects -= 1;
+            mem::free(node.header.data);
+            mem::free(node.header);
+
+            __internal_ElleGC_HeaderNode *next = node.next;
+            mem::free(node);
+            node = next;
+        } else {
+            prev = node;
+            node = node.next;
         }
     }
 }
 
 fn GCAllocator::collect(GCAllocator *self) {
+    before_size := self.total_size;
+
     // garbage collection is a simple mark & sweep algorithm
     // --
     // its currently just a naive stop-the-world approach
@@ -226,16 +145,37 @@ fn GCAllocator::collect(GCAllocator *self) {
     // or arena allocator or something along those lines
     self.mark();
     self.sweep();
+
+    after_size := self.total_size;
+    freed_size := before_size - after_size;
+
+    if before_size > 0 {
+        ratio := freed_size * 100 / before_size;
+
+        if ratio < 25 {
+            self.threshold *= GCAllocator::GROWTH_FACTOR;
+        } else if ratio > 75 {
+            self.threshold /= GCAllocator::GROWTH_FACTOR;
+
+            if self.threshold < GCAllocator::MIN_THRESHOLD {
+                self.threshold = GCAllocator::MIN_THRESHOLD;
+            }
+        }
+    }
 }
 
 fn GCAllocator::alloc(GCAllocator *self, i32 size) {
     if self.total_size + size > self.threshold {
-        let previous_size = self.total_size;
         self.collect();
     }
 
     let header = __internal_ElleGC_Header::new(size);
-    self.map.insert(header.data, header);
+
+    __internal_ElleGC_HeaderNode *node = mem::malloc(#size(__internal_ElleGC_HeaderNode));
+    node.header = header;
+    node.next = self.head;
+    self.head = node;
+
     self.total_size += size;
     self.objects += 1;
 
@@ -247,23 +187,36 @@ fn GCAllocator::realloc(GCAllocator *self, void *ptr, i32 new_size) {
         return self.alloc(new_size);
     }
 
-    let current_header = self.map.find(ptr);
+    let current = self.head;
+    __internal_ElleGC_HeaderNode *prev = nil;
 
-    if current_header {
-        self.map.remove(ptr);
+    while current {
+        if current.header.data == ptr {
+            current.header.data = mem::realloc(current.header.data, new_size);
+            self.total_size = self.total_size - current.header.size + new_size;
+            current.header.size = new_size;
+            return current.header.data;
+        }
 
-        current_header.data = mem::realloc(current_header.data, new_size);
-        self.total_size = self.total_size - current_header.size + new_size;
-        current_header.size = new_size;
-
-        self.map.insert(current_header.data, current_header);
-        return current_header.data;
+        prev = current;
+        current = current.next;
     }
 
     return self.alloc(new_size);
 }
 
 fn GCAllocator::free_self(GCAllocator *self) {
-    self.map.free_self();
+    __internal_ElleGC_HeaderNode *node = self.head;
+
+    while node {
+        let next = node.next;
+
+        mem::free(node.header.data);
+        mem::free(node.header);
+        mem::free(node);
+
+        node = next;
+    }
+
     mem::free(self);
 }
