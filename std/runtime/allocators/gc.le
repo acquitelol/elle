@@ -71,7 +71,7 @@ fn GCAllocator::new() {
         ptr := *start;
 
         // pointers tend to be pretty large; this is not a vm
-        if #cast(bool, ptr) && ptr > 0x1000000  {
+        if #cast(bool, ptr) && ptr > 0x1000000 {
             block := self.find(ptr);
 
             // only mark if not already marked because
@@ -169,9 +169,9 @@ fn GCAllocator::alloc(GCAllocator *self, i32 size) {
         self.collect();
     }
 
-    let header = __internal_ElleGC_Header::new(size);
-
+    header := __internal_ElleGC_Header::new(size);
     __internal_ElleGC_HeaderNode *node = mem::malloc(#size(__internal_ElleGC_HeaderNode));
+
     node.header = header;
     node.next = self.head;
     self.head = node;
@@ -187,8 +187,7 @@ fn GCAllocator::realloc(GCAllocator *self, void *ptr, i32 new_size) {
         return self.alloc(new_size);
     }
 
-    let current = self.head;
-    __internal_ElleGC_HeaderNode *prev = nil;
+    current := self.head;
 
     while current {
         if current.header.data == ptr {
@@ -198,7 +197,6 @@ fn GCAllocator::realloc(GCAllocator *self, void *ptr, i32 new_size) {
             return current.header.data;
         }
 
-        prev = current;
         current = current.next;
     }
 
@@ -206,10 +204,10 @@ fn GCAllocator::realloc(GCAllocator *self, void *ptr, i32 new_size) {
 }
 
 fn GCAllocator::free_self(GCAllocator *self) {
-    __internal_ElleGC_HeaderNode *node = self.head;
+    node := self.head;
 
     while node {
-        let next = node.next;
+        next := node.next;
 
         mem::free(node.header.data);
         mem::free(node.header);
