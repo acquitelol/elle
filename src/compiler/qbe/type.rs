@@ -52,7 +52,7 @@ impl Type {
                     let (name, parts) = Self::from_internal_id(td);
 
                     let mapped = if nesting >= DISPLAY_NESTING_MAX {
-                        "...".into()
+                        "..".into()
                     } else {
                         parts
                             .iter()
@@ -147,7 +147,7 @@ impl Type {
                                             .collect::<Vec<_>>()
                                             .join(", ")
                                     } else {
-                                        "...".into()
+                                        "..".into()
                                     }
                                 )
                             } else {
@@ -905,16 +905,26 @@ impl Type {
                 lhs == rhs || lhs.is_void() || rhs.is_void()
             }
             (Self::Enum(lhs, _), Self::Enum(rhs, _)) => lhs == rhs,
-            (Self::Struct(lhs), Self::Struct(rhs)) => if is_generic!(lhs) && is_generic!(rhs) {
-                let (lhs_name, lhs_parts) = Self::from_internal_id(&lhs);
-                let (rhs_name, rhs_parts) = Self::from_internal_id(&rhs);
+            (Self::Struct(lhs), Self::Struct(rhs)) => {
+                if is_generic!(lhs) && is_generic!(rhs) {
+                    let (lhs_name, lhs_parts) = Self::from_internal_id(&lhs);
+                    let (rhs_name, rhs_parts) = Self::from_internal_id(&rhs);
 
-                lhs_name == rhs_name && lhs_parts.iter().zip(rhs_parts.iter()).all(|(lhs, rhs)| lhs.contextual_eq(rhs))
-            } else {
-                lhs == rhs
+                    lhs_name == rhs_name
+                        && lhs_parts
+                            .iter()
+                            .zip(rhs_parts.iter())
+                            .all(|(lhs, rhs)| lhs.contextual_eq(rhs))
+                } else {
+                    lhs == rhs
+                }
             }
-            (ty, Self::Enum(_, repr_ty)) => Option::as_ref(repr_ty).is_some_and(|repr_ty| repr_ty == ty),
-            (Self::Enum(_, repr_ty), ty) => Option::as_ref(repr_ty).is_some_and(|repr_ty| repr_ty == ty),
+            (ty, Self::Enum(_, repr_ty)) => {
+                Option::as_ref(repr_ty).is_some_and(|repr_ty| repr_ty == ty)
+            }
+            (Self::Enum(_, repr_ty), ty) => {
+                Option::as_ref(repr_ty).is_some_and(|repr_ty| repr_ty == ty)
+            }
             (x, y) => x == y,
         }
     }
