@@ -64,12 +64,6 @@ pub fn build(
     }
 
     let mut args = vec!["-o", &output_path, &path_string];
-    args.extend(
-        linker_flags
-            .iter()
-            .filter(|x| x.is_some())
-            .map(|x| x.as_ref().unwrap().as_str()),
-    );
 
     if !object_files.is_empty() {
         for file in object_files {
@@ -86,9 +80,16 @@ pub fn build(
         // explicitly look for the runtime at this path in case
         // the user doesnt have rpath set or similar
         args.push(&lib_lookup);
-        args.push("-lm");
         args.push("-lelle"); // must be prebuilt
+        args.push("-lm");
     }
+
+    args.extend(
+        linker_flags
+            .iter()
+            .filter(|x| x.is_some())
+            .map(|x| x.as_ref().unwrap().as_str()),
+    );
 
     let result = Command::new(linker_path)
         .args(args)
