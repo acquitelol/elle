@@ -1,0 +1,42 @@
+use std/prelude;
+
+struct EventEmitter @nofmt {
+    HashMap<string, fn(void *)[]> *listeners
+}
+
+fn EventEmitter::new() {
+    return EventEmitter {
+        listeners = HashMap::new()
+    };
+}
+
+fn EventEmitter::on(EventEmitter *self, string event, fn(void *) cb) {
+    event := self.listeners.get_or_insert(event, [fn(void *);]);
+    event.push(cb);
+}
+
+fn EventEmitter::off(EventEmitter *self, string event, fn(void *) cb) {
+    if !self.listeners.contains_key(event) { return; }
+    position := self.listeners[event].iter().position_with(fn(x, cb) x == cb, cb);
+
+    if _, position := position {
+        self.listeners[event].remove(position);
+    }
+}
+
+fn EventEmitter::emit(EventEmitter *self, string event, void *payload) {
+    if !self.listeners.contains_key(event) { return; }
+
+    for cb in self.listeners[event] {
+        cb(payload);
+    }
+}
+
+fn main() {
+    emitter := EventEmitter::new();
+    emitter.on("foo", fn(string x) $dbg(x));
+    emitter.on("foo", cb := fn() $println("event from foo"));
+    emitter.emit("foo", "hello, world!");
+    emitter.off("foo", cb);
+    emitter.emit("foo", "hello again!");
+}
