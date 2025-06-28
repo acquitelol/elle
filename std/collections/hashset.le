@@ -26,7 +26,7 @@ struct HashSet<T> {
 }
 
 fn HashSet::__fmt__<T>(HashSet<T> self, i32 nesting) {
-    let values = self.values();
+    let values = self.values().collect();
     let res = "{";
 
     for u64 i = 0; i < values.len(); i += 1 {

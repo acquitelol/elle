@@ -12,7 +12,6 @@ struct TcpConnection {
 fn TcpConnection::read_raw<T>(TcpConnection self, T *buffer, u64 size) -> Result<i64, Errno> {
     res := recv(self.fd, buffer, size, 0);
 
-    $dbg(self.fd, buffer, size, res);
     if res < 0 {
         return Result::Err(#cast(Errno, errno));
     }
