@@ -253,7 +253,7 @@ More complex example
 fn main() {
     x := "foo"; // x is "foo"
 
-    x := 1; // x is 2, it changes type!
+    x := 1; // x is 1, it changes type!
 
     {
         x = 2; // x is 2

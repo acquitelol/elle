@@ -1,6 +1,7 @@
 # ₊˚ Elle ♡︎
 
 ### A procedural programming language built in Rust and QBE
+
 There is also a [mirror of this repository](https://git.sr.ht/~rosiepie/elle/) on SourceHut.
 
 ‎ ‎ ╱|、
@@ -42,7 +43,7 @@ fn main() {
 
 ### ♡ If you have any questions, please **[raise an issue](https://github.com/acquitelol/elle/issues/new) :3**
 
-All contributions to this project are welcome and I love talking about this stuff!
+All contributions to this project are welcome!
 
 <hr />
 
