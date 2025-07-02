@@ -1,0 +1,35 @@
+use std/prelude;
+
+struct Square { i32 length }
+const Square::draw = fn(Square *self) (0..self.length).for_each_with(fn(_, self) $println("*".repeat(self.length)), self);
+
+struct Triangle { i32 length }
+const Triangle::draw = fn(Triangle *self) (1..=self.length).for_each(fn(i) $println("*".repeat(i)));
+
+struct Shape @nofmt {
+    void *base,
+    fn(void *) draw
+}
+
+fn Shape::from<T>(T *shape) {
+    return Shape {
+        base = shape,
+        draw = T::draw
+    };
+}
+
+fn Shape::draw(Shape self) {
+    cb := self.draw;
+    cb(self.base);
+}
+
+fn main() {
+    square := Square { length = 5 };
+    triangle := Triangle { length = 4 };
+    shapes := [Shape::from(&square), Shape::from(&triangle)];
+
+    for shape in shapes {
+        shape.draw();
+        $println();
+    }
+}
