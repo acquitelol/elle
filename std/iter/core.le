@@ -182,6 +182,16 @@ fn Iterator::position<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> bool pre
     return self.position_with(fn(val, predicate) predicate(val), predicate);
 }
 
+fn Iterator::for_each_with<T, Arg, Any, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, Arg) -> Any cb, Arg value) {
+    for x in self {
+        cb(x, value);
+    }
+}
+
+fn Iterator::for_each<T, Any, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> Any cb) {
+    return self.for_each_with(fn(x, cb) cb(x), cb);
+}
+
 fn Iterator::flat_map<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> U cb) {
     res := self.map(cb);
     val := res.next().unwrap();
