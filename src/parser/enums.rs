@@ -320,7 +320,31 @@ fn modify_type_in_node(
     tree: Option<&RefCell<Vec<Primitive>>>,
 ) -> AstNode {
     match &mut node {
-        AstNode::VariadicStart { .. } | AstNode::Literal { .. } => {}
+        AstNode::VariadicStart { .. } => {}
+        AstNode::Literal(Literal { value, .. }) => {
+            if let Some(name_string) = value.get_string_inner()
+                && name_string.contains('.')
+            {
+                let namespace_name = name_string.splitn(2, '.').nth(0).unwrap().to_string();
+
+                if generics.contains(&namespace_name) {
+                    let id = modify_type(
+                        &ValueKind::String(namespace_name.clone())
+                            .to_type_string(false, false, None)
+                            .unwrap(),
+                        generics,
+                        known_types,
+                        struct_pool,
+                        tree,
+                    )
+                    .strict_id();
+
+                    let parts = name_string.splitn(2, '.').collect::<Vec<_>>();
+                    assert!(parts[0] == namespace_name);
+                    *value = ValueKind::String(format!("{id}.{}", parts[1]));
+                }
+            }
+        }
         AstNode::Declare(Declare { r#type, value, .. }) => {
             if let Some(ty) = r#type {
                 *ty = modify_type(ty, generics, known_types, struct_pool, tree);
