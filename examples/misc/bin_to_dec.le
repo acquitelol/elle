@@ -2,9 +2,9 @@ use std/prelude;
 
 fn main() {
     for ;; {
-        bin := Array::from_string(io::input("Enter a binary string: "));
+        bin := io::input("Enter a binary string: ");
 
-        if !bin.every(fn(x) "01".contains(x)) {
+        if !bin.iter().all(fn(x) "01".contains(x)) {
             $eprintf("Invalid string: {}", bin);
             continue;
         }
@@ -13,7 +13,8 @@ fn main() {
         res := 0;
 
         for c in bin {
-            c == '1' && res += mult /= 2; // wtf
+            mult /= 2;
+            c == '1' && res += mult;
         }
 
         $dbg(res);
