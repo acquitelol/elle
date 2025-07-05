@@ -752,6 +752,8 @@ impl<'a> Statement<'a> {
             if token.kind.is_arithmetic()
                 && token.kind.precedence() <= precedence
                 && nesting == 0
+                && block_nesting == 0
+                && curly_nesting == 0
                 && ternary_nesting == 0
             {
                 precedence_index = index;
@@ -1566,6 +1568,11 @@ impl<'a> Statement<'a> {
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
                     expression = self.parse_ternary_node(expression, location);
+                }
+
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    expression = self.parse_arithmetic()
                 }
 
                 _ => expect_eot!(token),
