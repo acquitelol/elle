@@ -1,9 +1,17 @@
 use std/iter/core;
+use std/unit;
 global pub;
 
+// Note: Unit is a placeholder for the `Arg` generic
+// This is done so that we don't need to monomorphize,
+// nor pass the value by pointer to the callback
+//
+// This is useful when you want to pass a callback as the arg:
+//
+// (1..3).map_with(fn(x, cb) cb(x), cb);
 struct Map<T, U, AnyEnded> {
     Iterator<T, AnyEnded> base,
-    fn(T, void *) -> U cb,
+    fn(T, Unit) -> U cb,
     void *arg
 }
 
@@ -14,7 +22,7 @@ struct Map<T, U, AnyEnded> {
 ) -> Iterator<U, AnyEnded> {
     Map<T, U, AnyEnded> map = Map {
         base = self,
-        cb = #cast(fn(T, void *) -> U, cb),
+        cb = #cast(fn(T, Unit) -> U, cb),
         arg = Box::new(arg).to_ptr()
     };
 
@@ -22,14 +30,14 @@ struct Map<T, U, AnyEnded> {
         env = Box::new(map).to_ptr(),
         next = fn(Map<T, U, AnyEnded> *env) {
             return env.base.next().map_with(fn(x, env) {
-                cb := env.cb;
+                cb := #cast(fn(T, Arg) -> U, env.cb);
                 return cb(x, *#cast(Arg *, env.arg));
             }, env);
         },
         next_back = self.next_back ? fn(Map<T, U, AnyEnded> *env) {
             base := *#cast(Iterator<T, DoubleEnded> *, &env.base);
             return base.next_back().map_with(fn(x, env) {
-                cb := env.cb;
+                cb := #cast(fn(T, Arg) -> U, env.cb);
                 return cb(x, *#cast(Arg *, env.arg));
             }, env);
         } : nil
