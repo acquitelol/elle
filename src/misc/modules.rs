@@ -422,7 +422,6 @@ pub fn lex_and_parse(
 
     // Add global constants
     // - nil => 0 (nullptr)
-    // - ElleMeta => Utility struct
     if nesting == 0 {
         tree.insert(
             0,
@@ -442,46 +441,6 @@ pub fn lex_and_parse(
                     tagged: false,
                 })),
                 location: loc.clone(),
-            }),
-        );
-
-        tree.insert(
-            0,
-            Primitive::Function(FunctionSource {
-                namespace_token: Token::from_ident(get_POINTER_ID!()),
-                name_token: Token::from_ident(LEN_CONSTANT),
-                name: format!("{}.{LEN_CONSTANT}", get_POINTER_ID!()),
-                public: false,
-                usable: true,
-                imported: false,
-                variadic: false,
-                external: false,
-                builtin: true,
-                volatile: false,
-                format: false,
-                unaliased: None,
-                generics: vec!["T".into()],
-                arguments: vec![Argument {
-                    name: "self".into(),
-                    r#type: Type::Pointer(Box::new(Type::Unknown("T".into()))),
-                    no_fmt: false,
-                    is_unused: false,
-                }],
-                r#return: Some(Type::Word),
-                body: vec![AstNode::Return(Return {
-                    value: Box::new(AstNode::ArrayLength(ArrayLength {
-                        value: Box::new(AstNode::Literal(Literal {
-                            kind: TokenKind::Identifier,
-                            value: ValueKind::String("self".into()),
-                            location: loc.clone(),
-                            tagged: false,
-                        })),
-                        location: loc.clone(),
-                    })),
-                    location: loc.clone(),
-                })],
-                location: loc.clone(),
-                return_location: loc,
             }),
         );
     }
