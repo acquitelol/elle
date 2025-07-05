@@ -1,19 +1,22 @@
 use std/prelude;
-use std/time;
 
-const string SHORT_EXTENSION = ".le";
+const SHORT_EXTENSION = ".le";
 
-fn main() {
-    string[] lines = [];
+fn main(string[] args) {
+    if args.len() == 1 || args[1] != "wrapped" {
+        libc::system("rlwrap {} wrapped".format(args[0]));
+    }
+
+    lines := [string;];
 
     while true {
-        let line = io::input(".ೃ࿔* -> ");
+        line := io::input(".ೃ࿔* -> ");
 
         if line.ends_with(";") {
             line.pop();
         }
 
-        let backlog = "{}{}".format(
+        backlog := "{}{}".format(
             lines.join(";\n{}".format(" ".repeat(16))),
             lines.len() > 0 ? ";" : ""
         );
@@ -34,15 +37,15 @@ fn main() {
             continue;
         }
 
-        let src_path = ".repl-{}{}".format(time(nil), SHORT_EXTENSION);
-        let exec_path = "./{}".format(src_path.replace(SHORT_EXTENSION, ""));
+        src_path := ".repl-{}{}".format(time(nil), SHORT_EXTENSION);
+        exec_path := "./{}".format(src_path.replace(SHORT_EXTENSION, ""));
 
         if !io::write_to_file(src_path, code) {
             io::eprintf("Failed to write to file at path: {}", src_path);
             continue;
         }
 
-        let src_code = libc::system("ellec --hush {}".format(src_path));
+        src_code := libc::system("ellec --hush {}".format(src_path));
         io::remove(src_path);
 
         if !src_code {
