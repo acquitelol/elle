@@ -2444,21 +2444,21 @@ Iterators are powerful in that they can have adapters applied to them, to perfor
 
 These (as of 0.68.0) include:
 
-| Adapter       | `???Ended`    | Description                                                                                                                                          |
-| ------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `once`        | `SingleEnded` | Takes a value and yields it lazily a single time.                                                                                                    |
-| `range`       | `DoubleEnded` | Creates an iterable range between 2 values, optionally including the end. There is also syntax sugar for this in the form of `x..y` and `x..=y`.     |
-| `iota`        | `SingleEnded` | Yields infinitely from the `start` parameter provided.                                                                                               |
-| `filter`      | `AnyEnded`    | Filters the values from the iterator passed in with the predicate provided.                                                                          |
-| `map`         | `AnyEnded`    | Projects the values from the iterator passed in with the callback provided.                                                                          |
-| `rev`         | `DoubleEnded` | Switches `next` with `next_back`, essentially allowing for yielding from the back of the iterator.                                                   |
-| `take`        | `AnyEnded`    | Takes `n` elements from the iterator provided. If the iterator has less than `n` elements in it, `Take` will yield however many elements are left.   |
-| `chunks`      | `AnyEnded`    | Splits the elements from the iterator into `n` sized collected arrays of `T`. If there isn't an even split, the last array will have `< n` items.    |
-| `windows`     | `AnyEnded`    | Returns a sliding window over the iterator of size `n`. If `n` is larger than the length of the iterator, this will yield nothing.                   |
-| `cycle`       | `SingleEnded` | Accepts any `Iterator<T, AnyEnded>` and a generator for any `Iterator<T, AnyEnded>. Replaces old iterator once it runs out by calling the generator. |
-| `intersperse` | `SingleEnded` | Accepts any `Iterator<T, AnyEnded>` and yields the value provided each odd yield. `(0..3).intersperse(99).collect()` == `[0, 99, 1, 99, 2]`.         |
-| `skip`        | `AnyEnded`    | Returns a new iterator which skips `n` elements from the iterator provided.                                                                          |
-| `enumerate`   | `SingleEnded` | Accepts any iterator and yields values from it along with an index, in a tuple. `["a", "b"].iter().enumerate().collect()` == `[(0, a), (1, b)]`.     |
-| `zip`         | `AnyEnded`    | Accepts any 2 iterators which may yield different values and yields a tuple of a value from each one. Stops whenever one has no values left.         |
-| `chain`       | `AnyEnded`    | Accepts any 2 iterators which yield the same type and yields iterators from the second iterator once the first has no values left.                   |
-| `peekable`    | `AnyEnded`    | Accepts any iterator and allows peeking values from the front of it.                                                                                 |
+| Adapter        | `???Ended`    | Description                                                                                                                                          |
+| -------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `once`         | `SingleEnded` | Takes a value and yields it lazily a single time.                                                                                                    |
+| `range`        | `DoubleEnded` | Creates an iterable range between 2 values, optionally including the end. There is also syntax sugar for this in the form of `x..y` and `x..=y`.     |
+| `iota`         | `SingleEnded` | Yields infinitely from the `start` parameter provided.                                                                                               |
+| `filter`       | `AnyEnded`    | Filters the values from the iterator passed in with the predicate provided.                                                                          |
+| `map/map_with` | `AnyEnded`    | Projects the values from the iterator passed in with the callback provided, aswell as an arg if using `map_with`                                     |
+| `rev`          | `DoubleEnded` | Switches `next` with `next_back`, essentially allowing for yielding from the back of the iterator.                                                   |
+| `take`         | `AnyEnded`    | Takes `n` elements from the iterator provided. If the iterator has less than `n` elements in it, `Take` will yield however many elements are left.   |
+| `chunks`       | `AnyEnded`    | Splits the elements from the iterator into `n` sized collected arrays of `T`. If there isn't an even split, the last array will have `< n` items.    |
+| `windows`      | `AnyEnded`    | Returns a sliding window over the iterator of size `n`. If `n` is larger than the length of the iterator, this will yield nothing.                   |
+| `cycle`        | `SingleEnded` | Accepts any `Iterator<T, AnyEnded>` and a generator for any `Iterator<T, AnyEnded>. Replaces old iterator once it runs out by calling the generator. |
+| `intersperse`  | `SingleEnded` | Accepts any `Iterator<T, AnyEnded>` and yields the value provided each odd yield. `(0..3).intersperse(99).collect()` == `[0, 99, 1, 99, 2]`.         |
+| `skip`         | `AnyEnded`    | Returns a new iterator which skips `n` elements from the iterator provided.                                                                          |
+| `enumerate`    | `SingleEnded` | Accepts any iterator and yields values from it along with an index, in a tuple. `["a", "b"].iter().enumerate().collect()` == `[(0, a), (1, b)]`.     |
+| `zip`          | `AnyEnded`    | Accepts any 2 iterators which may yield different values and yields a tuple of a value from each one. Stops whenever one has no values left.         |
+| `chain`        | `AnyEnded`    | Accepts any 2 iterators which yield the same type and yields iterators from the second iterator once the first has no values left.                   |
+| `peekable`     | `AnyEnded`    | Accepts any iterator and allows peeking values from the front of it.                                                                                 |

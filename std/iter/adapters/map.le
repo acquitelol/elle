@@ -3,24 +3,50 @@ global pub;
 
 struct Map<T, U, AnyEnded> {
     Iterator<T, AnyEnded> base,
-    fn(T) -> U cb
+    fn(T, void *) -> U cb,
+    void *arg
+}
+
+!pub fn __internal_map_iter<T, U, Arg, AnyEnded>(
+    Iterator<T, AnyEnded> self,
+    fn(T, Arg) -> U cb,
+    Arg arg
+) -> Iterator<U, AnyEnded> {
+    Map<T, U, AnyEnded> map = Map {
+        base = self,
+        cb = #cast(fn(T, void *) -> U, cb),
+        arg = Box::new(arg).to_ptr()
+    };
+
+    return Iterator {
+        env = Box::new(map).to_ptr(),
+        next = fn(Map<T, U, AnyEnded> *env) {
+            return env.base.next().map_with(fn(x, env) {
+                cb := env.cb;
+                return cb(x, *#cast(Arg *, env.arg));
+            }, env);
+        },
+        next_back = self.next_back ? fn(Map<T, U, AnyEnded> *env) {
+            base := *#cast(Iterator<T, DoubleEnded> *, &env.base);
+            return base.next_back().map_with(fn(x, env) {
+                cb := env.cb;
+                return cb(x, *#cast(Arg *, env.arg));
+            }, env);
+        } : nil
+    };
 }
 
 fn Iterator::map<T, U, AnyEnded>(
     Iterator<T, AnyEnded> self,
     fn(T) -> U cb
 ) -> Iterator<U, AnyEnded> {
-    Map<T, U, AnyEnded> map = Map {
-        base = self,
-        cb = cb
-    };
+    return __internal_map_iter(self, fn(x, cb) cb(x), cb);
+}
 
-    return Iterator {
-        env = Box::new(map).to_ptr(),
-        next = fn(Map<T, U, AnyEnded> *env) env.base.next().map(env.cb),
-        next_back = self.next_back ? fn(Map<T, U, AnyEnded> *env) {
-            base := *#cast(Iterator<T, DoubleEnded> *, &env.base);
-            return base.next_back().map(env.cb);
-        } : nil
-    };
+fn Iterator::map_with<T, U, Arg, AnyEnded>(
+    Iterator<T, AnyEnded> self,
+    fn(T, Arg) -> U cb,
+    Arg arg
+) -> Iterator<U, AnyEnded> {
+    return __internal_map_iter(self, cb, arg);
 }
