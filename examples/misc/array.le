@@ -9,11 +9,12 @@ fn len_in_other_fn(i64 *arr) {
     io::printf("The length of the array is {}", #len(arr));
 }
 
+// FIXME: this will not work until static array types are added to the language
 fn main() {
-    let test = #[i64::MAX, i64::MIN, -39];
+    let test = #[i32::MAX, i32::MIN, -39];
 
-    for item in test {
-        io::printf("test[{}] = {}", #i(item), item);
+    for i, item in test.iter().enumerate() {
+        io::printf("test[{}] = {}", i, item);
     }
 
     len_in_other_fn(test);

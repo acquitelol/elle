@@ -1,16 +1,15 @@
-use std/rand;
-use std/time;
-use std/io;
+use std/prelude;
 
-const i32 ITERATIONS = 1e5;
-const i32 ACCURACY = 1e6;
-const f64 EPSILON = 0.1305;
+const ITERATIONS = 1e5;
+const ACCURACY = 1e6;
+const EPSILON = 0.1305;
+const CHANCE = EPSILON * (ACCURACY / 100);
 
-fn roll(i32* results, i32 formattedEpsilon) {
-    let attempts = 0;
-    let roll = ACCURACY;
+fn roll() {
+    attempts := 0;
+    roll := ACCURACY;
 
-    while roll > formattedEpsilon {
+    while roll > CHANCE {
         attempts += 1;
         roll = rand::random(0, ACCURACY);
     }
@@ -18,29 +17,12 @@ fn roll(i32* results, i32 formattedEpsilon) {
     return attempts;
 }
 
-fn calculateAverage(i32* results) {
-    let sum = 0;
-
-    for i32 i = 0; i < ITERATIONS; i += 1 {
-        sum += results[i];
-    }
-
-    return sum / ITERATIONS;
-}
-
 fn main() {
-    i32 results[ITERATIONS];
-    let formattedEpsilon = EPSILON * (ACCURACY / 100);
-
     rand::seed(time(nil));
-
-    for let i = 0; i < ITERATIONS; i += 1 {
-        results[i] = roll(results, formattedEpsilon);
-    }
+    results := (0..ITERATIONS).map(roll);
 
     io::printf(
         "Rolled a {}% chance in an average of {} attempts",
-        EPSILON,
-        calculateAverage(results)
+        EPSILON, results.sum() / ITERATIONS
     );
 }
