@@ -13,8 +13,7 @@ use string_interner::StringInterner;
 use crate::compiler::qbe::r#type::Type;
 use crate::lexer::enums::{MutRc, Token};
 use crate::parser::enums::{
-    ArrayLength, ConstantSource, EnumSource, FunctionSource, Literal, Return, StructSource,
-    UseSource,
+    ConstantSource, EnumSource, FunctionSource, Literal, StructSource, UseSource,
 };
 use crate::parser::parser::EnumPool;
 use crate::{
@@ -26,15 +25,12 @@ use crate::{
     misc::colors::*,
     override_and_add_node,
     parser::{
-        enums::{Argument, AstNode, Primitive},
+        enums::{AstNode, Primitive},
         parser::{DoOnly, Parser, StructPool},
     },
-    Warnings, LEN_CONSTANT, POINTER_ID, PRIMARY_ALLOCATOR_MODULE, SHORT_EXTENSION, STD_LIB_PATH,
+    Warnings, PRIMARY_ALLOCATOR_MODULE, SHORT_EXTENSION, STD_LIB_PATH,
 };
-use crate::{
-    elle_error, get_POINTER_ID, get_STD_LIB_PATH, ARBITRARY_ALLOCATOR_MODULE,
-    BACKUP_ALLOCATOR_MODULE,
-};
+use crate::{elle_error, get_STD_LIB_PATH, ARBITRARY_ALLOCATOR_MODULE, BACKUP_ALLOCATOR_MODULE};
 
 pub type Interner = StringInterner<BufferBackend>;
 

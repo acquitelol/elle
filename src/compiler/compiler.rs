@@ -73,7 +73,6 @@ pub struct Compiler {
     pub warnings: Warnings,
     // lambda functions that should be added as soon as possible
     pub deferred_functions: Vec<Function>,
-    pub function_defs: HashMap<String, Function>,
     // Map from temporary to its stack allocated address
     pub address_pool: HashMap<Value, Value>,
     pub output_path: String,
@@ -287,7 +286,6 @@ impl Compiler {
             warnings,
             tree,
             deferred_functions: vec![],
-            function_defs: hashmap![],
             address_pool: hashmap![],
             output_path: output_path.clone(),
             pedantic,
