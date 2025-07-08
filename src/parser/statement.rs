@@ -2872,28 +2872,28 @@ impl<'a> Statement<'a> {
             let mut curly_nesting = 0;
             let mut nesting = 0;
 
-            let tokens = self.yield_tokens_with_condition(|current, _, _| {
-                if current.kind == TokenKind::LeftParenthesis {
+            let tokens = self.yield_tokens_with_condition(|current, prev, _| {
+                if prev.kind == TokenKind::LeftParenthesis {
                     paren_nesting += 1;
                 }
 
-                if current.kind == TokenKind::RightParenthesis {
+                if prev.kind == TokenKind::RightParenthesis {
                     paren_nesting -= 1;
                 }
 
-                if current.kind == TokenKind::LeftBlockBrace {
+                if prev.kind == TokenKind::LeftBlockBrace {
                     block_nesting += 1;
                 }
 
-                if current.kind == TokenKind::RightBlockBrace {
+                if prev.kind == TokenKind::RightBlockBrace {
                     block_nesting -= 1;
                 }
 
-                if current.kind == TokenKind::LeftCurlyBrace {
+                if prev.kind == TokenKind::LeftCurlyBrace {
                     curly_nesting += 1;
                 }
 
-                if current.kind == TokenKind::RightCurlyBrace {
+                if prev.kind == TokenKind::RightCurlyBrace {
                     curly_nesting -= 1;
                 }
 
