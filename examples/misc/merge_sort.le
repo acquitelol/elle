@@ -1,0 +1,43 @@
+use std/prelude;
+
+fn Array::merge_sort<T>(T[] self) {
+    if self.len() < 2 { return self; }
+    return self.iter().map(fn(x) [x]).collect().merge()[0];
+}
+
+fn Array::merge<T>(T[][] self) -> T[][] {
+    if self.len() < 2 {
+        return self;
+    } else if self.len() == 2 {
+        res := [T;];
+        xs, ys := self;
+        i := j := 0;
+
+        while i < xs.len() && j < ys.len() {
+            if xs[i] < ys[j] {
+                res.push(xs[i]);
+                i += 1;
+            } else {
+                res.push(ys[j]);
+                j += 1;
+            }
+        }
+
+        res.extend(xs.slice(i, -1));
+        res.extend(ys.slice(j, -1));
+        return [res];
+    } else {
+        res := self;
+
+        while res.len() > 1 {
+            // you cant escape this with fold :(
+            res = res.chunks(2).map(fn(x) x.merge()[0]).collect();
+        }
+
+        return res;
+    }
+}
+
+fn main() {
+    $dbg([9, 1, 8, 2, 7].merge_sort()); // [1, 2, 7, 8, 9]
+}
