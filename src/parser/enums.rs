@@ -325,7 +325,7 @@ fn modify_type_in_node(
             if let Some(name_string) = value.get_string_inner()
                 && name_string.contains('.')
             {
-                let namespace_name = name_string.splitn(2, '.').nth(0).unwrap().to_string();
+                let namespace_name = name_string.split('.').nth(0).unwrap().to_string();
 
                 if generics.contains(&namespace_name) {
                     let id = modify_type(
@@ -364,7 +364,7 @@ fn modify_type_in_node(
                     // Err holds our explicitly typed parameter
                     Err(arg) => {
                         arg.r#type =
-                            modify_type(&arg.r#type, generics, known_types, struct_pool, tree)
+                            modify_type(&arg.r#type, generics, known_types, struct_pool, tree);
                     }
                     _ => {}
                 }
@@ -451,6 +451,7 @@ fn modify_type_in_node(
             condition,
             body,
             else_body,
+            elifs,
             ..
         }) => {
             let new_condition =
@@ -459,6 +460,19 @@ fn modify_type_in_node(
             *body = modify_type_in_ast(body.clone(), generics, known_types, struct_pool, tree);
             *else_body =
                 modify_type_in_ast(else_body.clone(), generics, known_types, struct_pool, tree);
+
+            for (condition, body) in elifs {
+                let new_condition = modify_type_in_node(
+                    *condition.clone(),
+                    generics,
+                    known_types,
+                    struct_pool,
+                    tree,
+                );
+
+                *condition = Box::new(new_condition);
+                *body = modify_type_in_ast(body.clone(), generics, known_types, struct_pool, tree)
+            }
         }
         AstNode::WhileLoopStatement(WhileLoopStatement {
             condition,
