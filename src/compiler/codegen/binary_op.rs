@@ -1,11 +1,9 @@
-use std::cmp::Ordering;
-
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         lib::{
-            convert::convert_to_type, meta_struct::generate_meta_struct,
-            short_circuit::handle_short_circuiting_operation,
+            meta_struct::generate_meta_struct, short_circuit::handle_short_circuiting_operation,
+            weighted_cast::handle_weighted_cast,
         },
         qbe::{comparison::Comparison, instruction::Instruction, r#type::Type, value::Value},
     },
@@ -78,22 +76,19 @@ impl Codegen<'_> for BinaryOperation {
 
         let cloned_func = ctx.func.borrow_mut().to_owned();
 
-        let (mut left_ty, left_val_unparsed) =
+        let (mut left_ty, mut left_val) =
             self.left.clone().compile(gen, ctx).unwrap_or_else(|| {
                 elle_error!(self.location.borrow().error(
                     "Unexpected error when trying to parse left side of an arithmetic operation",
                 ))
             });
 
-        let (mut right_ty, right_val_unparsed) =
+        let (mut right_ty, mut right_val) =
             self.right.clone().compile(gen, ctx).unwrap_or_else(|| {
                 elle_error!(self.location.borrow().error(
                     "Unexpected error when trying to parse right side of an arithmetic operation",
                 ))
             });
-
-        let mut left_val = left_val_unparsed.clone();
-        let mut right_val = right_val_unparsed.clone();
 
         if self.operator != TokenKind::Concat {
             if left_ty.is_string() && right_ty == Type::Char {
@@ -122,40 +117,15 @@ impl Codegen<'_> for BinaryOperation {
                 right_val = char_tmp;
             }
         }
-
-        match left_ty.weight().cmp(&right_ty.weight()) {
-            Ordering::Greater => {
-                let (ty, val) = convert_to_type(
-                    gen,
-                    ctx.func,
-                    right_ty.clone(),
-                    left_ty.clone(),
-                    right_val_unparsed,
-                    &self.location,
-                    &self.location,
-                    false,
-                );
-
-                right_ty = ty;
-                right_val = val;
-            }
-            Ordering::Less => {
-                let (ty, val) = convert_to_type(
-                    gen,
-                    ctx.func,
-                    left_ty,
-                    right_ty.clone(),
-                    left_val_unparsed,
-                    &self.location,
-                    &self.location,
-                    false,
-                );
-
-                left_ty = ty;
-                left_val = val;
-            }
-            Ordering::Equal => {}
-        }
+        handle_weighted_cast(
+            gen,
+            ctx.func,
+            &mut left_ty,
+            &mut left_val,
+            &mut right_ty,
+            &mut right_val,
+            &self.location,
+        );
 
         if ((!left_ty.is_primitive() || !right_ty.is_primitive())
             || left_ty.is_enum()
