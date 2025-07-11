@@ -37,6 +37,7 @@ pub enum Instruction {
     ShiftLeft(Value, Value),
     ArithmeticShiftRight(Value, Value),
     Blit(Value, Value, u64),
+    Phi(Vec<(String, Value)>),
     // LogicalShiftRight(Value, Value),
     #[cfg(debug_assertions)]
     Comment(String),
@@ -95,7 +96,8 @@ impl Instruction {
             }
             #[cfg(debug_assertions)]
             Self::Comment(_) => false,
-            Self::Jump(_) => false
+            Self::Jump(_) => false,
+            Self::Phi(_) => false
         }
     }
 }
@@ -260,6 +262,19 @@ impl fmt::Display for Instruction {
             }
             Self::Blit(src, dst, size) => {
                 write!(formatter, "blit {src}, {dst}, {size}")
+            }
+            Self::Phi(values) => {
+                write!(formatter, "phi ")?;
+
+                for (i, (label, value)) in values.iter().enumerate() {
+                    write!(formatter, "@{label} {value}")?;
+
+                    if i + 1 < values.len() {
+                        write!(formatter, ", ")?;
+                    }
+                }
+
+                Ok(())
             }
             #[cfg(debug_assertions)]
             Self::Comment(val) => {
