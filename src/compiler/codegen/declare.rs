@@ -154,7 +154,7 @@ impl Codegen<'_> for Declare {
                     final_val.clone(),
                 ));
 
-                if addr_ty.is_pointer() {
+                if addr_ty.is_pointer() && !gen.no_gc {
                     ctx.func.borrow_mut().add_instruction(Instruction::Call(
                         Value::Global(GC_NOOP.into()),
                         vec![(addr_ty.clone(), addr_val.clone())],
