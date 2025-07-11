@@ -90,33 +90,6 @@ impl Codegen<'_> for BinaryOperation {
                 ))
             });
 
-        if self.operator != TokenKind::Concat {
-            if left_ty.is_string() && right_ty == Type::Char {
-                let char_tmp = gen.new_temporary(None, true);
-
-                ctx.func.borrow_mut().assign_instruction(
-                    &char_tmp,
-                    &Type::Char,
-                    Instruction::Load(Type::Char, left_val),
-                );
-
-                left_ty = Type::Char;
-                left_val = char_tmp;
-            }
-
-            if right_ty.is_string() && left_ty == Type::Char {
-                let char_tmp = gen.new_temporary(None, true);
-
-                ctx.func.borrow_mut().assign_instruction(
-                    &char_tmp,
-                    &Type::Char,
-                    Instruction::Load(Type::Char, right_val),
-                );
-
-                right_ty = Type::Char;
-                right_val = char_tmp;
-            }
-        }
         handle_weighted_cast(
             gen,
             ctx.func,
