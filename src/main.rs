@@ -234,7 +234,10 @@ async fn main() -> ExitCode {
                 hush = true;
             }
             "--nosm" | "--no-string-module" => no_strings = true,
-            "--noalloc" | "--no-allocation" => no_alloc = true,
+            "--noalloc" | "--no-allocation" => {
+                no_alloc = true;
+                no_gc = true;
+            }
             "--nogc" | "--no-garbage-collector" => no_gc = true,
             "--nostd" | "--no-stdlib" => no_std = true,
             "--nofmt" | "--no-primitive-formatters" => no_fmt = true,
