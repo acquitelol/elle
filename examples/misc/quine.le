@@ -1,7 +1,7 @@
 fn main() {
     x := "fn main() {
     x := \"?\";
-    io::puts(x.replace(#[#cast(char, 63)], x.replace(#['\\\\', '\\\\'], #['\\\\', '\\\\', '\\\\', '\\\\']).replace(#['\"'], #['\\\\', '\"'])));
+    io::puts(x.replace(#[#cast(char, 63)], x.replace(#['\\\\'], #['\\\\', '\\\\']).replace(\"\\\"\", \"\\\\\\\"\")));
 }";
-    io::puts(x.replace(#[#cast(char, 63)], x.replace(#['\\', '\\'], #['\\', '\\', '\\', '\\']).replace(#['"'], #['\\', '"'])));
+    io::puts(x.replace(#[#cast(char, 63)], x.replace(#['\\'], #['\\', '\\']).replace("\"", "\\\"")));
 }
