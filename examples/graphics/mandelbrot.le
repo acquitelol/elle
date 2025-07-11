@@ -5,11 +5,11 @@ const SCREEN_WIDTH = 800;
 const SCREEN_HEIGHT = 800;
 const RESET_SPEED = 0.08;
 const EPSILON = 0.001;
+const RESOLUTION = 1.0 / 4;
 
 fn main() {
-    f32 resolution = 1 / 4;
-    i32 textureWidth = SCREEN_WIDTH * resolution;
-    i32 textureHeight = SCREEN_HEIGHT * resolution;
+    i32 textureWidth = SCREEN_WIDTH * RESOLUTION;
+    i32 textureHeight = SCREEN_HEIGHT * RESOLUTION;
 
     rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Mandelbrot Set");
     defer rl::close_window();
@@ -23,7 +23,7 @@ fn main() {
     let zoom = 0.75;
     let offsetX = -0.75;
     let offsetY = 0.0;
-    let fontSize = 15 * resolution;
+    let fontSize = 15 * RESOLUTION;
     let baseZoomScale = 0.02;
 
     let targetZoom = 0.75;

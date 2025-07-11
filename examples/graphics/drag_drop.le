@@ -35,16 +35,16 @@ fn main() {
             rl::clear_background(rl::get_color(0x181818FF));
             rl::draw_text("Drop files here...", PADDING, PADDING, TITLE_FONT_SIZE, DARKGRAY);
 
-            for file in files {
+            for i, file in files.iter().enumerate() {
                 rl::draw_rectangle(
-                    0, TOP_OFFSET + RECT_HEIGHT * #i(file),
+                    0, TOP_OFFSET + RECT_HEIGHT * i,
                     rl::get_screen_width(), RECT_HEIGHT,
-                    rl::fade(DARKGRAY, #i(file) % 2 == 0 ? 0.3 : 0.1)
+                    rl::fade(DARKGRAY, i % 2 == 0 ? 0.3 : 0.1)
                 );
 
                 rl::draw_text(
                     file, PADDING,
-                    TOP_OFFSET + TEXT_OFFSET + RECT_HEIGHT * #i(file),
+                    TOP_OFFSET + TEXT_OFFSET + RECT_HEIGHT * i,
                     ENTRY_FONT_SIZE, GRAY
                 );
             }

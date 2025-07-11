@@ -99,7 +99,7 @@ impl Codegen<'_> for Literal {
                             && !ty.is_unknown()
                             && ty.is_strictly_number()
                             // prevents -1 or 65535 from being interpreted as bools
-                            && (ty.is_bool() && [0, 1].contains(&val))
+                            && (!ty.is_bool() || [0, 1].contains(&val))
                     }) {
                         ctx.ty.clone().unwrap_or(num_ty)
                     } else {

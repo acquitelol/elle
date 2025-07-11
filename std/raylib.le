@@ -333,8 +333,8 @@ struct FilePathList {
     string *paths,         // Filepaths entries
 }
 
-!external fn FilePathList::__len__(FilePathList self) {
-    return self.count;
+!external fn FilePathList::__iter__(FilePathList self) {
+    return (0..self.count).map_with(fn(i, self) self.paths[i], self);
 }
 
 !external fn FilePathList::__load__(FilePathList self, u32 i) {
