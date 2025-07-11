@@ -1,6 +1,7 @@
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
+        lib::weighted_cast::handle_weighted_cast,
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
     elle_error,
@@ -9,13 +10,15 @@ use crate::{
 
 impl Codegen<'_> for Ternary {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let temp = gen.new_temporary(Some("ternary"), false);
-
+        gen.tmp_counter += 1;
         let true_label = format!("ift.{}", gen.tmp_counter);
         let false_label = format!("iff.{}", gen.tmp_counter);
+        let conv_label = format!("conv.{}", gen.tmp_counter);
         let end_label = format!("end.{}", gen.tmp_counter);
+        let matches_true_label = format!("ift.match.{}", gen.tmp_counter);
+        let matches_false_label = format!("iff.match.{}", gen.tmp_counter);
 
-        let (_, condition_val) =
+        let (_, cond_val) =
             self.condition
                 .compile(gen, &ctx.to_nnf())
                 .unwrap_or_else(|| {
@@ -27,22 +30,76 @@ impl Codegen<'_> for Ternary {
         ctx.func
             .borrow_mut()
             .add_instruction(Instruction::JumpNonZero(
-                condition_val,
+                cond_val,
                 true_label.clone(),
                 false_label.clone(),
             ));
 
-        ctx.func.borrow_mut().add_block(true_label);
+        ctx.func.borrow_mut().add_block(true_label.clone());
 
-        let (if_true_ty, if_true_val) = self.if_true.compile(gen, ctx).unwrap_or_else(|| {
-            elle_error!(self
-                .location
-                .borrow()
-                .error("Unexpected error when trying to compile the `true` path of a ternary"))
-        });
+        let (mut if_true_ty, mut if_true_val) =
+            self.if_true.compile(gen, ctx).unwrap_or_else(|| {
+                elle_error!(self
+                    .location
+                    .borrow()
+                    .error("Unexpected error when trying to compile the `true` path of a ternary"))
+            });
+
+        ctx.func
+            .borrow_mut()
+            .add_instruction(Instruction::Jump(conv_label.clone()));
+
+        ctx.func.borrow_mut().add_block(false_label.clone());
+
+        let (mut if_false_ty, mut if_false_val) =
+            self.if_false.compile(gen, ctx).unwrap_or_else(|| {
+                elle_error!(self
+                    .location
+                    .borrow()
+                    .error("Unexpected error when trying to compile the `false` path of a ternary"))
+            });
+
+        ctx.func
+            .borrow_mut()
+            .add_instruction(Instruction::Jump(conv_label.clone()));
+
+        ctx.func.borrow_mut().add_block(conv_label);
+
+        let phi_tmp = gen.new_temporary(None, false);
 
         ctx.func.borrow_mut().assign_instruction(
-            &temp,
+            &phi_tmp,
+            &Type::Boolean,
+            Instruction::Phi(vec![
+                (true_label, Value::Const(String::new(), 1)),
+                (false_label, Value::Const(String::new(), 0)),
+            ]),
+        );
+
+        handle_weighted_cast(
+            gen,
+            ctx.func,
+            &mut if_true_ty,
+            &mut if_true_val,
+            &mut if_false_ty,
+            &mut if_false_val,
+            &self.location,
+        );
+
+        ctx.func
+            .borrow_mut()
+            .add_instruction(Instruction::JumpNonZero(
+                phi_tmp,
+                matches_true_label.clone(),
+                matches_false_label.clone(),
+            ));
+
+        ctx.func.borrow_mut().add_block(matches_true_label.clone());
+
+        let if_true_tmp = gen.new_temporary(None, false);
+
+        ctx.func.borrow_mut().assign_instruction(
+            &if_true_tmp,
             &if_true_ty,
             Instruction::Copy(if_true_val),
         );
@@ -51,17 +108,12 @@ impl Codegen<'_> for Ternary {
             .borrow_mut()
             .add_instruction(Instruction::Jump(end_label.clone()));
 
-        ctx.func.borrow_mut().add_block(false_label);
+        ctx.func.borrow_mut().add_block(matches_false_label.clone());
 
-        let (if_false_ty, if_false_val) = self.if_false.compile(gen, ctx).unwrap_or_else(|| {
-            elle_error!(self
-                .location
-                .borrow()
-                .error("Unexpected error when trying to compile the `false` path of a ternary"))
-        });
+        let if_false_tmp = gen.new_temporary(None, false);
 
         ctx.func.borrow_mut().assign_instruction(
-            &temp,
+            &if_false_tmp,
             &if_false_ty,
             Instruction::Copy(if_false_val),
         );
@@ -71,6 +123,18 @@ impl Codegen<'_> for Ternary {
             .add_instruction(Instruction::Jump(end_label.clone()));
 
         ctx.func.borrow_mut().add_block(end_label);
-        Some((if_true_ty, temp))
+
+        let res_tmp = gen.new_temporary(None, false);
+
+        ctx.func.borrow_mut().assign_instruction(
+            &res_tmp,
+            &if_true_ty,
+            Instruction::Phi(vec![
+                (matches_true_label, if_true_tmp),
+                (matches_false_label, if_false_tmp),
+            ]),
+        );
+
+        Some((if_true_ty, res_tmp))
     }
 }
