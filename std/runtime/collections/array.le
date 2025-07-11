@@ -24,33 +24,57 @@ struct Array<T> @nofmt {
 }
 
 fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
-    parts := [string;];
+    // the number of ", " in the array + everything else
+    total_length := (self.len() - 1) * 2;
+    inline_parts := [string;];
 
-    for i32 i = 0; i < self.len(); i += 1 {
-        parts.push(self[i].__fmt__(nesting));
+    for u64 i = 0; i < self.len(); i += 1 {
+        s := self[i].__fmt__(nesting);
+        inline_parts.push(s);
+        total_length += s.len();
+
+        if total_length >= Array::MAX_INLINE_LENGTH {
+            break; // we already cant inline it
+        }
     }
 
-    without_nl := parts.join(", ");
-
-    if without_nl.len() < Array::MAX_INLINE_LENGTH {
-        return "[{}]".format(without_nl);
-    } else {
-        spacing := " ".repeat(nesting * 4);
-        delimeter := ",\n{}".format(spacing);
-
-        return "[\n{}{}\n{}]".format(
-            spacing,
-            parts
-                .map(fn(x) {
-                    return x
-                        .split("\n")
-                        .map(fn(y) "{}{}".format(" ".repeat(4), y))
-                        .join("\n");
-                })
-                .join(delimeter),
-            spacing
-        );
+    if total_length < Array::MAX_INLINE_LENGTH {
+        return "[{}]".format(inline_parts.join(", "));
     }
+
+    base_indent := " ".repeat(nesting * 4);
+    child_indent := base_indent <> "    ";
+    base_indent_arr := Array::from_string(base_indent);
+
+    result := ['[', '\n'];
+    result.extend(base_indent_arr);
+
+    for u64 i = 0; i < self.len(); i += 1 {
+        if i > 0 {
+            result.push(',');
+            result.push('\n');
+            result.extend(base_indent_arr);
+        }
+
+        s := i < inline_parts.len()
+            ? inline_parts[i]
+            : self[i].__fmt__(nesting);
+
+        indented := s
+            .split("\n")
+            .map_with(fn(line, x) "{}{}".format(x, line), child_indent)
+            .join("\n");
+
+        for u64 j = 0; j < indented.len(); j += 1 {
+            result.push(indented[j]);
+        }
+    }
+
+    result.push('\n');
+    result.extend(base_indent_arr);
+    result.push(']');
+    result.push('\0');
+    return result.elements;
 }
 
 fn Array::__load__<T>(ElleMeta meta, T[] self, u64 i) {
