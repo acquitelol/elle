@@ -35,7 +35,7 @@ pub fn handle_short_circuiting_operation(
     let right_matches_label = format!("{}.right.match.{}", kind, gen.tmp_counter);
     let end_label = format!("{}.end.{}", kind, gen.tmp_counter);
 
-    let (mut left_ty, mut left_val) = left
+    let (mut left_ty, left_val) = left
         .compile(
             gen,
             &CodegenContext {
@@ -68,6 +68,16 @@ pub fn handle_short_circuiting_operation(
         ),
     );
 
+    func.borrow_mut().add_block(format!("{left_label}.jmp"));
+
+    let mut left_tmp_jmp = gen.new_temporary(Some(&kind.to_string()), true);
+
+    func.borrow_mut().assign_instruction(
+        &left_tmp_jmp,
+        &left_ty,
+        Instruction::Copy(left_val.clone()),
+    );
+
     match kind {
         TokenKind::And => {
             func.borrow_mut().add_instruction(Instruction::JumpNonZero(
@@ -90,7 +100,7 @@ pub fn handle_short_circuiting_operation(
 
     func.borrow_mut().add_block(right_label.clone());
 
-    let (mut right_ty, mut right_val) = right
+    let (mut right_ty, right_val) = right
         .compile(
             gen,
             &CodegenContext {
@@ -121,6 +131,16 @@ pub fn handle_short_circuiting_operation(
         ),
     );
 
+    func.borrow_mut().add_block(format!("{right_label}.jmp"));
+
+    let mut right_tmp_jmp = gen.new_temporary(Some(&kind.to_string()), true);
+
+    func.borrow_mut().assign_instruction(
+        &right_tmp_jmp,
+        &right_ty,
+        Instruction::Copy(right_val.clone()),
+    );
+
     // This is the same for AND and OR
     func.borrow_mut().add_instruction(Instruction::JumpNonZero(
         right_tmp,
@@ -136,8 +156,8 @@ pub fn handle_short_circuiting_operation(
         &phi_tmp,
         &Type::Boolean,
         Instruction::Phi(vec![
-            (left_label.clone(), Value::Const(String::new(), 0)),
-            (right_label.clone(), Value::Const(String::new(), 1)),
+            (format!("{left_label}.jmp"), Value::Const(String::new(), 0)),
+            (format!("{right_label}.jmp"), Value::Const(String::new(), 1)),
         ]),
     );
 
@@ -145,9 +165,9 @@ pub fn handle_short_circuiting_operation(
         gen,
         func,
         &mut left_ty,
-        &mut left_val,
+        &mut left_tmp_jmp,
         &mut right_ty,
-        &mut right_val,
+        &mut right_tmp_jmp,
         &location,
     );
 
@@ -165,20 +185,26 @@ pub fn handle_short_circuiting_operation(
 
     func.borrow_mut().add_block(left_matches_label.clone());
 
-    let left_tmp = gen.new_temporary(Some(&kind.to_string()), true);
+    let left_tmp_match = gen.new_temporary(Some(&kind.to_string()), true);
 
-    func.borrow_mut()
-        .assign_instruction(&left_tmp, &left_ty, Instruction::Copy(left_val.clone()));
+    func.borrow_mut().assign_instruction(
+        &left_tmp_match,
+        &left_ty,
+        Instruction::Copy(left_tmp_jmp.clone()),
+    );
 
     func.borrow_mut()
         .add_instruction(Instruction::Jump(end_label.clone()));
 
     func.borrow_mut().add_block(right_matches_label.clone());
 
-    let right_tmp = gen.new_temporary(Some(&kind.to_string()), true);
+    let right_tmp_match = gen.new_temporary(Some(&kind.to_string()), true);
 
-    func.borrow_mut()
-        .assign_instruction(&right_tmp, &left_ty, Instruction::Copy(right_val));
+    func.borrow_mut().assign_instruction(
+        &right_tmp_match,
+        &left_ty,
+        Instruction::Copy(right_tmp_jmp),
+    );
 
     func.borrow_mut()
         .add_instruction(Instruction::Jump(end_label.clone()));
@@ -194,13 +220,16 @@ pub fn handle_short_circuiting_operation(
     .to_string();
 
     let mut predecessors = vec![
-        (right_label, Value::Const(prefix.clone(), 0)),
-        (left_matches_label, left_tmp.clone()),
-        (right_matches_label, right_tmp.clone()),
+        (
+            format!("{right_label}.jmp"),
+            Value::Const(prefix.clone(), 0),
+        ),
+        (left_matches_label, left_tmp_match.clone()),
+        (right_matches_label, right_tmp_match.clone()),
     ];
 
     if kind == TokenKind::And {
-        predecessors.insert(0, (left_label, Value::Const(prefix, 0)));
+        predecessors.insert(0, (format!("{left_label}.jmp"), Value::Const(prefix, 0)));
     }
 
     func.borrow_mut()

@@ -45,6 +45,8 @@ impl Codegen<'_> for Ternary {
                     .error("Unexpected error when trying to compile the `true` path of a ternary"))
             });
 
+        ctx.func.borrow_mut().add_block(format!("{true_label}.jmp"));
+
         ctx.func
             .borrow_mut()
             .add_instruction(Instruction::Jump(conv_label.clone()));
@@ -61,6 +63,10 @@ impl Codegen<'_> for Ternary {
 
         ctx.func
             .borrow_mut()
+            .add_block(format!("{false_label}.jmp"));
+
+        ctx.func
+            .borrow_mut()
             .add_instruction(Instruction::Jump(conv_label.clone()));
 
         ctx.func.borrow_mut().add_block(conv_label);
@@ -71,8 +77,8 @@ impl Codegen<'_> for Ternary {
             &phi_tmp,
             &Type::Boolean,
             Instruction::Phi(vec![
-                (true_label, Value::Const(String::new(), 1)),
-                (false_label, Value::Const(String::new(), 0)),
+                (format!("{true_label}.jmp"), Value::Const(String::new(), 1)),
+                (format!("{false_label}.jmp"), Value::Const(String::new(), 0)),
             ]),
         );
 
