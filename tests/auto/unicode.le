@@ -1,0 +1,35 @@
+use std/prelude;
+
+struct Meow { i32 int } // 英語
+const Meow::print = fn(Meow self) $printf("self: {}", self.int);
+
+struct にゃ { i32 整数 } // 日本語
+const にゃ::プリント = fn(にゃ 自分) $printf("自分: {}", 自分.整数);
+
+struct мяу { i32 инт } // ロシア語
+const мяу::печатать = fn(мяу себя) $printf("себя: {}", себя.инт);
+
+struct ʍoǝɯ { i32 ʇuᴉ } // オーストラリア語
+const ʍoǝɯ::ʇuᴉɹd = fn(ʍoǝɯ ɟlǝs) $printf("ɟlǝs: {}", ɟlǝs.ʇuᴉ);
+
+struct `🐱` { i32 `1️⃣` } // 絵文字
+const `🐱`::`🖨️` = fn(`🐱` `💁‍♀️`) $printf("💁‍♀️: {}", `💁‍♀️`.`1️⃣`);
+
+fn main() {
+    foo := Meow { int = 3 };
+    foo.print(); // 英語
+
+    フー := にゃ { 整数 = 3 };
+    フー.プリント(); // 日本語
+
+    фу := мяу { инт = 3 };
+    фу.печатать(); // ロシア語
+
+    ooɟ := ʍoǝɯ { ʇuᴉ = 3 };
+    ooɟ.ʇuᴉɹd(); // オーストラリア語
+
+    `🌸` := `🐱` { `1️⃣` = 3 };
+    `🌸`.`🖨️`(); // 絵文字
+
+    $println("All `unicode` tests have passed!".color("green").reset());
+}
