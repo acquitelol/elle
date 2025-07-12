@@ -15,6 +15,7 @@ pub struct Lexer<'a> {
     bol: usize,
     prev_token: Option<Token>,
     line_starts: Vec<usize>,
+    relative_loc: (usize, usize),
     has_tagged: bool, // whether a token was tagged for introspection yet
 }
 
@@ -28,6 +29,26 @@ impl Lexer<'_> {
             }
         }
 
+        let (i_row, i_col) = get_INTROSPECTION_LOCATION!();
+        let mut out_col = 0;
+        let mut col = 0;
+        let mut row = 0;
+
+        for c in input.chars() {
+            if row == i_row && i_col == col {
+                break;
+            }
+
+            if c == '\n' {
+                row += 1;
+                col = 0;
+                out_col = 0;
+            } else {
+                col += 1;
+                out_col += c.len_utf8();
+            }
+        }
+
         Lexer {
             file,
             input,
@@ -36,6 +57,7 @@ impl Lexer<'_> {
             bol: 0,
             prev_token: None,
             line_starts,
+            relative_loc: (row, out_col),
             has_tagged,
         }
     }
@@ -62,8 +84,7 @@ impl Lexer<'_> {
         if c.is_alphabetic() || c == '_' {
             let (kind, value) = self.consume_identifier(start_row, start_col);
             let location = self.get_location(start_row, start_col);
-            let mut tagged =
-                location.contains(&Position::from_tuple(get_INTROSPECTION_LOCATION!()));
+            let mut tagged = location.contains(&Position::from_tuple(self.relative_loc));
 
             if tagged {
                 if self.has_tagged {
@@ -84,8 +105,7 @@ impl Lexer<'_> {
         if c.is_ascii_digit() {
             let (kind, value) = self.consume_number_literal(start_row, start_col);
             let location = self.get_location(start_row, start_col);
-            let mut tagged =
-                location.contains(&Position::from_tuple(get_INTROSPECTION_LOCATION!()));
+            let mut tagged = location.contains(&Position::from_tuple(self.relative_loc));
 
             if tagged {
                 if self.has_tagged {
@@ -462,7 +482,7 @@ impl Lexer<'_> {
         }
 
         let location = self.get_location(start_row, start_col);
-        let mut tagged = location.contains(&Position::from_tuple(get_INTROSPECTION_LOCATION!()));
+        let mut tagged = location.contains(&Position::from_tuple(self.relative_loc));
 
         if tagged {
             if self.has_tagged {
