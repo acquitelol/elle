@@ -2,7 +2,7 @@ use core::fmt;
 use std::{cell::RefCell, collections::HashMap, iter::Peekable, mem, num::ParseIntError};
 
 use crate::{
-    elle_error, get_POINTER_ID, has_unknown_part, hashmap, is_generic,
+    elle_error, ensure_ascii, get_POINTER_ID, has_unknown_part, hashmap, is_generic,
     lexer::enums::{Location, MutRc, Token},
     misc::{
         colors::{get_GREEN, get_RED, get_RESET, GREEN, RED, RESET},
@@ -1108,7 +1108,7 @@ impl fmt::Display for Type {
             Self::Single => write!(formatter, "s"),
             Self::Double => write!(formatter, "d"),
             Self::Null => write!(formatter, ""),
-            Self::Struct(td) => write!(formatter, ":{td}"),
+            Self::Struct(td) => write!(formatter, ":{}", ensure_ascii!(td.clone(), encode)),
             Self::Enum(_, inner) => {
                 write!(
                     formatter,

@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, fmt};
 
 use super::{module::Module, r#type::Type};
-use crate::{elle_error, lexer::enums::Location};
+use crate::{elle_error, ensure_ascii, lexer::enums::Location};
 
 /// QBE aggregate type definition
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
@@ -46,7 +46,7 @@ impl TypeDef {
 
 impl fmt::Display for TypeDef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "type :{} = ", self.name)?;
+        write!(f, "type :{} = ", ensure_ascii!(self.name.clone(), encode))?;
         if let Some(align) = self.align {
             write!(f, "align {align} ")?;
         }

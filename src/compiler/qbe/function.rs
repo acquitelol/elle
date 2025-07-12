@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt};
 
-use crate::{elle_error, lexer::enums::Location};
+use crate::{elle_error, ensure_ascii, lexer::enums::Location};
 
 use super::{
     block::Block, instruction::Instruction, linkage::Linkage, r#type::Type, statement::Statement,
@@ -123,7 +123,7 @@ impl fmt::Display for Function {
         writeln!(
             formatter,
             " ${name}({args}) {{",
-            name = self.name,
+            name = ensure_ascii!(self.name.clone(), wrap),
             args = arguments_clone.join(", "),
         )?;
 

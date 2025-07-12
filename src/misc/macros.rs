@@ -82,6 +82,31 @@ macro_rules! elle_error {
 }
 
 #[macro_export]
+macro_rules! ensure_ascii {
+    ($str:expr, wrap) => {
+        if $str.chars().any(|c| !c.is_ascii()) {
+            format!("\"{}\"", $str)
+        } else {
+            $str
+        }
+    };
+
+    ($str:expr, encode) => {
+        if $str.chars().any(|c| !c.is_ascii()) {
+            format!(
+                "_{}",
+                $str.as_bytes()
+                    .iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect::<String>()
+            )
+        } else {
+            $str
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! is_generic {
     ($name:expr $(,)?) => {
         $name.contains(&format!(".{}.", $crate::GENERIC_IDENTIFIER))

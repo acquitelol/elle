@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::ensure_ascii;
+
 use super::{data_item::DataItem, linkage::Linkage, r#type::Type};
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
@@ -28,7 +30,12 @@ impl Data {
 
 impl fmt::Display for Data {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "{}data ${} = ", self.linkage, self.name)?;
+        write!(
+            formatter,
+            "{}data ${} = ",
+            self.linkage,
+            ensure_ascii!(self.name.clone(), wrap)
+        )?;
 
         if let Some(align) = self.align {
             write!(formatter, "align {align} ")?;
