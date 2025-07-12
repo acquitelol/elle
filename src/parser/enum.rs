@@ -49,7 +49,9 @@ impl<'a> Enum<'a> {
         }
 
         self.parser.advance();
-        self.parser.expect_tokens(&[TokenKind::Identifier]);
+        self.parser
+            .expect_tokens(&[TokenKind::Identifier, TokenKind::ExactLiteral]);
+
         let name_token = self.parser.current_token();
         let name = self.parser.get_identifier();
         self.parser.advance();

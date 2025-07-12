@@ -206,7 +206,7 @@ macro_rules! get_type {
             name = if is_fn_pointer {
                 $self.current_token().value.get_string_inner().unwrap()
             } else {
-                $self.get(&[TokenKind::Identifier])
+                $self.get_identifier()
             };
 
             is_struct = $struct_pool.borrow().contains_key(&name);

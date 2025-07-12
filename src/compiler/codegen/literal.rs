@@ -14,7 +14,7 @@ use crate::{
 impl Codegen<'_> for Literal {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         match self.kind {
-            TokenKind::Identifier => match self.value {
+            TokenKind::Identifier | TokenKind::ExactLiteral => match self.value {
                 ValueKind::String(name) => {
                     let res = gen.get_variable_lazy(
                         &name,

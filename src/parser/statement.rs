@@ -119,6 +119,10 @@ impl<'a> Statement<'a> {
         self.expect_tokens_with_message(expected, None);
     }
 
+    fn expect_identifier(&self) {
+        self.expect_tokens(&[TokenKind::Identifier, TokenKind::ExactLiteral]);
+    }
+
     pub fn get(&self, expected: &[TokenKind]) -> String {
         let mut found = false;
 
@@ -188,7 +192,7 @@ impl<'a> Statement<'a> {
                 .error("Expected identifier here but got EOF."));
         }
 
-        self.expect_tokens(&[TokenKind::Identifier]);
+        self.expect_identifier();
         let name = self.current_token();
 
         if let Some(next) = self.next_token()
@@ -268,7 +272,7 @@ impl<'a> Statement<'a> {
 
     fn parse_declarative_like(&mut self) -> AstNode {
         let location = self.current_token().location;
-        self.expect_tokens(&[TokenKind::Identifier]);
+        self.expect_identifier();
         let name = self.current_token();
 
         self.advance();
@@ -300,21 +304,21 @@ impl<'a> Statement<'a> {
 
     fn parse_tuple_declare(&mut self, existing_ty: Option<Option<Type>>) -> AstNode {
         let location = self.current_token().location;
-        self.expect_tokens(&[TokenKind::Identifier]);
+        self.expect_identifier();
         let first = self.current_token();
         self.advance();
 
         self.expect_tokens(&[TokenKind::Comma]);
         self.advance();
 
-        self.expect_tokens(&[TokenKind::Identifier]);
+        self.expect_identifier();
         let second = self.current_token();
         self.advance();
 
         let third = if self.current_token().kind == TokenKind::Comma {
             self.advance();
 
-            self.expect_tokens(&[TokenKind::Identifier]);
+            self.expect_identifier();
             let third = self.current_token();
             self.advance();
 
@@ -895,7 +899,7 @@ impl<'a> Statement<'a> {
 
         let name = name.map_or_else(
             || {
-                self.expect_tokens(&[TokenKind::Identifier]);
+                self.expect_identifier();
                 let tmp = self.current_token();
                 self.advance();
 
@@ -1337,13 +1341,13 @@ impl<'a> Statement<'a> {
 
     /// for x in [1, 2, 3] {}
     fn parse_foreach_statement(&mut self, location: MutRc<Location>) -> AstNode {
-        self.expect_tokens(&[TokenKind::Identifier]);
+        self.expect_identifier();
         let first = self.current_token();
         self.advance();
 
         let second = if self.current_token().kind == TokenKind::Comma {
             self.advance();
-            self.expect_tokens(&[TokenKind::Identifier]);
+            self.expect_identifier();
             let res = self.current_token();
             self.advance();
             Some(res)
@@ -1353,7 +1357,7 @@ impl<'a> Statement<'a> {
 
         let third = if self.current_token().kind == TokenKind::Comma {
             self.advance();
-            self.expect_tokens(&[TokenKind::Identifier]);
+            self.expect_identifier();
             let res = self.current_token();
             self.advance();
             Some(res)
@@ -1760,7 +1764,7 @@ impl<'a> Statement<'a> {
     fn parse_variadic(&mut self) -> AstNode {
         let location = self.current_token().location;
         self.advance();
-        self.expect_tokens(&[TokenKind::Identifier]);
+        self.expect_identifier();
         let name = self.current_token();
 
         self.advance();
@@ -1773,7 +1777,7 @@ impl<'a> Statement<'a> {
     fn parse_yield_variadic(&mut self) -> AstNode {
         let location = self.current_token().location;
         let position = self.position;
-        self.expect_tokens(&[TokenKind::Identifier]);
+        self.expect_identifier();
         let name = self.current_token();
 
         self.advance();
@@ -2497,7 +2501,7 @@ impl<'a> Statement<'a> {
     fn parse_struct_init(&mut self) -> AstNode {
         let location = self.current_token().location;
         let position = self.position;
-        self.expect_tokens(&[TokenKind::Identifier]);
+        self.expect_identifier();
         let name = self.current_token();
         let plain_name = name.value.get_string_inner().unwrap();
 
@@ -2649,7 +2653,7 @@ impl<'a> Statement<'a> {
         self.expect_tokens(valid_tokens);
         self.advance();
 
-        self.expect_tokens(&[TokenKind::Identifier]);
+        self.expect_identifier();
 
         let name_token = self.current_token();
         let name = self.get_identifier();
@@ -2693,7 +2697,7 @@ impl<'a> Statement<'a> {
         while valid_tokens.contains(&self.current_token().kind) && !self.is_eof() {
             self.advance(); // Ignore the TokenKind::Dot
 
-            self.expect_tokens(&[TokenKind::Identifier]);
+            self.expect_identifier();
             let inner_location = self.current_token().location;
 
             let name_token = self.current_token();
@@ -3988,7 +3992,9 @@ impl<'a> Statement<'a> {
 
                         match tie.clone().kind {
                             TokenKind::Yield => self.parse_yield_variadic(),
-                            TokenKind::Identifier => self.parse_field_access(None),
+                            TokenKind::Identifier | TokenKind::ExactLiteral => {
+                                self.parse_field_access(None)
+                            }
                             other => elle_error!(unexpected_error(tie, format!("{other:?}"))),
                         }
                     } else if next.kind == TokenKind::Equal {

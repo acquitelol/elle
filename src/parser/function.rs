@@ -268,16 +268,7 @@ impl<'a> Function<'a> {
                     break;
                 }
 
-                let name = match self.parser.current_token().kind {
-                    TokenKind::Identifier => self.parser.get_identifier(),
-                    other => elle_error!(self
-                        .parser
-                        .current_token()
-                        .location
-                        .borrow()
-                        .error(format!("Invalid token type: {other:?}"))),
-                };
-
+                let name = self.parser.get_identifier();
                 self.parser.advance();
                 self.parser.match_token(TokenKind::Comma, true);
 

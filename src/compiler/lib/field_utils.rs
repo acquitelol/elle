@@ -58,7 +58,7 @@ pub fn process_field_access(
     loop {
         match right.clone() {
             AstNode::Literal(Literal {
-                kind: TokenKind::Identifier,
+                kind: TokenKind::Identifier | TokenKind::ExactLiteral,
                 value,
                 location,
                 tagged,

@@ -325,7 +325,7 @@ async fn main() -> ExitCode {
 
     let Some(input_path) = input_path else {
         eprintln!("ERROR: no input is provided");
-        eprintln!("Usage: {program} <main.l | main.elle>");
+        eprintln!("Usage: {program} <main.le>");
         return ExitCode::FAILURE;
     };
 

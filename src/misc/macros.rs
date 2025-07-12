@@ -355,7 +355,7 @@ macro_rules! is_type {
     ($token:expr, $pools:expr, $generics:expr, $restricted:literal) => {{
         let ty_name = $token.value.get_string_inner().unwrap_or("".into());
 
-        $token.kind == TokenKind::Identifier
+        ($token.kind == TokenKind::Identifier || $token.kind == TokenKind::ExactLiteral)
             && ($token.value.is_base_type()
                 || $pools.struct_pool.borrow().contains_key(&ty_name)
                 || $pools.enum_pool.borrow().contains_key(&ty_name)
