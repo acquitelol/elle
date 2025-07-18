@@ -116,21 +116,21 @@ fn State::clear(State *self) {
 fn State::draw_buttons(State *self) {
     button_map := [
         [
+            Button::new("7", fn(self, state) state.input <>= self.kind),
+            Button::new("4", fn(self, state) state.input <>= self.kind),
             Button::new("1", fn(self, state) state.input <>= self.kind),
-            Button::new("2", fn(self, state) state.input <>= self.kind),
-            Button::new("3", fn(self, state) state.input <>= self.kind),
             Button::new("+", fn(self, state) state.handle_operation(self)),
         ],
         [
-            Button::new("4", fn(self, state) state.input <>= self.kind),
+            Button::new("8", fn(self, state) state.input <>= self.kind),
             Button::new("5", fn(self, state) state.input <>= self.kind),
-            Button::new("6", fn(self, state) state.input <>= self.kind),
+            Button::new("2", fn(self, state) state.input <>= self.kind),
             Button::new("-", fn(self, state) state.handle_operation(self)),
         ],
         [
-            Button::new("7", fn(self, state) state.input <>= self.kind),
-            Button::new("8", fn(self, state) state.input <>= self.kind),
             Button::new("9", fn(self, state) state.input <>= self.kind),
+            Button::new("6", fn(self, state) state.input <>= self.kind),
+            Button::new("3", fn(self, state) state.input <>= self.kind),
             Button::new("*", fn(self, state) state.handle_operation(self)),
         ],
         [

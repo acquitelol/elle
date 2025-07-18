@@ -216,8 +216,6 @@ fn Result::and_then<T, E, U>(Result<T, E> self, fn(T) -> Result<U, E> cb) -> Res
     }
 }
 
-/// Calls the provided function with the Ok value and additional argument if this is an Ok,
-/// otherwise returns the Err value unchanged
 fn Result::and_then_with<T, E, U, V>(Result<T, E> self, fn(T, V) -> Result<U, E> cb, V arg) -> Result<U, E> {
     if self.is_ok() {
         return cb(self.__value, arg);
