@@ -84,6 +84,14 @@ fn Result::unwrap<T, E>(ElleMeta meta, Result<T, E> self) -> T {
     return self.__value;
 }
 
+fn Result::unwrap_err<T, E>(ElleMeta meta, Result<T, E> self) -> E {
+    if self.__is_ok {
+        __internal_result_throw(self, "Called `Result::unwrap_err()` on an `Ok()` value", meta);
+    }
+
+    return self.__error;
+}
+
 /// Returns the inner T if the result is ok, otherwise returns the fallback
 fn Result::unwrap_or<T, E>(Result<T, E> self, T fallback) -> T {
     if !self.__is_ok {
@@ -103,11 +111,11 @@ fn Result::is_err<T, E>(Result<T, E> self) {
     return !self.is_ok();
 }
 
-fn Result::resolve_with<T, E, U, Out>(
+fn Result::resolve_with<T, E, Arg, Out>(
     Result<T, E> self,
-    fn(T, U) -> Out if_ok,
-    fn(E, U) -> Out if_err,
-    U arg
+    fn(T, Arg) -> Out if_ok,
+    fn(E, Arg) -> Out if_err,
+    Arg arg
 ) {
     if self.is_ok() {
         return if_ok(self.__value, arg);
@@ -160,11 +168,11 @@ fn Result::is_err_or<T, E>(Result<T, E> self, fn(T) -> bool cb) {
     }
 }
 
-fn Result::map_with<T, E, U, Out>(Result<T, E> self, fn(T, U) -> Out cb, U arg) {
+fn Result::map_with<T, E, Arg, Out>(Result<T, E> self, fn(T, Arg) -> Out cb, Arg arg) {
     if self.is_ok() {
-        return Result::Ok<Out, E>(cb(self.__value, arg));
+        return Ok<Out, E>(cb(self.__value, arg));
     } else {
-        return Result::Err<Out, E>(self.__error);
+        return Err<Out, E>(self.__error);
     }
 }
 
@@ -174,7 +182,7 @@ fn Result::map<T, E, Out>(Result<T, E> self, fn(T) -> Out cb) {
 
 fn Result::map_err_with<T, E, U, Out>(Result<T, E> self, fn(E, U) -> Out cb, U arg) {
     if !self.is_ok() {
-        return Result::Err<T, Out>(cb(self.__error, arg));
+        return Err<T, Out>(cb(self.__error, arg));
     } else {
         return self;
     }
@@ -182,4 +190,38 @@ fn Result::map_err_with<T, E, U, Out>(Result<T, E> self, fn(E, U) -> Out cb, U a
 
 fn Result::map_err<T, E, Out>(Result<T, E> self, fn(E) -> Out cb) {
     return self.map_err_with(fn(err, cb) cb(err), cb);
+}
+
+fn Result::or_else<T, E, F>(Result<T, E> self, fn(E) -> Result<T, F> cb) -> Result<T, F> {
+    if self.is_ok() {
+        return Ok<T, F>(self.__value);
+    } else {
+        return cb(self.__error);
+    }
+}
+
+fn Result::or_else_with<T, E, F, Arg>(Result<T, E> self, fn(E, Arg) -> Result<T, F> cb, Arg arg) -> Result<T, F> {
+    if self.is_ok() {
+        return Result::Ok<T, F>(self.__value);
+    } else {
+        return cb(self.__error, arg);
+    }
+}
+
+fn Result::and_then<T, E, U>(Result<T, E> self, fn(T) -> Result<U, E> cb) -> Result<U, E> {
+    if self.is_ok() {
+        return cb(self.__value);
+    } else {
+        return Err<U, E>(self.__error);
+    }
+}
+
+/// Calls the provided function with the Ok value and additional argument if this is an Ok,
+/// otherwise returns the Err value unchanged
+fn Result::and_then_with<T, E, U, V>(Result<T, E> self, fn(T, V) -> Result<U, E> cb, V arg) -> Result<U, E> {
+    if self.is_ok() {
+        return cb(self.__value, arg);
+    } else {
+        return Err<U, E>(self.__error);
+    }
 }
