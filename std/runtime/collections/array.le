@@ -378,8 +378,8 @@ fn Array::map<T, U>(T[] self, fn(T, u64, T[]) -> U mapping) -> U[] {
     return new_self;
 }
 
-fn Array::filter_with<T, U>(T[] self, fn(T, U, u64, T[]) -> bool mapping, U arg) -> U[] {
-    let new_self = Array::with_capacity<U>(self.len());
+fn Array::filter_with<T, U>(T[] self, fn(T, U, u64, T[]) -> bool mapping, U arg) -> T[] {
+    let new_self = Array::with_capacity<T>(self.len());
 
     for u64 i = 0; i < self.len(); i += 1 {
         if mapping(self[i], arg, i, self) {
@@ -390,16 +390,8 @@ fn Array::filter_with<T, U>(T[] self, fn(T, U, u64, T[]) -> bool mapping, U arg)
     return new_self;
 }
 
-fn Array::filter<T, U>(T[] self, fn(T, u64, T[]) -> bool mapping) -> U[] {
-    let new_self = Array::with_capacity<U>(self.len());
-
-    for u64 i = 0; i < self.len(); i += 1 {
-        if mapping(self[i], arg, i, self) {
-            new_self.push(self[i]);
-        }
-    }
-
-    return new_self;
+fn Array::filter<T>(T[] self, fn(T, u64, T[]) -> bool mapping) -> T[] {
+    return self.filter_with(fn(x, cb, i, self) cb(x, i, self), mapping);
 }
 
 fn Array::every<T>(T[] self, fn(T, u64, T[]) -> bool cb) {
