@@ -85,7 +85,44 @@ pub fn convert_to_type(
             || first.weight() < second.weight()
             || explicit
         {
-            return (second, val);
+            // if were involving floats at all, that probably means
+            // were converting an enum for a binary operation. so we should properly
+            // perform the conversion to repr type using extension and conversion
+            // for ints to floats.
+            //
+            // there is a loose invariant that enum reprs can only ever be
+            //
+            // - integers
+            // - floats
+            // - strings
+            // - other enums
+            //
+            // due to the literal values for variants only being allowed to be
+            //
+            // - char literals
+            // - string literals
+            // - integers
+            //
+            // this means that can safely assume that, if floats are involved,
+            // the type conversion should be fully fledged and not a reinterpret
+            // cast, as this is likely a conversion from an enum to a float
+            // like `Foo::A * 3.0`
+            if !first.get_enum_repr().unwrap_or(first.clone()).is_float()
+                && !second.get_enum_repr().unwrap_or(second.clone()).is_float()
+            {
+                return (second, val);
+            }
+
+            return convert_to_type(
+                gen,
+                func,
+                first.get_enum_repr().unwrap_or(first.clone()),
+                second.get_enum_repr().unwrap_or(second.clone()),
+                val,
+                left_location,
+                right_location,
+                explicit,
+            );
         }
 
         implicit_conversion_error!()
