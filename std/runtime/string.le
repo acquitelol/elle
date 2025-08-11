@@ -159,6 +159,14 @@ fn string::slice(string self, i32 start, i32 end) -> string {
     return sliced;
 }
 
+fn string::first(string self) {
+    return self[0];
+}
+
+fn string::last(string self) {
+    return self[self.len() - 1];
+}
+
 // Concatenates all of the arguments into 1 final string
 //
 // examples:
