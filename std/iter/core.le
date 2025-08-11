@@ -36,6 +36,14 @@ fn Iterator::next_back<T>(Iterator<T, DoubleEnded> self) {
     return cb(self.env);
 }
 
+fn Iterator::empty<T, AnyEnded>() -> Iterator<T, AnyEnded> {
+    return Iterator {
+        env = nil,
+        next = fn() None(),
+        next_back = fn() None()
+    };
+}
+
 fn Iterator::count<T, AnyEnded>(Iterator<T, AnyEnded> self) -> u64 {
     u64 n = 0;
 

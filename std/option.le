@@ -87,6 +87,14 @@ fn Option::unwrap_or<T>(Option<T> self, T fallback) -> T {
     return self.__value;
 }
 
+fn Option::unwrap_or_else<T>(Option<T> self, fn() -> T fallback) -> T {
+    if !self.__is_some {
+        return fallback();
+    }
+
+    return self.__value;
+}
+
 fn Option::or_else<T>(Option<T> self, fn() -> Option<T> fallback) -> Option<T> {
     if !self.__is_some {
         return fallback();
