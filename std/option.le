@@ -137,21 +137,30 @@ fn Option::resolve<T, Out>(Option<T> self, fn(T) -> Out if_some, fn() -> Out if_
     }
 }
 
-fn Option::is_some_and<T>(Option<T> self, fn(T) -> bool cb) {
+fn Option::is_some_and_with<T, Arg>(Option<T> self, fn(T, Arg) -> bool cb, Arg arg) {
     if self.is_some() {
-        return cb(self.__value);
+        return cb(self.__value, arg);
     } else {
         return false;
     }
 }
 
-fn Option::is_none_or<T>(Option<T> self, fn(T) -> bool cb) {
+fn Option::is_some_and<T>(Option<T> self, fn(T) -> bool cb) {
+    return self.is_some_and_with(fn(x, cb) cb(x), cb);
+}
+
+fn Option::is_none_or_with<T, Arg>(Option<T> self, fn(T, Arg) -> bool cb, Arg arg) {
     if self.is_some() {
-        return cb(self.__value);
+        return cb(self.__value, arg);
     } else {
         return true;
     }
 }
+
+fn Option::is_none_or<T>(Option<T> self, fn(T) -> bool cb) {
+    return self.is_none_or_with(fn(x, cb) cb(x), cb);
+}
+
 
 fn Option::map_with<T, U, Out>(Option<T> self, fn(T, U) -> Out cb, U arg) {
     if self.is_some() {
