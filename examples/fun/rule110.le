@@ -1,16 +1,15 @@
 use std/prelude;
 
 fn Array::print(bool[] board) {
-    $println(board.map(fn(x) x ? '#' : '.').join(""));
+    $println(board.map(fn(x) "#."[x]).join(""));
 }
 
 fn main() {
     for ;; {
-        n := i32::parse(io::input("Enter the depth of the Rule 110: "));
-        n = n >= 2 ? n : 2;
+        n := math::max(2, i32::parse(io::input("Enter the depth of the Rule 110: ")));
 
         board := Array::with_capacity<bool>(n).fill(false);
-        board[n - 1] = 1;
+        board[n - 1] = true;
         board.print();
 
         for _ in 0..n - 2 {

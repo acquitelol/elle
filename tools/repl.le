@@ -5,6 +5,7 @@ const SHORT_EXTENSION = ".le";
 fn main(string[] args) {
     if args.len() == 1 || args[1] != "wrapped" {
         libc::system("rlwrap {} wrapped".format(args[0]));
+        return;
     }
 
     lines := [string;];

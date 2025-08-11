@@ -49,24 +49,24 @@ fn Node::print_on_lines(Node *self) {
 
 fn main() {
     root := Node {
-        left = Option::Some(Box::new(Node {
-            left = Option::Some(Box::new(Node {
-                left = Option::None(),
-                right = Option::None(),
+        left = Some(Box::new(Node {
+            left = Some(Box::new(Node {
+                left = None(),
+                right = None(),
                 value = 4
             })),
-            right = Option::None(),
+            right = None(),
             value = 2
         })),
-        right = Option::Some(Box::new(Node {
-            left = Option::Some(Box::new(Node {
-                left = Option::None(),
-                right = Option::None(),
+        right = Some(Box::new(Node {
+            left = Some(Box::new(Node {
+                left = None(),
+                right = None(),
                 value = 5
             })),
-            right = Option::Some(Box::new(Node {
-                left = Option::None(),
-                right = Option::None(),
+            right = Some(Box::new(Node {
+                left = None(),
+                right = None(),
                 value = 6
             })),
             value = 3

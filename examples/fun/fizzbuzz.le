@@ -9,16 +9,21 @@ fn main() {
     }
 
     for i in 1..=input {
-        let res = "";
+        if i % 15 == 0 {
+            $println("FizzBuzz");
+            continue;
+        }
 
         if i % 3 == 0 {
-            res <>= "Fizz";
+            $println("Fizz");
+            continue;
         }
 
         if i % 5 == 0 {
-            res <>= "Buzz";
+            $println("Buzz");
+            continue;
         }
 
-        io::println(res.default("{}".format(i)));
+        $println(i);
     }
 }
