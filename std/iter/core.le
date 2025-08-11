@@ -54,6 +54,16 @@ fn Iterator::fold<T, U, AnyEnded>(Iterator<T, AnyEnded> self, U initial, fn(U, T
     return initial;
 }
 
+fn Iterator::reduce<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, T) -> T cb) -> Option<T> {
+    exists, first := self.next();
+
+    if !exists {
+        return None();
+    }
+
+    return Some(self.fold(first, cb));
+}
+
 fn Iterator::sum<T, AnyEnded>(Iterator<T, AnyEnded> self) {
     return self.fold(0, fn(acc, cur) acc + cur);
 }
