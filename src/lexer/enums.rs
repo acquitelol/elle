@@ -250,6 +250,7 @@ impl TokenKind {
                 | Self::Equal
                 | Self::Question
                 | Self::In
+                | Self::Comment
         ) || self.is_declarative()
             || self.is_arithmetic()
     }
