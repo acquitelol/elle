@@ -40,10 +40,11 @@ macro_rules! insert_known_generics {
                         )
                     )
                 }
-                Some(_) => {} // Found but can convert implicitly
-                None => {
+                None if !ty.is_unknown() => {
                     $known_generics.insert(key, ty);
                 }
+                Some(_) => {} // Found but can convert implicitly
+                None => {} // Has an unknown type, shouldn't be added
             }
         }
     };

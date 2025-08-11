@@ -67,7 +67,14 @@ impl Codegen<'_> for Lambda {
                 imported: false,
                 generics: vec![],
                 arguments: patched_arguments,
-                r#return: self.return_ty,
+                r#return: self
+                    .return_ty
+                    .or(ctx
+                        .ty
+                        .clone()
+                        .and_then(|ty| ty.get_function_inner())
+                        .and_then(|func| func.return_type))
+                    .and_then(|ty| (!ty.has_generic_type()).then(|| ty)),
                 body: if ctx.is_generic { vec![] } else { self.value },
                 location: self.location.clone(),
                 return_location: self.location,
