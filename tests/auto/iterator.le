@@ -358,6 +358,12 @@ fn `peekable.works`() {
     $assert(iter.next() == None<i32>());
 }
 
+fn `flat_map.works`() {
+    $assert((0..3).flat_map(fn(x) [x, x * 2]).collect() == [0, 0, 1, 2, 2, 4]);
+    $assert((0..0).flat_map(fn(x) [x, x * 2]).collect() == [i32;]);
+    $assert((0..4).flat_map(fn(x) 0..x).collect() == [0, 0, 1, 0, 1, 2]);
+}
+
 fn `adapters.map_filter_take`() {
     result := (0..10)
         .map(fn(x) x * 2)
@@ -587,6 +593,7 @@ fn main() {
     `zip.works`();
     `chain.works`();
     `peekable.works`();
+    `flat_map.works`();
     `adapters.map_filter_take`();
     `adapters.skip_enumerate_collect`();
     `adapters.chain_filter_map`();
