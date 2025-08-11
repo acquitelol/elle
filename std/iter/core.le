@@ -211,9 +211,11 @@ fn Iterator::for_each<T, Any, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> Any
 }
 
 fn Iterator::flat_map<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> U cb) {
-    res := self.map(cb);
-    val := res.next().unwrap();
-    return res.fold(val, fn(acc, it) acc.chain(it));
+    return self
+        .map(cb)
+        .map(fn(x) x.__iter__())
+        .reduce(fn(acc, it) acc.chain(it))
+        .unwrap_or_else(fn() Iterator::empty());
 }
 
 fn Iterator::__iter__<T, AnyEnded>(Iterator<T, AnyEnded> self) {
