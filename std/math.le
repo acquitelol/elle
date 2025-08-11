@@ -9,9 +9,6 @@ const f64 PI = 3.1415926535897932384626433832795028841;
 
 external fn math::atan3(f64 x, f64 y) -> f64;
 external fn math::fact(i64 n) -> i64;
-external fn math::min(i64 a, i64 b) -> i64;
-external fn math::max(i64 a, i64 b) -> i64;
-external fn math::clamp(i64 value, i64 min_value, i64 max_value) -> i64;
 external fn math::fclamp(f64 value, f64 min_value, f64 max_value) -> f64;
 
 fn math::next_power_of_2<T>(T x) {
