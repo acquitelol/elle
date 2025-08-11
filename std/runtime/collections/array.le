@@ -576,3 +576,13 @@ fn Array::filled<T>(T[] self) {
     self.size = self.capacity;
     return self;
 }
+
+fn Array::concat<T>(T[][] arrays) {
+    res := [T;];
+
+    for array in arrays {
+        res.extend(array);
+    }
+
+    return res;
+}
