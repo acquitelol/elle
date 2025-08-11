@@ -51,28 +51,44 @@ fn Array::bytes(u64 capacity) {
 struct ArrayEnv<T> {
     T[] base,
     u64 start,
-    u64 end
+    u64 end,
+    u64 len
 }
 
 fn Array::__iter__<T>(T[] self) -> Iterator<T, DoubleEnded> {
-    ArrayEnv<T> env = ArrayEnv { base = self, start = 0, end = self.len() };
+    ArrayEnv<T> env = ArrayEnv {
+        base = self,
+        start = 0,
+        end = self.len(),
+        len = self.len()
+    };
 
     return Iterator {
         env = Box::new(env).to_ptr(),
         next = fn(ArrayEnv<T> *env) {
+            if env.len != env.base.len() {
+                env.end += env.base.len() - env.len;
+                env.len = env.base.len();
+            }
+
             if (from := env.start) < env.end {
                 env.start += 1;
-                return Option::Some(env.base[from]);
+                return Some(env.base[from]);
             } else {
-                return Option::None<T>();
+                return None<T>();
             }
         },
         next_back = fn(ArrayEnv<T> *env) {
+            if env.len != env.base.len() {
+                env.end += env.base.len() - env.len;
+                env.len = env.base.len();
+            }
+
             if env.start < env.end {
                 env.end -= 1;
-                return Option::Some(env.base[env.end]);
+                return Some(env.base[env.end]);
             } else {
-                return Option::None<T>();
+                return None<T>();
             }
         }
     };
@@ -81,24 +97,39 @@ fn Array::__iter__<T>(T[] self) -> Iterator<T, DoubleEnded> {
 external fn Array::__iter__<T>(T[] self) @alias(Array::iter) -> Iterator<T, DoubleEnded>;
 
 fn Array::iter_ref<T>(T[] self) -> Iterator<T *, DoubleEnded> {
-    ArrayEnv<T> env = ArrayEnv { base = self, start = 0, end = self.len() };
+    ArrayEnv<T> env = ArrayEnv {
+        base = self,
+        start = 0,
+        end = self.len(),
+        len = self.len()
+    };
 
     return Iterator {
         env = Box::new(env).to_ptr(),
         next = fn(ArrayEnv<T> *env) {
+            if env.len != env.base.len() {
+                env.end += env.base.len() - env.len;
+                env.len = env.base.len();
+            }
+
             if (from := env.start) < env.end {
                 env.start += 1;
-                return Option::Some(&env.base[from]);
+                return Some(&env.base[from]);
             } else {
-                return Option::None<T *>();
+                return None<T *>();
             }
         },
         next_back = fn(ArrayEnv<T> *env) {
+            if env.len != env.base.len() {
+                env.end += env.base.len() - env.len;
+                env.len = env.base.len();
+            }
+
             if env.start < env.end {
                 env.end -= 1;
-                return Option::Some(&env.base[env.end]);
+                return Some(&env.base[env.end]);
             } else {
-                return Option::None<T *>();
+                return None<T *>();
             }
         }
     };
