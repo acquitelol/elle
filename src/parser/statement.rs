@@ -2929,7 +2929,7 @@ impl<'a> Statement<'a> {
         });
 
         let if_false = Box::new({
-            let tokens = self.yield_tokens_with_delimiters(&[TokenKind::Semicolon]);
+            let tokens = self.yield_tokens_wrapped_with_semi();
             Statement::new(tokens, 0, self.body, self.shared).parse().0
         });
 
