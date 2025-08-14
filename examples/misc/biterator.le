@@ -1,0 +1,52 @@
+use std/prelude;
+
+struct Biterator<T> {
+    T inner,
+}
+
+struct BiteratorEnv<T> {
+    u8 *bytes,
+    u64 byte_count,
+    i64 front_bit,
+    i64 back_bit
+}
+
+fn Biterator::new<T>(T inner) -> Biterator<T> {
+    return Biterator { inner = inner };
+}
+
+fn Biterator::iter<T>(Biterator<T> *self) -> Iterator<u8, DoubleEnded> {
+    BiteratorEnv<T> env = BiteratorEnv {
+        bytes = #cast(u8 *, &self.inner),
+        byte_count = #size(T),
+        front_bit = 0,
+        back_bit = (#size(T) * 8) - 1
+    };
+
+    return Iterator {
+        env = Box::new(env).to_ptr(),
+        next = fn(BiteratorEnv<T> *env) {
+            if env.front_bit > env.back_bit { return None(); }
+
+            byte := env.bytes[env.front_bit / 8];
+            bit := (byte >> (env.front_bit % 8)) & 1;
+
+            env.front_bit += 1;
+            return Some<u8>(bit);
+        },
+        next_back = fn(BiteratorEnv<T> *env) {
+            if env.front_bit > env.back_bit { return None(); }
+
+            byte := env.bytes[env.back_bit / 8];
+            bit := (byte >> (env.back_bit % 8)) & 1;
+
+            env.back_bit -= 1;
+            return Some<u8>(bit);
+        }
+    };
+}
+
+fn main() {
+    // <[1, 0, 1, 1, 0, 1, 1, 0] at 0x6000001d4080>
+    $dbg(Biterator::new<u8>(0b10110110).iter().rev().collect());
+}
