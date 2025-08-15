@@ -8,8 +8,6 @@
     </strong>
 </h2>
 
-<hr />
-
 Elle is a procedural programming language built in Rust which compiles to the [QBE](https://c9x.me/compile) backend. There is also a [mirror of this repository](https://git.sr.ht/~rosiepie/elle/) on SourceHut.
 
 <hr />
