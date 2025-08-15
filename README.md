@@ -1,98 +1,83 @@
-# ₊˚ Elle ♡︎
+<p align="center">
+    <img src="images/mia_256x.png" alt="Mia">
+</p>
 
-### A procedural programming language built in Rust and QBE
+<h2 align="center">
+    <strong>
+        ₊˚ Elle ♡︎
+    </strong>
+</h2>
 
-There is also a [mirror of this repository](https://git.sr.ht/~rosiepie/elle/) on SourceHut.
+<hr />
 
-‎ ‎ ╱|、
-<br />
-(˚ˎ 。7
-<br />
-|、˜〵
-<br />
-じしˍ,)ノ
-<br />
+Elle is a procedural programming language built in Rust which compiles to the [QBE](https://c9x.me/compile) backend. There is also a [mirror of this repository](https://git.sr.ht/~rosiepie/elle/) on SourceHut.
 
-## ♡ **FAQ**
+<hr />
 
-### ✩ It is _heavily_ recommended to read the [FAQ](https://github.com/acquitelol/elle/blob/rewrite/FAQ.md) before trying the language. ✩
+✩ It is _heavily_ recommended to read the [FAQ](https://github.com/acquitelol/elle/blob/rewrite/FAQ.md) before trying the language. It will allow you to grasp the strengths and weaknesses of the language at a glance and quickly learn whether this language is one you would be comfortable using.
 
-It will allow you to grasp the strengths and weaknesses of the language at a glance and quickly learn whether this language is one you would be comfortable using.
+<hr />
 
-## ♡ **Documentation**
+✩ You can view the Elle documentation [here](https://github.com/acquitelol/elle/blob/rewrite/DOCS.md). Please note the language is still in active development and documentation is due to change at any time with no warning.
 
-✩ You can view the Elle documentation/reference [here](https://github.com/acquitelol/elle/blob/rewrite/DOCS.md). ✩
-
-### ✩ _If you like this project, consider giving it a star!_ ✩
-
-### ♡ **Hello, World!**
-
-Writing a hello world program in Elle is super easy:
+#### ♡ **Hello, World!**
 
 ```rs
-use std/io;
+use std/prelude;
 
 fn main() {
-    io::println("Hello world!");
+    $println("Hello world!");
 }
 ```
 
-- Simple enough! ♡
-
 <hr />
 
-### ♡ If you have any questions, please **[raise an issue](https://github.com/acquitelol/elle/issues/new) :3**
-
-All contributions to this project are welcome!
-
-<hr />
-
-### ♡ **How to run**
+#### ♡ **How to run**
 
 - Ensure you have [Rust](https://www.rust-lang.org/), [Cargo](https://crates.io/) and the [QBE](https://c9x.me/compile/) compiler backend.
 
-  ```terminal
-    $ git clone https://github.com/acquitelol/elle
-  ```
+```terminal
+  $ git clone https://github.com/acquitelol/elle
+```
 
-  ```terminal
-    $ cd elle
-  ```
+```terminal
+  $ cd elle
+```
 
-  ```console
-    $ make
-  ```
+```console
+  $ make
+```
 
-  to install the compiler, standard library, and runtime (installs into ~/.local/ by default)
+to install the compiler, standard library, and runtime (installs into ~/.local/ by default)
 
-  Add the compiler executable to your `$PATH`:
+Add the compiler executable to your `$PATH`:
 
-  ```console
-    $ export PATH="$HOME/.local/bin:$PATH"
-  ```
+```console
+  $ export PATH="$HOME/.local/bin:$PATH"
+```
 
-  **OR**
+**OR**
 
-  ```console
-    $ make compile-release
-  ```
+```console
+  $ make compile-release
+```
 
-  to get only a compiler executable and not install anything (does not require root)
+to get only a compiler executable and not install anything (does not require root)
 
-  - **You're done!**
+- **You're done!**
 
 #### ♡ You can now run `ellec` to get a help message of how to use the compiler!
 
 Try compiling a simple example!
 
 ```console
-  $ ellec ./examples/hello.le && ./hello
+  $ ellec ./examples/hello.le --run
 ```
 
 Try compiling an example with libraries!
 
 ```
-  $ ellec ./examples/graphics/ball.le -z -lraylib && ./ball
+  $ ellec ./examples/graphics/ball.le -z -lraylib --run
 ```
 
 <hr />
