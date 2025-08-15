@@ -21,7 +21,7 @@ arr := [i64;];
 i64[] arr = [];
 ```
 
-<hr />
+#
 
 ### ♡ **If statements**
 
@@ -53,7 +53,7 @@ if a == 1 {
 }
 ```
 
-<hr />
+#
 
 ### ♡ **While loops**
 
@@ -83,7 +83,7 @@ while i < 10 {
 
 Please keep in mind that you also have access to the `break` and `continue` keywords while inside of a loop, which break execution early or continue to the next iteration respectively.
 
-<hr />
+#
 
 ### ♡ **For loops**
 
@@ -135,7 +135,7 @@ fn main() {
 
 Please keep in mind that you also have access to the `break` and `continue` keywords while inside of a loop, which break execution early or continue to the next iteration respectively.
 
-<hr />
+#
 
 ### ♡ **Foreach loops**
 
@@ -174,7 +174,7 @@ for i, x in [1, 2, 3].iter().enumerate() {
 
 Please keep in mind that you also have access to the `break` and `continue` keywords while inside of a loop, which break execution early or continue to the next iteration respectively.
 
-<hr />
+#
 
 ### ♡ **Standalone blocks**
 
@@ -210,7 +210,7 @@ fn main() {
 }
 ```
 
-<hr />
+#
 
 ### ♡ **Variable Shadowing**
 
@@ -271,7 +271,7 @@ fn main() {
 }
 ```
 
-<hr />
+#
 
 ### ♡ **Function Metadata**
 
@@ -326,7 +326,7 @@ fn main() {
 
 `square` will be passed `ElleMeta`. Please notice how it is NOT passed by the caller. It is automatically passed by the compiler if it is required.
 
-<hr />
+#
 
 ### ♡ **Allocators**
 
@@ -386,7 +386,7 @@ fn main() {
 
 - You can pass the `--noalloc` flag during compilation. Keep in mind that, while this will no longer define allocators, this means you won't be able to use almost any of the Elle standard library, as all of it depends on these allocators. This flag goes well with the `--nostd` flag.
 
-<hr />
+#
 
 ### ♡ **Dynamic memory allocation**
 
@@ -438,7 +438,7 @@ ptr := #alloc(i32, 5); // same as mem::malloc(#size(i32) * 5)
 > [!IMPORTANT]
 > Standard library functions do not free their memory because of the assumption of an auto-freeing allocator. If you use standard library functions with manual memory management, expect memory leaks.
 
-<hr />
+#
 
 Example of using dynamic memory allocation:
 
@@ -519,7 +519,7 @@ into the (much) cleaner:
 machine := #alloc(Machine);
 ```
 
-<hr />
+#
 
 ### ♡ **Variadic Functions**
 
@@ -550,7 +550,7 @@ fn main() {
 
 Examples that contain variadic functions include [`variadic.le`](https://github.com/acquitelol/elle/blob/rewrite/examples/tests/variadic.le).
 
-<hr />
+#
 
 ### ♡ **Arrays**
 
@@ -656,7 +656,7 @@ This syntax essentially has 2 parts: the type and the values. You can specify th
 
 It's worth noting that the `T[]` type syntax is actually sugar for `Array<T> *`. `T[][]` is equivalent to `Array<Array<T> *> *`.
 
-<hr />
+#
 
 ### ♡ **Tuples and triples**
 
@@ -684,7 +684,7 @@ let foo = [(i32, string);];
 // ... nothing new here
 ```
 
-<hr />
+#
 
 ### ♡ **Destructuring syntax**
 
@@ -826,7 +826,7 @@ a, b := Foo { a = 1, b = "a" };
 a, b, c := Foo { a = 1, b = "a", c = 1.3 };
 ```
 
-<hr />
+#
 
 ### ♡ **Ranges**
 
@@ -856,7 +856,7 @@ for i in 5..=10 {
 }
 ```
 
-<hr />
+#
 
 ### ♡ **Lambda functions**
 
@@ -934,7 +934,7 @@ fn main() {
 }
 ```
 
-<hr />
+#
 
 ### ♡ **Exact literals**
 
@@ -975,7 +975,7 @@ fn main() {
 }
 ```
 
-<hr />
+#
 
 ### ♡ **Static buffers**
 
@@ -1021,7 +1021,7 @@ fn main() {
 
 The type of a static buffer cannot be inferred. You must declare it explicitly.
 
-<hr />
+#
 
 ### ♡ **Defer statements**
 
@@ -1037,7 +1037,7 @@ fn main() {
 }
 ```
 
-<hr />
+#
 
 A very simple example of this is declaring a variable and deferring printing its value, like this:
 
@@ -1133,7 +1133,7 @@ Without deferring, you would have to call `free` at every single place where you
 
 Of course for a function like the above, you are able to determine what path the code will take at compile time, however if you use something like `rand()` you no longer have the ability to do this, so you need to call `free` manually at all points where the function leaves its scope. This is an elegant way to prevent that.
 
-<hr />
+#
 
 ### ♡ **Type definitions**
 
@@ -1156,7 +1156,7 @@ These are the mappings of types in Elle:
 - `string` - A mapping to a `char *`, which is essentially an array of characters, or a "c-string".
 - `fn((type)*) (-> type)?` - A type representing a function pointer. As it's a pointer, it can be `nil`.
 
-<hr />
+#
 
 ### ♡ **Type Conversion / Casting**
 
@@ -1194,7 +1194,7 @@ and Elle will not complain because implicitly converting `void *` -> `T *` and v
 > [!IMPORTANT]
 > Strings are different to regular pointers. Even though they are just `char *`, the compiler will not allow you to implicitly cast a `void*` to a `string`. You will need to explicitly cast it.
 
-<hr />
+#
 
 ### ♡ **Unary operators**
 
@@ -1267,7 +1267,7 @@ pub fn main() {
 
 Here we declare `a` as 39, then we pass the "address" of `a` to `other` as a pointer to an `i32`, then this pointer is dereferenced.
 
-<hr />
+#
 
 The unary `*` operator is used to dereference a pointer to a value:
 
@@ -1312,7 +1312,7 @@ io::println(*(a + 1));
 
 will first add 1 to the address of `a`, and then will dereference that address.
 
-<hr />
+#
 
 ### ♡ **Arithmetic operations**
 
@@ -1384,7 +1384,7 @@ fn main() {
 }
 ```
 
-<hr />
+#
 
 ### ♡ **Constants**
 
@@ -1411,7 +1411,7 @@ In the above code, all of the constants are technically function definitions tha
 
 It is labelled as a "`constant`", because although it can return a different value (it can call any function), it cannot be redeclared.
 
-<hr />
+#
 
 ### ♡ **Non-base-10 literals**
 
@@ -1440,7 +1440,7 @@ fn main() {
 }
 ```
 
-<hr />
+#
 
 ### ♡ **Imports/modules**
 
@@ -1530,7 +1530,7 @@ fn foo(); // implicitly public and external
 !pub !external fn baz() {} // explicitly private and defined
 ```
 
-<hr />
+#
 
 ### ♡ **Structs**
 
@@ -1681,7 +1681,7 @@ The compiler will automatically pass the **address** of `foo` instead of `foo` i
 <br />
 In the case of a method that takes in a `self` _pointer_, the equivalent expression to `foo1.divideBy(2)` is `Foo::divideBy(&foo1, 2)`.
 
-<hr />
+#
 
 ### ♡ **Enumerations** (enums)
 
@@ -1871,7 +1871,7 @@ Implementation details:
 
 Enumerations are completely compile-time syntax sugar. Their variant values are directly inlined, though there is extra semantic information in their types, which disallows implicit conversions from their repr type to their defined type. Due to them being essentially a distinct existing type, their memory representation is just that of a primitive (pointer/char/int) in any case it is always an integer.
 
-<hr />
+#
 
 ### ♡ **Generics**
 
@@ -1955,7 +1955,7 @@ fn main() {
 
 From this you can get a quick grasp of how to use generics effectively. The struct uses 2 generics, and as all methods require to define the `self` argument's type, this means that you need to type <T, U> on every function that takes a Foo<T, U>. This is slightly verbose, and in the future I may allow for syntax to simplify it in the future.
 
-<hr />
+#
 
 ### ♡ **Command line arguments (argc/argv)**
 
@@ -1979,7 +1979,7 @@ fn main(string[] args) {
 
 Keep in mind that to use this, you must have the dynamic array module imported. You can either manually import `std/collections/array`, or import `std/prelude` which imports the array module inside.
 
-<hr />
+#
 
 ### ♡ **Sigils (identifier prefixes)**
 
@@ -2003,7 +2003,7 @@ For more information on stdlib alises, directives and attributes, please read be
 
 > `&` is not really a sigil, but it can be included here anyway. The `&x` expr gives you the address of `x`. You can read more about this in the Unary Operators chapter.
 
-<hr />
+#
 
 ### ♡ **Standard library aliases**
 
@@ -2015,7 +2015,7 @@ For more information on stdlib alises, directives and attributes, please read be
   - `Triple::new(...)` -> `$$(...)`
 - Note that this is created as an **alias** of the original function. This means you can call `io::dbg` instead of `$dbg`, for example.
 
-<hr />
+#
 
 ### ♡ **Directives**
 
@@ -2035,7 +2035,7 @@ The current existing directives are:
 | Reset allocator     | Sets the current allocator back to `#env.default_allocator`. **Does not call `#env.allocator.free_self`.**      | `#reset_allocator()`       |
 | Type conversion     | Uses a set of rules to convert `cast_expr` to type `T`. If it fails, it will throw a compile-time error.        | `#cast(T, cast_expr)`      |
 
-<hr />
+#
 
 ### ♡ **Attributes**
 
@@ -2052,7 +2052,7 @@ The current existing attributes are:
 | Repr     | Uses a different type for the representation of this structure. Can be optional.                    | Enums                              | `@repr(T)`                                  |
 | Unused   | Does not report a warning when the field is not set in a struct literal. Useful for padding.        | Struct fields                      | `@unused`                                   |
 
-<hr />
+#
 
 Example of attribute usage:
 
@@ -2077,7 +2077,7 @@ enum Foo @repr(u8) {
 
 If you specify an alias attribute on a non-external function, you will only be warned, an error will **not** be thrown. Keep in mind that external functions do not generate IR, so the @volatile attribute will have no effect on them.
 
-<hr />
+#
 
 ### ♡ **Formatters**
 
@@ -2175,7 +2175,7 @@ fn main() {
 }
 ```
 
-<hr />
+#
 
 ### ♡ **Objects and linking**
 
@@ -2220,7 +2220,7 @@ and compile it:
 $ ellec main.le foo.o && ./main
 ```
 
-<hr />
+#
 
 ### ♡ **External symbols**
 
@@ -2254,7 +2254,7 @@ pub external fn InitWindow(i32 width, i32 height, string title) @alias(raylib::i
 
 **Technical note:** This declaration does not emit any IR code. This means that all these definitions do is provide more information and context to the compiler. They do not change the output of the program directly.
 
-<hr />
+#
 
 ### ♡ **C FFI**
 
@@ -2345,7 +2345,7 @@ int main() {
 
 A namespaced function `foo::bar` internally creates `foo.bar`, which isn't importable from C. You can just make wrappers for these cases.
 
-<hr />
+#
 
 ### ♡ **Lazy Iterators**
 
