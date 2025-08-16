@@ -1,0 +1,34 @@
+use std/prelude;
+
+fn bucket_sort<T>(T[] arr, u8 digit) {
+    buckets := (0..10).map(fn() [T;]).collect();
+
+    for x in arr {
+        digit := (x / math::pow(10, digit)) % 10;
+        buckets[digit].push(x);
+    }
+
+    out := [T;];
+
+    for bucket in buckets {
+        for val in bucket {
+            out.push(val);
+        }
+    }
+
+    return out;
+}
+
+fn radix_sort<T>(T[] arr) {
+    out := arr;
+
+    for i in 0.."{}".format(T::MAX).len() {
+        out = bucket_sort(out, i);
+    }
+
+    return out;
+}
+
+fn main() {
+    $dbg(radix_sort([14, 23, 1242, 352, 39, 442]));
+}
