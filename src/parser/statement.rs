@@ -2010,7 +2010,7 @@ impl<'a> Statement<'a> {
                     }
                 }
 
-                token.kind == TokenKind::Semicolon
+                (token.kind == TokenKind::Semicolon && block_nesting == 0 && curly_nesting == 0)
                     || (nesting == 0
                         && block_nesting == 0
                         && curly_nesting == 0
