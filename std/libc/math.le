@@ -17,7 +17,7 @@ fn ldexp(f64 x, i32 exponent) @alias(math::ldexp) -> f64;
 fn log(f64 x) @alias(math::log) -> f64;
 fn log10(f64 x) @alias(math::log10) -> f64;
 fn modf(f64 x, f64 *integer) @alias(math::modf) -> f64;
-fn pow(f64 x, f64 y) @alias(math::pow) -> f64;
+//fn pow(f64 x, f64 y) @alias(math::pow) -> f64;
 fn sqrt(f64 x) @alias(math::sqrt) -> f64;
 fn ceil(f64 x) @alias(math::ceil) -> f64;
 fn fabs(f64 x) @alias(math::fabs) -> f64;
