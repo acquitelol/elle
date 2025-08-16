@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="images/mia_256x.png" alt="Mia">
+    <img src="https://github.com/acquitelol/elle/blob/rewrite/images/mia_512x.png?raw=true" alt="Mia" width="256">
 </p>
 
 <h2 align="center">

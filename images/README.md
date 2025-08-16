@@ -10,12 +10,12 @@ I found a really pretty butterfly made out of wires at the [Eden Project, Cornwa
     <tr>
       <td width="50%">
         <div>
-            <img src="butterfly_eden.webp" />
+            <img src="https://github.com/acquitelol/elle/blob/rewrite/images/butterfly_eden.webp?raw=true" />
         </div>
       </td>
       <td width="50%">
         <div>
-            <img src="mia_eden.webp" />
+            <img src="https://github.com/acquitelol/elle/blob/rewrite/images/mia_eden.webp?raw=true" />
         </div>
       </td>
     </tr>
