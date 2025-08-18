@@ -2013,6 +2013,7 @@ For more information on stdlib alises, directives and attributes, please read be
   - `io::panic(...)` -> `$panic(...)`
   - `Tuple::new(...)` -> `$(...)`
   - `Triple::new(...)` -> `$$(...)`
+  - `HashMap::with_entries(...)` -> `$map(...)`
 - Note that this is created as an **alias** of the original function. This means you can call `io::dbg` instead of `$dbg`, for example.
 
 #
@@ -2025,7 +2026,7 @@ The current existing directives are:
 
 | Name                | Description                                                                                                     | Usage                      |
 | ------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| Static array length | Gives you the length of a static array allocated using `#[1, 2, 3]` syntax                                      | `#len(expr)`               |
+| Static array length | Gives you the length of a static array created using `#[1, 2, 3]` syntax                                        | `#len(expr)`               |
 | Size expression     | Gives you the size of type `T` or expression `expr` in bytes as a u64                                           | `#size(T or expr)`         |
 | Elle Environment    | Gives you a `ElleEnv *` which is a global environment structure                                                 | `#env`                     |
 | Allocate memory     | Allows you to allocate a specific type using the current allocator                                              | `#alloc(T, size?)`         |

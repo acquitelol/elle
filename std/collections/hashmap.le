@@ -111,6 +111,9 @@ fn HashMap::with_entries<T, U>(ElleMeta meta, (T, U) first, ...args) -> HashMap<
 external fn HashMap::with_entries<T, U>(ElleMeta meta, (T, U) first, ...)
     @alias(HashMap::from_entries) -> HashMap<T, U> *;
 
+external fn HashMap::with_entries<T, U>(ElleMeta meta, (T, U) first, ...)
+    @alias($map) -> HashMap<T, U> *;
+
 fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
     if self.size >= self.capacity / 2 {
         self.resize(self.capacity * 2);
