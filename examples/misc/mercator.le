@@ -1,0 +1,50 @@
+// Turns any arbitrary longtitude and latitude into wplace[1] coordinates
+// using mercator math[2] to calculate the warped y value
+//
+// This script uses an arbitrary anchor to determine the world size
+// and then uses that to calculate the coordinate in pixels of the lon & lat
+// then turns that value back into wplace[1] tile and pixel coordinates
+//
+// [1] wplace = https://wplace.live/
+// [2] mercator math = https://en.wikipedia.org/wiki/Web_Mercator_projection
+use std/prelude;
+
+const CUTOFF = 85.051129;
+const TILE_SIZE = 1000;
+
+const anchor = $map(
+  $("coord", $map(
+      $("lon", -95.64706087822267),
+      $("lat", 64.11823816973708)
+  )),
+  $("tile", $map(
+      $("x", 479.0),
+      $("y", 544.0)
+  )),
+  $("pixel", $map(
+      $("x", 874.0),
+      $("y", 650.0)
+  ))
+);
+
+const anchor_x = anchor["tile"]["x"] * TILE_SIZE + anchor["pixel"]["x"];
+const anchor_y = anchor["tile"]["y"] * TILE_SIZE + anchor["pixel"]["y"];
+
+fn lonlat_to_tile(f64 lon, f64 lat) {
+    if lat > CUTOFF { lat = CUTOFF; }
+    if lat < -CUTOFF { lat = -CUTOFF; }
+
+    world := anchor_x / ((anchor["coord"]["lon"] + 180) / 360);
+    x := (lon + 180.0) / 360.0 * world;
+
+    a := lat * PI / 180.0;
+    y := (1.0 - math::log(math::tan(a) + 1.0 / math::cos(a)) / PI) / 2.0 * world;
+
+    tile := [x / TILE_SIZE, y / TILE_SIZE].map(math::floor);
+    pixel := [math::floor(x) - tile[0] * TILE_SIZE, math::floor(y) - tile[1] * TILE_SIZE];
+    return [tile, pixel].concat().map(fn(x) #cast(i32, x));
+}
+
+fn main() {
+    $println(lonlat_to_tile(139.80454068427733, 35.958871549617626));
+}
