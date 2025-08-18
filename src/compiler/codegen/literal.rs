@@ -16,7 +16,7 @@ impl Codegen<'_> for Literal {
         match self.kind {
             TokenKind::Identifier | TokenKind::ExactLiteral => match self.value {
                 ValueKind::String(name) => {
-                    let res = gen.get_variable_lazy(
+                    let mut res = gen.get_variable_lazy(
                         &name,
                         Some(ctx.func),
                         Some(ctx.module),
@@ -48,6 +48,19 @@ impl Codegen<'_> for Literal {
                             name.replace('.', "::"),
                             res.unwrap().0.display()
                         ));
+                    }
+
+                    // unwrap aliases: math::floor -> floor
+                    if let Some((ty, _)) = res.as_mut() && ty.is_function() {
+                        let Type::Function(inner) = ty else { unreachable!() };
+
+                        if let Some(mut func) = *inner.clone() {
+                            if let Some(ref unaliased) = func.unaliased {
+                                func.name = unaliased.clone();
+                            }
+
+                            *inner = Box::new(Some(func));
+                        }
                     }
 
                     res
