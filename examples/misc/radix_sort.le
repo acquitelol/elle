@@ -8,15 +8,7 @@ fn bucket_sort<T>(T[] arr, u8 digit) {
         buckets[digit].push(x);
     }
 
-    out := [T;];
-
-    for bucket in buckets {
-        for val in bucket {
-            out.push(val);
-        }
-    }
-
-    return out;
+    return buckets.concat();
 }
 
 fn radix_sort<T>(T[] arr) {
