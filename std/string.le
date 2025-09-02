@@ -79,34 +79,15 @@ fn string::ascii_lower() -> string;
 fn string::ascii_upper() -> string;
 fn string::ascii_numerics() -> string;
 
-struct StringEnv {
+struct StringEnv @nofmt {
     string base,
     u64 start,
     u64 end
 }
 
-!external fn string::__iter__(string self) -> Iterator<char, DoubleEnded> {
-    env := StringEnv { base = self, start = 0, end = self.len() };
-
-    return Iterator {
-        env = Box::new(env).to_ptr(),
-        next = fn(StringEnv *env) {
-            if (from := env.start) < env.end {
-                env.start += 1;
-                return Some(env.base[from]);
-            } else {
-                return None<char>();
-            }
-        },
-        next_back = fn(StringEnv *env) {
-            if env.start < env.end {
-                env.end -= 1;
-                return Some(env.base[env.end]);
-            } else {
-                return None<char>();
-            }
-        }
-    };
-}
-
+external fn `Box.0.StringEnv.1`(StringEnv env) -> Box<StringEnv>;
+external fn `Option.Some.0.15.1`(char value) -> Option<char>;
+external fn `Option.None.0.15.1`() -> Option<char>;
+external fn StringEnv::__fmt__(StringEnv self, u64 nesting) -> string;
+external fn string::__iter__(string self) -> Iterator<char, DoubleEnded>;
 external fn string::__iter__(string self) @alias(string::iter) -> Iterator<char, DoubleEnded>;

@@ -2,6 +2,7 @@ use std/runtime/collections/array;
 use std/runtime/libc/io;
 use std/runtime/libc/fd;
 use std/libc/string;
+use std/iter/core;
 use std/libc/mem;
 global pub;
 
@@ -634,4 +635,34 @@ fn string::ascii_upper() {
 
 fn string::ascii_numerics() {
     return "0123456789";
+}
+
+struct StringEnv {
+    string base,
+    u64 start,
+    u64 end
+}
+
+!external fn string::__iter__(string self) -> Iterator<char, DoubleEnded> {
+    env := StringEnv { base = self, start = 0, end = self.len() };
+
+    return Iterator {
+        env = Box::new(env).to_ptr(),
+        next = fn(StringEnv *env) {
+            if (from := env.start) < env.end {
+                env.start += 1;
+                return Some(env.base[from]);
+            } else {
+                return None<char>();
+            }
+        },
+        next_back = fn(StringEnv *env) {
+            if env.start < env.end {
+                env.end -= 1;
+                return Some(env.base[env.end]);
+            } else {
+                return None<char>();
+            }
+        }
+    };
 }
