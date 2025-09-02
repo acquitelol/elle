@@ -1566,6 +1566,23 @@ fn main() {
 }
 ```
 
+Alternatively, you can use shorthand syntax similar to JavaScript to create structs with fields that are also variables in the local scope:
+
+```rs
+struct Foo {
+    i32 a
+}
+
+fn main() {
+    a := 4;
+    foo := Foo { a }; // will work
+
+    x := 4;
+    foo := Foo { a = x }; // will also work
+    foo := Foo { x }; // will not work; no field `x` exists on Foo
+}
+```
+
 If taking a pointer to them from another function, you can do so like this:
 
 ```rs
@@ -1577,7 +1594,7 @@ fn other(Foo *foo) {
 }
 
 fn main() {
-    foo := ; // create Foo
+    foo := ...; // create Foo
     other(&foo);
 }
 ```

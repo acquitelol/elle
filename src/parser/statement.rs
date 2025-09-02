@@ -2528,9 +2528,17 @@ impl<'a> Statement<'a> {
                 continue;
             }
 
+            let name_token = self.current_token();
             let name = self.get_identifier();
 
             self.advance();
+
+            if [TokenKind::Comma, TokenKind::RightCurlyBrace].contains(&self.current_token().kind) {
+                values.push((name, Box::new(token_to_node!(&name_token, self))));
+                self.advance();
+                continue;
+            }
+
             self.expect_tokens(&[TokenKind::Equal]);
             self.advance();
 
