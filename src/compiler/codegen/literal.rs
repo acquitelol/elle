@@ -50,15 +50,21 @@ impl Codegen<'_> for Literal {
                         ));
                     }
 
+
                     // unwrap aliases: math::floor -> floor
-                    if let Some((ty, _)) = res.as_mut() && ty.is_function() {
+                    if let Some((ty, value)) = res.as_mut() && ty.is_function() {
                         let Type::Function(inner) = ty else { unreachable!() };
 
                         if let Some(mut func) = *inner.clone() {
                             if let Some(ref unaliased) = func.unaliased {
                                 func.name = unaliased.clone();
+
+                                if let Value::Global(ref mut val) = value {
+                                    *val = unaliased.clone();
+                                }
                             }
 
+                            func.unaliased = None;
                             *inner = Box::new(Some(func));
                         }
                     }
