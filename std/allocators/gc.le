@@ -14,3 +14,4 @@ fn GCAllocator::collect(GCAllocator *self);
 fn GCAllocator::alloc(GCAllocator *self, i32 size) -> void *;
 fn GCAllocator::realloc(GCAllocator *self, void *ptr, i32 new_size) -> void *;
 fn GCAllocator::free_self(GCAllocator *self);
+fn GCAllocator::free(GCAllocator *self);

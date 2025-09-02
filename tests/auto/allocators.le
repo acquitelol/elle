@@ -30,7 +30,7 @@ fn main() {
     );
 
     $assert(
-        #env.allocator.free == ArbitraryAllocator::noop,
+        #env.allocator.free == GCAllocator::free,
         "The freeing function should have switched to `{}::noop`.".format(kind)
     );
 
@@ -81,7 +81,7 @@ fn main() {
     );
 
     $assert(
-        #env.allocator.free_self == ArbitraryAllocator::noop,
+        #env.allocator.free_self == HeapAllocator::free_self,
         "The HeapAllocator freeing function should have switched to `{}::noop`.".format(kind)
     );
 
