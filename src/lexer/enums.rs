@@ -764,6 +764,8 @@ pub enum Attribute {
     Volatile,
     // Ensures no formatter is set by default on a struct marked by this
     NoFormat,
+    // Ensures no equality method is set by default on a struct marked by this
+    NoEq,
     // Automatically runs the formatter on every parameter of a function marked by this
     Format,
     // Representation of the inner type in an enum
@@ -790,6 +792,7 @@ impl Token {
             "alias" => Attribute::Alias,
             "volatile" => Attribute::Volatile,
             "nofmt" => Attribute::NoFormat,
+            "noeq" => Attribute::NoEq,
             "fmt" => Attribute::Format,
             "repr" => Attribute::Repr,
             "cfg" => Attribute::Cfg,

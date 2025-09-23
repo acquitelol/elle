@@ -58,6 +58,7 @@ impl<'a> Enum<'a> {
 
         let mut ty = None;
         let mut should_add_fmt_builtin = true;
+        let mut should_add_eq_builtin = true;
         let mut should_compile = true;
 
         if self.parser.match_token(TokenKind::Attribute, false) {
@@ -69,6 +70,10 @@ impl<'a> Enum<'a> {
                 match attribute {
                     Attribute::NoFormat => {
                         should_add_fmt_builtin = false;
+                        self.parser.advance();
+                    }
+                    Attribute::NoEq => {
+                        should_add_eq_builtin = false;
                         self.parser.advance();
                     }
                     Attribute::Repr => {
@@ -261,59 +266,61 @@ impl<'a> Enum<'a> {
 
         let mut builtins = vec![];
 
-        builtins.push(Primitive::Function(FunctionSource {
-            namespace_token: Token::from_ident(&name),
-            name_token: Token::from_ident(EQUALS_CONSTANT),
-            name: format!("{name}.{EQUALS_CONSTANT}"),
-            public,
-            usable: true,
-            imported: false,
-            variadic: false,
-            external: false,
-            builtin: true,
-            volatile: false,
-            format: false,
-            unaliased: None,
-            generics: vec![],
-            arguments: vec![
-                Argument {
-                    name: "self".into(),
-                    r#type: Type::Enum(name.clone(), Box::new(ty.clone())),
-                    no_fmt: false,
-                    is_unused: false,
-                },
-                Argument {
-                    name: "other".into(),
-                    r#type: Type::Enum(name.clone(), Box::new(ty.clone())),
-                    no_fmt: false,
-                    is_unused: false,
-                },
-            ],
-            r#return: None,
-            body: vec![AstNode::Return(Return {
-                value: Box::new(AstNode::BinaryOperation(BinaryOperation {
-                    left: Box::new(AstNode::Conversion(Conversion {
-                        r#type: ty.clone().or(Some(Type::Word)),
-                        value: Box::new(AstNode::token_to_literal(Token::from_ident("self"))),
+        if should_add_eq_builtin {
+            builtins.push(Primitive::Function(FunctionSource {
+                namespace_token: Token::from_ident(&name),
+                name_token: Token::from_ident(EQUALS_CONSTANT),
+                name: format!("{name}.{EQUALS_CONSTANT}"),
+                public,
+                usable: true,
+                imported: false,
+                variadic: false,
+                external: false,
+                builtin: true,
+                volatile: false,
+                format: false,
+                unaliased: None,
+                generics: vec![],
+                arguments: vec![
+                    Argument {
+                        name: "self".into(),
+                        r#type: Type::Enum(name.clone(), Box::new(ty.clone())),
+                        no_fmt: false,
+                        is_unused: false,
+                    },
+                    Argument {
+                        name: "other".into(),
+                        r#type: Type::Enum(name.clone(), Box::new(ty.clone())),
+                        no_fmt: false,
+                        is_unused: false,
+                    },
+                ],
+                r#return: None,
+                body: vec![AstNode::Return(Return {
+                    value: Box::new(AstNode::BinaryOperation(BinaryOperation {
+                        left: Box::new(AstNode::Conversion(Conversion {
+                            r#type: ty.clone().or(Some(Type::Word)),
+                            value: Box::new(AstNode::token_to_literal(Token::from_ident("self"))),
+                            location: location.clone(),
+                            explicit: true,
+                        })),
+                        right: Box::new(AstNode::Conversion(Conversion {
+                            r#type: ty.clone().or(Some(Type::Word)),
+                            value: Box::new(AstNode::token_to_literal(Token::from_ident("other"))),
+                            location: location.clone(),
+                            explicit: true,
+                        })),
+                        operator: TokenKind::EqualTo,
+                        treat_as_string: true,
+                        dunder_methods: true,
                         location: location.clone(),
-                        explicit: true,
                     })),
-                    right: Box::new(AstNode::Conversion(Conversion {
-                        r#type: ty.clone().or(Some(Type::Word)),
-                        value: Box::new(AstNode::token_to_literal(Token::from_ident("other"))),
-                        location: location.clone(),
-                        explicit: true,
-                    })),
-                    operator: TokenKind::EqualTo,
-                    treat_as_string: true,
-                    dunder_methods: true,
                     location: location.clone(),
-                })),
+                })],
                 location: location.clone(),
-            })],
-            location: location.clone(),
-            return_location: location.clone(),
-        }));
+                return_location: location.clone(),
+            }));
+        }
 
         if should_add_fmt_builtin {
             let mut cases = variants
