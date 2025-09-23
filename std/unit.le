@@ -1,3 +1,5 @@
 global pub;
-enum Unit @repr(u8) { _ }
+enum Unit @repr(u8) @nofmt @noeq { _ }
 const _ = Unit::_;
+
+external fn Unit::__fmt__(Unit self, u64 nesting);

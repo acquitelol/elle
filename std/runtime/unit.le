@@ -1,0 +1,1 @@
+pub enum Unit @repr(u8) { _ }

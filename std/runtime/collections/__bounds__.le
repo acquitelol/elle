@@ -1,0 +1,15 @@
+use std/runtime/libc/io;
+use std/core;
+
+global pub;
+
+fn __internal_array_bounds_check(string file, i32 line, i32 col, u64 i, u64 length) {
+    if i + 1 > length {
+        io::cprintf(
+            "[%s:%d:%d] ERROR: Index %lu is out of bounds for array length %lu\n",
+            file, line, col, i, length
+        );
+
+        libc::abort();
+    }
+}

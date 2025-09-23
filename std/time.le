@@ -2,7 +2,7 @@ global pub, external;
 
 const i64 CLOCKS_PER_SEC = 1_000_000;
 
-struct time_info {
+struct time_info @nofmt {
     i32 seconds,  // Seconds [0, 60]
     i32 minutes,  // Minutes [0, 59]
     i32 hours,    // Hour [0, 23]
