@@ -563,11 +563,12 @@ impl Location {
         let padding = 2;
         let ident = self.start.column.saturating_sub(self.ctx.len() - ctx.len());
 
-        let left = if ident >= self.end.column.saturating_sub(self.start.column) {
-            ident - self.end.column.saturating_sub(self.start.column)
-        } else {
-            ident
-        };
+        // let left = if ident >= self.end.column.saturating_sub(self.start.column) {
+        //     ident - self.end.column.saturating_sub(self.start.column)
+        // } else {
+        //     ident
+        // };
+        let left = ident;
 
         let split_index = ctx
             .char_indices()
