@@ -56,7 +56,6 @@
 "f32" @type
 "f64" @type
 "string" @type
-"any" @type
 
 ; Constants and literals
 (numeric_literal) @number
