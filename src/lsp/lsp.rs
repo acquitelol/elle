@@ -68,7 +68,7 @@ impl LanguageServer for Backend {
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
         let uri = &params.text_document.uri;
-        dbg!("File opened", uri);
+        dbg!("File saved", uri);
         self.try_report_diagnostics(uri).await;
     }
 

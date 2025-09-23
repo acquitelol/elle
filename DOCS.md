@@ -17,7 +17,7 @@ a := 0;    // acts the same as `let a = 0;`
 This is especially useful for dynamic array declarations:
 
 ```rs
-arr := [i64;];
+arr := []i64;
 i64[] arr = [];
 ```
 
@@ -559,7 +559,7 @@ There are 2 kinds of arrays in Elle: _dynamic_ and _static_.
 Dynamic arrays are allocated on the heap, and are designed to grow or shrink, allowing you to push and pop values. They also have far more utility methods on them compared to static arrays. These kinds of arrays are created with the following syntax:
 
 ```bnf
-array = "[" [type ";"] [elements] "]" ;
+array = "["[elements] "]" [type?];
 elements = expression {"," expression} ;
 ```
 
@@ -570,7 +570,7 @@ array = "#" "[" [elements] "]" ;
 elements = expression {"," expression} ;
 ```
 
-Both implement the `__len__` method, which means this is valid:
+Both implement the `__iter__` method, which means this is valid:
 
 ```rs
 for x in [1, 2, 3] {
@@ -597,7 +597,7 @@ Array<i64> *x = Array::new();
 
 // ... the most concise form ...
 
-x := [i64;];
+x := []i64;
 ```
 
 Static arrays do not, but you can still use `let`/`:=`:
@@ -644,8 +644,8 @@ Specifically for dynamic arrays, you can initialize them without giving them a v
 
 ```rs
 fn main() {
-    x := [i32;]; // x -> i32[]
-    y := [f32; 1, 2, 3]; // 1, 2, 3 inferred as f32 and overall y -> f32[]
+    x := []i32; // x -> i32[]
+    y := [1, 2, 3]f32; // 1, 2, 3 inferred as f32 and overall y -> f32[]
     z := ["a", "b", "c"]; // z -> string[], no explicit type means inferred
     w := []; // compilation error because T cannot be inferred
     $dbg(x, y, z, w);
@@ -679,7 +679,7 @@ let foo = [$(1, "a"), $(2, "b")];
 
 // if you don't wanna put values inside but wanna use the `let` keyowrd you can do this
 
-let foo = [(i32, string);];
+let foo = [](i32, string);
 
 // ... nothing new here
 ```

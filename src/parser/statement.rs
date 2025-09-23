@@ -957,18 +957,14 @@ impl<'a> Statement<'a> {
                         .next_token()
                         .is_some_and(|token| token.kind == TokenKind::LeftCurlyBrace))
             {
-                inner_ty = Some(self.get_type(Some(self.shared.generics)));
-                self.advance();
+                let loc = self.current_token().location;
+                let ty = self.get_type(Some(self.shared.generics));
 
-                if self.current_token().kind == TokenKind::Semicolon {
-                    self.advance();
+                set_end!(loc, self);
 
-                    // if the token *is* now right block brace after getting a ty
-                    // then break out early because there are no values
-                    if self.current_token().kind == TokenKind::RightBlockBrace {
-                        break;
-                    }
-                }
+                elle_error!(loc.borrow().error(format!(
+                    "Cannot add an explicit array type here. \nNOTE: `{RED}[{res};]{RESET}` syntax has been removed in favour of `{GREEN}[]{res}{RESET}`.",
+                        res = ty.display(), RED = get_RED!(), GREEN = get_GREEN!(), RESET = get_RESET!())));
             }
 
             let item_location = self.current_token().location;
@@ -1076,35 +1072,43 @@ impl<'a> Statement<'a> {
         self.expect_tokens(&[TokenKind::RightBlockBrace]);
         set_end!(location, self);
 
-        let mut expression = AstNode::ArrayLiteral(ArrayLiteral {
-            values,
-            explicit_inner: inner_ty.or_else(|| self.shared.known_generics.first().cloned()),
-            known_generics: self.shared.known_generics.clone(),
-            location: location.clone(),
-            dynamic,
-        });
+        macro_rules! expression {
+            () => {
+                AstNode::ArrayLiteral(ArrayLiteral {
+                    values,
+                    explicit_inner: inner_ty
+                        .or_else(|| self.shared.known_generics.first().cloned()),
+                    known_generics: self.shared.known_generics.clone(),
+                    location: location.clone(),
+                    dynamic,
+                })
+            };
+        }
 
-        if let Some(token) = self.advance_opt() {
+        while let Some(token) = self.advance_opt() {
             match token.kind {
                 TokenKind::Dot => {
-                    expression = self.parse_field_access(Some((position, expression, location)));
+                    return self.parse_field_access(Some((position, expression!(), location)));
                 }
                 TokenKind::LeftBlockBrace => {
-                    expression = self.parse_offset_store(Some((position, expression, location)));
+                    return self.parse_offset_store(Some((position, expression!(), location)));
                 }
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
-                    expression = self.parse_ternary_node(expression, location);
+                    return self.parse_ternary_node(expression!(), location);
                 }
                 other if other.is_arithmetic() => {
                     self.position = position;
                     return self.parse_arithmetic();
                 }
+                _ if dynamic => {
+                    inner_ty = Some(self.get_type(Some(self.shared.generics)));
+                }
                 _ => expect_eot!(token),
             }
         }
 
-        expression
+        expression!()
     }
 
     fn parse_if_statement(&mut self) -> AstNode {
