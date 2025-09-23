@@ -1,0 +1,139 @@
+// Displays a different color for each intersecting line
+
+use std/prelude;
+use std/raylib;
+
+fn orientation((i32, i32) a, (i32, i32) b, (i32, i32) c) {
+    return math::sign((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
+}
+
+fn on_segment((i32, i32) a, (i32, i32) b, (i32, i32) c) {
+    return (c.x >= math::min(a.x, b.x) && c.x <= math::max(a.x, b.x)) &&
+        (c.y >= math::min(a.y, b.y) && c.y <= math::max(a.y, b.y));
+}
+
+fn segments_intersect((i32, i32) p1, (i32, i32) p2, (i32, i32) q1, (i32, i32) q2) {
+    d1 := orientation(p1, p2, q1);
+    d2 := orientation(p1, p2, q2);
+    d3 := orientation(q1, q2, p1);
+    d4 := orientation(q1, q2, p2);
+
+    return d1 != d2 && d3 != d4
+        || (d1 == 0 && on_segment(p1, p2, q1))
+        || (d2 == 0 && on_segment(p1, p2, q2))
+        || (d3 == 0 && on_segment(q1, q2, p1))
+        || (d4 == 0 && on_segment(q1, q2, p2));
+}
+
+fn Array::is_intersecting((i32, i32)[] self, (i32, i32)[] other) {
+    for p1, p2 in self.windows(2) {
+        for p3, p4 in other.windows(2) {
+            if segments_intersect(p1, p2, p3, p4) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+fn Array::assign_groups((i32, i32)[][] self) {
+    adj := Array::with_capacity<bool[]>(self.len())
+        .filled()
+        .iter()
+        .map_with(fn(v, self) Array::with_capacity<bool>(self.len()).filled(), self)
+        .collect();
+
+    for i in 0..self.len() {
+        for j in i + 1..self.len() {
+            if self[i].is_intersecting(self[j]) {
+                adj[i][j] = true;
+                adj[j][i] = true;
+            }
+        }
+    }
+
+    colors := Array::with_capacity<u64>(self.len()).fill(u64::MAX);
+
+    for u in 0..self.len() {
+        used := Array::with_capacity<bool>(self.len()).fill(false);
+
+        for v in 0..self.len() {
+            if adj[u][v] && colors[v] != u64::MAX {
+                used[colors[v]] = true;
+            }
+        }
+
+        c := 0;
+
+        while c < self.len() && used[c] {
+            c += 1;
+        }
+
+        colors[u] = c;
+    }
+
+    return colors;
+}
+
+fn main() {
+    lines := [
+        [$(0,  0), $(2, 2), $(4, 4)],
+        [$(-1, -1), $(-1, 2), $(-1, 4)],
+        [$(-2, 0), $(-1, 4)],
+        [$(1, 0), $(1, 3)],
+        [$(3, 1), $(3, 3)],
+        [$(0, 3), $(3, 0)],
+        [$(4, 0), $(4, 4)],
+        [$(-3, 0), $(-3, 5)],
+        [$(2, 2), $(4, 0)],
+        [$(0, 0), $(0, 1), $(0, 2)],
+        [$(0, 0), $(5, 5)],
+        [$(0, 5), $(5, 0)],
+        [$(1, 1), $(3, 3)],
+        [$(2, 2), $(6, 6)],
+        [$(4, 4), $(8, 8)],
+        [$(1, 4), $(2, 2), $(4, 1)],
+        [$(3, 5), $(3, 3), $(5, 2)],
+        [$(5, 5), $(7, 4), $(6, 2)],
+        [$(0, -3), $(3, -3)],
+        [$(6, 6), $(8, 8), $(10, 6)],
+        [$(10, 6), $(8, 4), $(6, 6)],
+    ];
+
+    groups := lines.assign_groups();
+    colors := []Color;
+
+    for i in 0..=groups.iter().max().unwrap_or(0) {
+        hue := ((i * 2) * 360 / (math::max(groups.len(), 1)));
+        colors.push(rl::color_from_hsv(hue, 1.0, 1.0));
+    }
+
+    rl::init_window(800, 600, "Lines");
+    defer rl::close_window();
+
+    rl::set_target_fps(60);
+
+    scale := 50.0;
+    offset := 200.0;
+
+    while !rl::window_should_close() {
+        rl::begin_drawing();
+            rl::clear_background(BLACK);
+
+            for i, line in lines.iter().enumerate() {
+                color := colors[groups[i]];
+
+                for p1, p2 in line.windows(2) {
+                    rl::draw_line(
+                        p1.x * scale + offset,
+                        p1.y * scale + offset,
+                        p2.x * scale + offset,
+                        p2.y * scale + offset,
+                        color,
+                    );
+                }
+            }
+        rl::end_drawing();
+    }
+}
