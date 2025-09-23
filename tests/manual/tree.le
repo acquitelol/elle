@@ -28,7 +28,7 @@ fn Node::print_on_lines(Node *self) {
         node, level := queue.remove(0).unwrap();
 
         if levels.len() == level {
-            levels.push([i32;]);
+            levels.push([]i32);
         }
 
         levels[level].push(node.value);

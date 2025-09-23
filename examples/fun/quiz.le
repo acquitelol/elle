@@ -34,7 +34,7 @@ struct Operation @nofmt {
 
 fn main() {
     rand::seed(time(nil));
-    incorrect := [Question;];
+    incorrect := []Question;
 
     operations := [
         Operation { kind = "+", cb = fn(a, b) a + b },

@@ -123,7 +123,7 @@ fn Iterator::last<T, AnyEnded>(Iterator<T, AnyEnded> self) {
 }
 
 fn Iterator::collect<T, AnyEnded>(Iterator<T, AnyEnded> self) {
-    res := [T;];
+    res := []T;
 
     while _, val := self.next() {
         res.push(val);

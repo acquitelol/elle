@@ -14,7 +14,7 @@ fn Iterator::windows<T, AnyEnded>(
     Windows<T, AnyEnded> windows = Windows {
         base = self,
         n = n,
-        buf = [T;]
+        buf = []T
     };
 
     return Iterator {

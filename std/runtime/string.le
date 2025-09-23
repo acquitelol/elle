@@ -176,27 +176,26 @@ fn string::last(string self) {
 // string::concat("me", "ow") == "meow"
 fn string::concat(ElleMeta meta, ...args) -> string {
     string strings[meta.arity];
-    i32 sizes[meta.arity];
-    i64 length = 0;
+    u64 sizes[meta.arity];
+    u64 length = 0;
 
-    for let i = 0; i < meta.arity; i += 1 {
+    for i := 0; i < meta.arity; i += 1 {
         strings[i] = args.yield(string);
         sizes[i] = strings[i].len();
         length += sizes[i];
     }
 
-    let result = #alloc(char, length + 1);
+    result := #alloc(char, length + 1);
+    index := 0;
 
     if !result {
         return nil;
     }
 
-    let index = 0;
+    for i := 0; i < meta.arity; i += 1 {
+        current := strings[i];
 
-    for let i = 0; i < meta.arity; i += 1 {
-        let current = strings[i];
-
-        for let j = 0; j < sizes[i]; j += 1 {
+        for j := 0; j < sizes[i]; j += 1 {
             result[index] = current[j];
             index += 1;
         }

@@ -33,7 +33,11 @@ fn math::next_power_of_2<T>(T x) {
 	return y;
 }
 
-fn math::sign<T>(T x) -> bool {
+fn math::sign<T>(T x) {
+    if x == 0 {
+        return 0;
+    }
+
     return x > 0 ? 1 : -1;
 }
 

@@ -11,7 +11,7 @@ fn EventEmitter::new() {
 }
 
 fn EventEmitter::on(EventEmitter *self, string event, fn(void *) cb) {
-    event := self.listeners.get_or_insert(event, [fn(void *);]);
+    event := self.listeners.get_or_insert(event, []fn(void *));
     event.push(cb);
 }
 

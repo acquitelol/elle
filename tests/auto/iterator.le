@@ -35,7 +35,7 @@ fn `collect.works`() {
     $assert((5..7).collect() == [5, 6]);
     $assert((5..=7).collect() == [5, 6, 7]);
     $assert("abc".iter().collect().join("") == "abc");
-    $assert((0..0).collect() == [i32;]);
+    $assert((0..0).collect() == []i32);
     $assert(['e', 'l', 'l', 'e'].iter().collect().join("") == "elle");
 }
 
@@ -102,7 +102,7 @@ fn `find.works`() {
     $assert((0..10).find(fn(x) x > 9) == None<i32>());
     $assert([1, 2, 3].iter().find(fn(x) x > 2) == Some(3));
     $assert([1, 2, 3].iter().find(fn(x) x < 0) == None<i32>());
-    $assert([i32;].iter().find(fn() true) == None<i32>());
+    $assert([]i32.iter().find(fn() true) == None<i32>());
 }
 
 fn `any.works`() {
@@ -110,7 +110,7 @@ fn `any.works`() {
     $assert((0..5).any(fn(x) x == 10) == false);
     $assert([1, 2, 3].iter().any(fn(x) x > 0) == true);
     $assert([1, 2, 3].iter().any(fn(x) x < 0) == false);
-    $assert([i32;].iter().any(fn() true) == false);
+    $assert([]i32.iter().any(fn() true) == false);
 }
 
 fn `all.works`() {
@@ -118,7 +118,7 @@ fn `all.works`() {
     $assert((0..5).all(fn(x) x < 4) == false);
     $assert([2, 4, 6].iter().all(fn(x) x % 2 == 0) == true);
     $assert([2, 4, 5].iter().all(fn(x) x % 2 == 0) == false);
-    $assert([i32;].iter().all(fn() false) == true);
+    $assert([]i32.iter().all(fn() false) == true);
 }
 
 fn `position.works`() {
@@ -126,7 +126,7 @@ fn `position.works`() {
     $assert((0..5).position(fn(x) x == 10) == None<u64>());
     $assert([10, 20, 30].iter().position(fn(x) x == 20) == Some<u64>(1));
     $assert([10, 20, 30].iter().position(fn(x) x == 40) == None<u64>());
-    $assert([i32;].iter().position(fn() true) == None<u64>());
+    $assert([]i32.iter().position(fn() true) == None<u64>());
 }
 
 fn `once.works`() {
@@ -178,11 +178,11 @@ fn `filter.works`() {
     $assert((0..6).filter(fn(x) x % 2 == 0).collect() == [0, 2, 4]);
     $assert((0..6).filter(fn(x) x % 2 == 1).collect() == [1, 3, 5]);
     $assert([1, 2, 3].iter().filter(fn() true).collect() == [1, 2, 3]);
-    $assert([1, 2, 3].iter().filter(fn() false).collect() == [i32;]);
+    $assert([1, 2, 3].iter().filter(fn() false).collect() == []i32);
     $assert(["a", "ab", "abc"].iter().filter(fn(s) s.len() > 1).collect() == ["ab", "abc"]);
     $assert([-3, -2, -1, 0, 1, 2].iter().filter(fn(x) x < 0).collect() == [-3, -2, -1]);
     $assert((1..10).filter(fn(x) x % 3 == 0 || x % 5 == 0).collect() == [3, 5, 6, 9]);
-    $assert([i32;].iter().filter(fn() true).collect() == [i32;]);
+    $assert([]i32.iter().filter(fn() true).collect() == []i32);
 }
 
 fn `map.works`() {
@@ -192,7 +192,7 @@ fn `map.works`() {
     $assert([1, 2, 3].iter().map(fn(x) x * x).collect() == [1, 4, 9]);
     $assert([-1].iter().map(fn(x) (-x)).collect() == [1]);
     $assert([1].iter().map(fn(x) x).collect() == [1]);
-    $assert([i32;].iter().map(fn(x) x * 2).collect() == [i32;]);
+    $assert([]i32.iter().map(fn(x) x * 2).collect() == []i32);
     $assert([1, 2, 3].iter().map(fn(x) "{}".format(x)).collect() == ["1", "2", "3"]);
     $assert([1, 2, 3, 4].iter().map(fn(x) x % 2 == 0 ? "even" : "odd").collect()
         == ["odd", "even", "odd", "even"]);
@@ -205,7 +205,7 @@ fn `rev.works`() {
     $assert((0..=3).rev().collect() == [3, 2, 1, 0]);
     $assert([4, 3, 9, -1].iter().rev().collect() == [-1, 9, 3, 4]);
     $assert((1..10).rev().rev().collect() == (1..10).collect());
-    $assert((0..0).rev().collect() == [i32;]);
+    $assert((0..0).rev().collect() == []i32);
     $assert((5..6).rev().collect() == [5]);
     $assert([1, 2, 3].iter().rev().collect() == [3, 2, 1]);
     $assert([1, 2, 3].iter().rev().rev().collect() == [1, 2, 3]);
@@ -217,8 +217,8 @@ fn `take.works`() {
     $assert((0..4).take(5).collect() == [0, 1, 2, 3]);
     $assert((0..10).take(3).collect() == [0, 1, 2]);
     $assert(Iterator::iota(0).take(3).collect() == [0, 1, 2]);
-    $assert((0..10).take(0).collect() == [i32;]);
-    $assert((0..0).take(5).collect() == [i32;]);
+    $assert((0..10).take(0).collect() == []i32);
+    $assert((0..0).take(5).collect() == []i32);
     $assert((5..8).take(3).collect() == [5, 6, 7]);
     $assert((7..9).take(5).collect() == [7, 8]);
     $assert(Iterator::iota(100).take(5).collect() == [100, 101, 102, 103, 104]);
@@ -229,7 +229,7 @@ fn `take.works`() {
 fn `chunks.works`() {
     $assert((0..5).chunks(2).collect() == [[0, 1], [2, 3], [4]]);
     $assert((0..5).chunks(3).collect() == [[0, 1, 2], [3, 4]]);
-    $assert((0..0).chunks(2).collect() == [i32[];]);
+    $assert((0..0).chunks(2).collect() == []i32[]);
     $assert((0..4).chunks(1).collect() == [[0], [1], [2], [3]]);
     $assert((0..3).chunks(10).collect() == [[0, 1, 2]]);
     $assert((0..1).chunks(2).collect() == [[0]]);
@@ -239,10 +239,10 @@ fn `chunks.works`() {
 fn `windows.works`() {
     $assert((0..5).windows(2).collect() == [[0, 1], [1, 2], [2, 3], [3, 4]]);
     $assert((0..5).windows(3).collect() == [[0, 1, 2], [1, 2, 3], [2, 3, 4]]);
-    $assert((0..0).windows(2).collect() == [i32[];]);
+    $assert((0..0).windows(2).collect() == []i32[]);
     $assert((0..4).windows(1).collect() == [[0], [1], [2], [3]]);
-    $assert((0..3).windows(10).collect() == [i32[];]);
-    $assert((0..1).windows(2).collect() == [i32[];]);
+    $assert((0..3).windows(10).collect() == []i32[]);
+    $assert((0..1).windows(2).collect() == []i32[]);
     $assert((0..6).windows(2).collect() == [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]]);
 }
 
@@ -270,7 +270,7 @@ fn `intersperse.works`() {
     $assert([1, 2, 3].iter().intersperse(0).collect() == [1, 0, 2, 0, 3]);
     $assert([10, 20].iter().intersperse(-1).collect() == [10, -1, 20]);
     $assert([99].iter().intersperse(0).collect() == [99]);
-    $assert([i32;].iter().intersperse(5).collect() == [i32;]);
+    $assert([]i32.iter().intersperse(5).collect() == []i32);
     $assert(["a", "b", "c"].iter().intersperse("-").collect() == ["a", "-", "b", "-", "c"]);
     $assert((0..4).intersperse(99).collect() == [0, 99, 1, 99, 2, 99, 3]);
     $assert([true, false].iter().intersperse(true).collect() == [true, true, false]);
@@ -280,18 +280,18 @@ fn `intersperse.works`() {
 fn `skip.works`() {
     $assert((0..5).skip(0).collect() == [0, 1, 2, 3, 4]);
     $assert((0..5).skip(2).collect() == [2, 3, 4]);
-    $assert((0..5).skip(5).collect() == [i32;]);
-    $assert((0..5).skip(10).collect() == [i32;]);
+    $assert((0..5).skip(5).collect() == []i32);
+    $assert((0..5).skip(10).collect() == []i32);
     $assert((1..=3).skip(2).collect() == [3]);
-    $assert(Iterator::once(42).skip(1).collect() == [i32;]);
+    $assert(Iterator::once(42).skip(1).collect() == []i32);
     $assert(Iterator::once(42).skip(0).collect() == [42]);
-    $assert([i32;].iter().skip(3).collect() == [i32;]);
+    $assert([]i32.iter().skip(3).collect() == []i32);
 }
 
 fn `enumerate.works`() {
     $assert((10..13).enumerate().collect() == [$<u64, i32>(0, 10), $<u64, i32>(1, 11), $<u64, i32>(2, 12)]);
     $assert([99].iter().enumerate().collect() == [$<u64, i32>(0, 99)]);
-    $assert([i32;].iter().enumerate().collect() == [(u64, i32);]);
+    $assert([]i32.iter().enumerate().collect() == [](u64, i32));
     $assert(["a", "b"].iter().enumerate().collect() == [$<u64, string>(0, "a"), $<u64, string>(1, "b")]);
     $assert((0..5).enumerate().collect()
         == [$<u64, i32>(0, 0), $<u64, i32>(1, 1), $<u64, i32>(2, 2), $<u64, i32>(3, 3), $<u64, i32>(4, 4)]);
@@ -305,9 +305,9 @@ fn `zip.works`() {
     $assert((0..2).zip(10..13).collect() == [$(0, 10), $(1, 11)]);
     $assert((0..3).zip(10..12).collect() == [$(0, 10), $(1, 11)]);
     $assert([1, 2, 3].iter().zip([4, 5, 6].iter()).collect() == [$(1, 4), $(2, 5), $(3, 6)]);
-    $assert([i32;].iter().zip([1, 2].iter()).collect() == [(i32, i32);]);
-    $assert([1, 2].iter().zip([i32;].iter()).collect() == [(i32, i32);]);
-    $assert([i32;].iter().zip([i32;].iter()).collect() == [(i32, i32);]);
+    $assert([]i32.iter().zip([1, 2].iter()).collect() == [](i32, i32));
+    $assert([1, 2].iter().zip([]i32.iter()).collect() == [](i32, i32));
+    $assert([]i32.iter().zip([]i32.iter()).collect() == [](i32, i32));
     $assert(["a", "b"].iter().zip(["x", "y"].iter()).collect() == [$("a", "x"), $("b", "y")]);
     $assert((0..3).zip((0..3).map(fn(x) x * 2)).collect() == [$(0, 0), $(1, 2), $(2, 4)]);
     $assert(["a", "b"].iter().enumerate().zip(Iterator::iota(100)).collect()
@@ -316,9 +316,9 @@ fn `zip.works`() {
 
 fn `chain.works`() {
     $assert((0..3).chain(3..6).collect() == [0, 1, 2, 3, 4, 5]);
-    $assert([i32;].iter().chain([1, 2, 3].iter()).collect() == [1, 2, 3]);
-    $assert([1, 2, 3].iter().chain([i32;].iter()).collect() == [1, 2, 3]);
-    $assert([i32;].iter().chain([i32;].iter()).collect() == [i32;]);
+    $assert([]i32.iter().chain([1, 2, 3].iter()).collect() == [1, 2, 3]);
+    $assert([1, 2, 3].iter().chain([]i32.iter()).collect() == [1, 2, 3]);
+    $assert([]i32.iter().chain([]i32.iter()).collect() == []i32);
     $assert([10, 20].iter().chain([30, 40].iter()).collect() == [10, 20, 30, 40]);
     $assert((0..2).chain(2..4).chain(4..6).collect() == [0, 1, 2, 3, 4, 5]);
     $assert((0..4).map(fn(x) x * 2).chain((4..6).filter(fn(x) x % 2 == 0)).collect() == [0, 2, 4, 6, 4]);
@@ -341,7 +341,7 @@ fn `peekable.works`() {
     $assert(iter.peek() == None<i32>());
     $assert(iter.next() == None<i32>());
 
-    iter := [i32;].iter().peekable();
+    iter := []i32.iter().peekable();
 
     $assert(iter.peek() == None<i32>());
     $assert(iter.next() == None<i32>());
@@ -360,7 +360,7 @@ fn `peekable.works`() {
 
 fn `flat_map.works`() {
     $assert((0..3).flat_map(fn(x) [x, x * 2]).collect() == [0, 0, 1, 2, 2, 4]);
-    $assert((0..0).flat_map(fn(x) [x, x * 2]).collect() == [i32;]);
+    $assert((0..0).flat_map(fn(x) [x, x * 2]).collect() == []i32);
     $assert((0..4).flat_map(fn(x) 0..x).collect() == [0, 0, 1, 0, 1, 2]);
 }
 
@@ -485,7 +485,7 @@ fn `adapters.chunks_intersperse_map`() {
 }
 
 fn `foreach.simple_loop`() {
-    result := [i32;];
+    result := []i32;
 
     for x in 0..5 {
         result.push(x);
@@ -495,7 +495,7 @@ fn `foreach.simple_loop`() {
 }
 
 fn `foreach.enumerate_loop`() {
-    result := [(u64, i32);];
+    result := [](u64, i32);
 
     for i, x in (10..15).enumerate() {
         result.push($(i, x));
@@ -526,7 +526,7 @@ fn `foreach.break_loop`() {
 }
 
 fn `foreach.skip_enumerate_loop`() {
-    result := [(u64, i32);];
+    result := [](u64, i32);
 
     for i, x in (0..10).skip(7).enumerate() {
         result.push($(i, x));
@@ -540,7 +540,7 @@ fn `foreach.skip_enumerate_loop`() {
 }
 
 fn `foreach.nested_loops`() {
-    pairs := [(i32, u64, i32);];
+    pairs := [](i32, u64, i32);
 
     for i in 0..3 {
         for j, x in (10..15).enumerate() {

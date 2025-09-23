@@ -1,7 +1,7 @@
 use std/prelude;
 
 fn bucket_sort<T>(T[] arr, u8 digit) {
-    buckets := (0..10).map(fn() [T;]).collect();
+    buckets := (0..10).map(fn() []T).collect();
 
     for x in arr {
         digit := (x / math::pow(10, digit)) % 10;

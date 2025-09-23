@@ -26,7 +26,7 @@ struct Array<T> @nofmt {
 fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
     // the number of ", " in the array + everything else
     total_length := (self.len() - 1) * 2;
-    inline_parts := [string;];
+    inline_parts := []string;
 
     for u64 i = 0; i < self.len(); i += 1 {
         s := self[i].__fmt__(nesting);
@@ -578,7 +578,7 @@ fn Array::filled<T>(T[] self) {
 }
 
 fn Array::concat<T>(T[][] arrays) {
-    res := [T;];
+    res := []T;
 
     for array in arrays {
         res.extend(array);

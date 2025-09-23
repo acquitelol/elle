@@ -2,20 +2,20 @@ use std/prelude;
 
 fn main() {
     // Empty array via the shorthand
-    x := [i32;];
+    x := []i32;
     $assert(!x.len(), nil);
     x.push(1);
     $assert(x[0] == 1, nil);
 
     // Array with values inside using shorthand
-    y := [string; "a", "b", "c"];
+    y := ["a", "b", "c"]string;
     $assert(y[1] == "b", nil);
 
     // Array which requires casting of values using shorthand
     // ie, you put 39.999 which is f32 but explicitly specify
     // the array holds i32 so the values inside must be converted
     // to this type to prevent unpredictable reinterpret casts
-    z := [i32; 39.999];
+    z := [39.999]i32;
     $assert(z[0] == 39, nil); // casts 39.999 to i32 which truncates
 
     // Ensure normal arrays without shorthand also work
@@ -24,15 +24,15 @@ fn main() {
     $assert(w[0] == $("foo", 1), nil);
 
     // Non-trivial shorthand type (tuple)
-    v := [(i32, i32); $(1, 1)];
+    v := [$(1, 1)](i32, i32);
     $assert(v[0] == $(1, 1), nil);
 
     // Non-trivial shorthand type (pointer)
-    u := [i32 *; &39];
+    u := [&39]i32 *;
     $assert(*(u[0]) == 39, nil);
 
     // Non-trivial shorthand type (array)
-    t := [i32[]; [17]];
+    t := [[17]]i32[];
     $assert(t[0][0] == 17, nil);
 
     $println("All `array shorthand` tests have passed!".color("green").reset());

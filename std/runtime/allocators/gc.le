@@ -72,12 +72,12 @@ fn GCAllocator::new() {
         ptr := *start;
 
         // pointers tend to be pretty large; this is not a vm
-        if #cast(bool, ptr) && ptr > 0x1000000 {
+        if ptr && ptr > 0x1000000 {
             block := self.find(ptr);
 
             // only mark if not already marked because
             // recursively marking more is expensive
-            if #cast(bool, block) && !block.marked {
+            if block && !block.marked {
                 block.marked = true;
 
                 self.__internal_mark_region(
@@ -92,14 +92,15 @@ fn GCAllocator::new() {
 }
 
 fn GCAllocator::mark(GCAllocator *self) {
-    let current = self.head;
+    current := self.head;
+
     while current {
         current.header.marked = false;
         current = current.next;
     }
 
     // scan the stack for roots
-    self.__internal_mark_region(#cast(void **, &0), #env.stack_top);
+    self.__internal_mark_region(&nil, #env.stack_top);
 }
 
 fn GCAllocator::sweep(GCAllocator *self) {

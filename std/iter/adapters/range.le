@@ -28,7 +28,7 @@ fn Iterator::range<T>(T from, T to, bool inclusive) -> Iterator<T, DoubleEnded> 
         next_back = fn(Range<T> *env) {
             if env.from < env.to + env.inclusive {
                 env.to -= 1;
-                return Some(env.to + env.inclusive);
+                return Some(#cast(T, env.to + env.inclusive));
             } else {
                 return None<T>();
             }

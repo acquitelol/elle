@@ -18,7 +18,7 @@ fn main() {
     defer rl::close_window();
 
     rl::set_window_state(ConfigFlags::FLAG_WINDOW_RESIZABLE);
-    files := [string;];
+    files := []string;
 
     while !rl::window_should_close() {
         if rl::is_file_dropped() {

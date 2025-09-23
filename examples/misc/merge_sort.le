@@ -9,7 +9,7 @@ fn Array::merge<T>(T[][] self) -> T[][] {
     if self.len() < 2 {
         return self;
     } else if self.len() == 2 {
-        res := [T;];
+        res := []T;
         xs, ys := self;
         i := j := 0;
 
