@@ -257,6 +257,7 @@ macro_rules! get_type {
 
         while !$self.is_eof() {
             let tmp = $self.next_token();
+            let point = $self.position;
 
             if let Some(token) = tmp {
                 match token.kind {
@@ -267,6 +268,11 @@ macro_rules! get_type {
                     TokenKind::LeftBlockBrace => {
                         $self.advance();
                         $self.advance();
+
+                        if $self.current_token().kind != TokenKind::RightBlockBrace {
+                            $self.position = point;
+                            break;
+                        }
 
                         if !$struct_pool.borrow().contains_key("Array") {
                             $crate::set_end!(location, $self);
@@ -301,7 +307,6 @@ macro_rules! get_type {
                         }
 
                         ty = Type::Pointer(Box::new(Type::Struct(generic_name)));
-                        $self.expect_tokens(&[TokenKind::RightBlockBrace]);
                     }
                     TokenKind::LessThan if is_struct => {
                         $self.advance();
