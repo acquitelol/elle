@@ -666,7 +666,7 @@ impl Lexer<'_> {
             && (self.current_char().is_digit(radix)
                 || self.current_char() == '.'
                 || self.current_char() == '_')
-            || ['x', 'o', 'b', 'e'].contains(&self.current_char())
+            || ['x', 'o', 'b', 'e', '-'].contains(&self.current_char())
         {
             if self.current_char() == '.' {
                 if self.next_char().is_some_and(|c| !c.is_digit(radix)) {
@@ -674,6 +674,10 @@ impl Lexer<'_> {
                 }
 
                 float = true;
+            }
+
+            if !scientific && self.current_char() == '-' {
+                break;
             }
 
             // Don't want to set the radix again
@@ -751,9 +755,9 @@ impl Lexer<'_> {
                 )))
             });
 
-            let exponent = exponent_base.parse::<u32>().unwrap_or_else(|err| {
+            let exponent = exponent_base.parse::<f64>().unwrap_or_else(|err| {
                 elle_error!(self.get_location(start_row, start_col).error(format!(
-                    "Failed to parse the exponent {exponent_base} of scientific literal into an integer\n{err}"
+                    "Failed to parse the exponent {exponent_base} of scientific literal into a float\n{err}"
                 )))
             });
 
@@ -766,7 +770,7 @@ impl Lexer<'_> {
                     }
                 }
                 ParseResult::Int(val) => {
-                    literal = (val * 10_i64.pow(exponent)).to_string();
+                    literal = ((val as f64 * 10_f64.powf(exponent)) as i64).to_string();
                 }
             }
         }
