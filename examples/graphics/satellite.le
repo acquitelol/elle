@@ -1,0 +1,82 @@
+// Graphically displays the stable orbit of a satellite around a planet
+//
+// This uses the orbital speed formula derived from Newton's law of gravitation,
+// then uses simple harmonic motion formulae to calculate the position of the
+// satellite in stable orbit around the planet.
+//
+// Currently, the values are set to those of the earth with the satellite
+// orbiting at 300km above the surface of the earth.
+use std/prelude;
+use std/raylib;
+
+enum Screen {
+    Width = 800,
+    Height = 800
+}
+
+const EARTH_MASS = 5.97e24;
+const EARTH_RADIUS = 6.37e6;
+const ALTITUDE = 300e3;
+const G = 6.67e-11;
+
+fn draw_earth(f32 radius) {
+    rl::draw_ellipse(
+        Screen::Width / 2,
+        Screen::Height / 2,
+        radius, radius, BLUE
+    );
+
+    rl::draw_ellipse(
+        Screen::Width / 2,
+        Screen::Height / 2,
+        radius * 0.95, radius * 0.95, GREEN
+    );
+}
+
+fn main() {
+    rl::init_window(Screen::Width, Screen::Height, "Satellite");
+    defer rl::close_window();
+
+    rl::set_target_fps(60);
+
+    speed := 1000;
+    earth_radius_px := 300.0;
+    scale := earth_radius_px / EARTH_RADIUS;
+
+    orbit_radius := EARTH_RADIUS + ALTITUDE;
+    orbit_radius_px := orbit_radius * scale;
+
+    // v = sqrt(G * M / r) = sqrt(G * M / (r + h))
+    orbital_speed := math::sqrt((G * EARTH_MASS) / orbit_radius) * speed;
+
+    // speed = distance / time (T)
+    // distance = 2pi * (r + h)
+    // therefore T = distance / speed
+    //            => 2pi * (r + h) / speed
+    period := (2.0 * PI * orbit_radius) / orbital_speed;
+
+    // omega = 2pi * f = 2pi / T
+    omega := 2.0 * PI / period;
+
+    while !rl::window_should_close() {
+        time := rl::get_time();
+        angle := omega * time;
+
+        rl::begin_drawing();
+        rl::clear_background(BLACK);
+
+        sat := $(
+            math::cos(angle) * orbit_radius_px + (Screen::Width / 2),
+            math::sin(angle) * orbit_radius_px + (Screen::Height / 2),
+        );
+
+        rl::draw_ellipse(sat.x, sat.y, 5, 5, WHITE);
+        draw_earth(earth_radius_px);
+
+        rl::draw_text("Position: {}".format(sat), 20, Screen::Height - 80, 20, WHITE);
+        rl::draw_text("Angle: {} rad".format(angle), 20, Screen::Height - 60, 20, WHITE);
+        rl::draw_text("Speed: {} m/s".format(orbital_speed / speed), 20, Screen::Height - 40, 20, WHITE);
+        rl::draw_fps(4, 4);
+        rl::end_drawing();
+    }
+}
