@@ -396,7 +396,6 @@ pub fn lex_and_parse(
         }
     }
 
-    // Structs
     let (structs, new_struct_pool, new_enum_pool, ..) = parser.parse(
         &DoOnly::StructsAndEnums,
         Some(struct_pool.borrow().to_owned()),

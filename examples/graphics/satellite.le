@@ -19,7 +19,7 @@ const EARTH_RADIUS = 6.37e6;
 const ALTITUDE = 300e3;
 const G = 6.67e-11;
 
-fn draw_earth(f32 radius) {
+fn draw_planet(f32 radius) {
     rl::draw_ellipse(
         Screen::Width / 2,
         Screen::Height / 2,
@@ -37,11 +37,11 @@ fn main() {
     rl::init_window(Screen::Width, Screen::Height, "Satellite");
     defer rl::close_window();
 
-    rl::set_target_fps(60);
+    rl::set_target_fps(120);
 
     speed := 1000;
-    earth_radius_px := 300.0;
-    scale := earth_radius_px / EARTH_RADIUS;
+    planet_radius_px := 300.0;
+    scale := planet_radius_px / EARTH_RADIUS;
 
     orbit_radius := EARTH_RADIUS + ALTITUDE;
     orbit_radius_px := orbit_radius * scale;
@@ -71,7 +71,7 @@ fn main() {
         );
 
         rl::draw_ellipse(sat.x, sat.y, 5, 5, WHITE);
-        draw_earth(earth_radius_px);
+        draw_planet(planet_radius_px);
 
         rl::draw_text("Position: {}".format(sat), 20, Screen::Height - 80, 20, WHITE);
         rl::draw_text("Angle: {} rad".format(angle), 20, Screen::Height - 60, 20, WHITE);

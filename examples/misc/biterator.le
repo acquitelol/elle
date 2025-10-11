@@ -12,7 +12,7 @@ struct BiteratorEnv<T> {
 }
 
 fn Biterator::new<T>(T inner) -> Biterator<T> {
-    return Biterator { inner = inner };
+    return Biterator { inner };
 }
 
 fn Biterator::iter<T>(Biterator<T> *self) -> Iterator<u8, DoubleEnded> {
