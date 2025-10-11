@@ -1,0 +1,27 @@
+use std/prelude;
+
+struct DefaultMap<K, V> @nofmt {
+    HashMap<K, V> *inner,
+    fn() -> V cb
+}
+
+fn DefaultMap::__fmt__<K, V>(DefaultMap<K, V> self, u64 _) {
+    return self.inner.__fmt__(0);
+}
+
+fn DefaultMap::new<K, V>(fn() -> V cb) -> DefaultMap<K, V> {
+    return DefaultMap { inner = HashMap::new(), cb };
+}
+
+fn DefaultMap::__load__<K, V>(DefaultMap<K, V> self, K key) {
+    cb := self.cb;
+    return self.inner.get_or_insert(key, cb());
+}
+
+fn main() {
+    x := DefaultMap::new<string>(fn() Array::new<u64>());
+    x["a"].push(14);
+    x["a"].push(15);
+    x["b"].push(39);
+    $dbg(x);
+}
