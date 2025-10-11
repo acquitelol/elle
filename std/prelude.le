@@ -7,6 +7,7 @@ use std/collections/hashset;
 use std/collections/triple;
 use std/collections/tuple;
 use std/collections/array;
+use std/collections/stack;
 use std/option;
 use std/result;
 use std/limits;

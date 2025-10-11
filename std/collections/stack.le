@@ -1,0 +1,28 @@
+use std/collections/array;
+use std/result;
+global pub;
+
+struct Stack<T> {
+    T[] inner
+}
+
+fn Stack::new<T>() -> Stack<T> {
+    return Stack { inner = [] };
+}
+
+fn Stack::push<T>(Stack<T> self, T value) {
+    self.inner.push(value);
+    return nil;
+}
+
+fn Stack::pop<T>(Stack<T> self) -> Option<T> {
+    return self.inner.pop();
+}
+
+fn Stack::peek<T>(Stack<T> self) -> Option<T> {
+    return self.inner.last();
+}
+
+fn Stack::is_empty<T>(Stack<T> self) -> bool {
+    return self.inner.is_empty();
+}
