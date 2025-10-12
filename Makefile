@@ -23,15 +23,15 @@ install-std:
 	cp -rf std/* $(STD_PATH)
 
 install-runtime:
-	@rm -f $(RUNTIME_PATH)/libelle.o
-	@rm -f $(RUNTIME_PATH)/libelle.a
+	rm -f $(RUNTIME_PATH)/libelle.o
+	rm -f $(RUNTIME_PATH)/libelle.a
 	mkdir -p $(RUNTIME_PATH)
 	@# must be compiled without anything because this is the module creating it
 	@# its fine because those modules are actually just headers anyway
 	@# this is just so the headers dont overwrite the implementation in the stdlib
-	ellec $(STD_PATH)/runtime/index.le -o libelle.o -c --noalloc --nogc --nosm --nofmt --nostd
-	@ar -rcs $(RUNTIME_PATH)/libelle.a libelle.o
-	@rm -f libelle.o
+	@PATH="$(BIN_PATH):$(PATH)" ellec $(STD_PATH)/runtime/index.le -o libelle.o -c --noalloc --nogc --nosm --nofmt --nostd
+	ar -rcs $(RUNTIME_PATH)/libelle.a libelle.o
+	rm -f libelle.o
 
 compile-debug:
 	cargo build && mv ./target/debug/ellec ./ellec
@@ -41,7 +41,7 @@ compile-release:
 
 .PHONY: test-file
 test-file:
-	@ellec $(TEST_FILE) -o __ellec_test_tmp $(if $(VERBOSE),,--hush);
+	@PATH="$(BIN_PATH):$(PATH)" ellec $(TEST_FILE) -o __ellec_test_tmp $(if $(VERBOSE),,--hush);
 	-@./__ellec_test_tmp foo bar baz;
 	@rm -f ./__ellec_test_tmp $(if $(VERBOSE),,> /dev/null);
 
