@@ -76,16 +76,17 @@ fn HashMap::__fmt__<T, U>(HashMap<T, U> self, i32 nesting) {
 }
 
 fn HashMap::with_capacity<T, U>(u64 initial_capacity) -> HashMap<T, U> * {
-    map := #alloc(HashMap<T, U>);
+    self := #alloc(HashMap<T, U>);
 
-    map.table = Array::with_capacity(initial_capacity).filled();
-    map.size = 0;
+    self.table = Array::with_capacity(initial_capacity);
+    self.size = 0;
 
     for u64 i = 0; i < initial_capacity; i += 1 {
-        map.table.push(HashMapBucket::new<T, U>());
+        self.table.push(HashMapBucket::new<T, U>());
     }
 
-    return map;
+    self.table.size = self.table.capacity;
+    return self;
 }
 
 fn HashMap::new<T, U>() -> HashMap<T, U> * {
@@ -94,16 +95,16 @@ fn HashMap::new<T, U>() -> HashMap<T, U> * {
 
 // first_key, first_value are to infer T and U
 fn HashMap::with_entries<T, U>(ElleMeta meta, (T, U) first, ...args) -> HashMap<T, U> * {
-    map := HashMap::with_capacity<T, U>(4);
-    map[first.x] = first.y;
+    self := HashMap::with_capacity<T, U>(4);
+    self[first.x] = first.y;
 
     // subtract the first
     for u64 i = 0; i < meta.arity - 1; i += 1 {
         key, value := args.yield((T, U));
-        map[key] = value;
+        self[key] = value;
     }
 
-    return map;
+    return self;
 }
 
 external fn HashMap::with_entries<T, U>(ElleMeta meta, (T, U) first, ...)
@@ -227,7 +228,7 @@ fn HashMap::contains_key<T, U>(HashMap<T, U> *self, T key) -> bool {
 fn HashMap::resize<T, U>(HashMap<T, U> *self, u64 new_capacity) {
     old_table := self.table;
 
-    self.table = Array::with_capacity(new_capacity).filled();
+    self.table = Array::with_capacity(new_capacity);
     self.size = 0;
 
     for u64 i = 0; i < new_capacity; i += 1 {
@@ -242,6 +243,8 @@ fn HashMap::resize<T, U>(HashMap<T, U> *self, u64 new_capacity) {
             );
         }
     }
+
+    self.table.size = self.table.capacity;
 }
 
 fn HashMap::size<T, U>(HashMap<T, U> *self) {

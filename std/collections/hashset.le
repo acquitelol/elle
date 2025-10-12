@@ -41,27 +41,28 @@ fn HashSet::__fmt__<T>(HashSet<T> self, i32 nesting) {
 }
 
 fn HashSet::with_capacity<T>(u64 initial_capacity) -> HashSet<T> * {
-    let set = #alloc(HashSet<T>);
+    self := #alloc(HashSet<T>);
 
-    set.table = Array::with_capacity(initial_capacity).filled();
-    set.size = 0;
+    self.table = Array::with_capacity(initial_capacity);
+    self.size = 0;
 
     for u64 i = 0; i < initial_capacity; i += 1 {
-        set.table.push(HashSetBucket::new<T>());
+        self.table.push(HashSetBucket::new<T>());
     }
 
-    return set;
+    self.table.size = self.table.capacity;
+    return self;
 }
 
 fn HashSet::with_entries<T>(ElleMeta meta, T first, ...args) -> HashSet<T> * {
-    let set = HashSet::with_capacity<T>(4);
-    set.add(first);
+    self := HashSet::with_capacity<T>(4);
+    self.add(first);
 
     for i32 i = 0; i < meta.arity - 1; i += 1 {
-        set.add(args.yield(T));
+        self.add(args.yield(T));
     }
 
-    return set;
+    return self;
 }
 
 fn HashSet::new<T>() -> HashSet<T> * {
@@ -153,7 +154,7 @@ fn HashSet::is_empty<T>(HashSet<T> *self) -> bool {
 fn HashSet::resize<T>(HashSet<T> *self, u64 new_capacity) {
     old_table := self.table;
 
-    self.table = Array::with_capacity(new_capacity).filled();
+    self.table = Array::with_capacity(new_capacity);
     self.size = 0;
 
     for u64 i = 0; i < self.table.capacity; i += 1 {
@@ -165,6 +166,8 @@ fn HashSet::resize<T>(HashSet<T> *self, u64 new_capacity) {
             $assert(self.add(old_table[i].value));
         }
     }
+
+    self.table.size = self.table.capacity;
 }
 
 fn HashSet::clear<T>(HashSet<T> *self) {
