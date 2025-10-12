@@ -24,8 +24,7 @@ fn HashMapBucket::new<T, U>() {
 
 struct HashMap<T, U> {
     HashMapBucket<T, U> *[] table,
-    u64 size,
-    u64 capacity
+    u64 size
 }
 
 !pub fn __internal_key_exists_check<T, U>(HashMap<T, U> *self, T key, ElleMeta meta) {
@@ -79,8 +78,7 @@ fn HashMap::__fmt__<T, U>(HashMap<T, U> self, i32 nesting) {
 fn HashMap::with_capacity<T, U>(u64 initial_capacity) -> HashMap<T, U> * {
     map := #alloc(HashMap<T, U>);
 
-    map.table = Array::with_capacity(initial_capacity);
-    map.capacity = initial_capacity;
+    map.table = Array::with_capacity(initial_capacity).filled();
     map.size = 0;
 
     for u64 i = 0; i < initial_capacity; i += 1 {
@@ -115,11 +113,11 @@ external fn HashMap::with_entries<T, U>(ElleMeta meta, (T, U) first, ...)
     @alias($map) -> HashMap<T, U> *;
 
 fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
-    if self.size >= self.capacity / 2 {
-        self.resize(self.capacity * 2);
+    if self.size >= self.table.capacity / 2 {
+        self.resize(self.table.capacity * 2);
     }
 
-    u64 idx = key.__hash__(self.capacity);
+    u64 idx = key.__hash__(self.table.capacity);
     start_idx := idx;
 
     while true {
@@ -134,7 +132,7 @@ fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
             return true;
         }
 
-        idx = (idx + 1) % self.capacity;
+        idx = (idx + 1) % self.table.capacity;
 
         if idx == start_idx {
             return false;
@@ -147,7 +145,7 @@ fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
 external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) @alias(HashMap::set) -> bool;
 
 !pub fn __internal_hashmap_get<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
-    u64 idx = key.__hash__(self.capacity);
+    u64 idx = key.__hash__(self.table.capacity);
     start_idx := idx;
 
     while self.table[idx].full {
@@ -155,7 +153,7 @@ external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) @alias(HashM
             return Option::Some<U>(self.table[idx].value);
         }
 
-        idx = (idx + 1) % self.capacity;
+        idx = (idx + 1) % self.table.capacity;
 
         if idx == start_idx {
             break;
@@ -186,7 +184,7 @@ fn HashMap::get<T, U>(HashMap<T, U> *self, T key) {
 }
 
 fn HashMap::remove<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
-    u64 idx = key.__hash__(self.capacity);
+    u64 idx = key.__hash__(self.table.capacity);
     start_idx := idx;
 
     while self.table[idx].full {
@@ -197,7 +195,7 @@ fn HashMap::remove<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
             return Option::Some<U>(value);
         }
 
-        idx = (idx + 1) % self.capacity;
+        idx = (idx + 1) % self.table.capacity;
 
         if idx == start_idx {
             break;
@@ -208,7 +206,7 @@ fn HashMap::remove<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
 }
 
 fn HashMap::contains_key<T, U>(HashMap<T, U> *self, T key) -> bool {
-    u64 idx = key.__hash__(self.capacity);
+    u64 idx = key.__hash__(self.table.capacity);
     start_idx := idx;
 
     while self.table[idx].full {
@@ -216,7 +214,7 @@ fn HashMap::contains_key<T, U>(HashMap<T, U> *self, T key) -> bool {
             return true;
         }
 
-        idx = (idx + 1) % self.capacity;
+        idx = (idx + 1) % self.table.capacity;
 
         if idx == start_idx {
             break;
@@ -229,8 +227,7 @@ fn HashMap::contains_key<T, U>(HashMap<T, U> *self, T key) -> bool {
 fn HashMap::resize<T, U>(HashMap<T, U> *self, u64 new_capacity) {
     old_table := self.table;
 
-    self.table = Array::with_capacity(new_capacity);
-    self.capacity = new_capacity;
+    self.table = Array::with_capacity(new_capacity).filled();
     self.size = 0;
 
     for u64 i = 0; i < new_capacity; i += 1 {
@@ -258,7 +255,7 @@ fn HashMap::is_empty<T, U>(HashMap<T, U> *self) -> bool {
 fn HashMap::clear<T, U>(HashMap<T, U> *self) {
     self.size = 0;
 
-    for u64 i = 0; i < self.capacity; i += 1 {
+    for u64 i = 0; i < self.table.capacity; i += 1 {
         self.table[i].full = false;
     }
 }

@@ -22,7 +22,6 @@ fn HashSetBucket::new<T>() {
 struct HashSet<T> {
     HashSetBucket<T> *[] table,
     u64 size,
-    u64 capacity
 }
 
 fn HashSet::__fmt__<T>(HashSet<T> self, i32 nesting) {
@@ -44,12 +43,10 @@ fn HashSet::__fmt__<T>(HashSet<T> self, i32 nesting) {
 fn HashSet::with_capacity<T>(u64 initial_capacity) -> HashSet<T> * {
     let set = #alloc(HashSet<T>);
 
-    let capacity = math::next_power_of_2(initial_capacity);
-    set.table = Array::with_capacity(capacity);
-    set.capacity = capacity;
+    set.table = Array::with_capacity(initial_capacity).filled();
     set.size = 0;
 
-    for u64 i = 0; i < capacity; i += 1 {
+    for u64 i = 0; i < initial_capacity; i += 1 {
         set.table.push(HashSetBucket::new<T>());
     }
 
@@ -76,11 +73,11 @@ fn HashSet::add<T>(HashSet<T> *self, T value) -> bool {
         return false;
     }
 
-    if self.size >= self.capacity / 2 {
-        self.resize(self.capacity * 2);
+    if self.size >= self.table.capacity / 2 {
+        self.resize(self.table.capacity * 2);
     }
 
-    u64 idx = value.__hash__(self.capacity);
+    u64 idx = value.__hash__(self.table.capacity);
     let start_idx = idx;
 
     while true {
@@ -92,7 +89,7 @@ fn HashSet::add<T>(HashSet<T> *self, T value) -> bool {
             return true;
         }
 
-        idx = (idx + 1) % self.capacity;
+        idx = (idx + 1) % self.table.capacity;
 
         if idx == start_idx {
             return false;
@@ -101,7 +98,7 @@ fn HashSet::add<T>(HashSet<T> *self, T value) -> bool {
 }
 
 fn HashSet::remove<T>(HashSet<T> *self, T value) -> bool {
-    u64 idx = value.__hash__(self.capacity);
+    u64 idx = value.__hash__(self.table.capacity);
     let start_idx = idx;
 
     while true {
@@ -116,7 +113,7 @@ fn HashSet::remove<T>(HashSet<T> *self, T value) -> bool {
             return true;
         }
 
-        idx = (idx + 1) % self.capacity;
+        idx = (idx + 1) % self.table.capacity;
 
         if idx == start_idx {
             return false;
@@ -125,7 +122,7 @@ fn HashSet::remove<T>(HashSet<T> *self, T value) -> bool {
 }
 
 fn HashSet::contains<T>(HashSet<T> *self, T value) -> bool {
-    u64 idx = value.__hash__(self.capacity);
+    u64 idx = value.__hash__(self.table.capacity);
     let start_idx = idx;
 
     while true {
@@ -137,7 +134,7 @@ fn HashSet::contains<T>(HashSet<T> *self, T value) -> bool {
             return true;
         }
 
-        idx = (idx + 1) % self.capacity;
+        idx = (idx + 1) % self.table.capacity;
 
         if idx == start_idx {
             return false;
@@ -156,11 +153,10 @@ fn HashSet::is_empty<T>(HashSet<T> *self) -> bool {
 fn HashSet::resize<T>(HashSet<T> *self, u64 new_capacity) {
     old_table := self.table;
 
-    self.table = Array::with_capacity(new_capacity);
-    self.capacity = new_capacity;
+    self.table = Array::with_capacity(new_capacity).filled();
     self.size = 0;
 
-    for u64 i = 0; i < self.capacity; i += 1 {
+    for u64 i = 0; i < self.table.capacity; i += 1 {
         self.table.push(HashSetBucket::new<T>());
     }
 
@@ -174,16 +170,16 @@ fn HashSet::resize<T>(HashSet<T> *self, u64 new_capacity) {
 fn HashSet::clear<T>(HashSet<T> *self) {
     self.size = 0;
 
-    for u64 i = 0; i < self.capacity; i += 1 {
+    for u64 i = 0; i < self.table.capacity; i += 1 {
         self.table[i].full = false;
         self.table[i].deleted = false;
     }
 }
 
 fn HashSet::clone<T>(HashSet<T> *self) -> HashSet<T> * {
-    new_set := HashSet::with_capacity(self.capacity);
+    new_set := HashSet::with_capacity(self.table.capacity);
 
-    for u64 i = 0; i < self.capacity; i += 1 {
+    for u64 i = 0; i < self.table.capacity; i += 1 {
         if self.table[i].full {
             $assert(new_set.add(self.table[i].value));
         }
