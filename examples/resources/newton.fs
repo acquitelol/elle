@@ -54,17 +54,14 @@ void main() {
     float y = mix(y_min, y_max, fragTexCoord.y);
     vec2 z = vec2(x, y);
 
-    int iter = 0;
-
     for (int i = 0; i < max_iter; ++i) {
         vec2 f = poly(z);
         if (cplx_abs(f) < tol) break;
 
         vec2 f_prime = poly_prime(z);
-        if (cplx_abs(f_prime) < tol * tol) { iter = max_iter; break; }
+        if (cplx_abs(f_prime) < tol) break;
 
         z -= cplx_div(f, f_prime);
-        iter = i + 1;
     }
 
     int ri = 0;

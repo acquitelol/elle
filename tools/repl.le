@@ -8,7 +8,7 @@ fn main(string[] args) {
         return;
     }
 
-    lines := [string;];
+    lines := []string;
 
     while true {
         line := io::input(".ೃ࿔* -> ");
@@ -30,7 +30,7 @@ fn main(string[] args) {
                 io::println({});
             }".format(backlog, line)
          .split("\n")
-         .map<string>(fn(string x) x.replace(" ".repeat(12), ""))
+         .map(fn(x) x.replace(" ".repeat(12), ""))
          .join("\n");
 
         if line == "<!dbg>" {
