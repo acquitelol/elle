@@ -4,7 +4,7 @@ STD_PATH = $(DIST_PATH)/include/elle/std
 RUNTIME_PATH = $(DIST_PATH)/lib
 MAKEFLAGS += --no-print-directory
 
-default: install-release
+default: install-release ask-for-path
 
 install-debug: install-compiler-debug install-std install-runtime
 install-release: install-compiler-release install-std install-runtime
@@ -64,7 +64,12 @@ test-manual:
 	@$(MAKE) $(MAKEFLAGS) VERBOSE=1 DELAY=1 CLEAR=1 test-suite-manual
 
 repl:
-	ellec tools/repl.le
+	@PATH="$(BIN_PATH):$(PATH)" ellec tools/repl.le
+
+ask-for-path:
+	@echo "\nElle was installed into '$(BIN_PATH)'."
+	@echo "You can add this to your PATH environment variable by running:"
+	@echo "\n    export PATH=\"$(BIN_PATH):\$$PATH\"\n"
 
 clean:
 	rm -rf dist

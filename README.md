@@ -35,15 +35,16 @@ fn main() {
 - Ensure you have [Rust](https://www.rust-lang.org/), [Cargo](https://crates.io/) and the [QBE](https://c9x.me/compile/) compiler backend.
 
 ```terminal
-  $ git clone https://github.com/acquitelol/elle
+git clone https://github.com/acquitelol/elle
 ```
 
 ```terminal
-  $ cd elle
+cd elle
 ```
 
+(does not require root)
 ```console
-  $ make
+make
 ```
 
 to install the compiler, standard library, and runtime (installs into ~/.local/ by default)
@@ -51,7 +52,7 @@ to install the compiler, standard library, and runtime (installs into ~/.local/ 
 Add the compiler executable to your `$PATH`:
 
 ```console
-  $ export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 **OR**
@@ -60,22 +61,20 @@ Add the compiler executable to your `$PATH`:
   $ make compile-release
 ```
 
-to get only a compiler executable and not install anything (does not require root)
-
-- **You're done!**
+to get only a compiler executable and not install anything.
 
 #### ♡ You can now run `ellec` to get a help message of how to use the compiler!
 
 Try compiling a simple example!
 
 ```console
-  $ ellec ./examples/hello.le --run
+ellec ./examples/hello.le --run
 ```
 
 Try compiling an example with libraries!
 
 ```
-  $ ellec ./examples/graphics/ball.le -z -lraylib --run
+ellec ./examples/graphics/newton.le -z -lraylib --run
 ```
 
 #
