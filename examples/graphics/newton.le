@@ -33,10 +33,9 @@ fn main() {
     shader := rl::load_shader(nil, "examples/resources/newton.fs");
     defer rl::unload_shader(shader);
 
-    loc_kinds := ["x_min", "x_max", "y_min", "y_max", "max_iter", "tol"];
     locs := HashMap::new<string, i32>();
 
-    for loc in loc_kinds {
+    for loc in ["x_min", "x_max", "y_min", "y_max", "max_iter", "tol"] {
         locs[loc] = rl::get_shader_location(shader, loc);
     }
 
@@ -75,6 +74,16 @@ fn main() {
                     break;
                 }
             }
+        }
+
+        if rl::is_mouse_button_down(MouseButton::MOUSE_RIGHT_BUTTON) {
+            dx := rl::get_mouse_delta().x * (x_max - x_min) / SCREEN_WIDTH;
+            dy := rl::get_mouse_delta().y * (y_max - y_min) / SCREEN_HEIGHT;
+
+            x_min -= dx;
+            x_max -= dx;
+            y_min += dy;
+            y_max += dy;
         }
 
         if rl::is_mouse_button_released(MouseButton::MOUSE_LEFT_BUTTON) {
