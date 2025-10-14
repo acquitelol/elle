@@ -1,0 +1,93 @@
+struct Deque<T> @nofmt {
+    T[] data,
+    u64 front,
+    u64 back,
+    u64 size
+}
+
+fn Deque::new<T>() -> Deque<T> {
+    return Deque {
+        data = [],
+        front = 0,
+        back = 0,
+        size = 0
+    };
+}
+
+fn Deque::__fmt__<T>(Deque<T> self, u64 nesting) {
+    res := "{";
+
+    for i in 0..self.size {
+        idx := (self.front + i) % self.data.len();
+        res.extend(self.data[idx].__fmt__(nesting));
+
+        if i != self.size - 1 {
+            res.extend(", ");
+        }
+    }
+
+    res.push('}');
+    return res;
+}
+
+fn Deque::len<T>(Deque<T> self) {
+    return self.size;
+}
+
+fn Deque::is_empty<T>(Deque<T> self) {
+    return self.len() == 0;
+}
+
+!pub fn Deque::resize<T>(Deque<T> *self, u64 new_capacity) {
+    new_data := Array::with_capacity<T>(new_capacity).filled();
+
+    for i in 0..self.size {
+        new_data[i] = self.data[(self.front + i) % self.data.len()];
+    }
+
+    self.data = new_data;
+    self.front = 0;
+    self.back = self.size;
+}
+
+fn Deque::push_front<T>(Deque<T> *self, T value) {
+    if self.size == self.data.len() {
+        self.resize((self.data.len() || 1) * 2);
+    }
+
+    self.front = (self.front - 1 + self.data.len()) % self.data.len();
+    self.data[self.front] = value;
+    self.size += 1;
+}
+
+fn Deque::push_back<T>(Deque<T> *self, T value) {
+    if self.size == self.data.len() {
+        self.resize((self.data.len() || 1) * 2);
+    }
+
+    self.data[self.back] = value;
+    self.back = (self.back + 1) % self.data.len();
+    self.size += 1;
+}
+
+fn Deque::pop_front<T>(Deque<T> *self) -> Option<T> {
+    if self.is_empty() {
+        return None();
+    }
+
+    value := self.data[self.front];
+    self.front = (self.front + 1) % self.data.len();
+    self.size -= 1;
+    return Some(value);
+}
+
+fn Deque::pop_back<T>(Deque<T> *self) -> Option<T> {
+    if self.is_empty() {
+        return None();
+    }
+
+    self.back = (self.back - 1 + self.data.len()) % self.data.len();
+    value := self.data[self.back];
+    self.size -= 1;
+    return Some(value);
+}
