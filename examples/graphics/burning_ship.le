@@ -1,0 +1,96 @@
+use std/raylib;
+use std/prelude;
+
+const SCREEN_FACTOR = 80;
+const SCREEN_WIDTH = 8 * SCREEN_FACTOR;
+const SCREEN_HEIGHT = 8 * SCREEN_FACTOR;
+
+fn main() {
+    rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Burning Ship");
+    defer rl::close_window();
+    rl::set_target_fps(60);
+
+    x_min, x_max := $(-2.5, 1.5);
+    y_min, y_max := $(-2.5, 1.5);
+
+    colors := [
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(0.835, 0.176, 0.0),
+        Vector3::new(0.937, 0.463, 0.153),
+        Vector3::new(1.0, 1.0, 1.0),
+        Vector3::new(0.639, 0.0078, 0.384)
+    ];
+
+    shader := rl::load_shader(nil, "examples/resources/burning_ship.fs");
+    defer rl::unload_shader(shader);
+
+    locs := HashMap::new<string, i32>();
+
+    for name in ["x_min", "x_max", "y_min", "y_max", "z0", "max_iter"] {
+        locs[name] = rl::get_shader_location(shader, name);
+    }
+
+    for i in 0..colors.len() {
+        loc := rl::get_shader_location(shader, "colors[{}]".format(i));
+        rl::set_shader_value(shader, loc, &colors[i].x, ShaderUniformDataType::SHADER_UNIFORM_VEC3);
+    }
+
+    tex := rl::get_default_texture();
+    tex.width = SCREEN_WIDTH;
+    tex.height = SCREEN_HEIGHT;
+
+    rl::set_shader_value(shader, locs["max_iter"], &300, ShaderUniformDataType::SHADER_UNIFORM_INT);
+    rl::set_shader_value(shader, locs["z0"], &Vector2::from(0).x, ShaderUniformDataType::SHADER_UNIFORM_VEC2);
+
+    while !rl::window_should_close() {
+        mouse := rl::get_mouse_position();
+        m := Vector2::new(
+            x_min + mouse.x * (x_max - x_min) / SCREEN_WIDTH,
+            y_max - mouse.y * (y_max - y_min) / SCREEN_HEIGHT
+        );
+
+        wheel := rl::get_mouse_wheel_move();
+        if wheel != 0 {
+            scale := wheel > 0 ? 0.95 : 1.05;
+            x_min = m.x + (x_min - m.x) * scale;
+            x_max = m.x + (x_max - m.x) * scale;
+            y_min = m.y + (y_min - m.y) * scale;
+            y_max = m.y + (y_max - m.y) * scale;
+        }
+
+        if rl::is_mouse_button_down(MouseButton::MOUSE_RIGHT_BUTTON) {
+            dx := rl::get_mouse_delta().x * (x_max - x_min) / SCREEN_WIDTH;
+            dy := rl::get_mouse_delta().y * (y_max - y_min) / SCREEN_HEIGHT;
+
+            x_min -= dx;
+            x_max -= dx;
+            y_min -= dy;
+            y_max -= dy;
+        }
+
+        if rl::is_mouse_button_down(MouseButton::MOUSE_LEFT_BUTTON) {
+            rl::set_shader_value(shader, locs["z0"], &m.x, ShaderUniformDataType::SHADER_UNIFORM_VEC2);
+        }
+
+        rl::set_shader_value(shader, locs["x_min"], &x_min, ShaderUniformDataType::SHADER_UNIFORM_FLOAT);
+        rl::set_shader_value(shader, locs["x_max"], &x_max, ShaderUniformDataType::SHADER_UNIFORM_FLOAT);
+        rl::set_shader_value(shader, locs["y_min"], &y_min, ShaderUniformDataType::SHADER_UNIFORM_FLOAT);
+        rl::set_shader_value(shader, locs["y_max"], &y_max, ShaderUniformDataType::SHADER_UNIFORM_FLOAT);
+
+        rl::begin_drawing();
+            rl::clear_background(RAYWHITE);
+            rl::begin_shader_mode(shader);
+
+            rl::draw_texture_pro(
+                tex,
+                Rectangle { x = 0, y = 0, width = tex.width, height = tex.height },
+                Rectangle { x = 0, y = 0, width = tex.width, height = tex.height },
+                Vector2 { x = 0, y = 0 },
+                0, WHITE
+            );
+
+            rl::end_shader_mode();
+            rl::draw_fps(4, 4);
+        rl::end_drawing();
+    }
+}
