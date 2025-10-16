@@ -5,6 +5,7 @@ out vec4 finalColor;
 
 uniform vec3 colors[5];
 uniform float x_min, x_max, y_min, y_max;
+uniform bool mandelbrot;
 uniform int max_iter;
 uniform vec2 z0;
 
@@ -25,7 +26,7 @@ void main() {
     int i = 0;
     for (; i < max_iter; ++i) {
         // z = (|Re(z)| + |Im(z)|i)^2 + c
-        z = vec2(abs(z.x), abs(z.y));
+        if (!mandelbrot) z = vec2(abs(z.x), abs(z.y));
         z = cplx_mul(z, z) + c;
         if (cplx_abs(z) > 2.0) break;
     }
