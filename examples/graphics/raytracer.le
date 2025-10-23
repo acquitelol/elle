@@ -170,8 +170,8 @@ fn main() {
     rl::disable_cursor();
 
     camera := Camera3D {
-        position = Vector3::new(-1, 1, -4),
-        target = Vector3::new(-1, 0, 0),
+        position = Vector3::new(-1, 0.75, -4),
+        target = Vector3::new(-1, -0.25, 0),
         up = Vector3::new(0, 1, 0),
         fovy = 60,
         projection = CameraProjection::CAMERA_PERSPECTIVE
@@ -185,21 +185,16 @@ fn main() {
 
     lights := [
         Light {
-            position = Vector3::new(-1.5, 2.0, 0),
+            position = Vector3::new(0, 8, 0),
             color = #cast(Color, &u32::max()),
             intensity = 1
-        },
-        Light {
-            position = Vector3::new(-3, 0.0, -4),
-            color = #cast(Color, &u32::max()),
-            intensity = 0.01
         },
     ];
 
     plane := Plane {
         point = Vector3::new(0, -1, 0),
         normal = Vector3::new(0, 1, 0),
-        color = #cast(Color, &0xff222222)
+        color = #cast(Color, &0xffdddddd)
     };
 
     shader := rl::load_shader(nil, "examples/resources/raytracer.fs");
