@@ -6,13 +6,15 @@ external fn i32::promote(i32 self) -> i64;
 
 const f64 E = 2.7182818284590455348848081484902650117;
 const f64 PI = 3.1415926535897932384626433832795028841;
+const f32::inf = *#cast(f32 *, &0x7F800000);
+const f64::inf = *#cast(f64 *, &0x7FF0000000000000);
 
 external fn math::atan3(f64 x, f64 y) -> f64;
 external fn math::fact(i64 n) -> i64;
 external fn math::fclamp(f64 value, f64 min_value, f64 max_value) -> f64;
 
 fn math::pow<T>(T base, u32 exp) -> T {
-    out := 1;
+    T out = 1;
 
     while exp > 0 {
         if exp % 2 == 1 { out *= base; }
