@@ -52,6 +52,13 @@ float rand(vec2 co) {
     return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
+vec3 checkerboard_color(vec3 point) {
+    int checkX = int(floor(point.x));
+    int checkZ = int(floor(point.z));
+
+    return plane.color.rgb * ((checkX + checkZ) % 2 == 0 ? 1 : 0.25);
+}
+
 Ray get_ray(Camera camera, vec2 uv, vec2 jitter) {
     uv.x += (jitter.x - 0.5) * 0.002;
     uv.y += (jitter.y - 0.5) * 0.002;
@@ -134,7 +141,7 @@ vec4 trace_ray(Ray ray, vec2 seed) {
         // if (closest > 1e19) return vec4(0.01);
         vec3 point = current.position + current.direction * closest;
         vec3 normal = hit_index >= 0 ? normalize(point - spheres[hit_index].center) : plane.normal;
-        color *= hit_index >= 0 ? spheres[hit_index].color : plane.color;
+        color *= hit_index >= 0 ? spheres[hit_index].color : vec4(checkerboard_color(point), 1.0);
 
         vec4 light_color;
         vec3 reflected = reflect(current.direction, normal);
