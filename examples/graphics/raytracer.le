@@ -79,7 +79,46 @@ fn Light::apply_on_shader(Light self, Shader shader, u64 i) {
     );
 }
 
+struct Plane {
+    Vector3 point,
+    Vector3 normal,
+    Color color
+}
+
+fn Plane::apply_on_shader(Plane self, Shader shader) {
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "plane.point"),
+        &self.point,
+        ShaderUniformDataType::SHADER_UNIFORM_VEC3
+    );
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "plane.normal"),
+        &self.normal,
+        ShaderUniformDataType::SHADER_UNIFORM_VEC3
+    );
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "plane.color"),
+        [
+            #cast(f32, self.color.r) / 255.0,
+            #cast(f32, self.color.g) / 255.0,
+            #cast(f32, self.color.b) / 255.0,
+            #cast(f32, self.color.a) / 255.0,
+        ].elements,
+        ShaderUniformDataType::SHADER_UNIFORM_VEC4
+    );
+}
+
 fn Camera3D::apply_on_shader(Camera3D self, Shader shader) {
+    aspect := #cast(f32, Screen::Width) / #cast(f32, Screen::Height);
+    forward := self.target.sub(self.position).normalize();
+    right := forward.cross(self.up).normalize();
+    up := right.cross(forward);
+
     rl::set_shader_value(
         shader,
         rl::get_shader_location(shader, "camera.position"),
@@ -89,15 +128,22 @@ fn Camera3D::apply_on_shader(Camera3D self, Shader shader) {
 
     rl::set_shader_value(
         shader,
-        rl::get_shader_location(shader, "camera.target"),
-        &self.target,
+        rl::get_shader_location(shader, "camera.forward"),
+        Box::new(forward).to_ptr(),
+        ShaderUniformDataType::SHADER_UNIFORM_VEC3
+    );
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "camera.right"),
+        Box::new(right).to_ptr(),
         ShaderUniformDataType::SHADER_UNIFORM_VEC3
     );
 
     rl::set_shader_value(
         shader,
         rl::get_shader_location(shader, "camera.up"),
-        &self.up,
+        Box::new(up).to_ptr(),
         ShaderUniformDataType::SHADER_UNIFORM_VEC3
     );
 
@@ -111,7 +157,7 @@ fn Camera3D::apply_on_shader(Camera3D self, Shader shader) {
     rl::set_shader_value(
         shader,
         rl::get_shader_location(shader, "camera.ar"),
-        Box::new(#cast(f32, Screen::Width) / #cast(f32, Screen::Height)).to_ptr(),
+        Box::new(aspect).to_ptr(),
         ShaderUniformDataType::SHADER_UNIFORM_FLOAT
     );
 }
@@ -124,8 +170,8 @@ fn main() {
     rl::disable_cursor();
 
     camera := Camera3D {
-        position = Vector3::new(0, -2, -3),
-        target = Vector3::zero(),
+        position = Vector3::new(-1, 1, -4),
+        target = Vector3::new(-1, 0, 0),
         up = Vector3::new(0, 1, 0),
         fovy = 60,
         projection = CameraProjection::CAMERA_PERSPECTIVE
@@ -133,27 +179,34 @@ fn main() {
 
     spheres := [
         Sphere::new(Vector3::zero(), 1, #cast(Color, &0xfffc7eed)),
-        Sphere::new(Vector3::new(-2, 0, -1), 0.6, #cast(Color, &0xffcc7efc)),
-        Sphere::new(Vector3::new(-1.5, -1.5, 0), 0.4, #cast(Color, &0xfffc7eae))
+        Sphere::new(Vector3::new(-2, -0.4, -1), 0.6, #cast(Color, &0xffcc7efc)),
+        Sphere::new(Vector3::new(-1.5, -0.6, 0), 0.4, #cast(Color, &0xfffc7eae))
     ];
 
     lights := [
         Light {
-            position = Vector3::new(-1.5, 8.0, 0),
+            position = Vector3::new(-1.5, 2.0, 0),
             color = #cast(Color, &u32::max()),
             intensity = 1
         },
         Light {
-            position = Vector3::new(0, -16.0, 0),
+            position = Vector3::new(-3, 0.0, -4),
             color = #cast(Color, &u32::max()),
             intensity = 0.01
         },
     ];
 
+    plane := Plane {
+        point = Vector3::new(0, -1, 0),
+        normal = Vector3::new(0, 1, 0),
+        color = #cast(Color, &0xff222222)
+    };
+
     shader := rl::load_shader(nil, "examples/resources/raytracer.fs");
     defer rl::unload_shader(shader);
 
     camera.apply_on_shader(shader);
+    plane.apply_on_shader(shader);
 
     for i, light in lights.iter().enumerate() {
         light.apply_on_shader(shader, i);
