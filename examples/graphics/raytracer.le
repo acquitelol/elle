@@ -10,11 +10,13 @@ enum Screen {
 struct Sphere {
     Vector3 center,
     Color color,
-    f32 radius
+    f32 radius,
+    f32 ior,
+    f32 rough
 }
 
-fn Sphere::new(Vector3 center, f32 radius, Color color) {
-    return Sphere { center, radius, color };
+fn Sphere::new(Vector3 center, Color color, f32 radius, f32 ior, f32 rough) {
+    return Sphere { center, color, radius, ior, rough };
 }
 
 fn Sphere::apply_on_shader(Sphere self, Shader shader, u64 i) {
@@ -41,6 +43,20 @@ fn Sphere::apply_on_shader(Sphere self, Shader shader, u64 i) {
         shader,
         rl::get_shader_location(shader, "spheres[{}].radius".format(i)),
         &self.radius,
+        ShaderUniformDataType::SHADER_UNIFORM_FLOAT
+    );
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "spheres[{}].ior".format(i)),
+        &self.ior,
+        ShaderUniformDataType::SHADER_UNIFORM_FLOAT
+    );
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "spheres[{}].rough".format(i)),
+        &self.rough,
         ShaderUniformDataType::SHADER_UNIFORM_FLOAT
     );
 }
@@ -178,9 +194,9 @@ fn main() {
     };
 
     spheres := [
-        Sphere::new(Vector3::zero(), 1, #cast(Color, &0xfffc7eed)),
-        Sphere::new(Vector3::new(-2, -0.4, -1), 0.6, #cast(Color, &0xffcc7efc)),
-        Sphere::new(Vector3::new(-1.5, -0.6, 0), 0.4, #cast(Color, &0xfffc7eae))
+        Sphere::new(Vector3::zero(), #cast(Color, &0xfffc7eed), 1, 1.5, 0),
+        Sphere::new(Vector3::new(-2, -0.4, -1), #cast(Color, &0xffcc7efc), 0.6, 1.6, 0.025),
+        Sphere::new(Vector3::new(-1.5, -0.6, 0), #cast(Color, &0xfffc7eae), 0.4, 1.7, 0.05)
     ];
 
     lights := [
@@ -247,7 +263,10 @@ fn main() {
 
             rl::end_shader_mode();
             rl::draw_fps(10, 10);
-            rl::draw_text("Pos: {}".format(camera.position.__triple__()), 10, Screen::Height - 20, 10, WHITE);
+            rl::draw_text(
+                "Pos: {}".format(camera.position.__triple__()),
+                10, Screen::Height - 20, 10, WHITE
+            );
         rl::end_drawing();
     }
 }
