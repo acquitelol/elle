@@ -98,6 +98,10 @@ fn Vector2::angle(Vector2 self, Vector2 v2) {
     return #cast(f32, math::atan2(v2.y, v2.x) - math::atan2(self.y, self.x));
 }
 
+fn Vector2::__equals__(Vector2 self, Vector2 v2) {
+    return self.x == v2.x && self.y == v2.y;
+}
+
 // ----- Vector3 methods -----
 
 fn Vector3::zero() {
@@ -231,4 +235,8 @@ fn Vector3::angle(Vector3 self, Vector3 v2) {
 
     // Unwrap the cos(θ) into just θ
     return #cast(f32, math::acos(cos_theta));
+}
+
+fn Vector3::__equals__(Vector3 self, Vector3 v2) {
+    return self.x == v2.x && self.y == v2.y && self.z == v2.z;
 }
