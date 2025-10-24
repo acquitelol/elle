@@ -245,9 +245,31 @@ fn main() {
     tex.width = Screen::Width;
     tex.height = Screen::Height;
 
+    depth := 4;
+    samples := 4;
+
     while !rl::window_should_close() {
         rl::update_camera(#cast(Camera *, &camera), CameraMode::CAMERA_FREE);
         camera.apply_on_shader(shader);
+
+        if rl::is_key_pressed(KeyboardKey::KEY_Z) { depth = math::max(depth / 2, 1); }
+        if rl::is_key_pressed(KeyboardKey::KEY_X) { depth = math::min(depth * 2, 512); }
+        if rl::is_key_pressed(KeyboardKey::KEY_C) { samples = math::max(samples / 2, 1); }
+        if rl::is_key_pressed(KeyboardKey::KEY_V) { samples = math::min(samples * 2, 512); }
+
+        rl::set_shader_value(
+            shader,
+            rl::get_shader_location(shader, "depth"),
+            &depth,
+            ShaderUniformDataType::SHADER_UNIFORM_INT
+        );
+
+        rl::set_shader_value(
+            shader,
+            rl::get_shader_location(shader, "samples"),
+            &samples,
+            ShaderUniformDataType::SHADER_UNIFORM_INT
+        );
 
         rl::begin_drawing();
             rl::clear_background(BLACK);
@@ -263,6 +285,12 @@ fn main() {
 
             rl::end_shader_mode();
             rl::draw_fps(10, 10);
+
+            rl::draw_text(
+                "Depth: {}, Samples: {}".format(depth, samples),
+                10, Screen::Height - 30, 10, WHITE
+            );
+
             rl::draw_text(
                 "Pos: {}".format(camera.position.__triple__()),
                 10, Screen::Height - 20, 10, WHITE

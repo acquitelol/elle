@@ -50,6 +50,9 @@ uniform int spheres_size;
 uniform Camera camera;
 uniform Plane plane;
 
+uniform int depth;
+uniform int samples;
+
 float rand(vec2 co) {
     return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
 }
@@ -109,22 +112,6 @@ float intersect_plane(Ray ray) {
     return -1.0;
 }
 
-bool hit_light(Ray ray, out vec4 light_color) {
-    for (int i = 0; i < lights_size; ++i) {
-        float t = intersect_sphere(
-            Ray(ray.position, normalize(lights[i].position - ray.position)),
-            Sphere(lights[i].position, lights[i].color, LIGHT_RADIUS, 1, 0)
-        );
-
-        if (t > 0.0) {
-            light_color = lights[i].color * lights[i].intensity;
-            return true;
-        }
-    }
-
-    return false;
-}
-
 // The schlick approxmiation and glass scattering was adapted from:
 // https://raytracing.github.io/books/RayTracingInOneWeekend.html
 float schlick(float cos_theta, float ior) {
@@ -148,7 +135,6 @@ vec3 glass_scatter(vec3 ray_dir, vec3 hit_point, vec3 normal, float eta, vec2 se
 }
 
 vec4 trace_ray(Ray ray, vec2 seed) {
-    int depth = 4;
     vec4 color = vec4(1.0);
     Ray current = ray;
 
@@ -208,7 +194,6 @@ vec4 trace_ray(Ray ray, vec2 seed) {
 }
 
 void main() {
-    int samples = 8;
     vec4 sum = vec4(0.0);
 
     for (int i = 0; i < samples; ++i) {
