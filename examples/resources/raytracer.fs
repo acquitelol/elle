@@ -1,14 +1,9 @@
 #version 330
 
-struct Light {
-    vec3 position;
-    vec4 color;
-    float intensity;
-};
-
 struct Sphere {
     vec3 center;
     vec4 color;
+    float intensity;
     float radius;
     float ior;
     float rough;
@@ -39,10 +34,6 @@ out vec4 finalColor;
 
 #define PI 3.141592
 #define MAX_ENTITY 16
-#define LIGHT_RADIUS 2
-
-uniform Light lights[MAX_ENTITY];
-uniform int lights_size;
 
 uniform Sphere spheres[MAX_ENTITY];
 uniform int spheres_size;
@@ -165,6 +156,10 @@ vec4 trace_ray(Ray ray, vec2 seed) {
         vec3 point = current.position + current.direction * closest;
         vec3 normal = hit_plane ? plane.normal : normalize(point - spheres[hit_index].center);
 
+        if (spheres[hit_index].intensity > 0.0) {
+            color *= 1 + spheres[hit_index].color * spheres[hit_index].intensity;
+        }
+
         if (hit_plane) {
             color *= vec4(checkerboard_color(point), 1.0);
         } else {
@@ -177,14 +172,17 @@ vec4 trace_ray(Ray ray, vec2 seed) {
         if (dot(current.direction, normal) > 0.0) n *= -1, eta = 1 / eta;
 
         vec3 new_dir;
+        vec3 blur = normalize(rand_dir(seed));
 
         if (hit_plane) {
+            new_dir = normalize(normal + rand_dir(seed));
+        } else if (spheres[hit_index].ior == 1.0) {
             new_dir = reflect(current.direction, normal);
         } else {
-            vec3 blur = normalize(rand_dir(seed));
             new_dir = glass_scatter(current.direction, point, n, eta, seed);
-            new_dir = normalize(mix(new_dir, blur, spheres[hit_index].rough));
         }
+
+        if (!hit_plane) new_dir = normalize(mix(new_dir, blur, spheres[hit_index].rough));
 
         current = Ray(point + n * 1e-4, new_dir);
         seed += 0.1;
