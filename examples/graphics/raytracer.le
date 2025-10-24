@@ -7,13 +7,20 @@ enum Screen {
     Height = 800
 }
 
+enum Kind {
+    Diffuse,
+    Glass,
+    Emissive
+}
+
 struct Sphere {
     Vector3 center,
     Color color,
     f32 intensity,
     f32 radius,
     f32 ior,
-    f32 rough
+    f32 rough,
+    Kind kind
 }
 
 fn Sphere::apply_on_shader(Sphere self, Shader shader, u64 i) {
@@ -62,6 +69,13 @@ fn Sphere::apply_on_shader(Sphere self, Shader shader, u64 i) {
         rl::get_shader_location(shader, "spheres[{}].rough".format(i)),
         &self.rough,
         ShaderUniformDataType::SHADER_UNIFORM_FLOAT
+    );
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "spheres[{}].kind".format(i)),
+        &self.kind,
+        ShaderUniformDataType::SHADER_UNIFORM_INT
     );
 }
 
@@ -163,57 +177,76 @@ fn main() {
         projection = CameraProjection::CAMERA_PERSPECTIVE
     };
 
+    prev_position := camera.position;
+    prev_target := camera.target;
+
     spheres := [
         Sphere {
             center = Vector3::zero(),
             color = #cast(Color, &0xfffc7eed),
-            intensity = 0,
             radius = 1,
             ior = 1.5,
-            rough = 0
+            rough = 0,
+            kind = Kind::Glass
         },
         Sphere {
             center = Vector3::new(-2, -0.4, -1),
             color = #cast(Color, &0xffcc7efc),
-            intensity = 0,
             radius = 0.6,
             ior = 1.6,
-            rough = 0.025
+            rough = 0.025,
+            kind = Kind::Glass
         },
         Sphere {
             center = Vector3::new(-1.5, -0.6, 0),
             color = #cast(Color, &0xfffc7eae),
-            intensity = 0,
             radius = 0.4,
             ior = 1.7,
-            //ior = 1,
-            rough = 0.05
+            rough = 0.05,
+            kind = Kind::Glass
         },
         Sphere {
-            center = Vector3::new(-2, -0.3, 2),
+            center = Vector3::new(-3, -0.3, 2),
             color = #cast(Color, &0xfffc7eae),
-            intensity = 0,
             radius = 0.7,
-            ior = 1,
-            //ior = 1,
-            rough = 1
-        },
-        Sphere {
-            center = Vector3::new(3, 6, 3),
-            color = #cast(Color, &0xffffccff),
-            intensity = 30,
-            radius = 1,
-            ior = 1,
-            rough = 0
+            rough = 1,
+            kind = Kind::Diffuse
         },
         //Sphere {
-        //    center = Vector3::new(0, 120, 120),
-        //    color = #cast(Color, &0xffffffff),
-        //    intensity = 8,
-        //    radius = 30,
-        //    ior = 1,
-        //    rough = 0
-        //}
+        //    center = Vector3::zero(),
+        //    color = #cast(Color, &0xfffc7eed),
+        //    radius = 0.2,
+        //    intensity = 100,
+        //    kind = Kind::Emissive
+        //},
+        //Sphere {
+        //    center = Vector3::new(1, 1, 1),
+        //    color = #cast(Color, &0xff0000ff),
+        //    intensity = 100,
+        //    radius = 0.5,
+        //    kind = Kind::Emissive
+        //},
+        //Sphere {
+        //    center = Vector3::new(-1, 1, 1),
+        //    color = #cast(Color, &0xff00ff00),
+        //    intensity = 100,
+        //    radius = 0.5,
+        //    kind = Kind::Emissive
+        //},
+        //Sphere {
+        //    center = Vector3::new(1, 1, -1),
+        //    color = #cast(Color, &0xffff0000),
+        //    intensity = 100,
+        //    radius = 0.5,
+        //    kind = Kind::Emissive
+        //},
+        Sphere {
+            center = Vector3::new(0, 120, 120),
+            color = #cast(Color, &0xffffffff),
+            intensity = 10,
+            radius = 30,
+            kind = Kind::Emissive
+        }
     ];
 
     plane := Plane {
@@ -243,27 +276,42 @@ fn main() {
     tex.width = Screen::Width;
     tex.height = Screen::Height;
 
+    history := rl::load_render_texture(Screen::Width, Screen::Height);
+    history.texture.format = PixelFormat::PIXELFORMAT_UNCOMPRESSED_R32G32B32A32;
+    defer rl::unload_render_texture(history);
+
     depth := 8;
     samples := 8;
+    frameIndex := 1;
 
     while !rl::window_should_close() {
         rl::update_camera(#cast(Camera *, &camera), CameraMode::CAMERA_FREE);
         camera.apply_on_shader(shader);
 
+        if prev_position != camera.position || prev_target != camera.target {
+            frameIndex = 1;
+        }
+
+        prev_position = camera.position.clone();
+        prev_target = camera.target.clone();
+
+        rl::set_shader_value(
+            shader,
+            rl::get_shader_location(shader, "frameIndex"),
+            &frameIndex,
+            ShaderUniformDataType::SHADER_UNIFORM_INT
+        );
+
+        frameIndex += 1;
+
         if rl::is_key_pressed(KeyboardKey::KEY_Z) { depth = math::max(depth / 2, 1); }
         if rl::is_key_pressed(KeyboardKey::KEY_X) { depth = math::min(depth * 2, 512); }
         if rl::is_key_pressed(KeyboardKey::KEY_C) { samples = math::max(samples / 2, 1); }
         if rl::is_key_pressed(KeyboardKey::KEY_V) { samples = math::min(samples * 2, 512); }
-        if rl::is_key_pressed(KeyboardKey::KEY_B) { (&spheres[spheres.len() - 1]).intensity -= 1; }
-        if rl::is_key_pressed(KeyboardKey::KEY_N) { (&spheres[spheres.len() - 1]).intensity += 1; }
-        if rl::is_key_pressed(KeyboardKey::KEY_M) { (&spheres[spheres.len() - 1]).intensity = 0; }
-        if rl::is_key_pressed(KeyboardKey::KEY_COMMA) { (&spheres[spheres.len() - 1]).intensity = 8; }
-
-        time := rl::get_time();
-        speed := 2;
-        range := 5.0;
-
-        (&spheres[spheres.len() - 1]).center.y = 6 + range * math::sin(time * speed);
+        if rl::is_key_down(KeyboardKey::KEY_B) { (&spheres[spheres.len() - 1]).intensity -= 1; }
+        if rl::is_key_down(KeyboardKey::KEY_N) { (&spheres[spheres.len() - 1]).intensity += 1; }
+        if rl::is_key_down(KeyboardKey::KEY_M) { (&spheres[spheres.len() - 1]).intensity = 0; }
+        if rl::is_key_down(KeyboardKey::KEY_COMMA) { (&spheres[spheres.len() - 1]).intensity = 8; }
 
         rl::set_shader_value(
             shader,
@@ -283,19 +331,37 @@ fn main() {
             sphere.apply_on_shader(shader, i);
         }
 
+
         rl::begin_drawing();
             rl::clear_background(BLACK);
-            rl::begin_shader_mode(shader);
+            rl::begin_texture_mode(history);
+                rl::begin_shader_mode(shader);
+
+                rl::draw_texture_pro(
+                    tex,
+                    Rectangle { x = 0, y = 0, width = tex.width, height = -tex.height },
+                    Rectangle { x = 0, y = 0, width = tex.width, height = tex.height },
+                    Vector2 { x = 0, y = 0 },
+                    0, WHITE
+                );
+
+                rl::end_shader_mode();
+            rl::end_texture_mode();
+
+            rl::set_shader_value_texture(
+                shader,
+                rl::get_shader_location(shader, "history"),
+                &history.texture
+            );
 
             rl::draw_texture_pro(
-                tex,
-                Rectangle { x = 0, y = 0, width = tex.width, height = -tex.height },
-                Rectangle { x = 0, y = 0, width = tex.width, height = tex.height },
+                history.texture,
+                Rectangle { x = 0, y = 0, width = history.texture.width, height = -history.texture.height },
+                Rectangle { x = 0, y = 0, width = history.texture.width, height = history.texture.height },
                 Vector2 { x = 0, y = 0 },
                 0, WHITE
             );
 
-            rl::end_shader_mode();
             rl::draw_fps(10, 10);
 
             rl::draw_text(

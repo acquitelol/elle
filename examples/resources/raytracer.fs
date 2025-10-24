@@ -1,12 +1,17 @@
 #version 330
 
+#define KIND_DIFFUSE 0
+#define KIND_GLASS 1
+#define KIND_EMISSIVE 2
+
 struct Sphere {
     vec3 center;
     vec4 color;
-    float intensity;
     float radius;
+    float intensity;
     float ior;
     float rough;
+    int kind;
 };
 
 struct Camera {
@@ -29,6 +34,18 @@ struct Plane {
     vec4 color;
 };
 
+struct Hit {
+    bool did_hit;
+    float t;
+    int kind;
+    vec4 color;
+    vec3 point;
+    vec3 normal;
+    float intensity;
+    float ior;
+    float rough;
+};
+
 in vec2 fragTexCoord;
 out vec4 finalColor;
 
@@ -43,6 +60,11 @@ uniform Plane plane;
 
 uniform int depth;
 uniform int samples;
+
+uniform int frameIndex;
+uniform bool reset;
+
+uniform sampler2D history;
 
 float rand(vec2 co) {
     return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
@@ -63,9 +85,7 @@ vec3 checkerboard_color(vec3 point) {
 }
 
 Ray get_ray(Camera camera, vec2 uv, vec2 jitter) {
-    uv.x += (jitter.x - 0.5) * 0.002;
-    uv.y += (jitter.y - 0.5) * 0.002;
-
+    uv += (jitter - 0.5) * (vec2(1.0) / vec2(textureSize(history, 0)));
     uv = uv * 2.0 - 1.0;
     uv.x *= camera.ar;
 
@@ -125,67 +145,73 @@ vec3 glass_scatter(vec3 ray_dir, vec3 hit_point, vec3 normal, float eta, vec2 se
     }
 }
 
+Hit find_hit(Ray ray) {
+    Hit hit;
+    hit.did_hit = false;
+    float t = 1e20;
+
+    for (int i = 0; i < spheres_size; ++i) {
+        float ts = intersect_sphere(ray, spheres[i]);
+
+        if (ts > 0.0 && ts < t) {
+            vec3 point = ray.position + ray.direction * (t = ts);
+
+            hit.did_hit = true;
+            hit.kind = spheres[i].kind;
+            hit.color = spheres[i].color;
+            hit.point = point;
+            hit.normal = normalize(point - spheres[i].center);
+            hit.rough = spheres[i].rough;
+            hit.ior = spheres[i].ior;
+            hit.intensity = spheres[i].intensity;
+        }
+    }
+
+    float tp = intersect_plane(ray);
+    if (tp > 0.0 && tp < t) {
+        vec3 point = ray.position + ray.direction * (t = tp);
+
+        hit.did_hit = true;
+        hit.kind = KIND_DIFFUSE;
+        hit.color = vec4(checkerboard_color(point), 1.0);
+        hit.point = point;
+        hit.normal = plane.normal;
+        hit.rough = 1.0;
+        hit.ior = 1.0;
+        hit.intensity = 0.0;
+    }
+
+    return hit;
+}
+
 vec4 trace_ray(Ray ray, vec2 seed) {
     vec4 color = vec4(1.0);
     Ray current = ray;
 
     for (int bounce = 0; bounce < depth; ++bounce) {
-        float closest = 1e20;
-        int hit_index = -1;
-        bool hit_plane = false;
+        Hit hit = find_hit(current);
+        if (!hit.did_hit) return color * vec4(0.85, 0.82, 1.0, 1.0);
 
-        for (int i = 0; i < spheres_size; ++i) {
-            float t = intersect_sphere(current, spheres[i]);
-            if (t > 0.0 && t < closest) {
-                closest = t;
-                hit_index = i;
-                hit_plane = false;
-            }
-        }
+        if (hit.kind == KIND_GLASS) hit.color = mix(vec4(1.0), hit.color, 0.3);
 
-        float t_plane = intersect_plane(current);
+        color *= hit.color;
+        if (hit.kind == KIND_EMISSIVE) return color * hit.intensity;
 
-        if (t_plane > 0.0 && t_plane < closest) {
-            closest = t_plane;
-            hit_index = -2;
-            hit_plane = true;
-        }
-
-        if (closest > 1e19) return color * vec4(0.85, 0.82, 1.0, 1.0);
-
-        vec3 point = current.position + current.direction * closest;
-        vec3 normal = hit_plane ? plane.normal : normalize(point - spheres[hit_index].center);
-
-        if (spheres[hit_index].intensity > 0.0) {
-            color *= 1 + spheres[hit_index].color * spheres[hit_index].intensity;
-        }
-
-        if (hit_plane) {
-            color *= vec4(checkerboard_color(point), 1.0);
-        } else {
-            color *= mix(vec4(1.0), spheres[hit_index].color, 0.3);
-        }
-
-        vec3 n = normal;
-        float eta = 1.0 / spheres[hit_index].ior;
-
-        if (dot(current.direction, normal) > 0.0) n *= -1, eta = 1 / eta;
+        vec3 n = hit.normal;
+        float eta = 1.0 / hit.ior;
+        if (dot(current.direction, n) > 0.0) n = -n, eta = 1.0 / eta;
 
         vec3 new_dir;
-        vec3 blur = normalize(rand_dir(seed));
 
-        if (hit_plane) {
-            new_dir = normalize(normal + rand_dir(seed));
-        } else if (spheres[hit_index].ior == 1.0) {
-            new_dir = reflect(current.direction, normal);
+        if (hit.kind == KIND_GLASS) {
+            new_dir = glass_scatter(current.direction, hit.point, n, eta, seed);
         } else {
-            new_dir = glass_scatter(current.direction, point, n, eta, seed);
+            new_dir = reflect(current.direction, n);
         }
 
-        if (!hit_plane) new_dir = normalize(mix(new_dir, blur, spheres[hit_index].rough));
-
-        current = Ray(point + n * 1e-4, new_dir);
-        seed += 0.1;
+        vec3 seed_dir = rand_dir(seed += 0.1);
+        new_dir = normalize(mix(new_dir, seed_dir, hit.rough));
+        current = Ray(hit.point + n * 1e-4, new_dir);
     }
 
     return color;
@@ -193,14 +219,22 @@ vec4 trace_ray(Ray ray, vec2 seed) {
 
 void main() {
     vec4 sum = vec4(0.0);
+    vec4 prev = texture(history, fragTexCoord);
 
     for (int i = 0; i < samples; ++i) {
-        float n1 = rand(fragTexCoord + float(i));
-        float n2 = rand(fragTexCoord + float(i) * PI);
+        vec2 seed = fragTexCoord + vec2(float(frameIndex), float(i)) * 12.9898;
+        float n1 = rand(seed);
+        float n2 = rand(seed + 78.233);
 
         Ray ray = get_ray(camera, fragTexCoord, vec2(n1, n2));
         sum += trace_ray(ray, vec2(n1, n2));
     }
 
-    finalColor = sum / float(samples);
+    vec4 current = sum / float(samples);
+
+    if (frameIndex == 1) {
+        finalColor = current;
+    } else {
+        finalColor = mix(prev, current, 1.0 / float(frameIndex));
+    }
 }
