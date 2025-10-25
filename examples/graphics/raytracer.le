@@ -166,7 +166,7 @@ fn main() {
     rl::init_window(Screen::Width, Screen::Height, "Raytracer");
     defer rl::close_window();
 
-    rl::set_target_fps(60);
+    rl::set_target_fps(120);
     rl::disable_cursor();
 
     camera := Camera3D {
@@ -212,38 +212,10 @@ fn main() {
             rough = 1,
             kind = Kind::Diffuse
         },
-        //Sphere {
-        //    center = Vector3::zero(),
-        //    color = #cast(Color, &0xfffc7eed),
-        //    radius = 0.2,
-        //    intensity = 100,
-        //    kind = Kind::Emissive
-        //},
-        //Sphere {
-        //    center = Vector3::new(1, 1, 1),
-        //    color = #cast(Color, &0xff0000ff),
-        //    intensity = 100,
-        //    radius = 0.5,
-        //    kind = Kind::Emissive
-        //},
-        //Sphere {
-        //    center = Vector3::new(-1, 1, 1),
-        //    color = #cast(Color, &0xff00ff00),
-        //    intensity = 100,
-        //    radius = 0.5,
-        //    kind = Kind::Emissive
-        //},
-        //Sphere {
-        //    center = Vector3::new(1, 1, -1),
-        //    color = #cast(Color, &0xffff0000),
-        //    intensity = 100,
-        //    radius = 0.5,
-        //    kind = Kind::Emissive
-        //},
         Sphere {
             center = Vector3::new(0, 120, 120),
-            color = #cast(Color, &0xffffffff),
-            intensity = 10,
+            color = #cast(Color, &0xffffddff),
+            intensity = 30,
             radius = 30,
             kind = Kind::Emissive
         }
@@ -280,8 +252,8 @@ fn main() {
     history.texture.format = PixelFormat::PIXELFORMAT_UNCOMPRESSED_R32G32B32A32;
     defer rl::unload_render_texture(history);
 
-    depth := 8;
-    samples := 8;
+    depth := 16;
+    samples := 4;
     frameIndex := 1;
 
     while !rl::window_should_close() {
@@ -304,14 +276,32 @@ fn main() {
 
         frameIndex += 1;
 
-        if rl::is_key_pressed(KeyboardKey::KEY_Z) { depth = math::max(depth / 2, 1); }
-        if rl::is_key_pressed(KeyboardKey::KEY_X) { depth = math::min(depth * 2, 512); }
-        if rl::is_key_pressed(KeyboardKey::KEY_C) { samples = math::max(samples / 2, 1); }
-        if rl::is_key_pressed(KeyboardKey::KEY_V) { samples = math::min(samples * 2, 512); }
-        if rl::is_key_down(KeyboardKey::KEY_B) { (&spheres[spheres.len() - 1]).intensity -= 1; }
-        if rl::is_key_down(KeyboardKey::KEY_N) { (&spheres[spheres.len() - 1]).intensity += 1; }
-        if rl::is_key_down(KeyboardKey::KEY_M) { (&spheres[spheres.len() - 1]).intensity = 0; }
-        if rl::is_key_down(KeyboardKey::KEY_COMMA) { (&spheres[spheres.len() - 1]).intensity = 8; }
+        if rl::is_key_pressed(KeyboardKey::KEY_Z) {
+            depth = math::max(depth / 2, 1);
+            frameIndex = 1;
+        }
+
+        if rl::is_key_pressed(KeyboardKey::KEY_X) {
+            depth = math::min(depth * 2, 512);
+            frameIndex = 1;
+        }
+
+        sphere := &spheres[spheres.len() - 1];
+
+        if rl::is_key_down(KeyboardKey::KEY_B) {
+            sphere.intensity -= 1;
+            frameIndex = 1;
+        }
+
+        if rl::is_key_down(KeyboardKey::KEY_N) {
+            sphere.intensity += 1;
+            frameIndex = 1;
+        }
+
+        if rl::is_key_down(KeyboardKey::KEY_M) {
+            sphere.intensity = 0;
+            frameIndex = 1;
+        }
 
         rl::set_shader_value(
             shader,
@@ -330,7 +320,6 @@ fn main() {
         for i, sphere in spheres.iter().enumerate() {
             sphere.apply_on_shader(shader, i);
         }
-
 
         rl::begin_drawing();
             rl::clear_background(BLACK);
