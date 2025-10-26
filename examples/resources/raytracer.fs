@@ -1,4 +1,4 @@
-#version 330
+#version 410 core
 
 #define KIND_DIFFUSE 0
 #define KIND_GLASS 1
@@ -8,6 +8,19 @@ struct Sphere {
     vec3 center;
     vec4 color;
     float radius;
+    float intensity;
+    float ior;
+    float rough;
+    int kind;
+};
+
+struct Triangle {
+    vec3 v0, v1, v2;
+    int objIndex;
+};
+
+struct Object {
+    vec4 color;
     float intensity;
     float ior;
     float rough;
@@ -55,6 +68,12 @@ out vec4 finalColor;
 uniform Sphere spheres[MAX_ENTITY];
 uniform int spheres_size;
 
+uniform highp samplerBuffer triangles;
+uniform int triangles_size;
+
+uniform Object objects[MAX_ENTITY];
+uniform int objects_size;
+
 uniform Camera camera;
 uniform Plane plane;
 
@@ -75,6 +94,19 @@ vec3 rand_dir(vec2 seed) {
     float z = rand(seed * 56.78) * 2.0 - 1.0;
     float r = sqrt(max(0.0, 1.0 - z * z));
     return vec3(r * cos(a), r * sin(a), z);
+}
+
+vec4 get_vertex(int i, int offset) {
+    return texelFetch(triangles, i * 3 + offset);
+}
+
+Triangle get_triangle(int i) {
+    vec4 v0 = get_vertex(i, 0);
+    vec4 v1 = get_vertex(i, 1);
+    vec4 v2 = get_vertex(i, 2);
+    int meshIndex = int(v0.w);
+
+    return Triangle(v0.rgb, v1.rgb, v2.rgb, meshIndex);
 }
 
 vec3 checkerboard_color(vec3 point) {
@@ -123,6 +155,30 @@ float intersect_plane(Ray ray) {
     return -1.0;
 }
 
+float intersect_triangle(Ray ray, Triangle triangle) {
+    vec3 edge1 = triangle.v1 - triangle.v0;
+    vec3 edge2 = triangle.v2 - triangle.v0;
+    vec3 pvec = cross(ray.direction, edge2);
+
+    float det = dot(edge1, pvec);
+    if (abs(det) < 1e-6) return -1.0;
+
+    float invDet = 1.0 / det;
+    vec3 tvec = ray.position - triangle.v0;
+
+    float u = dot(tvec, pvec) * invDet;
+    if (u < 0.0 || u > 1.0) return -1.0;
+
+    vec3 qvec = cross(tvec, edge1);
+    float v = dot(ray.direction, qvec) * invDet;
+    if (v < 0.0 || (u + v) > 1.0) return -1.0;
+
+    float t = dot(edge2, qvec) * invDet;
+    if (t > 1.0e-3) return t;
+
+    return -1.0;
+}
+
 // The schlick approxmiation and glass scattering was adapted from:
 // https://raytracing.github.io/books/RayTracingInOneWeekend.html
 float schlick(float cos_theta, float ior) {
@@ -167,6 +223,25 @@ Hit find_hit(Ray ray) {
         }
     }
 
+    for (int i = 0; i < triangles_size; ++i) {
+        Triangle tri = get_triangle(i);
+        Object obj = objects[tri.objIndex];
+        float ts = intersect_triangle(ray, tri);
+
+        if (ts > 0.0 && ts < t) {
+            vec3 point = ray.position + ray.direction * (t = ts);
+
+            hit.did_hit = true;
+            hit.point = point;
+            hit.normal = normalize(cross(tri.v1 - tri.v0, tri.v2 - tri.v0));
+            hit.color = obj.color;
+            hit.intensity = obj.intensity;
+            hit.ior = obj.ior;
+            hit.rough = obj.rough;
+            hit.kind = obj.kind;
+        }
+    }
+
     float tp = intersect_plane(ray);
     if (tp > 0.0 && tp < t) {
         vec3 point = ray.position + ray.direction * (t = tp);
@@ -190,12 +265,11 @@ vec4 trace_ray(Ray ray, vec2 seed) {
 
     for (int bounce = 0; bounce < depth; ++bounce) {
         Hit hit = find_hit(current);
+
         if (!hit.did_hit) return color * vec4(0.85, 0.82, 1.0, 1.0);
-
         if (hit.kind == KIND_GLASS) hit.color = mix(vec4(1.0), hit.color, 0.3);
-
+        if (hit.kind == KIND_EMISSIVE) return color * hit.color * hit.intensity;
         color *= hit.color;
-        if (hit.kind == KIND_EMISSIVE) return color * hit.intensity;
 
         vec3 n = hit.normal;
         float eta = 1.0 / hit.ior;
@@ -218,6 +292,7 @@ vec4 trace_ray(Ray ray, vec2 seed) {
 }
 
 void main() {
+    // finalColor = vec4(get_triangle(0).v0, 1);
     vec4 sum = vec4(0.0);
     vec4 prev = texture(history, fragTexCoord);
 

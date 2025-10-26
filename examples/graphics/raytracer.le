@@ -1,10 +1,35 @@
+// On MacOS, compile with:
+//
+// ellec examples/graphics/raytracer.le -z -lraylib -z -framework -z OpenGL --run
 use std/prelude;
 use std/raylib;
 use std/math;
 
+external fn Vector3Transform(Vector3 v, Matrix mat) @alias(Vector3::transform) -> Vector3;
+external fn MatrixTranslate(f32 x, f32 y, f32 z) @alias(Matrix::translate) -> Matrix;
+external fn MatrixRotate(Vector3 axis, f32 angle) @alias(Matrix::rotate) -> Matrix;
+external fn MatrixScale(f32 x, f32 y, f32 z) @alias(Matrix::scale) -> Matrix;
+external fn MatrixMultiply(Matrix left, Matrix right) @alias(Matrix::mul) -> Matrix;
+external fn MatrixSubtract(Matrix left, Matrix right) @alias(Matrix::sub) -> Matrix;
+external fn MatrixAdd(Matrix left, Matrix right) @alias(Matrix::add) -> Matrix;
+
+external fn glGenBuffers(i32 n, u32 *buffers);
+external fn glGenTextures(i32 n, u32 *textures);
+external fn glBindBuffer(GL target, u32 buffer);
+external fn glBindTexture(GL target, u32 texture);
+external fn glBufferData(GL target, u32 len, void *data, GL kind);
+external fn glTexBuffer(GL target, GL x, u32 y);
+external fn glUniform1i(i32 loc, u32 x);
+
+enum GL @repr(u32) {
+    TEXTURE_BUFFER = 0x8C2A,
+    RGBA32F = 0x8814,
+    STATIC_DRAW = 0x88E4,
+}
+
 enum Screen {
     Width = 800,
-    Height = 800
+    Height = 450
 }
 
 enum Kind {
@@ -74,6 +99,58 @@ fn Sphere::apply_on_shader(Sphere self, Shader shader, u64 i) {
     rl::set_shader_value(
         shader,
         rl::get_shader_location(shader, "spheres[{}].kind".format(i)),
+        &self.kind,
+        ShaderUniformDataType::SHADER_UNIFORM_INT
+    );
+}
+
+struct Object {
+    Model model,
+    Color color,
+    f32 intensity,
+    f32 ior,
+    f32 rough,
+    Kind kind,
+    Matrix transform
+}
+
+fn Object::apply_on_shader(Object self, Shader shader, u64 i) {
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "objects[{}].color".format(i)),
+        [
+            #cast(f32, self.color.r) / 255.0,
+            #cast(f32, self.color.g) / 255.0,
+            #cast(f32, self.color.b) / 255.0,
+            #cast(f32, self.color.a) / 255.0,
+        ].elements,
+        ShaderUniformDataType::SHADER_UNIFORM_VEC4
+    );
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "objects[{}].intensity".format(i)),
+        &self.intensity,
+        ShaderUniformDataType::SHADER_UNIFORM_FLOAT
+    );
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "objects[{}].ior".format(i)),
+        &self.ior,
+        ShaderUniformDataType::SHADER_UNIFORM_FLOAT
+    );
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "objects[{}].rough".format(i)),
+        &self.rough,
+        ShaderUniformDataType::SHADER_UNIFORM_FLOAT
+    );
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "objects[{}].kind".format(i)),
         &self.kind,
         ShaderUniformDataType::SHADER_UNIFORM_INT
     );
@@ -170,8 +247,8 @@ fn main() {
     rl::disable_cursor();
 
     camera := Camera3D {
-        position = Vector3::new(-1, 0.75, -4),
-        target = Vector3::new(-1, -0.25, 0),
+        position = Vector3::new(0.75, 2.5, -0.75),
+        target = Vector3::new(0.7, -0.3, 2.8),
         up = Vector3::new(0, 1, 0),
         fovy = 60,
         projection = CameraProjection::CAMERA_PERSPECTIVE
@@ -181,54 +258,123 @@ fn main() {
     prev_target := camera.target;
 
     spheres := [
-        Sphere {
-            center = Vector3::zero(),
-            color = #cast(Color, &0xfffc7eed),
-            radius = 1,
-            ior = 1.5,
-            rough = 0,
-            kind = Kind::Glass
-        },
-        Sphere {
-            center = Vector3::new(-2, -0.4, -1),
-            color = #cast(Color, &0xffcc7efc),
-            radius = 0.6,
-            ior = 1.6,
-            rough = 0.025,
-            kind = Kind::Glass
-        },
-        Sphere {
-            center = Vector3::new(-1.5, -0.6, 0),
-            color = #cast(Color, &0xfffc7eae),
-            radius = 0.4,
-            ior = 1.7,
-            rough = 0.05,
-            kind = Kind::Glass
-        },
-        Sphere {
-            center = Vector3::new(-3, -0.3, 2),
-            color = #cast(Color, &0xfffc7eae),
-            radius = 0.7,
-            rough = 1,
-            kind = Kind::Diffuse
-        },
+        //Sphere {
+        //    center = Vector3::zero(),
+        //    color = #cast(Color, &0xfffc7eed),
+        //    radius = 1,
+        //    ior = 1.5,
+        //    rough = 0,
+        //    kind = Kind::Glass
+        //},
+        //Sphere {
+        //    center = Vector3::new(-2, -0.4, -1),
+        //    color = #cast(Color, &0xffcc7efc),
+        //    radius = 0.6,
+        //    ior = 1.6,
+        //    rough = 0.025,
+        //    kind = Kind::Glass
+        //},
+        //Sphere {
+        //    center = Vector3::new(-1.5, -0.6, 0),
+        //    color = #cast(Color, &0xfffc7eae),
+        //    radius = 0.4,
+        //    ior = 1.7,
+        //    rough = 0.05,
+        //    kind = Kind::Glass
+        //},
+        //Sphere {
+        //    center = Vector3::new(-3, -0.3, 2),
+        //    color = #cast(Color, &0xfffc7eae),
+        //    radius = 0.7,
+        //    rough = 1,
+        //    kind = Kind::Diffuse
+        //},
         Sphere {
             center = Vector3::new(0, 120, 120),
             color = #cast(Color, &0xffffddff),
-            intensity = 30,
-            radius = 30,
+            intensity = 15,
+            radius = 60,
             kind = Kind::Emissive
         }
     ];
 
     plane := Plane {
-        point = Vector3::new(0, -1, 0),
+        point = Vector3::new(0, 0, 0),
         normal = Vector3::new(0, 1, 0),
         color = #cast(Color, &0xffdddddd)
     };
 
+    triangles := []f32;
+    objects := [
+        Object {
+            model = rl::load_model("examples/resources/dragon.obj"),
+            color = #cast(Color, &0xfffedefd),
+            intensity = 0,
+            ior = 1.5,
+            rough = 0,
+            kind = Kind::Glass,
+            transform = Matrix::scale(5, 5, 5)
+                .mul(Matrix::rotate(Vector3::new(0, 1, 0), -PI / 2))
+                .mul(Matrix::translate(0.5, 0.5, 1.5))
+        }
+    ];
+
+    for idx, obj in objects.iter().enumerate() {
+        for i in 0..obj.model.meshCount {
+            mesh := obj.model.meshes[i];
+
+            for j in 0..mesh.triangleCount {
+                v0 := v1 := v2 := Vector3::zero();
+
+                if mesh.indices {
+                    j0 := mesh.indices[j * 3 + 0];
+                    j1 := mesh.indices[j * 3 + 1];
+                    j2 := mesh.indices[j * 3 + 2];
+
+                    v0 = Vector3::new(mesh.vertices[j0 * 3 + 0], mesh.vertices[j0 * 3 + 1], mesh.vertices[j0 * 3 + 2]);
+                    v1 = Vector3::new(mesh.vertices[j1 * 3 + 0], mesh.vertices[j1 * 3 + 1], mesh.vertices[j1 * 3 + 2]);
+                    v2 = Vector3::new(mesh.vertices[j2 * 3 + 0], mesh.vertices[j2 * 3 + 1], mesh.vertices[j2 * 3 + 2]);
+                } else {
+                    base := j * 9;
+                    v0 = Vector3::new(mesh.vertices[base + 0], mesh.vertices[base + 1], mesh.vertices[base + 2]);
+                    v1 = Vector3::new(mesh.vertices[base + 3], mesh.vertices[base + 4], mesh.vertices[base + 5]);
+                    v2 = Vector3::new(mesh.vertices[base + 6], mesh.vertices[base + 7], mesh.vertices[base + 8]);
+                }
+
+                for v in [v0, v1, v2] {
+                    v = v.transform(obj.transform);
+                    triangles.push(v.x);
+                    triangles.push(v.y);
+                    triangles.push(v.z);
+                    triangles.push(#cast(f32, idx));
+                }
+            }
+        }
+    }
+
     shader := rl::load_shader(nil, "examples/resources/raytracer.fs");
     defer rl::unload_shader(shader);
+
+    u32 tbo;
+    u32 buf;
+
+    glGenBuffers(1, &buf);
+    glBindBuffer(GL::TEXTURE_BUFFER, buf);
+    glBufferData(GL::TEXTURE_BUFFER, triangles.len() * 4, &triangles[0], GL::STATIC_DRAW);
+
+    glGenTextures(1, &tbo);
+    glBindTexture(GL::TEXTURE_BUFFER, tbo);
+    glTexBuffer(GL::TEXTURE_BUFFER, GL::RGBA32F, buf);
+
+    loc := rl::get_shader_location(shader, "triangles");
+    glUniform1i(loc, 0);
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "triangles_size"),
+        &triangles.size,
+        ShaderUniformDataType::SHADER_UNIFORM_INT
+    );
 
     camera.apply_on_shader(shader);
     plane.apply_on_shader(shader);
@@ -244,16 +390,26 @@ fn main() {
         ShaderUniformDataType::SHADER_UNIFORM_INT
     );
 
+    for i, object in objects.iter().enumerate() {
+        object.apply_on_shader(shader, i);
+    }
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "objects_size"),
+        &objects.size,
+        ShaderUniformDataType::SHADER_UNIFORM_INT
+    );
+
     tex := rl::get_default_texture();
     tex.width = Screen::Width;
     tex.height = Screen::Height;
 
     history := rl::load_render_texture(Screen::Width, Screen::Height);
-    history.texture.format = PixelFormat::PIXELFORMAT_UNCOMPRESSED_R32G32B32A32;
     defer rl::unload_render_texture(history);
 
-    depth := 16;
-    samples := 4;
+    depth := 4;
+    samples := 1;
     frameIndex := 1;
 
     while !rl::window_should_close() {
@@ -284,6 +440,13 @@ fn main() {
         if rl::is_key_pressed(KeyboardKey::KEY_X) {
             depth = math::min(depth * 2, 512);
             frameIndex = 1;
+        }
+
+        if rl::is_key_down(KeyboardKey::KEY_R) {
+            image := rl::load_image_from_texture(history.texture);
+            rl::image_flip_vertical(&image);
+            rl::export_image(image, "render.png");
+            rl::unload_image(image);
         }
 
         sphere := &spheres[spheres.len() - 1];
@@ -354,17 +517,17 @@ fn main() {
             rl::draw_fps(10, 10);
 
             rl::draw_text(
-                "Light Intensity: {}".format(spheres.last().unwrap().intensity),
+                "Depth: {}, Samples: {}, Frame: {}".format(depth, samples, frameIndex),
                 10, Screen::Height - 40, 10, WHITE
             );
 
             rl::draw_text(
-                "Depth: {}, Samples: {}".format(depth, samples),
+                "Position: {}".format(camera.position.__triple__()),
                 10, Screen::Height - 30, 10, WHITE
             );
 
             rl::draw_text(
-                "Pos: {}".format(camera.position.__triple__()),
+                "Target: {}".format(camera.target.__triple__()),
                 10, Screen::Height - 20, 10, WHITE
             );
         rl::end_drawing();
