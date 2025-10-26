@@ -694,7 +694,7 @@ enum ShaderAttributeDataType {
 // Pixel formats
 // NOTE: Support depends on OpenGL version and platform
 enum PixelFormat {
-    PIXELFORMAT_UNCOMPRESSED_GRAYSCALE ,     // 8 bit per pixel (no alpha)
+    PIXELFORMAT_UNCOMPRESSED_GRAYSCALE = 1,     // 8 bit per pixel (no alpha)
     PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA,     // 8*2 bpp (2 channels)
     PIXELFORMAT_UNCOMPRESSED_R5G6B5,         // 16 bpp
     PIXELFORMAT_UNCOMPRESSED_R8G8B8,         // 24 bpp
