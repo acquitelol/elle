@@ -1,6 +1,7 @@
 // On MacOS, compile with:
 //
 // ellec examples/graphics/raytracer.le -z -lraylib -z -framework -z OpenGL --run
+use std/allocators/arena;
 use std/prelude;
 use std/raylib;
 use std/math;
@@ -12,24 +13,32 @@ external fn MatrixScale(f32 x, f32 y, f32 z) @alias(Matrix::scale) -> Matrix;
 external fn MatrixMultiply(Matrix left, Matrix right) @alias(Matrix::mul) -> Matrix;
 external fn MatrixSubtract(Matrix left, Matrix right) @alias(Matrix::sub) -> Matrix;
 external fn MatrixAdd(Matrix left, Matrix right) @alias(Matrix::add) -> Matrix;
+external fn MatrixInvert(Matrix mat) @alias(Matrix::inverse) -> Matrix;
+external fn MatrixTranspose(Matrix mat) @alias(Matrix::transpose) -> Matrix;
 
 external fn glGenBuffers(i32 n, u32 *buffers);
 external fn glGenTextures(i32 n, u32 *textures);
 external fn glBindBuffer(GL target, u32 buffer);
 external fn glBindTexture(GL target, u32 texture);
 external fn glBufferData(GL target, u32 len, void *data, GL kind);
+external fn glGetUniformLocation(u32 id, string name) -> i32;
 external fn glTexBuffer(GL target, GL x, u32 y);
 external fn glUniform1i(i32 loc, u32 x);
+external fn glActiveTexture(GL target);
+external fn glGetError() -> GL;
+external fn glUseProgram(u64 id);
 
 enum GL @repr(u32) {
     TEXTURE_BUFFER = 0x8C2A,
     RGBA32F = 0x8814,
     STATIC_DRAW = 0x88E4,
+    TEXTURE0 = 0x84C0,
+    ACTIVE_UNIFORMS = 0x8B86
 }
 
 enum Screen {
     Width = 800,
-    Height = 450
+    Height = 800
 }
 
 enum Kind {
@@ -239,15 +248,150 @@ fn Camera3D::apply_on_shader(Camera3D self, Shader shader) {
     );
 }
 
+struct AABB {
+    Vector3 min,
+    Vector3 max,
+}
+
+struct BVHNode {
+    AABB bounds,
+    f32 left,
+    f32 right,
+    f32 start,
+    f32 end,
+}
+
+struct Triangle {
+    Vector3 v0,
+    f32 pad0,
+    Vector3 v1,
+    f32 pad1,
+    Vector3 v2,
+    f32 pad2,
+    Vector3 n0,
+    f32 pad3,
+    Vector3 n1,
+    f32 pad4,
+    Vector3 n2,
+    f32 pad5
+}
+
+fn Vector3::get(Vector3 self, u64 i) {
+    if i == 0 { return self.x; }
+    if i == 1 { return self.y; }
+    if i == 2 { return self.z; }
+}
+
+fn Vector3::set(Vector3 *self, u64 i, f32 value) {
+    if i == 0 { self.x = value; }
+    else if i == 1 { self.y = value ; }
+    else if i == 2 { self.z = value; }
+}
+
+fn Triangle::center(Triangle self) -> Vector3 {
+    return self.v0.add(self.v1).add(self.v2).scale(1 / 3);
+}
+
+fn Triangle::aabb(Triangle self) -> AABB {
+    min := Vector3::new(
+        math::min(self.v0.x, math::min(self.v1.x, self.v2.x)),
+        math::min(self.v0.y, math::min(self.v1.y, self.v2.y)),
+        math::min(self.v0.z, math::min(self.v1.z, self.v2.z))
+    );
+
+    max := Vector3::new(
+        math::max(self.v0.x, math::max(self.v1.x, self.v2.x)),
+        math::max(self.v0.y, math::max(self.v1.y, self.v2.y)),
+        math::max(self.v0.z, math::max(self.v1.z, self.v2.z))
+    );
+
+    return AABB { min, max };
+}
+
+fn AABB::merge(AABB a, AABB b) -> AABB {
+    return AABB {
+        min = Vector3::new(
+            math::min(a.min.x, b.min.x),
+            math::min(a.min.y, b.min.y),
+            math::min(a.min.z, b.min.z)
+        ),
+        max = Vector3::new(
+            math::max(a.max.x, b.max.x),
+            math::max(a.max.y, b.max.y),
+            math::max(a.max.z, b.max.z)
+        )
+    };
+}
+
+fn partition_triangles(Triangle[] triangles, i32 start, i32 end, i32 axis) {
+    mid := start + (end - start) / 2;
+
+    for i in start..end {
+        for j in i + 1..end {
+            if triangles[j].center().get(axis) < triangles[i].center().get(axis) {
+                tmp := triangles[i];
+                triangles[i] = triangles[j];
+                triangles[j] = tmp;
+            }
+        }
+    }
+
+    return mid;
+}
+
+fn build_bvh(Triangle[] triangles, i32 start, i32 end, BVHNode[] nodes) -> i32 {
+    node_index := nodes.size;
+
+    nodes.push(BVHNode {
+        bounds = AABB {
+            min = Vector3::from(1.0e30),
+            max = Vector3::from(-1.0e30)
+        },
+        left = -1,
+        right = -1,
+        start = start,
+        end = end
+    });
+
+    if end - start <= 1 {
+        (&nodes[node_index]).bounds = triangles[start].aabb();
+        return node_index;
+    }
+
+    bbox := triangles[start].aabb();
+
+    for i in start + 1..end {
+        bbox = AABB::merge(bbox, triangles[i].aabb());
+    }
+
+    (&nodes[node_index]).bounds = bbox;
+
+    extent := bbox.max.sub(bbox.min);
+
+    axis := 0;
+    if extent.y > extent.x { axis = 1; }
+    if extent.z > extent.get(axis) { axis = 2; }
+
+    mid := partition_triangles(triangles, start, end, axis);
+    left_index := build_bvh(triangles, start, mid, nodes);
+    right_index := build_bvh(triangles, mid, end, nodes);
+
+    node := &nodes[node_index];
+    node.left = left_index;
+    node.right = right_index;
+
+    return node_index;
+}
+
 fn main() {
     rl::init_window(Screen::Width, Screen::Height, "Raytracer");
     defer rl::close_window();
 
-    rl::set_target_fps(120);
+    rl::set_target_fps(60);
     rl::disable_cursor();
 
     camera := Camera3D {
-        position = Vector3::new(0.75, 2.5, -0.75),
+        position = Vector3::new(0.75, 1.9, -0.75),
         target = Vector3::new(0.7, -0.3, 2.8),
         up = Vector3::new(0, 1, 0),
         fovy = 60,
@@ -258,42 +402,11 @@ fn main() {
     prev_target := camera.target;
 
     spheres := [
-        //Sphere {
-        //    center = Vector3::zero(),
-        //    color = #cast(Color, &0xfffc7eed),
-        //    radius = 1,
-        //    ior = 1.5,
-        //    rough = 0,
-        //    kind = Kind::Glass
-        //},
-        //Sphere {
-        //    center = Vector3::new(-2, -0.4, -1),
-        //    color = #cast(Color, &0xffcc7efc),
-        //    radius = 0.6,
-        //    ior = 1.6,
-        //    rough = 0.025,
-        //    kind = Kind::Glass
-        //},
-        //Sphere {
-        //    center = Vector3::new(-1.5, -0.6, 0),
-        //    color = #cast(Color, &0xfffc7eae),
-        //    radius = 0.4,
-        //    ior = 1.7,
-        //    rough = 0.05,
-        //    kind = Kind::Glass
-        //},
-        //Sphere {
-        //    center = Vector3::new(-3, -0.3, 2),
-        //    color = #cast(Color, &0xfffc7eae),
-        //    radius = 0.7,
-        //    rough = 1,
-        //    kind = Kind::Diffuse
-        //},
         Sphere {
-            center = Vector3::new(0, 120, 120),
+            center = Vector3::new(0, 100, 100),
             color = #cast(Color, &0xffffddff),
             intensity = 15,
-            radius = 60,
+            radius = 15,
             kind = Kind::Emissive
         }
     ];
@@ -305,26 +418,37 @@ fn main() {
     };
 
     triangles := []f32;
+    nodes := []BVHNode;
+
     objects := [
         Object {
-            model = rl::load_model("examples/resources/dragon.obj"),
+            model = rl::load_model("examples/resources/dragon3.obj"),
             color = #cast(Color, &0xfffedefd),
             intensity = 0,
             ior = 1.5,
-            rough = 0,
+            rough = 0.05,
             kind = Kind::Glass,
-            transform = Matrix::scale(5, 5, 5)
-                .mul(Matrix::rotate(Vector3::new(0, 1, 0), -PI / 2))
-                .mul(Matrix::translate(0.5, 0.5, 1.5))
+            //transform = Matrix::scale(1, 1, 1)
+            //transform = Matrix::translate(0.5, 0.51, 0.5)
+            transform = Matrix::scale(2, 2, 2)
+                .mul(Matrix::rotate(Vector3::new(0, 1, 0), -PI / 3))
+                .mul(Matrix::translate(0.75, 0.6, 1.5))
         }
     ];
 
+    #set_allocator(ArenaAllocator::new());
+
     for idx, obj in objects.iter().enumerate() {
+        prevTriangles := triangles.len() / 12;
+        triangleCount := 0;
+
         for i in 0..obj.model.meshCount {
             mesh := obj.model.meshes[i];
+            triangleCount += mesh.triangleCount;
 
             for j in 0..mesh.triangleCount {
                 v0 := v1 := v2 := Vector3::zero();
+                n0 := n1 := n2 := Vector3::zero();
 
                 if mesh.indices {
                     j0 := mesh.indices[j * 3 + 0];
@@ -334,47 +458,113 @@ fn main() {
                     v0 = Vector3::new(mesh.vertices[j0 * 3 + 0], mesh.vertices[j0 * 3 + 1], mesh.vertices[j0 * 3 + 2]);
                     v1 = Vector3::new(mesh.vertices[j1 * 3 + 0], mesh.vertices[j1 * 3 + 1], mesh.vertices[j1 * 3 + 2]);
                     v2 = Vector3::new(mesh.vertices[j2 * 3 + 0], mesh.vertices[j2 * 3 + 1], mesh.vertices[j2 * 3 + 2]);
+
+                    n0 = Vector3::new(mesh.normals[j0 * 3 + 0], mesh.normals[j0 * 3 + 1], mesh.normals[j0 * 3 + 2]);
+                    n1 = Vector3::new(mesh.normals[j1 * 3 + 0], mesh.normals[j1 * 3 + 1], mesh.normals[j1 * 3 + 2]);
+                    n2 = Vector3::new(mesh.normals[j2 * 3 + 0], mesh.normals[j2 * 3 + 1], mesh.normals[j2 * 3 + 2]);
                 } else {
                     base := j * 9;
                     v0 = Vector3::new(mesh.vertices[base + 0], mesh.vertices[base + 1], mesh.vertices[base + 2]);
                     v1 = Vector3::new(mesh.vertices[base + 3], mesh.vertices[base + 4], mesh.vertices[base + 5]);
                     v2 = Vector3::new(mesh.vertices[base + 6], mesh.vertices[base + 7], mesh.vertices[base + 8]);
+
+                    n0 = Vector3::new(mesh.normals[base + 0], mesh.normals[base + 1], mesh.normals[base + 2]);
+                    n1 = Vector3::new(mesh.normals[base + 3], mesh.normals[base + 4], mesh.normals[base + 5]);
+                    n2 = Vector3::new(mesh.normals[base + 6], mesh.normals[base + 7], mesh.normals[base + 8]);
                 }
 
                 for v in [v0, v1, v2] {
-                    v = v.transform(obj.transform);
+                    v := v.transform(obj.transform);
+
                     triangles.push(v.x);
                     triangles.push(v.y);
                     triangles.push(v.z);
                     triangles.push(#cast(f32, idx));
                 }
+
+                for n in [n0, n1, n2] {
+                    n := n.transform(obj.transform.inverse().transpose()).normalize();
+
+                    triangles.push(n.x);
+                    triangles.push(n.y);
+                    triangles.push(n.z);
+                    triangles.push(#cast(f32, idx));
+                }
             }
         }
+
+        $printf("[()] Building BVH for {} triangles", triangleCount);
+
+        //triangles := triangles.chunks(12).map(fn(x) #cast(Triangle, &x[0])).collect();
+        build_bvh(#cast(Triangle[], triangles), prevTriangles, prevTriangles + triangleCount, nodes);
     }
+
+    $println("[()] Done generating triangles");
+
+    //$dbg(triangles.chunks(24).map(fn(x) #cast(Triangle, &x[0])).collect());
+    //$dbg(nodes);
 
     shader := rl::load_shader(nil, "examples/resources/raytracer.fs");
     defer rl::unload_shader(shader);
 
-    u32 tbo;
-    u32 buf;
+    len := triangles.len() / 4;
 
-    glGenBuffers(1, &buf);
-    glBindBuffer(GL::TEXTURE_BUFFER, buf);
-    glBufferData(GL::TEXTURE_BUFFER, triangles.len() * 4, &triangles[0], GL::STATIC_DRAW);
+    for node in nodes {
+        triangles.push(node.bounds.min.x);
+        triangles.push(node.bounds.min.y);
+        triangles.push(node.bounds.min.z);
+        triangles.push(0.0);
 
-    glGenTextures(1, &tbo);
-    glBindTexture(GL::TEXTURE_BUFFER, tbo);
-    glTexBuffer(GL::TEXTURE_BUFFER, GL::RGBA32F, buf);
+        triangles.push(node.bounds.max.x);
+        triangles.push(node.bounds.max.y);
+        triangles.push(node.bounds.max.z);
+        triangles.push(0.0);
 
-    loc := rl::get_shader_location(shader, "triangles");
-    glUniform1i(loc, 0);
+        triangles.push(node.left);
+        triangles.push(node.right);
+        triangles.push(node.start);
+        triangles.push(node.end);
+    }
+
+    $println("[()] Done pushing BVH nodes into triangles array");
+
+    #reset_allocator();
 
     rl::set_shader_value(
         shader,
         rl::get_shader_location(shader, "triangles_size"),
-        &triangles.size,
+        &(len / 6),
         ShaderUniformDataType::SHADER_UNIFORM_INT
     );
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "bvh_size"),
+        &nodes.size,
+        ShaderUniformDataType::SHADER_UNIFORM_INT
+    );
+
+    rl::set_shader_value(
+        shader,
+        rl::get_shader_location(shader, "bvh_start_index"),
+        &len,
+        ShaderUniformDataType::SHADER_UNIFORM_INT
+    );
+
+    glUseProgram(shader.id);
+
+    u32 triangles_tbo;
+    u32 triangles_buf;
+
+    glGenBuffers(1, &triangles_buf);
+    glBindBuffer(GL::TEXTURE_BUFFER, triangles_buf);
+    glBufferData(GL::TEXTURE_BUFFER, triangles.len() * #size(f32), &triangles[0], GL::STATIC_DRAW);
+
+    glActiveTexture(GL::TEXTURE0);
+    glGenTextures(1, &triangles_tbo);
+    glBindTexture(GL::TEXTURE_BUFFER, triangles_tbo);
+    glTexBuffer(GL::TEXTURE_BUFFER, GL::RGBA32F, triangles_buf);
+    glUniform1i(rl::get_shader_location(shader, "triangles"), 0);
 
     camera.apply_on_shader(shader);
     plane.apply_on_shader(shader);
@@ -408,9 +598,10 @@ fn main() {
     history := rl::load_render_texture(Screen::Width, Screen::Height);
     defer rl::unload_render_texture(history);
 
-    depth := 4;
+    depth := 1024;
     samples := 1;
     frameIndex := 1;
+    rendering := true;
 
     while !rl::window_should_close() {
         rl::update_camera(#cast(Camera *, &camera), CameraMode::CAMERA_FREE);
@@ -438,11 +629,23 @@ fn main() {
         }
 
         if rl::is_key_pressed(KeyboardKey::KEY_X) {
-            depth = math::min(depth * 2, 512);
+            depth = math::min(depth * 2, 1024);
             frameIndex = 1;
         }
 
-        if rl::is_key_down(KeyboardKey::KEY_R) {
+        if rl::is_key_pressed(KeyboardKey::KEY_C) {
+            samples = math::max(samples / 2, 1);
+        }
+
+        if rl::is_key_pressed(KeyboardKey::KEY_V) {
+            samples = math::min(samples * 2, 1024);
+        }
+
+        if rl::is_key_pressed(KeyboardKey::KEY_P) {
+            rendering = !rendering;
+        }
+
+        if rl::is_key_down(KeyboardKey::KEY_R) || (frameIndex % 100 == 0 && rendering) {
             image := rl::load_image_from_texture(history.texture);
             rl::image_flip_vertical(&image);
             rl::export_image(image, "render.png");
@@ -480,10 +683,6 @@ fn main() {
             ShaderUniformDataType::SHADER_UNIFORM_INT
         );
 
-        for i, sphere in spheres.iter().enumerate() {
-            sphere.apply_on_shader(shader, i);
-        }
-
         rl::begin_drawing();
             rl::clear_background(BLACK);
             rl::begin_texture_mode(history);
@@ -517,7 +716,12 @@ fn main() {
             rl::draw_fps(10, 10);
 
             rl::draw_text(
-                "Depth: {}, Samples: {}, Frame: {}".format(depth, samples, frameIndex),
+                "Triangles: {}, Rendering: {}".format(len / 6, rendering),
+                10, Screen::Height - 50, 10, WHITE
+            );
+
+            rl::draw_text(
+                "Depth: {}, Samples: {}, Accumulated: {}".format(depth, samples, frameIndex * samples),
                 10, Screen::Height - 40, 10, WHITE
             );
 

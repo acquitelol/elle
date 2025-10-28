@@ -1,4 +1,4 @@
-#version 410 core
+#version 330
 
 #define KIND_DIFFUSE 0
 #define KIND_GLASS 1
@@ -16,6 +16,7 @@ struct Sphere {
 
 struct Triangle {
     vec3 v0, v1, v2;
+    vec3 n0, n1, n2;
     int objIndex;
 };
 
@@ -25,6 +26,15 @@ struct Object {
     float ior;
     float rough;
     int kind;
+};
+
+struct BVHNode {
+    vec3 min;
+    vec3 max;
+    int left;
+    int right;
+    int start;
+    int end;
 };
 
 struct Camera {
@@ -68,8 +78,11 @@ out vec4 finalColor;
 uniform Sphere spheres[MAX_ENTITY];
 uniform int spheres_size;
 
-uniform highp samplerBuffer triangles;
+uniform samplerBuffer triangles;
+
 uniform int triangles_size;
+uniform int bvh_size;
+uniform int bvh_start_index;
 
 uniform Object objects[MAX_ENTITY];
 uniform int objects_size;
@@ -81,7 +94,6 @@ uniform int depth;
 uniform int samples;
 
 uniform int frameIndex;
-uniform bool reset;
 
 uniform sampler2D history;
 
@@ -97,16 +109,36 @@ vec3 rand_dir(vec2 seed) {
 }
 
 vec4 get_vertex(int i, int offset) {
-    return texelFetch(triangles, i * 3 + offset);
+    return texelFetch(triangles, i * 6 + offset);
 }
 
 Triangle get_triangle(int i) {
     vec4 v0 = get_vertex(i, 0);
     vec4 v1 = get_vertex(i, 1);
     vec4 v2 = get_vertex(i, 2);
-    int meshIndex = int(v0.w);
 
-    return Triangle(v0.rgb, v1.rgb, v2.rgb, meshIndex);
+    vec4 n0 = get_vertex(i, 3);
+    vec4 n1 = get_vertex(i, 4);
+    vec4 n2 = get_vertex(i, 5);
+
+    return Triangle(v0.rgb, v1.rgb, v2.rgb, n0.rgb, n1.rgb, n2.rgb, int(v0.w));
+}
+
+BVHNode get_bvh_node(int i) {
+    vec4 a = texelFetch(triangles, i * 3 + 0 + bvh_start_index);
+    vec4 b = texelFetch(triangles, i * 3 + 1 + bvh_start_index);
+    vec4 c = texelFetch(triangles, i * 3 + 2 + bvh_start_index);
+
+    vec3 min = a.xyz;
+    vec3 max = b.xyz;
+    int left  = int(c.x);
+    int right = int(c.y);
+
+    int start = int(c.z);
+    int end   = int(c.w);
+
+    // return BVHNode(vec3(0), vec3(0), 0, 0, 0, 0);
+    return BVHNode(min, max, left, right, start, end);
 }
 
 vec3 checkerboard_color(vec3 point) {
@@ -155,28 +187,42 @@ float intersect_plane(Ray ray) {
     return -1.0;
 }
 
-float intersect_triangle(Ray ray, Triangle triangle) {
+vec3 intersect_triangle(Ray ray, Triangle triangle) {
     vec3 edge1 = triangle.v1 - triangle.v0;
     vec3 edge2 = triangle.v2 - triangle.v0;
     vec3 pvec = cross(ray.direction, edge2);
 
     float det = dot(edge1, pvec);
-    if (abs(det) < 1e-6) return -1.0;
+    if (abs(det) < 1e-6) return vec3(-1.0, 0, 0);
 
     float invDet = 1.0 / det;
     vec3 tvec = ray.position - triangle.v0;
 
     float u = dot(tvec, pvec) * invDet;
-    if (u < 0.0 || u > 1.0) return -1.0;
+    if (u < 0.0 || u > 1.0) return vec3(-1.0, u, 0);
 
     vec3 qvec = cross(tvec, edge1);
     float v = dot(ray.direction, qvec) * invDet;
-    if (v < 0.0 || (u + v) > 1.0) return -1.0;
+    if (v < 0.0 || (u + v) > 1.0) return vec3(-1.0, u, v);
 
     float t = dot(edge2, qvec) * invDet;
-    if (t > 1.0e-3) return t;
+    if (t > 1.0e-3) return vec3(t, u, v);
 
-    return -1.0;
+    return vec3(-1.0, u, v);
+}
+
+bool intersect_aabb(Ray ray, vec3 _min, vec3 _max) {
+    vec3 inv = 1.0 / (ray.direction + 1.0e-4);
+    vec3 t0 = (_min - ray.position) * inv;
+    vec3 t1 = (_max - ray.position) * inv;
+
+    vec3 tminv = min(t0, t1);
+    vec3 tmaxv = max(t0, t1);
+
+    float tmin = max(max(tminv.x, tminv.y), tminv.z);
+    float tmax = min(min(tmaxv.x, tmaxv.y), tmaxv.z);
+
+    return tmax >= max(tmin, 0.0);
 }
 
 // The schlick approxmiation and glass scattering was adapted from:
@@ -223,22 +269,75 @@ Hit find_hit(Ray ray) {
         }
     }
 
-    for (int i = 0; i < triangles_size; ++i) {
-        Triangle tri = get_triangle(i);
-        Object obj = objects[tri.objIndex];
-        float ts = intersect_triangle(ray, tri);
+    // for (int i = 0; i < triangles_size; ++i) {
+    //     Triangle tri = get_triangle(i);
+    //     Object obj = objects[tri.objIndex];
+    //     float ts = intersect_triangle(ray, tri);
 
-        if (ts > 0.0 && ts < t) {
-            vec3 point = ray.position + ray.direction * (t = ts);
+    //     if (ts > 0.0 && ts < t) {
+    //         vec3 point = ray.position + ray.direction * (t = ts);
 
-            hit.did_hit = true;
-            hit.point = point;
-            hit.normal = normalize(cross(tri.v1 - tri.v0, tri.v2 - tri.v0));
-            hit.color = obj.color;
-            hit.intensity = obj.intensity;
-            hit.ior = obj.ior;
-            hit.rough = obj.rough;
-            hit.kind = obj.kind;
+    //         hit.did_hit = true;
+    //         hit.point = point;
+    //         hit.normal = normalize(cross(tri.v1 - tri.v0, tri.v2 - tri.v0));
+    //         hit.color = obj.color;
+    //         hit.intensity = obj.intensity;
+    //         hit.ior = obj.ior;
+    //         hit.rough = obj.rough;
+    //         hit.kind = obj.kind;
+    //     }
+    // }
+
+    const int MAX_STACK = 64;
+    int stack[MAX_STACK];
+    int sp = 0;
+    stack[sp++] = 0;
+
+    while (sp > 0) {
+        int node_index = stack[--sp];
+        if (node_index < 0 || node_index >= bvh_size) continue;
+        BVHNode node = get_bvh_node(node_index);
+
+        if (!intersect_aabb(ray, node.min, node.max)) continue;
+
+        if (node.left < 0 && node.right < 0) {
+            for (int ti = node.start; ti < node.end; ++ti) {
+                if (ti < 0 || ti > triangles_size) continue;
+                Triangle tri = get_triangle(ti);
+                Object obj = objects[tri.objIndex];
+
+                vec3 ints = intersect_triangle(ray, tri);
+                float ts = ints.x;
+                float u = ints.y;
+                float v = ints.z;
+
+                if (ts > 0.0 && ts < t) {
+                    vec3 point = ray.position + ray.direction * (t = ts);
+
+                    float w = 1.0 - u - v;
+                    vec3 normal = normalize(tri.n0 * w + tri.n1 * u + tri.n2);
+
+                    // vec3 normal = normalize(cross(tri.v1 - tri.v0, tri.v2 - tri.v0));
+                    // finalColor = vec4((normal + 1) / 2, 1);
+
+                    hit.did_hit = true;
+                    hit.point = point;
+                    hit.normal = normal;
+                    hit.color = obj.color;
+                    hit.intensity = obj.intensity;
+                    hit.ior = obj.ior;
+                    hit.rough = obj.rough;
+                    hit.kind = obj.kind;
+                }
+            }
+        } else {
+            if (node.left >= 0 && sp < MAX_STACK) {
+                stack[sp++] = node.left;
+            }
+
+            if (node.right >= 0 && sp < MAX_STACK) {
+                stack[sp++] = node.right;
+            }
         }
     }
 
@@ -266,6 +365,8 @@ vec4 trace_ray(Ray ray, vec2 seed) {
     for (int bounce = 0; bounce < depth; ++bounce) {
         Hit hit = find_hit(current);
 
+        // return vec4(0);
+
         if (!hit.did_hit) return color * vec4(0.85, 0.82, 1.0, 1.0);
         if (hit.kind == KIND_GLASS) hit.color = mix(vec4(1.0), hit.color, 0.3);
         if (hit.kind == KIND_EMISSIVE) return color * hit.color * hit.intensity;
@@ -292,7 +393,9 @@ vec4 trace_ray(Ray ray, vec2 seed) {
 }
 
 void main() {
-    // finalColor = vec4(get_triangle(0).v0, 1);
+    // BVHNode node = get_bvh_node(0);
+    // vec4 x = texelFetch(triangles, 0);
+    // return;
     vec4 sum = vec4(0.0);
     vec4 prev = texture(history, fragTexCoord);
 

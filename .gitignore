@@ -7,3 +7,4 @@ test
 __ellec_test_tmp
 out.ast
 flamegraph.svg
+render*.png

@@ -35,8 +35,8 @@ fn Array::read<T>(u8[] self, i32 *offset) -> T {
 }
 
 fn Array::to_repr<T, U>(U[] self) -> T[] {
-    self.size *= #size(U) / #size(T);
-    self.capacity *= #size(U) / #size(T);
+    self.size *= #cast(f32, #size(U)) / #size(T);
+    self.capacity *= #cast(f32, #size(U)) / #size(T);
     return #cast(T[], self);
 }
 

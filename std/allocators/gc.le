@@ -15,3 +15,5 @@ fn GCAllocator::alloc(GCAllocator *self, i32 size) -> void *;
 fn GCAllocator::realloc(GCAllocator *self, void *ptr, i32 new_size) -> void *;
 fn GCAllocator::free_self(GCAllocator *self);
 fn GCAllocator::free(GCAllocator *self);
+fn GCAllocator::set_threshold(GCAllocator *self, u64 threshold);
+fn GCAllocator::set_growth_factor(GCAllocator *self, u64 growth_factor);

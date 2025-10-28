@@ -22,6 +22,7 @@ struct GCAllocator @nofmt {
     u64 total_size,                    // total allocated memory
     u64 threshold,                     // threshold until collection
     u64 objects,                       // number of allocated objects
+    u64 growth_factor,                 // too much left or too much freed
     __internal_ElleGC_HeaderNode *head // linked list to track allocations
 }
 
@@ -45,10 +46,19 @@ fn GCAllocator::new() {
     // start with a threshold bigger than minimum
     // allow the gc to bring it down to min if necessary
     self.threshold = GCAllocator::MIN_THRESHOLD * 4;
+    self.growth_factor = GCAllocator::GROWTH_FACTOR;
     self.objects = 0;
     self.head = nil;
 
     return self;
+}
+
+fn GCAllocator::set_threshold(GCAllocator *self, u64 threshold) {
+    self.threshold = threshold;
+}
+
+fn GCAllocator::set_growth_factor(GCAllocator *self, u64 growth_factor) {
+    self.growth_factor = growth_factor;
 }
 
 !pub fn GCAllocator::find(GCAllocator *self, void *ptr) {
@@ -155,9 +165,9 @@ fn GCAllocator::collect(GCAllocator *self) {
         ratio := freed_size * 100 / before_size;
 
         if ratio < 25 {
-            self.threshold *= GCAllocator::GROWTH_FACTOR;
+            self.threshold *= self.growth_factor;
         } else if ratio > 75 {
-            self.threshold /= GCAllocator::GROWTH_FACTOR;
+            self.threshold /= self.growth_factor;
 
             if self.threshold < GCAllocator::MIN_THRESHOLD {
                 self.threshold = GCAllocator::MIN_THRESHOLD;
