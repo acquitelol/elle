@@ -99,7 +99,19 @@ fn Vector2::angle(Vector2 self, Vector2 v2) {
 }
 
 fn Vector2::__equals__(Vector2 self, Vector2 v2) {
-    return self.x == v2.x && self.y == v2.y;
+    return math::fabsf(self.x - v2.x) < 1.0e-6
+        && math::fabsf(self.y - v2.y) < 1.0e-6;
+}
+
+fn Vector2::get(Vector2 self, u64 i) {
+    if i == 0 { return self.x; }
+    if i == 1 { return self.y; }
+    return 0;
+}
+
+fn Vector2::set(Vector2 *self, u64 i, f32 value) {
+    if i == 0 { self.x = value; }
+    else if i == 1 { self.y = value; }
 }
 
 // ----- Vector3 methods -----
@@ -238,5 +250,20 @@ fn Vector3::angle(Vector3 self, Vector3 v2) {
 }
 
 fn Vector3::__equals__(Vector3 self, Vector3 v2) {
-    return self.x == v2.x && self.y == v2.y && self.z == v2.z;
+    return math::fabsf(self.x - v2.x) < 1.0e-6
+        && math::fabsf(self.y - v2.y) < 1.0e-6
+        && math::fabsf(self.z - v2.z) < 1.0e-6;
+}
+
+fn Vector3::get(Vector3 self, u64 i) {
+    if i == 0 { return self.x; }
+    if i == 1 { return self.y; }
+    if i == 2 { return self.z; }
+    return 0;
+}
+
+fn Vector3::set(Vector3 *self, u64 i, f32 value) {
+    if i == 0 { self.x = value; }
+    else if i == 1 { self.y = value; }
+    else if i == 2 { self.z = value; }
 }
