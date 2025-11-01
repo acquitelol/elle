@@ -203,7 +203,9 @@ pub struct Size {
 pub struct StructLiteral {
     pub name: Token,
     pub values: Vec<(String, Box<AstNode>)>,
+    pub spreads: Vec<(MutRc<Location>, AstNode)>,
     pub location: MutRc<Location>,
+    pub allow_empty: bool
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

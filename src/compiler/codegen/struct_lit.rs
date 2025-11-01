@@ -82,7 +82,9 @@ impl Codegen<'_> for StructLiteral {
         let value_set: HashSet<_> = self.values.iter().map(|value| value.0.clone()).collect();
         let diff: Vec<_> = member_set.difference(&value_set).collect();
 
-        if gen.warnings.has_warning(Warning::StructFieldsMissing) {
+        // we're assuming that if you are spreading something,
+        // all fields will automatically be set to some value
+        if gen.warnings.has_warning(Warning::StructFieldsMissing) && self.spreads.is_empty() && !self.allow_empty {
             for member in diff {
                 if members
                     .iter()
@@ -115,6 +117,43 @@ impl Codegen<'_> for StructLiteral {
             &Type::Long,
             Instruction::Alloc8(Value::Const(String::new(), i128::from(size))),
         );
+
+        for (location, spread) in self.spreads.iter().cloned() {
+            let (spread_ty, value) =
+                spread.compile(gen, &CodegenContext {
+                    ty: Some(ty.clone()),
+                    ..ctx.to_nnf()
+                })
+                .unwrap_or_else(||
+                    elle_error!(self.location.borrow().error(
+                        format!(
+                            "Unexpected error when trying to compile the spread in struct '{}'",
+                            Type::Struct(plain_name.clone()).display()
+                        )
+                    )
+                ));
+
+            let (final_ty, final_val) = if ty == spread_ty {
+                (spread_ty.clone(), value)
+            } else {
+                convert_to_type(
+                    gen,
+                    ctx.func,
+                    spread_ty.clone(),
+                    ty.clone(),
+                    value,
+                    &location,
+                    &location,
+                    false,
+                )
+            };
+
+            ctx.func.borrow_mut().add_instruction(Instruction::Blit(
+                final_val,
+                alloc_tmp.clone(),
+                final_ty.size(ctx.module),
+            ));
+        }
 
         for (member_name, value) in self.values.iter().cloned() {
             if !member_names.contains(&member_name) {

@@ -2520,8 +2520,55 @@ impl<'a> Statement<'a> {
         self.advance();
 
         let mut values = vec![];
+        let mut spreads = vec![];
 
         while !self.is_eof() {
+            if self.current_token().kind == TokenKind::Range {
+                let location = self.current_token().location.clone();
+                self.advance();
+                let mut paren_nesting = i32::from(self.current_token().kind == TokenKind::LeftParenthesis);
+                let mut curly_nesting = i32::from(self.current_token().kind == TokenKind::LeftCurlyBrace);
+                let mut block_nesting = i32::from(self.current_token().kind == TokenKind::LeftBlockBrace);
+
+                let tokens = self.yield_tokens_with_condition(|token, _, _| {
+                    if token.kind == TokenKind::LeftParenthesis {
+                        paren_nesting += 1;
+                    }
+
+                    if token.kind == TokenKind::RightParenthesis {
+                        paren_nesting -= 1;
+                    }
+
+                    if token.kind == TokenKind::LeftCurlyBrace {
+                        curly_nesting += 1;
+                    }
+
+                    if token.kind == TokenKind::RightCurlyBrace {
+                        if curly_nesting > 0 {
+                            curly_nesting -= 1;
+                        } else {
+                            return true;
+                        }
+                    }
+
+                    if token.kind == TokenKind::LeftBlockBrace {
+                        block_nesting += 1;
+                    }
+
+                    if token.kind == TokenKind::RightBlockBrace {
+                        block_nesting -= 1;
+                    }
+
+                    token.kind == TokenKind::Comma && paren_nesting == 0 && curly_nesting == 0 && block_nesting == 0
+                });
+
+                self.position -= 1;
+                set_end!(location, self);
+                self.position += 1;
+                let value = Statement::new(tokens, 0, self.body, self.shared).parse().0;
+                spreads.push((location, value));
+            }
+
             if self.current_token().kind == TokenKind::RightCurlyBrace {
                 self.advance();
                 break;
@@ -2606,7 +2653,9 @@ impl<'a> Statement<'a> {
         let mut expression = AstNode::StructLiteral(StructLiteral {
             name,
             values,
+            spreads,
             location: location.clone(),
+            allow_empty: false
         });
 
         if let Some(token) = self.advance_opt() {

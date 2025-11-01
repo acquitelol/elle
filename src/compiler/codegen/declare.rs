@@ -66,7 +66,9 @@ impl Codegen<'_> for Declare {
                         &self.r#type.clone().unwrap().get_struct_inner().unwrap(),
                     ),
                     values: vec![],
+                    spreads: vec![],
                     location: self.location.clone(),
+                    allow_empty: true
                 })
             } else {
                 AstNode::Literal(Literal {

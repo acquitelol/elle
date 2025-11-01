@@ -1594,7 +1594,7 @@ fn other(Foo *foo) {
 }
 
 fn main() {
-    foo := ...; // create Foo
+    foo := ..; // create Foo
     other(&foo);
 }
 ```
@@ -1697,6 +1697,51 @@ fn main() {
 The compiler will automatically pass the **address** of `foo` instead of `foo` itself to the function.
 <br />
 In the case of a method that takes in a `self` _pointer_, the equivalent expression to `foo1.divideBy(2)` is `Foo::divideBy(&foo1, 2)`.
+
+You can also spread existing structs into other structs to provide default values.
+
+> [!IMPORTANT]
+> This does not override fields you set. The position of spreading is not relevant.
+
+This means that the following pieces of code are equivalent:
+
+```rs
+struct Foo {
+    i32 x,
+    i32 y
+}
+
+fn main() {
+    a := Foo { x = 1, y = 2 };
+    b := Foo { ..a, x = 13 };
+}
+```
+
+```rs
+struct Foo {
+    i32 x,
+    i32 y
+}
+
+fn main() {
+    a := Foo { x = 1, y = 2 };
+    b := Foo { x = 13, ..a };
+}
+```
+
+At the moment, duck typing for spreading is not supported. This means that code like this is not supported:
+
+```rs
+struct Foo {
+    f32 x,
+    f32 y
+    bool z
+}
+
+fn main() {
+    x := Foo { ..Vector2::new(1, 2), z = false };
+}
+```
 
 #
 

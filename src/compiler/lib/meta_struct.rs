@@ -210,7 +210,9 @@ pub fn generate_meta_struct(
                 })),
             ),
         ],
+        spreads: vec![],
         location,
+        allow_empty: false
     });
 
     node
