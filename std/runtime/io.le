@@ -159,39 +159,40 @@ fn io::input(string message) -> string {
 }
 
 fn io::read_to_string(string path) -> string {
-    let file = io::fopen(path, "r");
+    file := io::fopen(path, "rb");
     defer io::fclose(file);
     io::assert(file, "Failed to open file {}".format(path));
 
     io::fseek(file, 0, 2);
-    let file_size = io::ftell(file);
+    file_size := io::ftell(file);
     io::fseek(file, 0, 0);
-    let buf_size = file_size > 0 ? file_size + 1 : #cast(i64, 4096);
 
-    let buf = #alloc(char, buf_size);
+    data := Array::with_capacity<char>(file_size + 1).filled();
+    read_size := io::fread(data.elements, #size(char), file_size, file);
 
-    if !buf {
-        return nil;
-    }
+    data.resize(read_size);
+    data.size = read_size;
+    data.elements[read_size] = 0;
 
-    i64 pos = 0;
-    i64 read_size;
+    return data.elements;
+}
 
-    while (read_size = io::fread(buf + pos, #size(char), buf_size - pos - 1, file)) > 0 {
-        pos += read_size;
+fn io::read_file_binary(string path) -> u8[] {
+    file := io::fopen(path, "rb");
+    defer io::fclose(file);
+    io::assert(file, "Failed to open file {}".format(path));
 
-        if pos >= buf_size - 1 {
-            buf_size *= 2;
-            buf = #realloc(buf, char, buf_size);
+    io::fseek(file, 0, 2);
+    file_size := io::ftell(file);
+    io::fseek(file, 0, 0);
 
-            if !buf {
-                return nil;
-            }
-        }
-    }
+    data := Array::with_capacity<u8>(file_size).filled();
+    read_size := io::fread(data.elements, #size(u8), file_size, file);
 
-    buf[pos] = '\0';
-    return buf;
+    data.resize(read_size);
+    data.size = read_size;
+
+    return data;
 }
 
 fn io::write_to_file(string path, string content) -> bool {

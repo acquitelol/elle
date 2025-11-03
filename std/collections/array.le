@@ -144,7 +144,16 @@ fn Array::windows<T>(T[] self, u64 size) {
 }
 
 // Functions emitted as a result of string::split monomorphization for the VLA
-// must be here so that the compiler doesn't re-monomorphize and cause duplicate symbols
-external fn `Array.with_capacity.0.2.15.1`(i32 capacity) -> string[];
+external fn `Array.with_capacity.0.2.15.1`(u64 capacity) -> string[];
 external fn `Array.push.0.2.15.1`(string[] self, string element);
 external fn `Array.resize.0.2.15.1`(string[] self, i32 new_capacity);
+
+// Functions emitted as a result of io::read_file_binary for the VLA
+external fn `Array.with_capacity.0.4.1`(u64 capacity) -> u8[];
+external fn `Array.resize.0.4.1`(u8[] self, u64 new_capacity);
+external fn `Array.filled.0.4.1`(u8[] self) -> u8[];
+
+// Functions emitted as a result of io::read_file_binary for the VLA
+external fn `Array.with_capacity.0.15.1`(u64 capacity) -> char[];
+external fn `Array.resize.0.15.1`(char[] self, u64 new_capacity);
+external fn `Array.filled.0.15.1`(char[] self) -> char[];
