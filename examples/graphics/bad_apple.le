@@ -1,0 +1,78 @@
+use std/prelude;
+use std/raylib;
+
+enum Video {
+    Width = 480,
+    Height = 360
+}
+
+enum Paths {
+    Source = "examples/resources/bad_apple.mp4",
+    Video = "examples/resources/bad_apple.bin",
+    Audio = "examples/resources/bad_apple.mp3"
+}
+
+fn Video::__fmt__(Video self, u64 nesting) { return "{}".format(self + 0); }
+fn Paths::__fmt__(Paths self, u64 nesting) -> string { return self; }
+
+fn main() {
+    rl::init_window(Video::Width * 2, Video::Height * 2, "Bad Apple");
+    defer rl::close_window();
+
+    rl::init_audio_device();
+    defer rl::close_audio_device();
+
+    libc::system("yes | ffmpeg -i {} -vf \"format=gray\" -t 200 -f rawvideo {}"
+        .format(Paths::Source, Paths::Video));
+
+    libc::system("yes | ffmpeg -i {} -vn -acodec libmp3lame {}"
+        .format(Paths::Source, Paths::Audio));
+
+    defer io::remove(Paths::Video);
+    defer io::remove(Paths::Audio);
+
+    frames := io::read_file_binary("examples/resources/bad_apple.bin");
+    frame := 0;
+
+    song := rl::load_music_stream("examples/resources/bad_apple.mp3");
+    defer rl::unload_music_stream(song);
+
+    image := Image {
+        data = frames.elements,
+        width = Video::Width,
+        height = Video::Height,
+        mipmaps = 1,
+        format = PixelFormat::PIXELFORMAT_UNCOMPRESSED_GRAYSCALE
+    };
+
+    texture := rl::load_texture_from_image(image);
+    defer rl::unload_texture(texture);
+
+    rl::set_target_fps(30);
+    rl::play_music_stream(song);
+
+    while !rl::window_should_close() {
+        if frame == 0 {
+            rl::seek_music_stream(song, 0);
+        }
+
+        rl::update_music_stream(song);
+        rl::update_texture(texture, frames.elements + frame * Video::Width * Video::Height);
+
+        frame += 1;
+        frame %= frames.len() / Video::Width / Video::Height;
+
+        rl::begin_drawing();
+
+        rl::clear_background(BLACK);
+        rl::draw_texture_pro(
+            texture,
+            Rectangle { x = 0, y = 0, width = Video::Width, height = Video::Height },
+            Rectangle { x = 0, y = 0, width = Video::Width * 2, height = Video::Height * 2 },
+            Vector2::zero(), 0, WHITE
+        );
+
+        rl::draw_fps(8, 8);
+        rl::end_drawing();
+    }
+}
