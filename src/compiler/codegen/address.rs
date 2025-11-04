@@ -15,7 +15,7 @@ impl Codegen<'_> for Address {
             ))
         });
 
-        if ty.is_struct() {
+        if ty.is_struct() || ty.is_static_array() {
             return Some((Type::Pointer(Box::new(ty)), val));
         }
 

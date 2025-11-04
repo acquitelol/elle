@@ -12,11 +12,11 @@ use crate::{
             value::Value,
         },
     },
-    elle_error, get_GREEN, get_POINTER_ID, get_RESET, hashmap, is_generic,
+    elle_error, get_GREEN, get_POINTER_ID, get_RESET, get_STATIC_ARRAY_ID, hashmap, is_generic,
     lexer::enums::{TokenKind, ValueKind},
     parser::enums::{Address, AstNode, FunctionCall, Literal},
     struct_hover, unknown_function, DUNDER_CONSTANTS, FORMAT_CONSTANT, GREEN, META_STRUCT_NAME,
-    POINTER_ID, PTR_PRIORITY_CONSTANTS, RESET, VOID_POINTER_ID,
+    POINTER_ID, PTR_PRIORITY_CONSTANTS, RESET, STATIC_ARRAY_ID, VOID_POINTER_ID,
 };
 
 impl Codegen<'_> for FunctionCall {
@@ -113,6 +113,8 @@ impl Codegen<'_> for FunctionCall {
             // dunder access
             } else if ty.is_pointer() && DUNDER_CONSTANTS.contains(&name.as_str()) && type_method {
                 name = format!("{}.{name}", get_POINTER_ID!());
+            } else if ty.is_static_array() {
+                name = format!("{}.{name}", get_STATIC_ARRAY_ID!());
             } else {
                 name = format!("{}.{name}", ty.id());
             }

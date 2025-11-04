@@ -6,14 +6,14 @@ use crate::{
     lexer::enums::{Location, MutRc, Token},
     misc::{
         colors::{get_GREEN, get_RED, get_RESET, GREEN, RED, RESET},
-        constants::{DISPLAY_NESTING_MAX, GENERIC_FUNCTION},
+        constants::{get_STATIC_ARRAY_ID, DISPLAY_NESTING_MAX, GENERIC_FUNCTION},
     },
     parser::{
         enums::{Argument, Primitive, StructSource},
         parser::StructPool,
     },
-    GENERIC_END, GENERIC_ENUM, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN, POINTER_ID,
-    VOID_POINTER_ID,
+    GENERIC_ARRAY, GENERIC_END, GENERIC_ENUM, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN,
+    POINTER_ID, STATIC_ARRAY_ID, VOID_POINTER_ID,
 };
 
 use super::{function::Function, module::Module};
@@ -42,6 +42,7 @@ pub enum Type {
     // Unknown generic
     Unknown(String),
     Function(Box<Option<Function>>),
+    StaticArray(Box<Type>, usize),
 }
 
 impl Type {
@@ -188,6 +189,7 @@ impl Type {
             }
             Self::Unknown(name) => name.into(),
             Self::Infer => unreachable!(),
+            Self::StaticArray(ty, size) => format!("{}[{size}]", ty.display()),
         }
     }
 
@@ -208,7 +210,9 @@ impl Type {
             Self::Void => "void".into(),
             Self::Null => "null".into(),
             Self::Enum(name, ..) | Self::Unknown(name) => name.clone(),
-            Self::Pointer(..) | Self::Struct(..) | Self::Function(..) => self.display(),
+            Self::Pointer(..) | Self::Struct(..) | Self::Function(..) | Self::StaticArray(..) => {
+                self.display()
+            }
             Self::Infer => unreachable!(),
         }
     }
@@ -218,6 +222,7 @@ impl Type {
             x if x.is_string() => "string".into(),
             x if x.is_void_pointer() => VOID_POINTER_ID.into(),
             Self::Pointer(_) => get_POINTER_ID!().into(),
+            Self::StaticArray(..) => get_STATIC_ARRAY_ID!().into(),
             _ => self.id(),
         }
     }
@@ -254,6 +259,9 @@ impl Type {
                     .unwrap_or(&Self::Word)
                     .to_internal_id()
             ),
+            Self::StaticArray(ty, size) => {
+                format!("{GENERIC_ARRAY}.{}.{size}", ty.to_internal_id(),)
+            }
             Self::Function(inner) if let Some(inner) = (**inner).clone() => {
                 format!(
                     "{GENERIC_FUNCTION}.{GENERIC_IDENTIFIER}.{}.{}.{GENERIC_END}",
@@ -283,6 +291,7 @@ impl Type {
                 GENERIC_UNKNOWN,
                 GENERIC_ENUM,
                 GENERIC_FUNCTION,
+                GENERIC_ARRAY,
             ]
             .contains(&id)
             {
@@ -349,6 +358,14 @@ impl Type {
                         let name = parts.next().unwrap();
                         let ty = internal_match(parts).unwrap();
                         Some(Type::Enum(name.to_string(), Box::new(Some(ty))))
+                    } else if part == GENERIC_ARRAY {
+                        let ty = internal_match(parts).unwrap();
+                        let size = parts.next().unwrap();
+                        let size = size
+                            .parse::<usize>()
+                            .expect("Failed to parse static array size {size}");
+
+                        Some(Type::StaticArray(Box::new(ty), size))
                     } else if part == GENERIC_FUNCTION {
                         assert_eq!(parts.next().unwrap(), GENERIC_IDENTIFIER);
                         let mut res = vec![];
@@ -481,6 +498,10 @@ impl Type {
                     self.clone()
                 }
             }
+            Self::StaticArray(inner, size) => Self::StaticArray(
+                Box::new(inner.unknown_to_known(struct_pool, tree, generics, known_generics)),
+                *size,
+            ),
             Self::Function(inner) if let Some(inner) = (**inner).clone() => {
                 let parsed_arguments = inner
                     .arguments
@@ -665,6 +686,7 @@ impl Type {
     pub fn has_generic_type(&self) -> bool {
         match self {
             Self::Pointer(inner) => inner.has_generic_type(),
+            Self::StaticArray(inner, ..) => inner.has_generic_type(),
             Self::Unknown(_) => true,
             Self::Function(f) => {
                 if let Some(f) = (**f).clone() {
@@ -687,6 +709,9 @@ impl Type {
     ) -> Option<HashMap<String, Self>> {
         match (self, generic_type) {
             (Self::Pointer(known_inner), Self::Pointer(generic_inner)) => {
+                known_inner.deduce_generic_type(generic_inner, location)
+            }
+            (Self::StaticArray(known_inner, ..), Self::StaticArray(generic_inner, ..)) => {
                 known_inner.deduce_generic_type(generic_inner, location)
             }
             (Self::Function(known_inner), Self::Function(generic_inner)) => {
@@ -738,6 +763,9 @@ impl Type {
             (Self::Pointer(known), other) if known.is_struct() && other.is_struct() => {
                 known.deduce_generic_type(other, location)
             }
+            (Self::StaticArray(known, _), Self::Pointer(other)) => {
+                known.deduce_generic_type(other, location)
+            }
             (known, Self::Unknown(name)) => Some(hashmap![name.clone() => known.clone()]),
             // Struct<(known)> vs Struct<T>
             (Self::Struct(specialized_name), Self::Struct(name))
@@ -778,6 +806,13 @@ impl Type {
     pub fn get_pointer_inner(&self) -> Option<Self> {
         match self {
             Self::Pointer(ty) => Some(*ty.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn get_static_array_inner(&self) -> Option<Self> {
+        match self {
+            Self::StaticArray(ty, ..) => Some(*ty.clone()),
             _ => None,
         }
     }
@@ -867,6 +902,10 @@ impl Type {
         matches!(self, Self::Boolean)
     }
 
+    pub const fn is_static_array(&self) -> bool {
+        matches!(self, Self::StaticArray(..))
+    }
+
     pub fn is_strictly_number(&self) -> bool {
         !self.is_string()
             && !self.is_void()
@@ -903,6 +942,9 @@ impl Type {
         match (self, other) {
             (Self::Pointer(lhs), Self::Pointer(rhs)) => {
                 lhs == rhs || lhs.is_void() || rhs.is_void()
+            }
+            (Self::StaticArray(lhs_ty, lhs_size), Self::StaticArray(rhs_ty, rhs_size)) => {
+                lhs_ty == rhs_ty && lhs_size == rhs_size
             }
             (Self::Enum(lhs, _), Self::Enum(rhs, _)) => lhs == rhs,
             (Self::Struct(lhs), Self::Struct(rhs)) => {
@@ -978,7 +1020,7 @@ impl Type {
     }
 
     pub const fn is_pointer_like(&self) -> bool {
-        matches!(self, Self::Pointer(_) | Self::Long)
+        matches!(self, Self::Pointer(_) | Self::StaticArray(..))
     }
 
     pub fn is_primitive(&self) -> bool {
@@ -1045,7 +1087,11 @@ impl Type {
             Self::Struct(_) => 7,
             Self::Double => 6,
             Self::Single => 5,
-            Self::Long | Self::UnsignedLong | Self::Pointer(..) | Self::Function(..) => 4,
+            Self::Long
+            | Self::UnsignedLong
+            | Self::Pointer(..)
+            | Self::Function(..)
+            | Self::StaticArray(..) => 4,
             Self::Word | Self::UnsignedWord => 3,
             Self::Halfword | Self::UnsignedHalfword => 2,
             Self::Boolean | Self::Byte | Self::UnsignedByte | Self::Char => 1,
@@ -1089,6 +1135,7 @@ impl Type {
 
                 size
             }
+            Self::StaticArray(ty, size) => ty.size(module) * *size as u64,
             Self::Unknown(..) | Self::Null => 0,
             _ => self.size_base(),
         }
@@ -1116,7 +1163,7 @@ impl fmt::Display for Type {
                     Option::as_ref(inner).unwrap_or(&Self::Word)
                 )
             }
-            Self::Pointer(..) | Self::Long | Self::Function(_) => {
+            Self::Pointer(..) | Self::Long | Self::Function(_) | Self::StaticArray(..) => {
                 write!(formatter, "l")
             }
             Self::Unknown(name) => elle_error!(Location::internal_error(format!(

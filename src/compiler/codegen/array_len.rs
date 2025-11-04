@@ -1,54 +1,24 @@
 /// ! EXCLUSIVELY FOR STATIC ARRAYS !
-/// This essentially returns `*(array_buf - #size(i32))`
-///
-/// Static arrays created in elle preallocate an extra
-/// integer and store the size there, then return the
-/// pointer + #size(i32). When accessing the size,
-/// we simply shift back and return the integer value.
-///
 /// THIS DOESNT WORK FOR DYNAMIC ARRAYS
-/// THEY USE STRUCTS, STATIC ARRAYS ARE JUST
-/// A FAT POINTER (pointer + header)
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
-        qbe::{instruction::Instruction, r#type::Type, value::Value},
+        qbe::{r#type::Type, value::Value},
     },
-    elle_error,
-    lexer::enums::{TokenKind, ValueKind},
-    parser::enums::{ArrayLength, AstNode, BinaryOperation, Literal},
+    parser::enums::ArrayLength,
 };
 
 impl Codegen<'_> for ArrayLength {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let node = AstNode::BinaryOperation(BinaryOperation {
-            left: self.value,
-            right: Box::new(AstNode::Literal(Literal {
-                kind: TokenKind::IntegerLiteral,
-                value: ValueKind::Number(i128::from(Type::Word.size(ctx.module))),
-                location: self.location.clone(),
-                tagged: false,
-            })),
-            operator: TokenKind::Subtract,
-            treat_as_string: false,
-            dunder_methods: true,
-            location: self.location.clone(),
-        });
+        let (ty, _) = self.value.clone().compile(gen, ctx).unwrap();
 
-        let (_, val) = node.compile(gen, ctx).unwrap_or_else(|| {
-            elle_error!(self.location.borrow().error(
-                "Unexpected error when trying to compile the formula for getting the array length",
-            ))
-        });
+        if let Type::StaticArray(_, size) = ty {
+            return Some((
+                Type::UnsignedLong,
+                Value::Const(String::new(), size as i128),
+            ));
+        }
 
-        let temp = gen.new_temporary(Some("array.length"), true);
-
-        ctx.func.borrow_mut().assign_instruction(
-            &temp,
-            &Type::Word,
-            Instruction::Load(Type::Word, val),
-        );
-
-        Some((Type::Word, temp))
+        return None;
     }
 }

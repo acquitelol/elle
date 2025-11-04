@@ -84,7 +84,10 @@ impl Codegen<'_> for StructLiteral {
 
         // we're assuming that if you are spreading something,
         // all fields will automatically be set to some value
-        if gen.warnings.has_warning(Warning::StructFieldsMissing) && self.spreads.is_empty() && !self.allow_empty {
+        if gen.warnings.has_warning(Warning::StructFieldsMissing)
+            && self.spreads.is_empty()
+            && !self.allow_empty
+        {
             for member in diff {
                 if members
                     .iter()
@@ -119,19 +122,20 @@ impl Codegen<'_> for StructLiteral {
         );
 
         for (location, spread) in self.spreads.iter().cloned() {
-            let (spread_ty, value) =
-                spread.compile(gen, &CodegenContext {
-                    ty: Some(ty.clone()),
-                    ..ctx.to_nnf()
-                })
-                .unwrap_or_else(||
-                    elle_error!(self.location.borrow().error(
-                        format!(
-                            "Unexpected error when trying to compile the spread in struct '{}'",
-                            Type::Struct(plain_name.clone()).display()
-                        )
-                    )
-                ));
+            let (spread_ty, value) = spread
+                .compile(
+                    gen,
+                    &CodegenContext {
+                        ty: Some(ty.clone()),
+                        ..ctx.to_nnf()
+                    },
+                )
+                .unwrap_or_else(|| {
+                    elle_error!(self.location.borrow().error(format!(
+                        "Unexpected error when trying to compile the spread in struct '{}'",
+                        Type::Struct(plain_name.clone()).display()
+                    )))
+                });
 
             let (final_ty, final_val) = if ty == spread_ty {
                 (spread_ty.clone(), value)
@@ -211,7 +215,7 @@ impl Codegen<'_> for StructLiteral {
                 ),
             );
 
-            if ty.is_struct() {
+            if ty.is_struct() || ty.is_static_array() {
                 ctx.func.borrow_mut().add_instruction(Instruction::Blit(
                     val,
                     offset_tmp,

@@ -32,6 +32,16 @@ pub fn can_convert_to_type(gen: &Compiler, first: &Type, second: &Type, explicit
         }
     }
 
+    if (first.is_static_array()
+        && second.is_pointer()
+        && first.get_static_array_inner().unwrap() == second.get_pointer_inner().unwrap())
+        || (first.is_static_array()
+            && second.is_string()
+            && first.get_static_array_inner().unwrap() == Type::Char)
+    {
+        return true;
+    }
+
     if ((first.is_pointer() && second.is_pointer())
         && first.get_pointer_inner().unwrap() != second.get_pointer_inner().unwrap())
         && !explicit

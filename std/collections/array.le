@@ -48,6 +48,14 @@ fn Array::bytes(u64 capacity) {
     return Array::with_capacity<u8>(capacity).filled();
 }
 
+fn Array::slice_from_raw_parts<T>(u64 size, T *elements) {
+    self := #alloc(Array<T>);
+    self.size = size;
+    self.capacity = size;
+    self.elements = elements;
+    return self;
+}
+
 struct ArrayEnv<T> {
     T[] base,
     u64 start,

@@ -41,7 +41,7 @@ fn string::contains(ElleMeta meta, string self, ...args) -> bool {
     }
 
     needle := meta.types[1] == "char"
-        ? #[args.yield(char), '\0']
+        ? #cast(string, #[args.yield(char), '\0'])
         : args.yield(string);
 
     return #cast(void *, strstr(self, needle)) != nil;
@@ -57,7 +57,7 @@ fn string::find(ElleMeta meta, string self, ...args) -> i64 {
     }
 
     needle := meta.types[1] == "char"
-        ? #[args.yield(char), '\0']
+        ? #cast(string, #[args.yield(char), '\0'])
         : args.yield(string);
 
     let result = strstr(self, needle);

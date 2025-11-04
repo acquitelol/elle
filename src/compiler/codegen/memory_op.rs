@@ -154,7 +154,7 @@ impl Codegen<'_> for MemoryOperation {
             return node.compile(gen, ctx);
         }
 
-        if !(matches!(left_ty, Type::Pointer(_)) || matches!(right_ty, Type::Pointer(_))) {
+        if !(left_ty.is_pointer_like() || right_ty.is_pointer_like()) {
             elle_error!(self.left_location.borrow().error(format!(
                 "Cannot {} data {} non-pointer types ({} and {})",
                 if self.value.is_some() {
@@ -169,13 +169,18 @@ impl Codegen<'_> for MemoryOperation {
         }
 
         let inner = if left_ty.is_pointer() {
-            left_ty.get_pointer_inner().unwrap()
+            left_ty.get_pointer_inner()
+        } else if left_ty.is_static_array() {
+            left_ty.get_static_array_inner()
+        } else if right_ty.is_pointer() {
+            right_ty.get_pointer_inner()
         } else {
-            right_ty.get_pointer_inner().unwrap()
-        };
+            right_ty.get_static_array_inner()
+        }
+        .unwrap();
 
         let node = AstNode::BinaryOperation(BinaryOperation {
-            left: if left_ty.is_pointer() {
+            left: if left_ty.is_pointer_like() {
                 self.left.clone()
             } else {
                 self.right.clone()
@@ -187,7 +192,7 @@ impl Codegen<'_> for MemoryOperation {
                     location: self.right_location.clone(),
                     tagged: false,
                 })),
-                right: if left_ty.is_pointer() {
+                right: if left_ty.is_pointer_like() {
                     self.right
                 } else {
                     self.left
@@ -235,7 +240,7 @@ impl Codegen<'_> for MemoryOperation {
                     )))
                 });
 
-            if val_ty.is_struct() {
+            if val_ty.is_struct() || val_ty.is_static_array() {
                 ctx.func.borrow_mut().add_instruction(Instruction::Blit(
                     compiled.clone(),
                     compiled_location,
@@ -254,7 +259,7 @@ impl Codegen<'_> for MemoryOperation {
 
         let res = if self.addr_only {
             (Type::Pointer(Box::new(inner)), compiled_location)
-        } else if inner.is_struct() {
+        } else if inner.is_struct() || inner.is_static_array() {
             (inner, compiled_location)
         } else {
             let temp = gen.new_temporary(Some("load"), true);

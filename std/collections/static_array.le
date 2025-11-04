@@ -1,0 +1,29 @@
+namespace __arr__;
+global pub;
+
+fn __arr__::len<T>(T self) {
+    return #len(self);
+}
+
+fn __arr__::is_empty<T>(T self) {
+    return self.len() == 0;
+}
+
+fn __arr__::__fmt__<T>(T self, u64 nesting) {
+    res := "[";
+
+    for u64 i = 0; i < self.len(); i += 1 {
+        res <>= self[i].__fmt__(nesting);
+
+        if i != self.len() - 1 {
+            res <>= ", ";
+        }
+    }
+
+    res <>= "]";
+    return res;
+}
+
+fn __arr__::__iter__<T>(T self) {
+    return Array::slice_from_raw_parts(self.len(), self).iter();
+}

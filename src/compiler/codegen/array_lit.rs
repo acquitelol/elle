@@ -153,44 +153,27 @@ impl Codegen<'_> for ArrayLiteral {
             }
         }
 
-        let buf_ty = Type::Pointer(Box::new(first_type.clone().unwrap_or(Type::Void)));
+        let repr_ty = first_type.clone().unwrap_or(Type::Void);
+        let buf_ty = Type::StaticArray(Box::new(repr_ty.clone()), self.values.len());
+
         let array_size = if let Some(ref ty) = first_type {
             self.values.len() as u64 * ty.size(ctx.module)
         } else {
             0
         };
-        let array_size_val = Value::Const(
-            String::new(),
-            i128::from(array_size + Type::Word.size_base()),
-        );
-        let tmp_full = gen.new_temporary(Some("array.full"), true);
-
-        ctx.func.borrow_mut().assign_instruction_front(
-            &tmp_full,
-            &buf_ty,
-            Instruction::Alloc8(array_size_val.clone()),
-        );
-
-        ctx.func.borrow_mut().add_instruction(Instruction::Store(
-            Type::Word,
-            tmp_full.clone(),
-            Value::Const(String::new(), results.len() as i128),
-        ));
 
         let tmp = gen.new_temporary(Some("array"), true);
+        let size = Value::Const(String::new(), i128::from(array_size));
 
-        ctx.func.borrow_mut().assign_instruction(
+        ctx.func.borrow_mut().assign_instruction_front(
             &tmp,
             &buf_ty,
-            Instruction::Add(
-                tmp_full,
-                Value::Const(String::new(), i128::from(Type::Word.size(ctx.module))),
-            ),
+            Instruction::Alloc8(size.clone()),
         );
 
         gen.buf_metadata.insert(
             ctx.value.clone().unwrap_or_else(|| tmp.clone()),
-            (buf_ty.get_pointer_inner().unwrap(), array_size_val),
+            (repr_ty, size),
         );
 
         for (i, value) in results.iter().enumerate() {
@@ -210,7 +193,7 @@ impl Codegen<'_> for ArrayLiteral {
 
             let ty = first_type.as_ref().unwrap().clone();
 
-            if ty.is_struct() {
+            if ty.is_struct() || ty.is_static_array() {
                 ctx.func.borrow_mut().add_instruction(Instruction::Blit(
                     value.clone(),
                     value_ptr,

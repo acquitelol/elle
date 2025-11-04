@@ -55,7 +55,7 @@ impl Codegen<'_> for FieldAccess {
                 false,
             );
 
-            if final_ty.is_struct() {
+            if final_ty.is_struct() || final_ty.is_static_array() {
                 ctx.func.borrow_mut().add_instruction(Instruction::Blit(
                     final_val,
                     offset_tmp.clone(),
@@ -77,7 +77,7 @@ impl Codegen<'_> for FieldAccess {
         // Structs are stored in contiguous memory.
         // Any field that is a struct should not be dereferenced
         // because that will break everything.
-        if field_ty.is_struct() || self.addr_only {
+        if field_ty.is_struct() || field_ty.is_static_array() || self.addr_only {
             Some((field_ty, offset_tmp))
         } else {
             ctx.func.borrow_mut().assign_instruction(

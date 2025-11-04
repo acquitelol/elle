@@ -269,9 +269,26 @@ macro_rules! get_type {
                         $self.advance();
                         $self.advance();
 
-                        if $self.current_token().kind != TokenKind::RightBlockBrace {
-                            $self.position = point;
-                            break;
+                        match $self.current_token().kind {
+                            TokenKind::IntegerLiteral => {
+                                let size = $self.current_token().value.get_number_inner().unwrap();
+                                $crate::set_end!(location, $self);
+
+                                ty = Type::StaticArray(Box::new(ty), size as usize);
+                                $self.advance();
+
+                                if $self.current_token().kind != TokenKind::RightBlockBrace {
+                                   $self.position = point;
+                                   break;
+                                }
+
+                                continue;
+                            },
+                            other if other != TokenKind::RightBlockBrace => {
+                               $self.position = point;
+                               break;
+                            }
+                            _ => {}
                         }
 
                         if !$struct_pool.borrow().contains_key("Array") {

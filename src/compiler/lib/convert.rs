@@ -143,6 +143,30 @@ pub fn convert_to_type(
         return (second, val);
     }
 
+    if (first.is_static_array()
+        && second.is_pointer()
+        && first.get_static_array_inner().unwrap() == second.get_pointer_inner().unwrap())
+        || (first.is_static_array()
+            && second.is_string()
+            && first.get_static_array_inner().unwrap() == Type::Char)
+    {
+        return (second, val);
+    }
+
+    if first.is_static_array()
+        && second.is_static_array()
+        && first.get_static_array_inner().unwrap() == second.get_static_array_inner().unwrap()
+    {
+        if let Type::StaticArray(_, lhs_size) = first
+            && let Type::StaticArray(_, rhs_size) = second
+            && (lhs_size == rhs_size || explicit)
+        {
+            return (second, val);
+        }
+
+        implicit_conversion_error!()
+    }
+
     if first.is_function() && second.is_function() {
         if explicit || first.function_eq(&second, Some(&left_location)) {
             return (second, val);
