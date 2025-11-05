@@ -6,7 +6,7 @@ use crate::{
     lexer::enums::{Location, MutRc, Token},
     misc::{
         colors::{get_GREEN, get_RED, get_RESET, GREEN, RED, RESET},
-        constants::{get_STATIC_ARRAY_ID, DISPLAY_NESTING_MAX, GENERIC_FUNCTION},
+        constants::{get_STATIC_ARRAY_ID, DISPLAY_NESTING_MAX, GENERIC_FUNCTION, GENERIC_SIZE},
     },
     parser::{
         enums::{Argument, Primitive, StructSource},
@@ -35,6 +35,7 @@ pub enum Type {
     Void,
     Null,
     Infer,
+    Size(usize), // for allowing static arrays to monomorphize with generic sizes
     // Inner type
     Pointer(Box<Type>),
     Struct(String),
@@ -42,7 +43,9 @@ pub enum Type {
     // Unknown generic
     Unknown(String),
     Function(Box<Option<Function>>),
-    StaticArray(Box<Type>, usize),
+    // first is inner type of the static array
+    // second MUST be Unknown or Size (though this can't be enforced well)
+    StaticArray(Box<Type>, Box<Type>),
 }
 
 impl Type {
@@ -140,7 +143,17 @@ impl Type {
 
                                 format!(
                                     "{}<{}>",
-                                    name,
+                                    if name.starts_with(&format!("{}::", get_STATIC_ARRAY_ID!()))
+                                        && !inner.arguments.is_empty()
+                                    {
+                                        name.replacen(
+                                            get_STATIC_ARRAY_ID!(),
+                                            &inner.arguments[0].0 .0.display(),
+                                            1,
+                                        )
+                                    } else {
+                                        name
+                                    },
                                     if has_unknown_part!(inner.name) {
                                         parts
                                             .iter()
@@ -152,7 +165,19 @@ impl Type {
                                     }
                                 )
                             } else {
-                                inner.name.replace('.', "::")
+                                let name = inner.name.replace('.', "::");
+
+                                if name.starts_with(&format!("{}::", get_STATIC_ARRAY_ID!()))
+                                    && !inner.arguments.is_empty()
+                                {
+                                    name.replacen(
+                                        get_STATIC_ARRAY_ID!(),
+                                        &inner.arguments[0].0 .0.display(),
+                                        1,
+                                    )
+                                } else {
+                                    name
+                                }
                             }
                         },
                         inner
@@ -189,7 +214,8 @@ impl Type {
             }
             Self::Unknown(name) => name.into(),
             Self::Infer => unreachable!(),
-            Self::StaticArray(ty, size) => format!("{}[{size}]", ty.display()),
+            Self::Size(size) => format!("{size}"),
+            Self::StaticArray(ty, size) => format!("{}[{}]", ty.display(), size.display()),
         }
     }
 
@@ -210,9 +236,11 @@ impl Type {
             Self::Void => "void".into(),
             Self::Null => "null".into(),
             Self::Enum(name, ..) | Self::Unknown(name) => name.clone(),
-            Self::Pointer(..) | Self::Struct(..) | Self::Function(..) | Self::StaticArray(..) => {
-                self.display()
-            }
+            Self::Pointer(..)
+            | Self::Struct(..)
+            | Self::Function(..)
+            | Self::StaticArray(..)
+            | Self::Size(..) => self.display(),
             Self::Infer => unreachable!(),
         }
     }
@@ -260,6 +288,13 @@ impl Type {
                     .to_internal_id()
             ),
             Self::StaticArray(ty, size) => {
+                let Type::Size(size) = **size else {
+                    elle_error!(Location::internal_error(format!(
+                        "Static array with type {} has a size which cannot be generic at this stage",
+                        ty.display()
+                    )))
+                };
+
                 format!("{GENERIC_ARRAY}.{}.{size}", ty.to_internal_id(),)
             }
             Self::Function(inner) if let Some(inner) = (**inner).clone() => {
@@ -276,6 +311,7 @@ impl Type {
             }
             Self::Struct(name) => name.clone(),
             Self::Unknown(name) => format!("{GENERIC_UNKNOWN}.{name}"),
+            Self::Size(size) => format!("{GENERIC_SIZE}.{size}"),
             _ => num.to_string(),
         }
     }
@@ -292,6 +328,7 @@ impl Type {
                 GENERIC_ENUM,
                 GENERIC_FUNCTION,
                 GENERIC_ARRAY,
+                GENERIC_SIZE,
             ]
             .contains(&id)
             {
@@ -365,7 +402,14 @@ impl Type {
                             .parse::<usize>()
                             .expect("Failed to parse static array size {size}");
 
-                        Some(Type::StaticArray(Box::new(ty), size))
+                        Some(Type::StaticArray(Box::new(ty), Box::new(Type::Size(size))))
+                    } else if part == GENERIC_SIZE {
+                        let size = parts.next().unwrap();
+                        let size = size
+                            .parse::<usize>()
+                            .expect("Failed to parse static array size {size}");
+
+                        Some(Type::Size(size))
                     } else if part == GENERIC_FUNCTION {
                         assert_eq!(parts.next().unwrap(), GENERIC_IDENTIFIER);
                         let mut res = vec![];
@@ -500,7 +544,7 @@ impl Type {
             }
             Self::StaticArray(inner, size) => Self::StaticArray(
                 Box::new(inner.unknown_to_known(struct_pool, tree, generics, known_generics)),
-                *size,
+                Box::new(size.unknown_to_known(struct_pool, tree, generics, known_generics)),
             ),
             Self::Function(inner) if let Some(inner) = (**inner).clone() => {
                 let parsed_arguments = inner
@@ -686,7 +730,7 @@ impl Type {
     pub fn has_generic_type(&self) -> bool {
         match self {
             Self::Pointer(inner) => inner.has_generic_type(),
-            Self::StaticArray(inner, ..) => inner.has_generic_type(),
+            Self::StaticArray(inner, size) => inner.has_generic_type() || size.has_generic_type(),
             Self::Unknown(_) => true,
             Self::Function(f) => {
                 if let Some(f) = (**f).clone() {
@@ -711,8 +755,25 @@ impl Type {
             (Self::Pointer(known_inner), Self::Pointer(generic_inner)) => {
                 known_inner.deduce_generic_type(generic_inner, location)
             }
-            (Self::StaticArray(known_inner, ..), Self::StaticArray(generic_inner, ..)) => {
-                known_inner.deduce_generic_type(generic_inner, location)
+            (
+                Self::StaticArray(known_inner, known_size),
+                Self::StaticArray(generic_inner, generic_size),
+            ) => {
+                let mut map = hashmap![String, Type];
+
+                known_inner
+                    .deduce_generic_type(generic_inner, location)
+                    .inspect(|known| map.extend(known.clone()));
+
+                known_size
+                    .deduce_generic_type(generic_size, location)
+                    .inspect(|known| map.extend(known.clone()));
+
+                if map.is_empty() {
+                    None
+                } else {
+                    Some(map)
+                }
             }
             (Self::Function(known_inner), Self::Function(generic_inner)) => {
                 let mut map = hashmap![];
@@ -812,7 +873,13 @@ impl Type {
 
     pub fn get_static_array_inner(&self) -> Option<Self> {
         match self {
-            Self::StaticArray(ty, ..) => Some(*ty.clone()),
+            Self::StaticArray(inner, size) => match **inner {
+                Self::StaticArray(_, _) => Some(Self::StaticArray(
+                    Box::new(inner.get_static_array_inner().unwrap()),
+                    size.clone(),
+                )),
+                _ => Some(*inner.clone()),
+            },
             _ => None,
         }
     }
@@ -1096,7 +1163,7 @@ impl Type {
             Self::Halfword | Self::UnsignedHalfword => 2,
             Self::Boolean | Self::Byte | Self::UnsignedByte | Self::Char => 1,
             Self::Enum(_, inner) => Option::as_ref(inner).unwrap_or(&Self::Word).weight(),
-            Self::Void | Self::Null | Self::Infer | Self::Unknown(_) => 0,
+            Self::Void | Self::Null | Self::Infer | Self::Unknown(_) | Self::Size(..) => 0,
         }
     }
 
@@ -1135,7 +1202,10 @@ impl Type {
 
                 size
             }
-            Self::StaticArray(ty, size) => ty.size(module) * *size as u64,
+            Self::StaticArray(ty, size) => match *size.clone() {
+                Type::Size(size) => ty.size(module) * size as u64,
+                other => elle_error!(Location::internal_error(format!("Static array with type {} has a size {other} which should not be generic at this stage", ty.display())))
+            },
             Self::Unknown(..) | Self::Null => 0,
             _ => self.size_base(),
         }
@@ -1168,6 +1238,9 @@ impl fmt::Display for Type {
             }
             Self::Unknown(name) => elle_error!(Location::internal_error(format!(
                 "Tried to compile with a generic type {name}"
+            ))),
+            Self::Size(size) => elle_error!(Location::internal_error(format!(
+                "Tried to compile with a generic size {size}"
             ))),
             x @ Self::Infer => elle_error!(Location::internal_error(format!(
                 "Attempted to format an invalid type: {x:?}"

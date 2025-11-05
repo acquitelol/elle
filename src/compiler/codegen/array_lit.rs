@@ -154,7 +154,20 @@ impl Codegen<'_> for ArrayLiteral {
         }
 
         let repr_ty = first_type.clone().unwrap_or(Type::Void);
-        let buf_ty = Type::StaticArray(Box::new(repr_ty.clone()), self.values.len());
+        let buf_ty = if let Type::StaticArray(inner, size) = repr_ty.clone() {
+            Type::StaticArray(
+                Box::new(Type::StaticArray(
+                    inner,
+                    Box::new(Type::Size(self.values.len())),
+                )),
+                size,
+            )
+        } else {
+            Type::StaticArray(
+                Box::new(repr_ty.clone()),
+                Box::new(Type::Size(self.values.len())),
+            )
+        };
 
         let array_size = if let Some(ref ty) = first_type {
             self.values.len() as u64 * ty.size(ctx.module)

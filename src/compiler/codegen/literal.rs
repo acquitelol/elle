@@ -50,10 +50,13 @@ impl Codegen<'_> for Literal {
                         ));
                     }
 
-
                     // unwrap aliases: math::floor -> floor
-                    if let Some((ty, value)) = res.as_mut() && ty.is_function() {
-                        let Type::Function(inner) = ty else { unreachable!() };
+                    if let Some((ty, value)) = res.as_mut()
+                        && ty.is_function()
+                    {
+                        let Type::Function(inner) = ty else {
+                            unreachable!()
+                        };
 
                         if let Some(mut func) = *inner.clone() {
                             if let Some(ref unaliased) = func.unaliased {
@@ -114,7 +117,7 @@ impl Codegen<'_> for Literal {
                     };
 
                     let mut final_ty = if ctx.ty.clone().is_some_and(|ty| {
-                        !ty.is_pointer()
+                        !ty.is_pointer_like()
                             && !ty.is_unknown()
                             && ty.is_strictly_number()
                             // prevents -1 or 65535 from being interpreted as bools

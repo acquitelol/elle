@@ -36,7 +36,8 @@ pub static GENERIC_IDENTIFIER: &str = "0"; // Start of a generic
 pub static GENERIC_END: &str = "1"; // Allowing for nested generic structs
 pub static GENERIC_POINTER: &str = "2"; // Pointer to another type
 pub static GENERIC_UNKNOWN: &str = "3"; // Unknown type T
-pub static GENERIC_ARRAY: &str = "97"; // Enum with another repr type
+pub static GENERIC_SIZE: &str = "96"; // Array with a repr and size
+pub static GENERIC_ARRAY: &str = "97"; // Array with a repr and size
 pub static GENERIC_FUNCTION: &str = "98"; // Callback encoded in the type system
 pub static GENERIC_ENUM: &str = "99"; // Enum with another repr type
 

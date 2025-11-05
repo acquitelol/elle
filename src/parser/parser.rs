@@ -274,7 +274,7 @@ macro_rules! get_type {
                                 let size = $self.current_token().value.get_number_inner().unwrap();
                                 $crate::set_end!(location, $self);
 
-                                ty = Type::StaticArray(Box::new(ty), size as usize);
+                                ty = Type::StaticArray(Box::new(ty), Box::new(Type::Size(size as usize)));
                                 $self.advance();
 
                                 if $self.current_token().kind != TokenKind::RightBlockBrace {
@@ -284,6 +284,20 @@ macro_rules! get_type {
 
                                 continue;
                             },
+                            TokenKind::Identifier => {
+                                let name = $self.current_token().value.get_string_inner().unwrap();
+                                $crate::set_end!(location, $self);
+
+                                ty = Type::StaticArray(Box::new(ty), Box::new(Type::Unknown(name)));
+                                $self.advance();
+
+                                if $self.current_token().kind != TokenKind::RightBlockBrace {
+                                   $self.position = point;
+                                   break;
+                                }
+
+                                continue;
+                            }
                             other if other != TokenKind::RightBlockBrace => {
                                $self.position = point;
                                break;

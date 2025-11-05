@@ -10,9 +10,21 @@ use crate::{
 
 impl Codegen<'_> for ArrayLength {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let (ty, _) = self.value.clone().compile(gen, ctx).unwrap();
+        let (mut ty, _) = self.value.clone().compile(gen, ctx).unwrap();
 
-        if let Type::StaticArray(_, size) = ty {
+        loop {
+            if let Type::StaticArray(inner, _) = ty.clone()
+                && let Type::StaticArray(..) = *inner
+            {
+                ty = *inner;
+            } else {
+                break;
+            }
+        }
+
+        if let Type::StaticArray(_, size) = ty
+            && let Type::Size(size) = *size
+        {
             return Some((
                 Type::UnsignedLong,
                 Value::Const(String::new(), size as i128),

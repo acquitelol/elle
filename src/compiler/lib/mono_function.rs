@@ -9,10 +9,10 @@ use crate::{
         primitive::{function::generate_function, r#struct::generate_struct},
         qbe::{function::Function, module::Module, r#type::Type},
     },
-    elle_error, get_GREEN, get_RED, get_RESET, hashmap,
+    elle_error, get_GREEN, get_RED, get_RESET, get_STATIC_ARRAY_ID, hashmap,
     lexer::enums::{Location, MutRc},
     parser::enums::{modify_type_in_ast, Argument, AstNode, FunctionSource, Primitive},
-    GENERIC_END, GENERIC_IDENTIFIER, GREEN, META_STRUCT_NAME, RED, RESET,
+    GENERIC_END, GENERIC_IDENTIFIER, GREEN, META_STRUCT_NAME, RED, RESET, STATIC_ARRAY_ID,
 };
 
 use super::can_convert::can_convert_to_type;
@@ -24,11 +24,17 @@ macro_rules! insert_known_generics {
                 Some(existing_ty)
                     if !can_convert_to_type($gen, existing_ty, &ty, false) && $throw && !ty.is_unknown() =>
                 {
+                    let name = $name.replace('.', "::");
+
                     elle_error!(
                         $call_location.borrow().with_extra_info(format!("{key} = `{}`, but got `{}`", existing_ty.display(), ty.display())).error(
                             format!(
                                 "Mismatched type for generic {key} in {}<{}>({}):\n{key} is defined with both type \"{GREEN}{}{RESET}\" and \"{RED}{}{RESET}\"",
-                                $name.replace('.', "::"),
+                                if name.starts_with(&format!("{}::", get_STATIC_ARRAY_ID!())) && !$this.arguments.is_empty() {
+                                    name.replacen(get_STATIC_ARRAY_ID!(), &$this.arguments[0].r#type.display(), 1)
+                                } else {
+                                    name
+                                },
                                 $this.generics.join(", "),
                                 if $this.arguments.is_empty() { "" } else { "..." },
                                 existing_ty.display(),
