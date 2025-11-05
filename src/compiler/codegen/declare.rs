@@ -6,7 +6,7 @@ use crate::{
     },
     elle_error,
     lexer::enums::{Token, TokenKind, ValueKind},
-    parser::enums::{AstNode, Declare, Literal, StructLiteral},
+    parser::enums::{AstNode, Buffer, Declare, Literal, StructLiteral},
     GC_NOOP,
 };
 
@@ -60,16 +60,44 @@ impl Codegen<'_> for Declare {
         };
 
         let node = *self.value.unwrap_or_else(|| {
-            Box::new(if self.r#type.clone().is_some_and(|ty| ty.is_struct()) {
-                AstNode::StructLiteral(StructLiteral {
-                    name: Token::from_ident(
-                        &self.r#type.clone().unwrap().get_struct_inner().unwrap(),
-                    ),
-                    values: vec![],
-                    spreads: vec![],
-                    location: self.location.clone(),
-                    allow_empty: true
-                })
+            Box::new(if let Some(ty) = self.r#type.clone() {
+                match ty {
+                    ty if ty.is_struct() => AstNode::StructLiteral(StructLiteral {
+                        name: Token::from_ident(
+                            &self.r#type.clone().unwrap().get_struct_inner().unwrap(),
+                        ),
+                        values: vec![],
+                        spreads: vec![],
+                        location: self.location.clone(),
+                        allow_empty: true,
+                    }),
+                    Type::StaticArray(ty, size) if let Type::Size(size) = *size => {
+                        let tmp = gen.new_temporary(None, true).get_string_inner();
+
+                        AstNode::Buffer(Buffer {
+                            name: Token {
+                                kind: TokenKind::Identifier,
+                                value: ValueKind::String(tmp),
+                                location: self.location.clone(),
+                                tagged: false,
+                            },
+                            r#type: Option::from(*ty),
+                            size: Box::new(AstNode::token_to_literal(Token {
+                                kind: TokenKind::IntegerLiteral,
+                                value: ValueKind::Number(size as i128),
+                                location: self.location.clone(),
+                                tagged: false,
+                            })),
+                            location: self.location.clone(),
+                        })
+                    }
+                    _ => AstNode::Literal(Literal {
+                        kind: TokenKind::IntegerLiteral,
+                        value: ValueKind::Number(0),
+                        location: self.location.clone(),
+                        tagged: false,
+                    }),
+                }
             } else {
                 AstNode::Literal(Literal {
                     kind: TokenKind::IntegerLiteral,
