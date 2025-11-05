@@ -50,6 +50,19 @@ pub fn can_convert_to_type(gen: &Compiler, first: &Type, second: &Type, explicit
         return false;
     }
 
+    if (first.is_pointer_like() && !first.is_void_pointer() && second.is_map_to_int())
+        || (first.is_map_to_int() && second.is_pointer_like() && !second.is_void_pointer())
+            && !explicit
+    {
+        return false;
+    }
+
+    if let Type::Size(lhs) = first
+        && let Type::Size(rhs) = second
+    {
+        return lhs == rhs;
+    }
+
     let weights_match = first.weight() == second.weight();
     let both_int_or_float =
         (first.is_int() && second.is_int()) || (first.is_float() && second.is_float());

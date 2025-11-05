@@ -499,7 +499,7 @@ fn __to_string(string ty, i64 args, bool wrap) {
     }
 
     if ty.starts_with("u8") {
-        return __internal_to_string<u8, u8>(args, "%u", fn(u8 *self) self & 0xFF);
+        return __internal_to_string<u8, u8>(args, "%u", fn(u8 *self) (*self & 0xFF));
     }
 
     if ty.starts_with("u16") {

@@ -157,13 +157,20 @@ pub fn convert_to_type(
         && second.is_static_array()
         && first.get_static_array_inner().unwrap() == second.get_static_array_inner().unwrap()
     {
-        if let Type::StaticArray(_, lhs_size) = first
-            && let Type::StaticArray(_, rhs_size) = second
+        if let Type::StaticArray(_, lhs_size) = first.clone()
+            && let Type::StaticArray(_, rhs_size) = second.clone()
             && (lhs_size == rhs_size || explicit)
         {
             return (second, val);
         }
 
+        implicit_conversion_error!()
+    }
+
+    if ((first.is_pointer_like() && !first.is_void_pointer() && second.is_map_to_int())
+        || (first.is_map_to_int() && second.is_pointer_like() && !second.is_void_pointer()))
+        && !explicit
+    {
         implicit_conversion_error!()
     }
 

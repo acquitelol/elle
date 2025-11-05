@@ -87,7 +87,7 @@ fn GCAllocator::set_growth_factor(GCAllocator *self, u64 growth_factor) {
 
             // only mark if not already marked because
             // recursively marking more is expensive
-            if block && !block.marked {
+            if #cast(bool, block) && !block.marked {
                 block.marked = true;
 
                 self.__internal_mark_region(
@@ -97,7 +97,7 @@ fn GCAllocator::set_growth_factor(GCAllocator *self, u64 growth_factor) {
             }
         }
 
-        start += 1; // to mitigate potential misalignment
+        start += #cast(void **, 1); // to mitigate potential misalignment
     }
 }
 
