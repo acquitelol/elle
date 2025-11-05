@@ -674,6 +674,24 @@ impl Codegen<'_> for FunctionCall {
             Instruction::Call(val, params.into_iter().map(|x| x.0).collect()),
         );
 
+        if ty.is_static_array() {
+            let res = gen.new_temporary(None, true);
+
+            ctx.func.borrow_mut().assign_instruction_front(
+                &res,
+                &ty,
+                Instruction::Alloc8(Value::Const(String::new(), i128::from(ty.size(ctx.module)))),
+            );
+
+            ctx.func.borrow_mut().add_instruction(Instruction::Blit(
+                tmp,
+                res.clone(),
+                ty.size(ctx.module),
+            ));
+
+            return Some((ty, res));
+        }
+
         Some((ty, tmp))
     }
 }
