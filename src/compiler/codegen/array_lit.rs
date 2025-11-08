@@ -15,7 +15,13 @@ impl Codegen<'_> for ArrayLiteral {
         let inner_ty = ctx
             .ty
             .clone()
-            .and_then(|ty| ty.get_pointer_inner())
+            .and_then(|ty| {
+                if ty.is_static_array() {
+                    ty.get_static_array_inner()
+                } else {
+                    ty.get_pointer_inner()
+                }
+            })
             // Don't infer T when this value isnt being assigned to a variable
             .and_then(|x| if ctx.value.is_some() { Some(x) } else { None });
 
@@ -92,18 +98,26 @@ impl Codegen<'_> for ArrayLiteral {
 
         // value.is_some() because we don't want to do this to
         // arrays that aren't assigned to a variable
-        if ctx.value.is_some() && ctx.ty.is_some() && !ctx.ty.clone().unwrap().is_pointer() {
-            elle_error!(
-                self.location.borrow().error(
-                    format!("The type of array '{:?}' must be a pointer to the inner type of the array (it is {})",
-                        self.values, ctx.ty.clone().unwrap().display()
-                    )
-                )
-            );
+        if ctx.value.is_some() && ctx.ty.is_some() && !ctx.ty.clone().unwrap().is_pointer_like() {
+            elle_error!(self.location.borrow().error(format!(
+                "The type of array must be a pointer to the inner type of the array (it is {})",
+                ctx.ty.clone().unwrap().display()
+            )));
         }
 
         for (i, (location, value)) in self.values.iter().enumerate() {
-            let (ty, val) = value
+            let node = if let Some(ref ty) = inner_ty {
+                &AstNode::Conversion(Conversion {
+                    r#type: Some(ty.clone()),
+                    value: Box::new(value.clone()),
+                    location: location.clone(),
+                    explicit: false,
+                })
+            } else {
+                value
+            };
+
+            let (ty, val) = node
                 .clone()
                 .compile(
                     gen,
