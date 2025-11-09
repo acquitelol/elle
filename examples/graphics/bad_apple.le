@@ -57,7 +57,7 @@ fn main() {
         }
 
         rl::update_music_stream(song);
-        rl::update_texture(texture, frames.elements + frame * Video::Width * Video::Height);
+        rl::update_texture(texture, frames.elements + #cast(void *, frame * Video::Width * Video::Height));
 
         frame += 1;
         frame %= frames.len() / Video::Width / Video::Height;
