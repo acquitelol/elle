@@ -563,7 +563,7 @@ array = "["[elements] "]" [type?];
 elements = expression {"," expression} ;
 ```
 
-Static arrays are allocated on the stack, and are designed to be static in size. These arrays have basically no utility methods on them, and decay to just a pointer (`#[1, 2, 3]` -> `i32 *`) but are faster. They're declared with the following syntax:
+Static arrays are allocated on the stack, and are designed to be static in size. These arrays define a static array type with a size known at compile time. They're declared with the following syntax:
 
 ```bnf
 array = "#" "[" [elements] "]" ;
@@ -603,12 +603,12 @@ x := []i64;
 Static arrays do not, but you can still use `let`/`:=`:
 
 ```rs
-let x = #[1, 2, 3]; // x's type is `i32 *`
-x := #[1, 2, 3]; // x's type is `i32 *`
+let x = #[1, 2, 3]; // x's type is `i32[3]`
+x := #[1, 2, 3]; // x's type is `i32[3]`
 
 // ... OR if you need the inference ...
 
-f32 *x = #[1, 2, 3]; // 1, 2, 3 are casted to floats
+f32[3] x = #[1, 2, 3];
 ```
 
 You can also use `let`/`:=` when declaring dynamic arrays which have values:
@@ -624,7 +624,7 @@ You can also define multi-dimensional arrays:
 grid := [
     [1, 2],
     [3, 4]
-];
+]; // i32[][]
 
 grid[0][1]; // 2
 grid[1][0]; // 3
@@ -634,10 +634,93 @@ grid[1][0]; // 3
 char[][] x = [
     ['a', 'b'],
     ['c', 'd']
-];
+]; // char[][]
 
 x[0][0]; // a
 x[1][1]; // d
+```
+
+This also works for static arrays:
+
+```rs
+grid := #[
+    #[1, 2],
+    #[3, 4]
+]; // i32[2][]
+
+grid[0][1]; // 2
+grid[1][0]; // 3
+
+// ... or if you prefer explicit typing ...
+
+char[2][2] x = #[
+    #['a', 'b'],
+    #['c', 'd']
+]; // char[2][2]
+
+x[0][0]; // a
+x[1][1]; // d
+```
+
+Static arrays may also be generic over their type _and_ size:
+
+```rs
+fn foo<T, N>(T[N] arr) {
+    for item in arr {
+        $dbg(item);
+    }
+}
+```
+
+Keep in mind that you cannot perform mathematical operations on these types values, but you can add constraints like so to functions:
+
+```rs
+fn __arr__::mul<T, A, B, C>(T[A][B] a, T[B][C] b) {
+    T[A][C] res;
+
+    for i in 0..a.len() {
+        for j in 0..b[0].len() {
+            sum := 0;
+
+            for k in 0..a[0].len() {
+                sum += a[i][k] * b[k][j];
+            }
+
+            res[i][j] = sum;
+        }
+    }
+
+    return res;
+}
+```
+
+And the size can be transformed, allowing for compile time operations to the dimensions of the array:
+
+```rs
+fn __arr__::transpose<T, A, B>(T[A][B] xs) -> T[B][A] {
+    T[B][A] res;
+
+    for i in 0..xs.len() {
+        for j in 0..xs[0].len() {
+            res[j][i] = xs[i][j];
+        }
+    }
+
+    return res;
+}
+```
+
+Example usage:
+
+```rs
+fn main() {
+    x := #[
+        #[1, 2, 3],
+        #[4, 5, 6]
+    ]; // i32[2][3]
+
+    transposed := x.transpose(); // i32[3][2]
+}
 ```
 
 Specifically for dynamic arrays, you can initialize them without giving them a value or explicitly using the array contructor of Array::new<T>() to create them:
