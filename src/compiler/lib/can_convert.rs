@@ -57,6 +57,12 @@ pub fn can_convert_to_type(gen: &Compiler, first: &Type, second: &Type, explicit
         return false;
     }
 
+    if let Type::StaticArray(lhs, lhs_size) = first
+        && let Type::StaticArray(rhs, rhs_size) = second
+    {
+        return lhs == rhs && lhs_size == rhs_size;
+    }
+
     if let Type::Size(lhs) = first
         && let Type::Size(rhs) = second
     {

@@ -1094,6 +1094,7 @@ impl Type {
         match self {
             Self::Pointer(x) if matches!(**x, Self::Struct(_)) => false,
             Self::Pointer(x) if matches!(**x, Self::Char) => false,
+            Self::StaticArray(..) => false,
             Self::Struct(_) => false,
             _ => true,
         }

@@ -153,14 +153,10 @@ pub fn convert_to_type(
         return (second, val);
     }
 
-    if first.is_static_array()
-        && second.is_static_array()
-        && first.get_static_array_inner().unwrap() == second.get_static_array_inner().unwrap()
+    if let Type::StaticArray(ref lhs, ref lhs_size) = first
+        && let Type::StaticArray(ref rhs, ref rhs_size) = second
     {
-        if let Type::StaticArray(_, lhs_size) = first.clone()
-            && let Type::StaticArray(_, rhs_size) = second.clone()
-            && (lhs_size == rhs_size || explicit)
-        {
+        if lhs == rhs && (lhs_size == rhs_size || explicit) {
             return (second, val);
         }
 
