@@ -154,15 +154,11 @@ impl Type {
                                     } else {
                                         name
                                     },
-                                    if has_unknown_part!(inner.name) {
-                                        parts
-                                            .iter()
-                                            .map(Self::display)
-                                            .collect::<Vec<_>>()
-                                            .join(", ")
-                                    } else {
-                                        "..".into()
-                                    }
+                                    parts
+                                        .iter()
+                                        .map(Self::display)
+                                        .collect::<Vec<_>>()
+                                        .join(", ")
                                 )
                             } else {
                                 let name = inner.name.replace('.', "::");
