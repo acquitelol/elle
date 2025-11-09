@@ -1,0 +1,45 @@
+use std/raylib;
+use std/prelude;
+
+fn main() {
+    rl::init_window(0, 0, "Ascii Art");
+    defer rl::close_window();
+    rl::set_target_fps(60);
+
+    shader := rl::load_shader(nil, "examples/resources/ascii_art.fs");
+    defer rl::unload_shader(shader);
+
+    image := rl::load_image("examples/resources/dragon.png");
+    defer rl::unload_image(image);
+
+    rl::image_resize(&image, image.width / 4, image.height / 4);
+    rl::set_window_size(image.width, image.height);
+
+    tex := rl::load_texture_from_image(image);
+    defer rl::unload_texture(tex);
+
+    while !rl::window_should_close() {
+        rl::set_shader_value(
+            shader,
+            rl::get_shader_location(shader, "time"),
+            &#cast(f32, rl::get_time()),
+            ShaderUniformDataType::SHADER_UNIFORM_FLOAT
+        );
+
+        rl::begin_drawing();
+            rl::clear_background(RAYWHITE);
+            rl::begin_shader_mode(shader);
+
+            rl::draw_texture_pro(
+                tex,
+                Rectangle { x = 0, y = 0, width = tex.width, height = tex.height },
+                Rectangle { x = 0, y = 0, width = tex.width, height = tex.height },
+                Vector2 { x = 0, y = 0 },
+                0, WHITE
+            );
+
+            rl::end_shader_mode();
+            rl::draw_fps(4, 4);
+        rl::end_drawing();
+    }
+}
