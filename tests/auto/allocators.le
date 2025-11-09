@@ -41,7 +41,7 @@ fn main() {
 
     ptr := #alloc(i32);
     $assert(
-        ptr != nil && ptr % #size(void *) == 0,
+        ptr != nil && #cast(bool, ptr % #size(void *)) == 0,
         "Basic checks for ensuring the pointer provided by the {} is valid failed.".format(gc_kind)
     );
 
@@ -87,7 +87,7 @@ fn main() {
 
     ptr := #alloc(i32);
     $assert(
-        ptr != nil && ptr % #size(void *) == 0,
+        ptr != nil && #cast(bool, ptr % #size(void *)) == 0,
         "Basic checks for ensuring the pointer provided by the {} is valid failed.".format(heap_kind)
     );
 
@@ -133,7 +133,7 @@ fn main() {
 
     ptr := #alloc(i32);
     $assert(
-        ptr != nil && ptr % #size(void *) == 0,
+        ptr != nil && #cast(bool, ptr % #size(void *)) == 0,
         "Basic checks for ensuring the pointer provided by the {} is valid failed.".format(arena_kind)
     );
 

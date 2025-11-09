@@ -984,6 +984,7 @@ impl Type {
 
     pub fn is_string(&self) -> bool {
         matches!(self, Self::Pointer(inner) if *inner.as_ref() == Self::Char)
+            || matches!(self, Self::StaticArray(inner, ..) if *inner.as_ref() == Self::Char)
     }
 
     pub fn is_void_pointer(&self) -> bool {

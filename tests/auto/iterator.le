@@ -49,7 +49,7 @@ fn `fold.works`() {
     $assert((0..5).fold(0, fn(acc, cur) acc + cur) == 10);
     $assert((0..=5).fold(0, fn(acc, cur) acc + cur) == 15);
     $assert((1..=4).fold(1, fn(acc, cur) acc * cur) == 24);
-    $assert("abc".iter().fold("", fn(acc, ch) acc <> #[ch]) == "abc");
+    $assert("abc".iter().fold("", fn(acc, ch) acc <> #[ch, '\0']) == "abc");
     $assert((0..3).fold(10, fn(acc, cur) acc - cur) == 7);
 }
 
