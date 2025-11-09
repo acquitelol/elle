@@ -9,6 +9,16 @@ fn __arr__::is_empty<T, N>(T[N] self) {
     return self.len() == 0;
 }
 
+fn __arr__::__equals__<T, N>(T[N] self, T[N] other) {
+    for i in 0..self.len() {
+        if self[i] != other[i] {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 fn __arr__::__fmt__<T, N>(T[N] self, u64 nesting) {
     res := "[";
 
