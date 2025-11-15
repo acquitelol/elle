@@ -203,6 +203,13 @@ macro_rules! get_type {
         } else {
             is_fn_pointer = $self.current_token().kind == TokenKind::Function;
 
+            if $self.current_token().kind == TokenKind::IntegerLiteral {
+                let size = $self.current_token().value.get_number_inner().unwrap();
+                // You can't nest size types
+                // `5<...>` or `5 *` or `5[10]` makes no sense
+                return Type::Size(size as usize);
+            }
+
             name = if is_fn_pointer {
                 $self.current_token().value.get_string_inner().unwrap()
             } else {
