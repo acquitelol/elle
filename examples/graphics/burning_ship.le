@@ -2,8 +2,8 @@ use std/raylib;
 use std/prelude;
 
 const SCREEN_FACTOR = 80;
-const SCREEN_WIDTH = 8 * SCREEN_FACTOR;
-const SCREEN_HEIGHT = 8 * SCREEN_FACTOR;
+const SCREEN_WIDTH = 12 * SCREEN_FACTOR;
+const SCREEN_HEIGHT = 12 * SCREEN_FACTOR;
 
 fn main() {
     rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Burning Ship");

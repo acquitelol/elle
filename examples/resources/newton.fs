@@ -22,6 +22,7 @@ float cplx_abs(vec2 a) {
     return sqrt(a.x * a.x + a.y * a.y);
 }
 
+// z^5 + z^2 - z + 1 = 0
 vec2 poly(vec2 z) {
     vec2 result = vec2(1);
 

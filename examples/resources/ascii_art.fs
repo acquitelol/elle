@@ -17,11 +17,11 @@ float character(int n, vec2 p) {
     return 0.0;
 }
 
-float minCell = 4.0;
-float maxCell = 16.0;
+float minCell = 8.0;
+float maxCell = 32.0;
 
 void main() {
-    float t = (sin((time + 8) / 4) + 1.0) / 2.0;
+    float t = (sin(time + 2) + 1.0) / 2.0;
     float cell = mix(minCell, maxCell, t);
 
     ivec2 size = textureSize(texture0, 0);
