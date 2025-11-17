@@ -258,6 +258,28 @@ impl<'a> Struct<'a> {
             self.parser.advance();
 
             if self.parser.current_token().kind != TokenKind::RightCurlyBrace {
+                if self.parser.current_token().kind == TokenKind::LeftBlockBrace {
+                    let location = self.parser.current_token().location;
+                    self.parser.advance();
+                    let size = self.parser.get_type(Some(&generics));
+                    self.parser.advance();
+                    self.parser.expect_tokens(&[TokenKind::RightBlockBrace]);
+                    set_end!(location, self.parser);
+
+                    elle_error!(location
+                        .borrow()
+                        .with_extra_info(format!(
+                            "Note: replace `{} {}[{}]` with `{}[{}] {}`",
+                            ty.display(),
+                            name,
+                            size.display(),
+                            ty.display(),
+                            size.display(),
+                            name
+                        ))
+                        .error("Cannot declare a static array using this syntax."))
+                }
+
                 self.parser.expect_tokens(&[TokenKind::Comma]);
                 self.parser.advance();
             }
