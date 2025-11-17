@@ -584,12 +584,12 @@ impl Location {
 
         let issue = &rhs[..split_index];
         let rhs = &rhs[split_index..];
-        let line = format!("{} | ", self.start.row + 1);
+        let line = format!("{:<2} | ", self.start.row);
 
         format!(
             "\n{upper}\n{user_message}\n\n{above}{line_number}{}{lhs}{BOLD}{fmt}{UNDERLINE}{issue}{RESET}{rhs}\n{}{}{BOLD}{GREEN}^{}{}{RESET}\n{fmt}{}{RESET}\n",
             " ".repeat(padding),
-            " ".repeat(padding + format!("{} | ", self.start.row + 1).len()),
+            " ".repeat(padding + line.len()),
             " ".repeat(left),
             "~".repeat(self.end.column.saturating_sub(self.start.column).saturating_sub(1)),
             if self.extra_info.is_empty() { String::new()} else { format!(" {}", self.extra_info)  },
@@ -598,14 +598,13 @@ impl Location {
                 String::new()
             } else {
                 format!(
-                    "{:<2} | {}{}\n",
-                    self.start.row,
+                    "{line}{}{}\n",
                     " ".repeat(padding),
                     above
                 )
             },
             user_message = message.into(),
-            line_number = line,
+            line_number = format!("{:<2} | ", self.start.row + 1),
             BOLD = get_BOLD!(),
             UNDERLINE = get_UNDERLINE!(),
             GREEN = get_GREEN!(),
