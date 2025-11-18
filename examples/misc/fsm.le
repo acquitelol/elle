@@ -1,0 +1,47 @@
+use std/prelude;
+
+enum State { S0, S1, S2, S3, S4, S5 }
+const State::__hash__ = fn (State self, u64 capacity)
+    #cast(u8, self).__hash__(capacity);
+
+const states = $map(
+    $(State::S0, $map(
+        $(50, $(State::S5, 0)),
+        $(10, $(State::S1, 40)),
+        $(20, $(State::S2, 30)),
+    )),
+    $(State::S1, $map(
+        $(10, $(State::S2, 30)),
+        $(20, $(State::S3, 20)),
+    )),
+    $(State::S2, $map(
+        $(20, $(State::S4, 10)),
+        $(10, $(State::S3, 20)),
+    )),
+    $(State::S3, $map(
+        $(10, $(State::S4, 10)),
+        $(20, $(State::S5, 0)),
+    )),
+    $(State::S4, $map(
+        $(10, $(State::S5, 0)),
+    ))
+);
+
+fn main() {
+    while true {
+        state := State::S0;
+        output := 50;
+        input := io::input("Enter an input -> ")
+            .replace(" ", "")
+            .split(",")
+            .map(i32::parse);
+
+        for item in input {
+            state, output = item
+                ? states[state][item]
+                : $(state, output);
+
+            $println(output);
+        }
+    }
+}

@@ -30,7 +30,7 @@ struct HashMap<T, U> {
 !pub fn __internal_key_exists_check<T, U>(HashMap<T, U> *self, T key, ElleMeta meta) {
     if !self.contains_key(key) {
         io::cprintf(
-            "[%s:%d%d] ERROR: Key '%s' does not exist in this HashMap.\n"
+            "[%s:%d:%d] ERROR: Key '%s' does not exist in this HashMap.\n"
                 .color("red")
                 .reset(),
             meta.file,
