@@ -72,15 +72,7 @@ impl Codegen<'_> for Declare {
                         allow_empty: true,
                     }),
                     Type::StaticArray(ty, size) if let Type::Size(size) = *size => {
-                        let tmp = gen.new_temporary(None, true).get_string_inner();
-
                         AstNode::Buffer(Buffer {
-                            name: Token {
-                                kind: TokenKind::Identifier,
-                                value: ValueKind::String(tmp),
-                                location: self.location.clone(),
-                                tagged: false,
-                            },
                             r#type: Option::from(*ty),
                             size: Box::new(AstNode::token_to_literal(Token {
                                 kind: TokenKind::IntegerLiteral,

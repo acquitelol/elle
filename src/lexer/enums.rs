@@ -107,6 +107,7 @@ pub enum TokenKind {
     RangeEqual,
     Environment,
     Alloc,
+    Alloca,
     Realloc,
     Free,
     SetAllocator,

@@ -204,13 +204,33 @@ impl<'a> Statement<'a> {
         self.advance();
 
         if self.current_token().kind == TokenKind::LeftBlockBrace {
-            if r#type.as_ref().is_some_and(|x| x == &Type::Infer) {
-                elle_error!(location
-                    .borrow()
-                    .error("Cannot declare a buffer with an inferred inner type."));
+            let location = self.current_token().location;
+            let mut block_nesting = 0;
+
+            while !self.is_eof() {
+                self.advance();
+
+                if self.current_token().kind == TokenKind::LeftBlockBrace {
+                    block_nesting += 1;
+                }
+
+                if self.current_token().kind == TokenKind::RightBlockBrace {
+                    if block_nesting > 0 {
+                        block_nesting -= 1;
+                    } else {
+                        break;
+                    }
+                }
             }
 
-            return self.parse_buffer(Some(name), r#type, Some(location));
+            set_end!(location, self);
+            elle_error!(location
+                .borrow()
+                .with_extra_info(format!(
+                    "Please use #alloca({}, count?) instead.",
+                    r#type.unwrap_or(Type::Void).display()
+                ))
+                .error("Buffers cannot be declared using this syntax."))
         }
 
         if self.is_eof() || self.current_token().kind == TokenKind::Semicolon {
@@ -889,51 +909,89 @@ impl<'a> Statement<'a> {
         node
     }
 
-    fn parse_buffer(
-        &mut self,
-        name: Option<Token>,
-        ty: Option<Type>,
-        loc: Option<MutRc<Location>>,
-    ) -> AstNode {
-        let location = loc.unwrap_or_else(|| self.current_token().location);
+    fn parse_alloca(&mut self) -> AstNode {
+        let location = self.current_token().location;
+        let position = self.position;
 
-        let name = name.map_or_else(
-            || {
-                self.expect_identifier();
-                let tmp = self.current_token();
-                self.advance();
-
-                tmp
-            },
-            |name| name,
-        );
-
-        self.expect_tokens(&[TokenKind::LeftBlockBrace]);
-        self.advance();
-
-        let size;
-
-        if self.current_token().kind == TokenKind::RightBlockBrace {
-            elle_error!(self.current_token().location.borrow().error(format!(
-                "Expected an expression but got: {:?}",
-                self.current_token().kind
-            )))
-        } else {
-            let tokens = self.yield_tokens_with_delimiters(&[TokenKind::RightBlockBrace]);
-            size = Some(Statement::new(tokens, 0, self.body, self.shared).parse().0);
+        if self.current_token().tagged {
+            elle_error!(format!(
+                "hover\n{}\n{}\n#alloca(T, count_expr?) -> T*\n",
+                self.current_token().location.borrow().display_plain(false),
+                self.current_token().location.borrow().display_plain(true),
+            ));
         }
 
-        self.expect_tokens(&[TokenKind::RightBlockBrace]);
         self.advance();
-        self.expect_tokens(&[TokenKind::Semicolon]);
+
+        self.expect_tokens(&[TokenKind::LeftParenthesis]);
+        self.advance();
+
+        let ty = self.get_type(Some(self.shared.generics));
+        self.advance();
+
+        let size = if self.current_token().kind == TokenKind::Comma {
+            self.advance();
+            let mut nesting = i32::from(self.current_token().kind == TokenKind::LeftParenthesis);
+
+            let tokens = self.yield_tokens_with_condition(|current, _, _| {
+                if current.kind == TokenKind::LeftParenthesis {
+                    nesting += 1;
+                }
+
+                if current.kind == TokenKind::RightParenthesis {
+                    if nesting > 0 {
+                        nesting -= 1;
+                    } else {
+                        return true;
+                    }
+                }
+
+                false
+            });
+
+            self.advance();
+            Statement::new(tokens, 0, self.body, self.shared).parse().0
+        } else {
+            AstNode::Literal(Literal {
+                kind: TokenKind::IntegerLiteral,
+                value: ValueKind::Number(1),
+                location: location.clone(),
+                tagged: false,
+            })
+        };
+
         set_end!(location, self);
 
-        AstNode::Buffer(Buffer {
-            name,
-            r#type: Some(ty.unwrap_or(Type::Byte)),
-            size: Box::new(size.unwrap()),
-            location,
-        })
+        let mut expression = AstNode::Buffer(Buffer {
+            r#type: Some(ty.clone()),
+            size: Box::new(size),
+            location: location.clone(),
+        });
+
+        if !self.is_eof() {
+            match self.current_token().kind {
+                TokenKind::Dot => {
+                    expression = self.parse_field_access(Some((position, expression, location)));
+                }
+
+                TokenKind::LeftBlockBrace => {
+                    expression = self.parse_offset_store(Some((position, expression, location)));
+                }
+
+                TokenKind::Semicolon => {}
+                other if other.is_ternary_start() => {
+                    expression = self.parse_ternary_node(expression, location);
+                }
+
+                other if other.is_arithmetic() => {
+                    self.position = position;
+                    return self.parse_arithmetic();
+                }
+                _ => expect_eot!(self.current_token()),
+            }
+        }
+
+        expression
     }
 
     fn parse_array(&mut self, dynamic: bool) -> AstNode {
@@ -2526,9 +2584,12 @@ impl<'a> Statement<'a> {
             if self.current_token().kind == TokenKind::Range {
                 let location = self.current_token().location.clone();
                 self.advance();
-                let mut paren_nesting = i32::from(self.current_token().kind == TokenKind::LeftParenthesis);
-                let mut curly_nesting = i32::from(self.current_token().kind == TokenKind::LeftCurlyBrace);
-                let mut block_nesting = i32::from(self.current_token().kind == TokenKind::LeftBlockBrace);
+                let mut paren_nesting =
+                    i32::from(self.current_token().kind == TokenKind::LeftParenthesis);
+                let mut curly_nesting =
+                    i32::from(self.current_token().kind == TokenKind::LeftCurlyBrace);
+                let mut block_nesting =
+                    i32::from(self.current_token().kind == TokenKind::LeftBlockBrace);
 
                 let tokens = self.yield_tokens_with_condition(|token, _, _| {
                     if token.kind == TokenKind::LeftParenthesis {
@@ -2559,7 +2620,10 @@ impl<'a> Statement<'a> {
                         block_nesting -= 1;
                     }
 
-                    token.kind == TokenKind::Comma && paren_nesting == 0 && curly_nesting == 0 && block_nesting == 0
+                    token.kind == TokenKind::Comma
+                        && paren_nesting == 0
+                        && curly_nesting == 0
+                        && block_nesting == 0
                 });
 
                 self.position -= 1;
@@ -2655,7 +2719,7 @@ impl<'a> Statement<'a> {
             values,
             spreads,
             location: location.clone(),
-            allow_empty: false
+            allow_empty: false,
         });
 
         if let Some(token) = self.advance_opt() {
@@ -3986,6 +4050,7 @@ impl<'a> Statement<'a> {
             TokenKind::ArrayLength => self.parse_array_length(),
             TokenKind::Environment => self.parse_env(),
             TokenKind::Alloc => self.parse_alloc(),
+            TokenKind::Alloca => self.parse_alloca(),
             TokenKind::Realloc => self.parse_realloc(),
             TokenKind::Free => self.parse_free(),
             TokenKind::SetAllocator => self.parse_set_allocator(),

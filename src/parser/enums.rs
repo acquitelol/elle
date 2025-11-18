@@ -69,7 +69,6 @@ pub struct FunctionCall {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Buffer {
-    pub name: Token,
     pub r#type: Option<Type>,
     pub size: Box<AstNode>,
     pub location: MutRc<Location>,
@@ -205,7 +204,7 @@ pub struct StructLiteral {
     pub values: Vec<(String, Box<AstNode>)>,
     pub spreads: Vec<(MutRc<Location>, AstNode)>,
     pub location: MutRc<Location>,
-    pub allow_empty: bool
+    pub allow_empty: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

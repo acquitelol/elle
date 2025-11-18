@@ -4,14 +4,12 @@ use crate::{
         lib::convert::convert_to_type,
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
-    elle_error,
     lexer::enums::{TokenKind, ValueKind},
     parser::enums::{AstNode, BinaryOperation, Buffer, Literal},
 };
 
 impl Codegen<'_> for Buffer {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let plain_name = self.name.value.get_string_inner().unwrap();
         let buf_ty = Type::Pointer(Box::new(self.r#type.clone().unwrap()));
 
         let node = if let Some(ref ty) = self.r#type {
@@ -37,13 +35,8 @@ impl Codegen<'_> for Buffer {
             })
         };
 
-        let (ty, val) = node.compile(gen, &ctx.to_nnf()).unwrap_or_else(|| {
-            elle_error!(self.location.borrow().error(format!(
-                "Unexpected error when trying to compile size for a buffer named '{plain_name}'"
-            )))
-        });
-
-        let tmp = gen.new_variable(&buf_ty, &plain_name, Some(ctx.func), true, false);
+        let (ty, val) = node.compile(gen, &ctx.to_nnf()).unwrap();
+        let tmp = gen.new_temporary(None, true);
 
         let (_, converted_val) = convert_to_type(
             gen,
@@ -67,17 +60,6 @@ impl Codegen<'_> for Buffer {
             (buf_ty.get_pointer_inner().unwrap(), converted_val),
         );
 
-        let res = (buf_ty, tmp);
-
-        if self.name.tagged {
-            elle_error!(format!(
-                "hover\n{}\n{}\nlet {plain_name}[]: {}",
-                self.name.location.borrow().display_plain(false),
-                self.name.location.borrow().display_plain(true),
-                res.0.display()
-            ));
-        }
-
-        Some(res)
+        Some((buf_ty, tmp))
     }
 }

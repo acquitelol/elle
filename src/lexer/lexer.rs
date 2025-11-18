@@ -455,6 +455,7 @@ impl Lexer<'_> {
                                 "len" => (TokenKind::ArrayLength, ValueKind::Nil),
                                 "env" => (TokenKind::Environment, ValueKind::Nil),
                                 "alloc" => (TokenKind::Alloc, ValueKind::Nil),
+                                "alloca" => (TokenKind::Alloca, ValueKind::Nil),
                                 "realloc" => (TokenKind::Realloc, ValueKind::Nil),
                                 "free" => (TokenKind::Free, ValueKind::Nil),
                                 "set_allocator" => (TokenKind::SetAllocator, ValueKind::Nil),

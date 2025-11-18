@@ -1060,52 +1060,6 @@ fn main() {
 
 #
 
-### ♡ **Static buffers**
-
-- A static buffer is a basic allocation of stack memory with a specified size.
-- You can allocate a buffer with the `type buf[size];` syntax.
-
-This would allocate memory on the stack of that size and give you back a pointer to that type.
-
-For example:
-
-```rs
-use std/prelude;
-
-const i32 ARRAY_SIZE = 40;
-
-fn main() {
-    i32 foo[ARRAY_SIZE]; // foo's type is `i32 *`
-
-    for i in 0..ARRAY_SIZE {
-        foo[i] = (i + 10) * 100;
-    }
-
-    $dbg(foo[33]);
-}
-```
-
-The size doesn't have to be known at compile time:
-
-```rs
-use std/prelude;
-
-fn main() {
-    let size = i32::parse(io::input("Enter a size -> "));
-    i32 foo[size]; // foo's type is `i32 *`
-
-    for i in 0..size {
-        foo[i] = (i + 10) * 100;
-    }
-
-    $dbg(foo[size - 1]);
-}
-```
-
-The type of a static buffer cannot be inferred. You must declare it explicitly.
-
-#
-
 ### ♡ **Defer statements**
 
 - A `defer` statement is commonly used to group together memory allocation and deallocation. A simple explanation is that it stores whatever statement is defined inside and inserts it when the current scope is about to be left, ie during a return, a block being exited, or an implicit return due to the function scope being left. `defer` statements are inserted backwards.
@@ -2169,17 +2123,18 @@ For more information on stdlib alises, directives and attributes, please read be
 
 The current existing directives are:
 
-| Name                | Description                                                                                                     | Usage                      |
-| ------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| Static array length | Gives you the length of a static array created using `#[1, 2, 3]` syntax                                        | `#len(expr)`               |
-| Size expression     | Gives you the size of type `T` or expression `expr` in bytes as a u64                                           | `#size(T or expr)`         |
-| Elle Environment    | Gives you a `ElleEnv *` which is a global environment structure                                                 | `#env`                     |
-| Allocate memory     | Allows you to allocate a specific type using the current allocator                                              | `#alloc(T, size?)`         |
-| Reallocate memory   | Allows you to reallocate a pointer with a specific type using the current allocator                             | `#realloc(expr, T, size?)` |
-| Free memory         | Frees a pointer using the current allocator. If the allocator didn't define a `free` method, this does nothing. | `#free(ptr_expr)`          |
-| Set allocator       | Sets the current allocator to the one specified by `expr`                                                       | `#set_allocator(expr)`     |
-| Reset allocator     | Sets the current allocator back to `#env.default_allocator`. **Does not call `#env.allocator.free_self`.**      | `#reset_allocator()`       |
-| Type conversion     | Uses a set of rules to convert `cast_expr` to type `T`. If it fails, it will throw a compile-time error.        | `#cast(T, cast_expr)`      |
+| Name                   | Description                                                                                                     | Usage                       |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| Static array length    | Gives you the length of a static array created using `#[1, 2, 3]` syntax.                                       | `#len(expr)`                |
+| Size expression        | Gives you the size of type `T` or expression `expr` in bytes as a u64.                                          | `#size(T or expr)`          |
+| Elle Environment       | Gives you a `ElleEnv *` which is a global environment structure.                                                | `#env`                      |
+| Allocate memory        | Allows you to allocate a specific type (and optional count) using the current allocator.                        | `#alloc(T, count?)`         |
+| Allocate static memory | Allows you to allocate a specific type (and optional count) on the stack.                                       | `#alloca(T, count?)`        |
+| Reallocate memory      | Allows you to reallocate a pointer with a specific type using the current allocator                             | `#realloc(expr, T, count?)` |
+| Free memory            | Frees a pointer using the current allocator. If the allocator didn't define a `free` method, this does nothing. | `#free(ptr_expr)`           |
+| Set allocator          | Sets the current allocator to the one specified by `expr`                                                       | `#set_allocator(expr)`      |
+| Reset allocator        | Sets the current allocator back to `#env.default_allocator`. **Does not call `#env.allocator.free_self`.**      | `#reset_allocator()`        |
+| Type conversion        | Uses a set of rules to convert `cast_expr` to type `T`. If it fails, it will throw a compile-time error.        | `#cast(T, cast_expr)`       |
 
 #
 

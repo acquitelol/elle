@@ -22,7 +22,7 @@ fn main() {
     $assert(x[0].x == 42, nil);
     $assert(y[0].x == 39, nil);
 
-    Foo z[1];
+    Foo[1] z;
     z[0] = Foo { x = 123 }; // should be blit instead of assigned
 
     $assert(z[0].x == 123, nil);

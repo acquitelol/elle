@@ -1,11 +1,11 @@
 use std/prelude;
 
 fn main() {
-    i32 x[42];
+    i32[42] x;
     (41[x] = 39)[x] = 41;
     $assert(x[x[x[41[x]][x]][x][x]] == 39, nil);
 
-    i32 y[10];
+    i32[10] y;
     4[y] = 39;
     $assert(4[y] == 39, nil);
     $assert(y[4] == 39, nil);
