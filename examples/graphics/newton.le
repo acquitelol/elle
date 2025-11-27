@@ -5,7 +5,50 @@ const SCREEN_FACTOR = 80;
 const SCREEN_WIDTH = 12 * SCREEN_FACTOR;
 const SCREEN_HEIGHT = 12 * SCREEN_FACTOR;
 
+const MAX_SAMPLES_PER_UPDATE = 4096;
+const MAX_SAMPLES = 512;
+const CHANNELS = 1;
+const SIZE = 16;
+
+struct Globals {
+    f32 frequency,
+    f32 sample_rate,
+    i32 overtones,
+    @unused f32[] phase,
+    @unused f32[] notes,
+}
+
+fn audio_input_callback(i16 *buffer, u32 frames) {
+    globals := #cast(Globals *, #env.buffer);
+
+    for i := 0; i < frames; i += 1 {
+        mix := 0.0;
+
+        for j := 0; j < globals.overtones; j += 1 {
+            s := globals.notes[j] / globals.sample_rate;
+            mix += math::sinf(2 * PI * globals.phase[j]) * 0.25;
+            globals.phase[j] += s;
+            if globals.phase[j] >= 1 { globals.phase[j] -= 1; }
+        }
+
+        mix = math::clamp(mix, -1, 1);
+        buffer[i] = #cast(i16, mix * i16::max());
+    }
+}
+
 fn main() {
+    globals := Globals {
+        frequency = 440.0,
+        sample_rate = 44100,
+        overtones = 4,
+    };
+
+    globals.phase = (0..globals.overtones).map(fn() 0.0).collect();
+    globals.notes = (0..globals.overtones)
+        .map_with(fn(i, globals) globals.frequency * math::powf(2.0, (i * 3.0) / 12.0), globals)
+        .collect();
+    #env.buffer = &globals;
+
     rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Newton Fractal");
     defer rl::close_window();
 
@@ -55,6 +98,21 @@ fn main() {
 
     grabbed := -1;
 
+    rl::init_audio_device();
+    defer rl::close_audio_device();
+
+    rl::set_audio_stream_buffer_size_default(MAX_SAMPLES_PER_UPDATE);
+
+    stream := rl::load_audio_stream(globals.sample_rate, SIZE, CHANNELS);
+    defer rl::unload_audio_stream(stream);
+
+    rl::set_audio_stream_callback(stream, audio_input_callback);
+    rl::set_audio_stream_volume(stream, 0);
+    rl::play_audio_stream(stream);
+
+    unpause_timer := 0.0;
+    pause_timer := 0.0;
+
     while !rl::window_should_close() {
         mouse := rl::get_mouse_position();
         m := Vector2::new(
@@ -70,6 +128,8 @@ fn main() {
                 );
 
                 if math::abs(mouse.x - s.x) < 10 && math::abs(mouse.y - s.y) < 10 {
+                    unpause_timer = 1;
+                    pause_timer = 0;
                     grabbed = i;
                     break;
                 }
@@ -86,11 +146,40 @@ fn main() {
             y_max += dy;
         }
 
-        if rl::is_mouse_button_released(MouseButton::MOUSE_LEFT_BUTTON) {
+        if grabbed != -1 && rl::is_mouse_button_released(MouseButton::MOUSE_LEFT_BUTTON) {
             grabbed = -1;
+            pause_timer = 1;
+        }
+
+        if unpause_timer > 0 {
+            unpause_timer -= rl::get_frame_time();
+            unpause_timer = math::max(unpause_timer, 0);
+            rl::set_audio_stream_volume(stream, 1 - (unpause_timer * unpause_timer));
+        }
+
+        if pause_timer > 0 {
+            pause_timer -= rl::get_frame_time();
+            pause_timer = math::max(pause_timer, 0);
+            rl::set_audio_stream_volume(stream, pause_timer * pause_timer);
         }
 
         if grabbed != -1 {
+            mouse_pos := rl::get_mouse_position();
+
+            if mouse_pos.x > 0 && mouse_pos.y > 0 {
+                dist := 0.0;
+
+                for root in roots {
+                    if root == roots[grabbed] { continue; }
+                    dist += roots[grabbed].sub(root).length_sq();
+                }
+
+                globals.frequency = (1 / (math::sqrt(dist) + 0.0001)) * 880;
+                globals.notes = (0..globals.overtones)
+                    .map_with(fn(i, globals) globals.frequency * math::powf(2.0, (i * 3.0) / 12.0), globals)
+                    .collect();
+            }
+
             roots[grabbed] = m;
         }
 
@@ -145,6 +234,8 @@ fn main() {
 
                 rl::draw_circle(s.x, s.y, 4, BLACK);
             }
+
+            rl::draw_text("{}".format(globals), 10, 700, 10, BLACK);
 
             rl::draw_fps(4, 4);
         rl::end_drawing();
