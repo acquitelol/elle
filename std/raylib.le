@@ -216,7 +216,7 @@ struct Shader {
 
 // MaterialMap
 struct MaterialMap {
-    Texture texture,      // Material map texture
+    Texture texture,        // Material map texture
     Color color,            // Material map color
     f32 value,              // Material map value
 }
@@ -225,10 +225,7 @@ struct MaterialMap {
 struct Material {
     Shader shader,          // Material shader
     MaterialMap *maps,      // Material maps array (MAX_MATERIAL_MAPS)
-    f32 params0,            // Material generic parameters (if required)
-    f32 params1,            // Elle does not support static array types
-    f32 params2,
-    f32 params3,
+    f32[4] params,          // Material generic parameters (if required)
 }
 
 // Transform, vertex transformation data
@@ -240,8 +237,7 @@ struct Transform {
 
 // Bone, skeletal animation bone
 struct BoneInfo {
-    i64 n0, i64 n1,         // Bone name
-    i64 n2, i64 n3,         // Elle does not support static array types
+    char[32] name,          // Bone name
     i32 parent,             // Bone parent
 }
 
@@ -267,8 +263,7 @@ struct ModelAnimation {
     i32 frameCount,         // Number of animation frames
     BoneInfo *bones,        // Bones information (skeleton)
     Transform **framePoses, // Poses array by frame
-    i64 n0, i64 n1,         // Animation name
-    i64 n2, i64 n3,         // Elle does not support static array types
+    char[32] name,          // Animation name
 }
 
 // Ray, ray for raycasting
@@ -293,10 +288,10 @@ struct BoundingBox {
 
 // Wave, audio wave data
 struct Wave {
-    u64 frameCount,         // Total number of frames (considering channels)
-    u64 sampleRate,         // Frequency (samples per second)
-    u64 sampleSize,         // Bit depth (bits per sample): 8, 16, 32 (24 not supported)
-    u64 channels,           // Number of channels (1-mono, 2-stereo, ...)
+    u32 frameCount,         // Total number of frames (considering channels)
+    u32 sampleRate,         // Frequency (samples per second)
+    u32 sampleSize,         // Bit depth (bits per sample): 8, 16, 32 (24 not supported)
+    u32 channels,           // Number of channels (1-mono, 2-stereo, ...)
     void *data,             // Buffer data pointer
 }
 
@@ -345,10 +340,7 @@ struct FilePathList {
 struct AutomationEvent {
     u64 frame,             // Event frame
     u64 ty,                // Event type (AutomationEventType)
-    i32 params0,           // Event parameters (if required)
-    i32 params1,           // Elle does not support static array types
-    i32 params2,
-    i32 params3,
+    i32[4] params0,        // Event parameters (if required)
 }
 
 // Automation event list
@@ -368,35 +360,21 @@ struct VrDeviceInfo {
     f32 eyeToScreenDistance,        // Distance between eye and display in meters
     f32 lensSeparationDistance,     // Lens separation distance in meters
     f32 interpupillaryDistance,     // IPD (distance between pupils) in meters
-    f32 lensDistortionValues0,      // Lens distortion constant parameters
-    f32 lensDistortionValues1,      // Elle does not support static array types
-    f32 lensDistortionValues2,
-    f32 lensDistortionValues3,
-    f32 chromaAbCorrection0,        // Chromatic aberration correction parameters
-    f32 chromaAbCorrection1,        // Elle does not support static array types
-    f32 chromaAbCorrection2,
-    f32 chromaAbCorrection3,
+    f32[4] lensDistortionValues,    // Lens distortion constant parameters
+    f32[4] chromaAbCorrection,      // Chromatic aberration correction parameters
 }
 
 // VrStereoConfig, VR stereo rendering configuration for simulator
 // Elle does not support static array types but the struct must remain the same size
 struct VrStereoConfig {
-    Matrix projection0,             // VR projection matrices (per eye)
-    Matrix projection1,
-    Matrix viewOffset0,             // VR view offset matrices (per eye)
-    Matrix viewOffset1,
-    f32 leftLensCenter0,            // VR left lens center
-    f32 leftLensCenter1,
-    f32 rightLensCenter0,           // VR right lens center
-    f32 rightLensCenter1,
-    f32 leftScreenCenter0,          // VR left screen center
-    f32 leftScreenCenter1,
-    f32 rightScreenCenter0,         // VR right screen center
-    f32 rightScreenCenter1,
-    f32 scale0,                     // VR distortion scale
-    f32 scale1,
-    f32 scaleIn0,                   // VR distortion scale in
-    f32 scaleIn1,
+    Matrix[2] projection,           // VR projection matrices (per eye)
+    Matrix[2] viewOffset,           // VR view offset matrices (per eye)
+    f32[2] leftLensCenter,          // VR left lens center
+    f32[2] rightLensCenter,         // VR right lens center
+    f32[2] leftScreenCenter,        // VR left screen center
+    f32[2] rightScreenCenter,       // VR right screen center
+    f32[2] scale,                   // VR distortion scale
+    f32[2] scaleIn,                   // VR distortion scale in
 }
 
 //----------------------------------------------------------------------------------
@@ -1004,7 +982,7 @@ fn DirectoryExists(string dirPath)                                        @alias
 fn IsFileExtension(string fileName, string ext)                           @alias(rl::is_file_extension)         -> bool;         // Check file extension (including point: .png, .wav)
 fn GetFileLength(string fileName)                                         @alias(rl::get_file_length)           -> i32;          // Get file length in bytes (NOTE: GetFileSize() conflicts with windows.h)
 fn GetFileExtension(string fileName)                                      @alias(rl::get_file_extension)        -> string;       // Get pointer to extension for a filename string (includes dot: '.png')
-fn GetFileName(string filePath)                                            @alias(rl::get_file_name)             -> string;       // Get pointer to filename for a path string
+fn GetFileName(string filePath)                                            @alias(rl::get_file_name)            -> string;       // Get pointer to filename for a path string
 fn GetFileNameWithoutExt(string filePath)                                 @alias(rl::get_file_name_withut_ext)  -> string;       // Get filename string without extension (uses static string)
 fn GetDirectoryPath(string filePath)                                      @alias(rl::get_directory_path)        -> string;       // Get full path for a given fileName with path (uses static string)
 fn GetPrevDirectoryPath(string dirPath)                                   @alias(rl::get_prev_directory_path)   -> string;       // Get previous directory path for a given path (uses static string)
@@ -1109,7 +1087,7 @@ fn UpdateCameraPro(Camera *camera, Vector3 movement, Vector3 rotation, f32 zoom)
 // Set texture and rectangle to be used on shapes drawing
 // NOTE: It can be useful when using basic shapes and one single font,
 // defining a font char white rectangle would allow drawing everything in a single draw call
-fn SetShapesTexture(Texture texture, Rectangle source)                                                @alias(rl::set_shapes_texture);                 // Set texture and rectangle to be used on shapes drawing
+fn SetShapesTexture(Texture texture, Rectangle source)                                                  @alias(rl::set_shapes_texture);                 // Set texture and rectangle to be used on shapes drawing
 
 // Basic shapes drawing functions
 fn DrawPixel(i32 posX, i32 posY, Color color)                                                           @alias(rl::draw_pixel);                             // Draw a pixel
@@ -1120,16 +1098,16 @@ fn DrawLineEx(Vector2 startPos, Vector2 endPos, f32 thick, Color color)         
 fn DrawLineStrip(Vector2 *points, i32 pointCount, Color color)                                          @alias(rl::draw_line_strip);                        // Draw lines sequence (using gl lines)
 fn DrawLineBezier(Vector2 startPos, Vector2 endPos, i32 thick, Color color)                             @alias(rl::draw_line_bezier);                       // Draw line segment cubic-bezier in-out interpolation
 fn DrawCircle(i32 centerX, i32 centerY, f32 radius, Color color)                                        @alias(rl::draw_circle);                            // Draw a color-filled circle
-fn DrawCircleSector(Vector2 center, f32 radius, f32 startAngle, f32 endAngle, i32 segments, Color color)      @alias(rl::draw_circle_sector);            // Draw a piece of a circle
-fn DrawCircleSectorLines(Vector2 center, f32 radius, f32 startAngle, f32 endAngle, i32 segments, Color color) @alias(rl::draw_circle_sector_lines);      // Draw circle sector outline
+fn DrawCircleSector(Vector2 center, f32 radius, f32 startAngle, f32 endAngle, i32 segments, Color color)      @alias(rl::draw_circle_sector);               // Draw a piece of a circle
+fn DrawCircleSectorLines(Vector2 center, f32 radius, f32 startAngle, f32 endAngle, i32 segments, Color color) @alias(rl::draw_circle_sector_lines);         // Draw circle sector outline
 fn DrawCircleGradient(i32 centerX, i32 centerY, f32 radius, Color color1, Color color2)                 @alias(rl::draw_circle_gradient);                   // Draw a gradient-filled circle
 fn DrawCircleV(Vector2 center, f32 radius, Color color)                                                 @alias(rl::draw_circle_v);                          // Draw a color-filled circle (Vector version)
 fn DrawCircleLines(i32 centerX, i32 centerY, f32 radius, Color color)                                   @alias(rl::draw_circle_lines);                      // Draw circle outline
 fn DrawCircleLinesV(Vector2 center, f32 radius, Color color)                                            @alias(rl::draw_circle_lines_v);                    // Draw circle outline (Vector version)
 fn DrawEllipse(i32 centerX, i32 centerY, f32 radiusH, f32 radiusV, Color color)                         @alias(rl::draw_ellipse);                           // Draw ellipse
 fn DrawEllipseLines(i32 centerX, i32 centerY, f32 radiusH, f32 radiusV, Color color)                    @alias(rl::draw_ellipse_lines);                     // Draw ellipse outline
-fn DrawRing(Vector2 center, f32 innerRadius, f32 outerRadius, f32 startAngle, f32 endAngle, i32 segments, Color color)      @alias(rl::draw_ring);       // Draw ring
-fn DrawRingLines(Vector2 center, f32 innerRadius, f32 outerRadius, f32 startAngle, f32 endAngle, i32 segments, Color color) @alias(rl::draw_ring_lines); // Draw ring outline
+fn DrawRing(Vector2 center, f32 innerRadius, f32 outerRadius, f32 startAngle, f32 endAngle, i32 segments, Color color)      @alias(rl::draw_ring);          // Draw ring
+fn DrawRingLines(Vector2 center, f32 innerRadius, f32 outerRadius, f32 startAngle, f32 endAngle, i32 segments, Color color) @alias(rl::draw_ring_lines);    // Draw ring outline
 fn DrawRectangle(i32 posX, i32 posY, i32 width, i32 height, Color color)                                @alias(rl::draw_rectangle);                         // Draw a color-filled rectangle
 fn DrawRectangleV(Vector2 position, Vector2 size, Color color)                                          @alias(rl::draw_rectangle_v);                       // Draw a color-filled rectangle (Vector version)
 fn DrawRectangleRec(Rectangle rec, Color color)                                                         @alias(rl::draw_rectangle_rec);                     // Draw a color-filled rectangle
@@ -1199,7 +1177,7 @@ fn LoadImageRaw(string fileName, i32 width, i32 height, i32 format, i32 headerSi
 fn LoadImageSvg(string fileNameOrString, i32 width, i32 height)                             @alias(rl::load_image_svg)            -> Image;     // Load image from SVG file data or string with specified size
 fn LoadImageAnim(string fileName, i32 *frames)                                              @alias(rl::load_image_anim)           -> Image;     // Load image sequence from file (frames appended to image.data)
 fn LoadImageFromMemory(string fileType, u8 *fileData, i32 dataSize)                         @alias(rl::load_image_from_memory)    -> Image;     // Load image from memory buffer, fileType refers to extension: i.e. '.png'
-fn LoadImageFromTexture(Texture texture)                                                  @alias(rl::load_image_from_texture)   -> Image;     // Load image from GPU texture data
+fn LoadImageFromTexture(Texture texture)                                                    @alias(rl::load_image_from_texture)   -> Image;     // Load image from GPU texture data
 fn LoadImageFromScreen()                                                                    @alias(rl::load_image_from_screen)    -> Image;     // Load image from screen buffer and (screenshot)
 fn IsImageReady(Image image)                                                                @alias(rl::is_image_ready)            -> bool;      // Check if an image is ready
 fn UnloadImage(Image image)                                                                 @alias(rl::unload_image);                           // Unload image from CPU memory (RAM)
@@ -1275,14 +1253,14 @@ fn ImageDrawTextEx(Image *dst, Font font, string text, Vector2 position, f32 fon
 
 // Texture loading functions
 // NOTE: These functions require GPU access
-fn LoadTexture(string fileName)                                 @alias(rl::load_texture)            -> Texture;        // Load texture from file into GPU memory (VRAM)
-fn LoadTextureFromImage(Image image)                            @alias(rl::load_texture_from_image) -> Texture;        // Load texture from imagae data
-fn LoadTextureCubemap(Image image, i32 layout)                  @alias(rl::load_texture_cubemap)    -> TextureCubemap;   // Load cubemap from image, multiple image cubemap layouts supported
-fn LoadRenderTexture(i32 width, i32 height)                     @alias(rl::load_render_texture)     -> RenderTexture2D;  // Load texture for rendering (framebuffer)
+fn LoadTexture(string fileName)                               @alias(rl::load_texture)            -> Texture;          // Load texture from file into GPU memory (VRAM)
+fn LoadTextureFromImage(Image image)                          @alias(rl::load_texture_from_image) -> Texture;          // Load texture from imagae data
+fn LoadTextureCubemap(Image image, i32 layout)                @alias(rl::load_texture_cubemap)    -> TextureCubemap;   // Load cubemap from image, multiple image cubemap layouts supported
+fn LoadRenderTexture(i32 width, i32 height)                   @alias(rl::load_render_texture)     -> RenderTexture2D;  // Load texture for rendering (framebuffer)
 fn IsTextureReady(Texture texture)                            @alias(rl::is_texture_ready)        -> bool;             // Check if a texture is ready
 fn UnloadTexture(Texture texture)                             @alias(rl::unload_texture);                              // Unload texture from GPU memory (VRAM)
-fn IsRenderTextureReady(RenderTexture2D target)                 @alias(rl::is_render_texture_ready) -> bool;             // Check if a render texture is ready
-fn UnloadRenderTexture(RenderTexture2D target)                  @alias(rl::unload_render_texture);                       // Unload render texture from GPU memory (VRAM)
+fn IsRenderTextureReady(RenderTexture2D target)               @alias(rl::is_render_texture_ready) -> bool;             // Check if a render texture is ready
+fn UnloadRenderTexture(RenderTexture2D target)                @alias(rl::unload_render_texture);                       // Unload render texture from GPU memory (VRAM)
 fn UpdateTexture(Texture texture, void *pixels)               @alias(rl::update_texture);                              // Update GPU texture with new data
 fn UpdateTextureRec(Texture tex, Rectangle rec, void *pixels) @alias(rl::update_texture_rec);                          // Update GPU texture rectangle with new data
 
@@ -1327,7 +1305,7 @@ fn LoadFontFromImage(Image image, Color key, i32 firstChar)     @alias(rl::load_
 fn IsFontReady(Font font)                                       @alias(rl::is_font_ready)           -> bool;             // Check if a font is ready
 fn LoadFontEx(string fileName, i32 fontSize, i32 *codepoints, i32 codepointCount)                                        @alias(rl::load_font_ex)          -> Font;        // Load font from file with extended parameters, use NULL for codepoints and 0 for codepointCount to load the default character set
 fn LoadFontFromMemory(string fileType, u8 *fileData, i32 dataSize, i32 fontSize, i32 *codepoints, i32 codepointCount)    @alias(rl::load_font_from_memory) -> Font;        // Load font from memory buffer, fileType refers to extension: i.e. '.ttf'
-fn LoadFontData(u8 *fileData, i32 dataSize, i32 fontSize, i32 *codepoints, i32 codepointCount, i32 ty)                 @alias(rl::load_font_data)        -> GlyphInfo *; // Load font data for further use
+fn LoadFontData(u8 *fileData, i32 dataSize, i32 fontSize, i32 *codepoints, i32 codepointCount, i32 ty)                 @alias(rl::load_font_data)          -> GlyphInfo *; // Load font data for further use
 fn GenImageFontAtlas(GlyphInfo *glyphs, Rectangle **glyphRecs, i32 glyphCount, i32 size, i32 padding, i32 packMethod)    @alias(rl::gen_image_font_atlas)  -> Image;       // Generate image font atlas using chars info
 fn UnloadFontData(GlyphInfo *glyphs, i32 glyphCount)            @alias(rl::unload_font_data);                            // Unload font chars info data (RAM)
 fn UnloadFont(Font font)                                        @alias(rl::unload_font);                                 // Unload font from GPU memory (VRAM)
@@ -1422,8 +1400,8 @@ fn DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, f32 rotation
 fn DrawModelWires(Model model, Vector3 position, f32 scale, Color tint)                                                @alias(rl::draw_model_wires);    // Draw a model wires (with texture if set)
 fn DrawModelWiresEx(Model model, Vector3 position, Vector3 rotationAxis, f32 rotationAngle, Vector3 scale, Color tint) @alias(rl::draw_model_wires_ex); // Draw a model wires (with texture if set) with extended parameters
 fn DrawBoundingBox(BoundingBox box, Color color)                                                                       @alias(rl::draw_bounding_box);   // Draw bounding box (wires)
-fn DrawBillboard(Camera camera, Texture texture, Vector3 position, f32 size, Color tint)                             @alias(rl::draw_billboard);      // Draw a billboard texture
-fn DrawBillboardRec(Camera camera, Texture texture, Rectangle source, Vector3 position, Vector2 size, Color tint)    @alias(rl::draw_billboard_rec);  // Draw a billboard texture defined by source
+fn DrawBillboard(Camera camera, Texture texture, Vector3 position, f32 size, Color tint)                               @alias(rl::draw_billboard);      // Draw a billboard texture
+fn DrawBillboardRec(Camera camera, Texture texture, Rectangle source, Vector3 position, Vector2 size, Color tint)      @alias(rl::draw_billboard_rec);  // Draw a billboard texture defined by source
 fn DrawBillboardPro(Camera camera, Texture texture, Rectangle source, Vector3 position, Vector3 up, Vector2 size, Vector2 origin, f32 rotation, Color tint)
     @alias(rl::draw_billboard_pro); // Draw a billboard texture defined by source and rotation
 
@@ -1513,7 +1491,7 @@ fn SetSoundPitch(Sound sound, f32 pitch)                             @alias(rl::
 fn SetSoundPan(Sound sound, f32 pan)                                 @alias(rl::set_sound_pan);                  // Set pan for a sound (0.5 is center)
 fn WaveCopy(Wave wave)                                               @alias(rl::wave_copy)             -> Wave;  // Copy a wave to a new wave
 fn WaveCrop(Wave *wave, i32 initSample, i32 finalSample)             @alias(rl::wave_crop);                      // Crop a wave to defined samples range
-fn WaveFormat(Wave *wave, i32 sampleRate, i32 sampleSize, i32 channels) @alias(rl::wave_format);               // Convert wave data to desired format
+fn WaveFormat(Wave *wave, i32 sampleRate, i32 sampleSize, i32 channels) @alias(rl::wave_format);                 // Convert wave data to desired format
 fn LoadWaveSamples(Wave wave)                                        @alias(rl::load_wave_samples)     -> f32 *; // Load samples data from wave as a 32bit float data array
 fn UnloadWaveSamples(f32 *samples)                                   @alias(rl::unload_wave_samples);            // Unload samples data loaded with LoadWaveSamples()
 
