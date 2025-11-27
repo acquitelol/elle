@@ -55,7 +55,7 @@ fn Vector2::length_sq(Vector2 self) {
 }
 
 fn Vector2::length(Vector2 self) {
-    return math::sqrt(self.length_sq());
+    return math::sqrtf(self.length_sq());
 }
 
 fn Vector2::add(Vector2 self, Vector2 v2) {
@@ -69,6 +69,20 @@ fn Vector2::sub(Vector2 self, Vector2 v2) {
     return Vector2 {
         x = self.x - v2.x,
         y = self.y - v2.y,
+    };
+}
+
+fn Vector2::mul(Vector2 self, Vector2 v2) {
+    return Vector2 {
+        x = self.x * v2.x,
+        y = self.y * v2.y,
+    };
+}
+
+fn Vector2::div(Vector2 self, Vector2 v2) {
+    return Vector2 {
+        x = self.x / v2.x,
+        y = self.y / v2.y,
     };
 }
 
@@ -165,7 +179,7 @@ fn Vector3::length_sq(Vector3 self) {
 }
 
 fn Vector3::length(Vector3 self) {
-    return math::sqrt(self.length_sq());
+    return math::sqrtf(self.length_sq());
 }
 
 fn Vector3::add(Vector3 self, Vector3 v2) {
@@ -181,6 +195,22 @@ fn Vector3::sub(Vector3 self, Vector3 v2) {
         x = self.x - v2.x,
         y = self.y - v2.y,
         z = self.z - v2.z,
+    };
+}
+
+fn Vector3::mul(Vector3 self, Vector3 v2) {
+    return Vector3 {
+        x = self.x * v2.x,
+        y = self.y * v2.y,
+        z = self.z * v2.z,
+    };
+}
+
+fn Vector3::div(Vector3 self, Vector3 v2) {
+    return Vector3 {
+        x = self.x / v2.x,
+        y = self.y / v2.y,
+        z = self.z / v2.z,
     };
 }
 
