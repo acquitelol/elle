@@ -412,6 +412,13 @@ async fn main() -> ExitCode {
             no_fmt: false,
             is_unused: false,
         },
+        // Arbitrary user-defined data, temporary solution before static variables
+        Argument {
+            name: "buffer".into(),
+            r#type: Type::Pointer(Box::new(Type::Void)),
+            no_fmt: false,
+            is_unused: true
+        }
     ];
 
     struct_pool.insert(

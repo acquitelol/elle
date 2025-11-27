@@ -398,6 +398,7 @@ This structure is also not defined in Elle code (like `ElleMeta`), but its equiv
 struct ElleEnv {
     ArbitraryAllocator *allocator,
     TAllocator *default_allocator,
+    void *buffer // arbitrary user data, may be treated as global
 }
 ```
 
