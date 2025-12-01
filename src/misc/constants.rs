@@ -77,8 +77,7 @@ pub static DUNDER_CONSTANTS: &[&str] = &[
 
 // Keywords
 pub static RESERVED_KEYWORDS: &[&str] = &[
-    "as", "mut", "match", "static", "super", "do", "macro", "step", "of", "class", "var", "impl",
-    "union",
+    "as", "mut", "match", "static", "super", "do", "macro", "of", "class", "var", "impl", "union",
 ];
 
 // Miscellaneous
