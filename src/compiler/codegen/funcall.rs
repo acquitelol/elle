@@ -524,20 +524,9 @@ impl Codegen<'_> for FunctionCall {
             params.insert(0, (res, false));
         }
 
-        if tmp_function.variadic {
-            params.insert(
-                tmp_function.arguments.len(),
-                ((Type::Null, Value::Literal("...".into())), false),
-            );
-
-            // ensure structs are not passed as abi structs but rather just the pure
-            // address so that it can be reconstructed accordingly with vaarg
-            for arg in &mut params[tmp_function.arguments.len()..] {
-                arg.0 .0 = arg.0 .0.clone().into_base();
-            }
-        }
-
-        if !tmp_function.variadic && tmp_function.arguments.len() != params.len() {
+        if tmp_function.arguments.len() != params.len()
+            && !(tmp_function.arguments.len() < params.len() && tmp_function.variadic)
+        {
             let only = if tmp_function.arguments.len() > params.len() && !params.is_empty() {
                 "only "
             } else {
@@ -586,13 +575,16 @@ impl Codegen<'_> for FunctionCall {
                         name.replace('.', "::"),
                         if arg_len > 0 { "..." } else { "" }
                     )
+                } else if tmp_function.variadic {
+                    format!("This function is variadic and requires {} argument{}", arg_len, if arg_len == 1 { "" } else { "s" })
                 } else {
                     String::new()
                 })
                 .error(format!(
-                    "Function named `{}({})` takes {} argument{}, but you {}passed {}\n{}",
+                    "Function named `{}({})` takes {}{} argument{}, but you {}passed {}\n{}",
                     name.replace('.', "::"),
                     if arg_len > 0 { "..." } else { "" },
+                    if tmp_function.variadic { "at least " } else { "" },
                     arg_len,
                     if arg_len == 1 { "" } else { "s" },
                     only,
@@ -625,6 +617,19 @@ impl Codegen<'_> for FunctionCall {
                             .join("\n")
                     }
                 )))
+        }
+
+        if tmp_function.variadic {
+            params.insert(
+                tmp_function.arguments.len(),
+                ((Type::Null, Value::Literal("...".into())), false),
+            );
+
+            // ensure structs are not passed as abi structs but rather just the pure
+            // address so that it can be reconstructed accordingly with vaarg
+            for arg in &mut params[tmp_function.arguments.len()..] {
+                arg.0 .0 = arg.0 .0.clone().into_base();
+            }
         }
 
         let tmp = gen.new_temporary(None, true);
