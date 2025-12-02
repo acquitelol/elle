@@ -6,6 +6,8 @@ use super::{data_item::DataItem, linkage::Linkage, r#type::Type};
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Data {
+    pub ty: Option<Type>,
+    pub external: bool,
     pub linkage: Linkage,
     pub name: String,
     pub align: Option<u64>,
@@ -20,6 +22,8 @@ impl Data {
         items: Vec<(Type, DataItem)>,
     ) -> Self {
         Self {
+            ty: None,
+            external: false,
             linkage,
             name,
             align,

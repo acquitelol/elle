@@ -13,7 +13,7 @@ use string_interner::StringInterner;
 use crate::compiler::qbe::r#type::Type;
 use crate::lexer::enums::{MutRc, Token};
 use crate::parser::enums::{
-    ConstantSource, EnumSource, FunctionSource, Literal, StructSource, UseSource,
+    ConstantSource, EnumSource, FunctionSource, GlobalSource, Literal, StructSource, UseSource,
 };
 use crate::parser::parser::EnumPool;
 use crate::{
@@ -40,6 +40,7 @@ pub fn lex_and_parse(
     struct_pool: &RefCell<StructPool>,
     enum_pool: &RefCell<EnumPool>,
     parsed_modules: &RefCell<HashSet<SymbolU32>>,
+    init_methods: &RefCell<Vec<String>>,
     warnings: &Warnings,
     no_strings: bool,
     no_alloc: bool,
@@ -178,16 +179,18 @@ pub fn lex_and_parse(
         tokens.clone(),
         struct_pool.borrow().to_owned(),
         enum_pool.borrow().to_owned(),
+        init_methods.borrow().to_owned(),
         warnings.clone(),
     );
 
     let mut fallback = vec![];
     let mut tree = existing_tree.unwrap_or(&mut fallback);
 
-    let (mut imports, new_struct_pool, new_enum_pool, ..) =
+    let (mut imports, new_struct_pool, new_enum_pool, new_init_methods, ..) =
         parser.parse(&DoOnly::Imports, None, None);
     struct_pool.replace_with(|_| new_struct_pool);
     enum_pool.replace_with(|_| new_enum_pool);
+    init_methods.replace_with(|_| new_init_methods);
     let loc = Rc::new(RefCell::new(Location::default(input_path.clone())));
 
     if nesting == 0 && !no_fmt {
@@ -281,6 +284,7 @@ pub fn lex_and_parse(
                     struct_pool,
                     enum_pool,
                     parsed_modules,
+                    init_methods,
                     warnings,
                     no_strings,
                     no_alloc,
@@ -315,6 +319,15 @@ pub fn lex_and_parse(
                         Primitive::Constant(ConstantSource { name, public, .. }) => {
                             override_and_add_node!(
                                 Primitive::Constant,
+                                &mut tree,
+                                &name,
+                                symbol,
+                                public
+                            );
+                        }
+                        Primitive::Global(GlobalSource { name, public, .. }) => {
+                            override_and_add_node!(
+                                Primitive::Global,
                                 &mut tree,
                                 &name,
                                 symbol,
@@ -396,16 +409,17 @@ pub fn lex_and_parse(
         }
     }
 
-    let (structs, new_struct_pool, new_enum_pool, ..) = parser.parse(
+    let (structs, new_struct_pool, new_enum_pool, new_init_methods, ..) = parser.parse(
         &DoOnly::StructsAndEnums,
         Some(struct_pool.borrow().to_owned()),
         Some(enum_pool.borrow().to_owned()),
     );
     struct_pool.replace_with(|_| new_struct_pool);
     enum_pool.replace_with(|_| new_enum_pool);
+    init_methods.replace_with(|_| new_init_methods);
     tree.extend(structs);
 
-    let (others, new_struct_pool, new_enum_pool, ..) = parser.parse(
+    let (others, new_struct_pool, new_enum_pool, new_init_methods, ..) = parser.parse(
         &DoOnly::FunctionsAndConstants,
         Some(struct_pool.borrow().to_owned()),
         Some(enum_pool.borrow().to_owned()),
@@ -413,6 +427,7 @@ pub fn lex_and_parse(
 
     struct_pool.replace_with(|_| new_struct_pool);
     enum_pool.replace_with(|_| new_enum_pool);
+    init_methods.replace_with(|_| new_init_methods);
     tree.extend(others);
 
     // Add global constants
@@ -447,6 +462,7 @@ pub fn existing_definition(tree: &[Primitive], node_name: &str) -> Option<usize>
     tree.iter().position(|item| match item {
         Primitive::Use { .. } => false,
         Primitive::Constant(ConstantSource { name, .. })
+        | Primitive::Global(GlobalSource { name, .. })
         | Primitive::Function(FunctionSource { name, .. })
         | Primitive::Struct(StructSource { name, .. })
         | Primitive::Enum(EnumSource { name, .. }) => *name == node_name,

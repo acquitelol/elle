@@ -134,7 +134,9 @@ impl fmt::Display for Module {
         }
 
         for (_, data) in &self.data {
-            writeln!(f, "{data}")?;
+            if !data.external {
+                writeln!(f, "{data}")?;
+            }
         }
 
         for func in self.functions.values() {

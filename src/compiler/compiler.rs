@@ -1,6 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, fs::File, io::Write};
 
 use crate::{
+    compiler::primitive::global::generate_global,
     elle_error, get_MAIN_ID, hashmap,
     lexer::enums::{Location, MutRc, Token, ValueKind},
     misc::{
@@ -252,15 +253,26 @@ impl Compiler {
                 // If it fails to get the variable from the current scope
                 // then attempt to get it from a global instead
                 let tmp_module = module.unwrap().borrow();
-                let global = tmp_module
-                    .data
-                    .iter()
-                    .find(|(_, item)| item.name == name.clone());
+                let global = tmp_module.data.get(name.as_str());
 
-                global.map_or_else(
-                    || undefined_error!(),
-                    |(_, item)| Some((Type::Long, Value::Global(item.name.clone()))),
-                )
+                if let Some(data) = global.cloned() {
+                    let tmp = self.new_temporary(None, false);
+
+                    func.expect("Could not find current function")
+                        .borrow_mut()
+                        .assign_instruction(
+                            &tmp,
+                            &data.ty.clone().unwrap(),
+                            Instruction::Load(
+                                data.ty.clone().unwrap(),
+                                Value::Global(data.name.clone()),
+                            ),
+                        );
+
+                    return Some((data.ty.unwrap(), tmp));
+                }
+
+                undefined_error!()
             }
         }
     }
@@ -480,6 +492,9 @@ impl Compiler {
                     } else {
                         module_ref.borrow_mut().add_type(td);
                     }
+                }
+                Primitive::Global(this) => {
+                    generate_global(this, &mut gen, &module_ref);
                 }
                 _ => {}
             }

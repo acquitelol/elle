@@ -5,7 +5,14 @@ use crate::{
     elle_error,
     lexer::enums::{Location, MutRc, Token, TokenKind, ValueKind},
     misc::colors::*,
-    parser::{constant::Constant, function::Function, r#enum::Enum, r#struct::Struct},
+    parser::{
+        constant::Constant,
+        enums::{AstNode, Declare, FunctionSource, GlobalSource, Return},
+        function::Function,
+        global::Global,
+        r#enum::Enum,
+        r#struct::Struct
+    },
     Warnings, GENERIC_END, GENERIC_IDENTIFIER,
 };
 
@@ -451,6 +458,7 @@ pub struct Parser {
     // Map of struct name to members and generics
     pub struct_pool: RefCell<StructPool>,
     pub enum_pool: RefCell<EnumPool>,
+    pub init_methods: RefCell<Vec<String>>,
     pub global_public: bool,
     pub global_external: bool,
     pub warnings: Warnings,
@@ -461,6 +469,7 @@ impl Parser {
         tokens: Vec<Token>,
         struct_pool: StructPool,
         enum_pool: EnumPool,
+        init_methods: Vec<String>,
         warnings: Warnings,
     ) -> Self {
         Self {
@@ -469,6 +478,7 @@ impl Parser {
             tree: RefCell::new(vec![]),
             struct_pool: RefCell::new(struct_pool),
             enum_pool: RefCell::new(enum_pool),
+            init_methods: RefCell::new(init_methods),
             global_public: false,
             global_external: false,
             warnings,
@@ -620,7 +630,7 @@ impl Parser {
         do_only: &DoOnly,
         new_struct_pool: Option<StructPool>,
         new_enum_pool: Option<EnumPool>,
-    ) -> (Vec<Primitive>, StructPool, EnumPool) {
+    ) -> (Vec<Primitive>, StructPool, EnumPool, Vec<String>) {
         if let Some(pool) = new_struct_pool {
             self.struct_pool = RefCell::new(pool);
         }
@@ -805,6 +815,81 @@ impl Parser {
 
                     clean!();
                 }
+                TokenKind::Let => {
+                    if local && public {
+                        elle_error!(self
+                            .current_token()
+                            .location
+                            .borrow()
+                            .error("Cannot specify a global as both private and public"));
+                    }
+
+                    let mut global = Global::new(self);
+
+                    let statement = global.parse(
+                        if local {
+                            false
+                        } else {
+                            global_public || public
+                        },
+                        external,
+                        do_only == &DoOnly::FunctionsAndConstants,
+                        location.clone(),
+                    );
+
+                    if let Some(statement) = statement
+                        && let Primitive::Global(GlobalSource {
+                            name_token,
+                            method_name,
+                            location,
+                            value,
+                            ..
+                        }) = statement.clone()
+                    {
+                        let token = Token::from_ident(&method_name);
+
+                        self.tree.borrow_mut().push(statement);
+                        self.tree
+                            .borrow_mut()
+                            .push(Primitive::Function(FunctionSource {
+                                namespace_token: token.clone(),
+                                name_token: token,
+                                name: method_name.clone(),
+                                public,
+                                usable: true,
+                                imported: false,
+                                variadic: false,
+                                external,
+                                builtin: false,
+                                volatile: false,
+                                format: false,
+                                unaliased: None,
+                                generics: vec![],
+                                arguments: vec![],
+                                r#return: None,
+                                body: if external {
+                                    vec![]
+                                } else {
+                                    vec![AstNode::Return(Return {
+                                        value: Box::new(AstNode::Declare(Declare {
+                                            name: name_token,
+                                            r#type: None,
+                                            value,
+                                            location: location.clone(),
+                                            value_location: location.clone(),
+                                        })),
+                                        location: location.clone(),
+                                    })]
+                                },
+                                location: location.clone(),
+                                return_location: location,
+                            }));
+
+                        self.init_methods.borrow_mut().push(method_name);
+                    }
+
+                    clean!();
+                }
                 TokenKind::Struct => {
                     if external {
                         elle_error!(self.current_token().location.borrow().error(
@@ -897,6 +982,7 @@ impl Parser {
             self.tree.borrow_mut().to_owned(),
             self.struct_pool.borrow_mut().to_owned(),
             self.enum_pool.borrow_mut().to_owned(),
+            self.init_methods.borrow_mut().to_owned(),
         );
     }
 }

@@ -99,3 +99,10 @@ macro_rules! INTERNAL_ITERATOR_FORMAT {
         "__internal_{}_iterator{}"
     };
 }
+
+#[macro_export]
+macro_rules! INTERNAL_GLOBAL_INIT_FORMAT {
+    () => {
+        "__internal.elle.init_{}"
+    };
+}

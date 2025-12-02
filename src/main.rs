@@ -38,6 +38,7 @@ use parser::enums::{Argument, AstNode, Primitive};
 use tower_lsp::{LspService, Server};
 
 use crate::compiler::qbe::r#type::Type;
+use crate::lexer::enums::MutRc;
 use crate::parser::enums::{
     Address, BinaryOperation, Declare, Environment, FieldAccess, FunctionCall, FunctionSource,
     Literal, MemoryOperation, Return, SetAllocator, StructLiteral, StructSource,
@@ -412,13 +413,6 @@ async fn main() -> ExitCode {
             no_fmt: false,
             is_unused: false,
         },
-        // Arbitrary user-defined data, temporary solution before static variables
-        Argument {
-            name: "buffer".into(),
-            r#type: Type::Pointer(Box::new(Type::Void)),
-            no_fmt: false,
-            is_unused: true
-        }
     ];
 
     struct_pool.insert(
@@ -434,6 +428,7 @@ async fn main() -> ExitCode {
     let struct_pool = RefCell::new(struct_pool);
     let enum_pool = RefCell::new(HashMap::new());
     let parsed_modules = RefCell::new(HashSet::new());
+    let init_methods = RefCell::new(vec![]);
     let mut string_module_methods = vec![];
     let mut interner = Interner::new();
 
@@ -443,6 +438,7 @@ async fn main() -> ExitCode {
         &struct_pool,
         &enum_pool,
         &parsed_modules,
+        &init_methods,
         &warnings,
         no_strings,
         no_alloc,
@@ -881,6 +877,31 @@ async fn main() -> ExitCode {
         }));
     } else {
         unsafe { MAIN_ID = Some("main") };
+    }
+
+    // insert global inits into main func
+    for primitive in &mut tree {
+        match primitive {
+            Primitive::Function(FunctionSource { name, body, .. }) if name == get_MAIN_ID!() => {
+                for call in init_methods.borrow().iter().rev().map(|method| {
+                    let token = Token::from_ident(method);
+
+                    AstNode::FunctionCall(FunctionCall {
+                        namespace_token: token.clone(),
+                        name_token: token.clone(),
+                        name: method.clone(),
+                        generics: vec![],
+                        parameters: vec![],
+                        type_method: false,
+                        ignore_no_def: false,
+                        location: MutRc::new(RefCell::new(Location::base())),
+                    })
+                }) {
+                    body.insert(0, call);
+                }
+            }
+            _ => {}
+        }
     }
 
     if ast {

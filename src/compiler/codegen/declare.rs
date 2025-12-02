@@ -24,7 +24,7 @@ impl Codegen<'_> for Declare {
             Err(_) => Type::Word,
         };
 
-        if self.r#type.is_none()
+        let undeclared = self.r#type.is_none()
             && gen
                 .get_variable(
                     plain_name.as_str(),
@@ -32,8 +32,9 @@ impl Codegen<'_> for Declare {
                     Some(ctx.module),
                     &VariableInfo::default(),
                 )
-                .is_err()
-        {
+                .is_err();
+
+        if undeclared && !ctx.module.borrow().data.contains_key(&plain_name) {
             elle_error!(
                 self.location.borrow().error(
                     format!("Variable named '{plain_name}' hasn't been declared yet.\nPlease declare it before trying to re-declare it.")));
@@ -53,7 +54,9 @@ impl Codegen<'_> for Declare {
         );
 
         let mut local_ty = self.r#type.clone().unwrap_or(existing);
-        let mut temp = if local_ty == Type::Infer {
+        let mut temp = if local_ty == Type::Infer
+            || (undeclared && ctx.module.borrow().data.contains_key(&plain_name))
+        {
             None
         } else {
             Some(gen.new_variable(&local_ty, &plain_name, Some(ctx.func), true, false))
@@ -137,6 +140,39 @@ impl Codegen<'_> for Declare {
             {
                 local_ty = ret_ty.clone();
                 temp = Some(gen.new_variable(&local_ty, &plain_name, Some(ctx.func), false, false));
+            }
+
+            // assuming its assigning to a global at this stage
+            if undeclared && let Some(global) = ctx.module.borrow().data.get(&plain_name) {
+                let (data_ty, data_val) = convert_to_type(
+                    gen,
+                    ctx.func,
+                    ret_ty.clone(),
+                    global.ty.clone().unwrap(),
+                    value.clone(),
+                    &self.location,
+                    &self.location,
+                    false,
+                );
+
+                let addr_val = Value::Global(plain_name.clone());
+
+                ctx.func.borrow_mut().add_instruction(Instruction::Store(
+                    data_ty.clone(),
+                    addr_val.clone(),
+                    data_val,
+                ));
+
+                let tmp = gen.new_temporary(None, false);
+
+                ctx.func.borrow_mut().assign_instruction(
+                    &tmp,
+                    &data_ty.clone(),
+                    Instruction::Load(data_ty.clone(), addr_val.clone()),
+                );
+
+                gen.address_pool.insert(tmp.clone(), addr_val);
+                return Some((data_ty, tmp));
             }
 
             let (final_ty, final_val) = if ret_ty == local_ty {

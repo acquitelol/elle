@@ -35,6 +35,7 @@ pub enum Type {
     Void,
     Null,
     Infer,
+    Zeroed,      // internal type for zero initialized static data
     Size(usize), // for allowing static arrays to monomorphize with generic sizes
     // Inner type
     Pointer(Box<Type>),
@@ -209,7 +210,7 @@ impl Type {
                 }
             }
             Self::Unknown(name) => name.into(),
-            Self::Infer => unreachable!(),
+            Self::Infer | Self::Zeroed => unreachable!(),
             Self::Size(size) => format!("{size}"),
             Self::StaticArray(ty, size) => format!("{}[{}]", ty.display(), size.display()),
         }
@@ -237,7 +238,7 @@ impl Type {
             | Self::Function(..)
             | Self::StaticArray(..)
             | Self::Size(..) => self.display(),
-            Self::Infer => unreachable!(),
+            Self::Zeroed | Self::Infer => unreachable!(),
         }
     }
 
@@ -1161,7 +1162,12 @@ impl Type {
             Self::Halfword | Self::UnsignedHalfword => 2,
             Self::Boolean | Self::Byte | Self::UnsignedByte | Self::Char => 1,
             Self::Enum(_, inner) => Option::as_ref(inner).unwrap_or(&Self::Word).weight(),
-            Self::Void | Self::Null | Self::Infer | Self::Unknown(_) | Self::Size(..) => 0,
+            Self::Void
+            | Self::Null
+            | Self::Infer
+            | Self::Unknown(_)
+            | Self::Size(..)
+            | Self::Zeroed => 0,
         }
     }
 
@@ -1222,6 +1228,7 @@ impl fmt::Display for Type {
             Self::UnsignedLong => write!(formatter, "ul"),
             Self::Single => write!(formatter, "s"),
             Self::Double => write!(formatter, "d"),
+            Self::Zeroed => write!(formatter, "z"),
             Self::Null => write!(formatter, ""),
             Self::Struct(td) => write!(formatter, ":{}", ensure_ascii!(td.clone(), encode)),
             Self::Enum(_, inner) => {

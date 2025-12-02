@@ -18,6 +18,8 @@ impl Codegen<'_> for Environment {
                 gen.data_sections.insert(
                     ENV_ID.into(),
                     Data {
+                        ty: None,
+                        external: false,
                         linkage: Linkage::public(),
                         name: ENV_ID.into(),
                         align: None,
