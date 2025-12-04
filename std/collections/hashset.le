@@ -1,3 +1,4 @@
+use std/collections/hashmap;
 use std/collections/array;
 use std/iter/iterator;
 use std/limits;
@@ -6,51 +7,23 @@ use std/math;
 
 global pub;
 
-struct HashSetBucket<T> {
-    T value,
-    bool full,
-    bool deleted
-}
-
-fn HashSetBucket::new<T>() {
-    let bucket = #alloc(HashSetBucket<T>);
-    bucket.full = false;
-    bucket.deleted = false;
-    return bucket;
-}
-
 struct HashSet<T> {
-    HashSetBucket<T> *[] table,
-    u64 size,
+    HashMap<T, bool> *map
 }
 
-fn HashSet::__fmt__<T>(HashSet<T> self, i32 nesting) {
-    let values = self.values().collect();
-    let res = "{";
-
-    for u64 i = 0; i < values.len(); i += 1 {
-        res <>= values[i].__fmt__(0);
-
-        if i < values.len() - 1 {
-            res <>= ", ";
-        }
-    }
-
-    res.push('}');
-    return res;
+fn HashSet::__fmt__<T>(HashSet<T> self) {
+    return "{{ {} }".format(self.map.keys().intersperse(", ").collect());
 }
 
-fn HashSet::with_capacity<T>(u64 initial_capacity) -> HashSet<T> * {
+fn HashSet::new<T>() -> HashSet<T> * {
     self := #alloc(HashSet<T>);
+    self.map = HashMap::new();
+    return self;
+}
 
-    self.table = Array::with_capacity(initial_capacity);
-    self.size = 0;
-
-    for u64 i = 0; i < initial_capacity; i += 1 {
-        self.table.push(HashSetBucket::new<T>());
-    }
-
-    self.table.size = self.table.capacity;
+fn HashSet::with_capacity<T>(u64 capacity) -> HashSet<T> * {
+    self := #alloc(HashSet<T>);
+    self.map = HashMap::with_capacity(capacity);
     return self;
 }
 
@@ -65,126 +38,58 @@ fn HashSet::with_entries<T>(ElleMeta meta, T first, ...args) -> HashSet<T> * {
     return self;
 }
 
-fn HashSet::new<T>() -> HashSet<T> * {
-    return HashSet::with_capacity(4);
-}
-
 fn HashSet::add<T>(HashSet<T> *self, T value) -> bool {
-    if self.contains(value) {
+    if self.map.contains_key(value) {
         return false;
     }
 
-    if self.size >= self.table.capacity / 2 {
-        self.resize(self.table.capacity * 2);
-    }
-
-    u64 idx = value.__hash__(self.table.capacity);
-    let start_idx = idx;
-
-    while true {
-        if !self.table[idx].full || self.table[idx].deleted {
-            self.table[idx].value = value;
-            self.table[idx].full = true;
-            self.table[idx].deleted = false;
-            self.size += 1;
-            return true;
-        }
-
-        idx = (idx + 1) % self.table.capacity;
-
-        if idx == start_idx {
-            return false;
-        }
-    }
+    self.map[value] = true;
+    return true;
 }
 
 fn HashSet::remove<T>(HashSet<T> *self, T value) -> bool {
-    u64 idx = value.__hash__(self.table.capacity);
-    let start_idx = idx;
-
-    while true {
-        if !self.table[idx].full && !self.table[idx].deleted {
-            return false;
-        }
-
-        if self.table[idx].full && self.table[idx].value == value {
-            self.table[idx].full = false;
-            self.table[idx].deleted = true;
-            self.size -= 1;
-            return true;
-        }
-
-        idx = (idx + 1) % self.table.capacity;
-
-        if idx == start_idx {
-            return false;
-        }
-    }
+    return self.map.remove(value).is_some();
 }
 
 fn HashSet::contains<T>(HashSet<T> *self, T value) -> bool {
-    u64 idx = value.__hash__(self.table.capacity);
-    let start_idx = idx;
-
-    while true {
-        if !self.table[idx].full && !self.table[idx].deleted {
-            return false;
-        }
-
-        if self.table[idx].full && self.table[idx].value == value {
-            return true;
-        }
-
-        idx = (idx + 1) % self.table.capacity;
-
-        if idx == start_idx {
-            return false;
-        }
-    }
+    return self.map.contains_key(value);
 }
 
 fn HashSet::size<T>(HashSet<T> *self) -> u64 {
-    return self.size;
+    return self.map.size();
 }
 
 fn HashSet::is_empty<T>(HashSet<T> *self) -> bool {
-    return self.size == 0;
-}
-
-fn HashSet::resize<T>(HashSet<T> *self, u64 new_capacity) {
-    old_table := self.table;
-
-    self.table = Array::with_capacity(new_capacity);
-    self.size = 0;
-
-    for u64 i = 0; i < self.table.capacity; i += 1 {
-        self.table.push(HashSetBucket::new<T>());
-    }
-
-    for u64 i = 0; i < old_table.len(); i += 1 {
-        if old_table[i].full {
-            $assert(self.add(old_table[i].value));
-        }
-    }
-
-    self.table.size = self.table.capacity;
+    return self.map.size() == 0;
 }
 
 fn HashSet::clear<T>(HashSet<T> *self) {
-    self.size = 0;
-
-    for u64 i = 0; i < self.table.capacity; i += 1 {
-        self.table[i].full = false;
-        self.table[i].deleted = false;
-    }
+    self.map.clear();
 }
 
-fn HashSet::clone<T>(HashSet<T> *self) -> HashSet<T> * {
-    new_set := HashSet::with_capacity(self.table.capacity);
+fn HashSet::__iter__<T>(HashSet<T> *self) {
+    return self.map.keys();
+}
 
-    for u64 i = 0; i < self.table.capacity; i += 1 {
-        if self.table[i].full {
-            $assert(new_set.add(self.table[i].value));
+external fn HashSet::__iter__<T>(HashSet<T> *self) @alias(HashSet::iter) -> Iterator<T, SingleEnded>;
+external fn HashSet::__iter__<T>(HashSet<T> *self) @alias(HashSet::values) -> Iterator<T, SingleEnded>;
+
+fn HashSet::clone<T>(HashSet<T> *self) -> HashSet<T> * {
+    new_set := HashSet::with_capacity<T>(self.size());
+
+    for value in self {
+        new_set.add(value);
+    }
+
+    return new_set;
+}
+
+fn HashSet::difference<T>(HashSet<T> *self, HashSet<T> *other) -> HashSet<T> * {
+    new_set := HashSet::with_capacity<T>(self.size());
+
+    for value in self {
+        if !other.contains(value) {
+            $assert(new_set.add(value));
         }
     }
 
@@ -194,37 +99,9 @@ fn HashSet::clone<T>(HashSet<T> *self) -> HashSet<T> * {
 fn HashSet::from<T>(T[] array) -> HashSet<T> * {
     let set = HashSet::new();
 
-    for i := 0; i < array.len(); i += 1 {
+    for u64 i = 0; i < array.len(); i += 1 {
         set.add(array[i]);
     }
 
     return set;
 }
-
-struct HashSetEnv<T> {
-    HashSet<T> *base,
-    u64 i
-}
-
-fn HashSet::__iter__<T>(HashSet<T> *self) -> Iterator<T, SingleEnded> {
-    HashSetEnv<T> env = HashSetEnv { base = self, i = 0 };
-
-    return Iterator {
-        env = Box::new(env).to_ptr(),
-        next = fn(HashSetEnv<T> *env) {
-            while env.i < env.base.table.len() {
-                if env.base.table[env.i].full {
-                    value := env.base.table[env.i].value;
-                    env.i += 1;
-                    return Option::Some(value);
-                }
-                env.i += 1;
-            }
-            return Option::None<T>();
-        },
-        next_back = nil
-    };
-}
-
-external fn HashSet::__iter__<T>(HashSet<T> *self) @alias(HashSet::iter) -> Iterator<T, SingleEnded>;
-external fn HashSet::__iter__<T>(HashSet<T> *self) @alias(HashSet::values) -> Iterator<T, SingleEnded>;
