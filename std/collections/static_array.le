@@ -70,3 +70,11 @@ fn __arr__::mul<T, A, B, C>(T[A][B] a, T[B][C] b) {
 
     return res;
 }
+
+fn __arr__::__tuple__<T>(T[2] self) {
+    return $(self[0], self[1]);
+}
+
+fn __arr__::__triple__<T>(T[3] self) {
+    return $$(self[0], self[1], self[2]);
+}
