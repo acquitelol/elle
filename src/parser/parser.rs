@@ -867,7 +867,7 @@ impl Parser {
                                 generics: vec![],
                                 arguments: vec![],
                                 r#return: None,
-                                body: if external {
+                                body: if external || value.is_none() {
                                     vec![]
                                 } else {
                                     vec![AstNode::Declare(Declare {
