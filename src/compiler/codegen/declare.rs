@@ -106,7 +106,9 @@ impl Codegen<'_> for Declare {
         let parsed = node.compile(
             gen,
             &CodegenContext {
-                ty: if local_ty == Type::Infer {
+                ty: if local_ty == Type::Infer
+                    || (undeclared && ctx.module.borrow().data.contains_key(&plain_name))
+                {
                     None
                 } else {
                     Some(local_ty.clone())
