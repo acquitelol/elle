@@ -17,6 +17,8 @@ pub fn generate_global(this: GlobalSource, gen: &mut Compiler, module: &RefCell<
 
     let ty = if this.external {
         this.r#type.unwrap()
+    } else if let Some(ty) = this.r#type {
+        ty
     } else {
         this.value
             .unwrap()

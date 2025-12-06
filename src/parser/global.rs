@@ -112,33 +112,42 @@ impl<'a> Global<'a> {
             }));
         }
 
-        self.parser.expect_tokens(&[TokenKind::Equal]);
-        self.parser.advance();
+        let mut value = None;
 
-        let value_location = self.parser.current_token().location;
-        let tokens = self.parser.yield_tokens_wrapped_with_semi();
+        if self.parser.current_token().kind == TokenKind::Equal || ty.is_none() {
+            self.parser.expect_tokens(&[TokenKind::Equal]);
+            self.parser.advance();
 
-        // `end` here is AFTER yielding all the tokens
-        set_end!(value_location, self.parser);
-        self.parser.advance();
+            let value_location = self.parser.current_token().location;
+            let tokens = self.parser.yield_tokens_wrapped_with_semi();
 
-        let body: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
-        let value = Statement::new(
-            tokens,
-            0,
-            &body,
-            &Shared {
-                struct_pool: &self.parser.struct_pool,
-                enum_pool: &self.parser.enum_pool,
-                tree: &self.parser.tree,
-                generics: &vec![],
-                known_generics: &vec![],
-                addr_only: false,
-                tmp_counter: &RefCell::new(0),
-            },
-        )
-        .parse()
-        .0;
+            // `end` here is AFTER yielding all the tokens
+            set_end!(value_location, self.parser);
+            self.parser.advance();
+
+            let body: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
+            value = Some(
+                Statement::new(
+                    tokens,
+                    0,
+                    &body,
+                    &Shared {
+                        struct_pool: &self.parser.struct_pool,
+                        enum_pool: &self.parser.enum_pool,
+                        tree: &self.parser.tree,
+                        generics: &vec![],
+                        known_generics: &vec![],
+                        addr_only: false,
+                        tmp_counter: &RefCell::new(0),
+                    },
+                )
+                .parse()
+                .0,
+            );
+        } else {
+            self.parser.expect_tokens(&[TokenKind::Semicolon]);
+            self.parser.advance();
+        }
 
         set_end!(location, self.parser);
 
@@ -149,16 +158,18 @@ impl<'a> Global<'a> {
             name,
             public,
             r#type: ty.clone(),
-            value: Some(Box::new(if let Some(ty) = ty {
-                AstNode::Conversion(Conversion {
-                    r#type: Some(ty),
-                    value: Box::new(value),
-                    location: value_location,
-                    explicit: false,
+            value: value.map(|value| {
+                Box::new(if let Some(ty) = ty {
+                    AstNode::Conversion(Conversion {
+                        r#type: Some(ty),
+                        value: Box::new(value),
+                        location: location.clone(),
+                        explicit: false,
+                    })
+                } else {
+                    value
                 })
-            } else {
-                value
-            })),
+            }),
             usable: true,
             imported: false,
             external: false,
