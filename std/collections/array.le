@@ -4,7 +4,7 @@ use std/math;
 global pub;
 
 /// Max length of the array string before its elements wrap onto new lines
-const Array::MAX_INLINE_LENGTH = 40;
+let Array::MAX_INLINE_LENGTH = 40;
 
 fn Array::truncate(i64[] self) {
     return self.map(i64::truncate);

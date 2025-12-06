@@ -2,7 +2,7 @@ use std/runtime/string;
 use std/core;
 global pub;
 
-const i64 __internal_EOF = -1;
+let EOF: i64 = -1;
 
 !pub fn __print(i64 args, ElleMeta meta, bool wrap, bool full, bool newline) {
     for let i = 0; i < meta.arity; i += 1 {
@@ -146,7 +146,7 @@ fn io::input(string message) -> string {
     let buf = #alloc(char, 4096);
 
     io::print(message);
-    io::fgets(buf, 4096, __internal_stdin);
+    io::fgets(buf, 4096, stdin);
 
     // I would rather O(n) than O(2n)
     let length = buf.len();

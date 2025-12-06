@@ -1,6 +1,6 @@
 global pub, external;
 
-const i64 CLOCKS_PER_SEC = 1_000_000;
+let CLOCKS_PER_SEC: i64 = 1_000_000;
 
 struct time_info @nofmt {
     i32 seconds,  // Seconds [0, 60]

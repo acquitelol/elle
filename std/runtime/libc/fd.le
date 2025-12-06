@@ -2,6 +2,6 @@ use std/runtime/libc/io;
 namespace libc;
 global pub;
 
-const FILE *__internal_stdin = libc::fdopen(0, "r");
-const FILE *__internal_stdout = libc::fdopen(1, "w");
-const FILE *__internal_stderr = libc::fdopen(2, "w");
+let stdin = libc::fdopen(0, "r");
+let stdout = libc::fdopen(1, "w");
+let stderr = libc::fdopen(2, "w");

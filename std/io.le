@@ -2,9 +2,7 @@ use std/libc/io;
 use std/core;
 
 global pub, external;
-
-fn __internal_EOF() -> i64;
-const i64 EOF = __internal_EOF();
+external let EOF: i64;
 
 fn io::dbg(ElleMeta meta, ...args) @fmt;
 fn io::print(ElleMeta meta, ...args) @fmt;

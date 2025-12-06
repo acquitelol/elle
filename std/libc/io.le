@@ -1,23 +1,20 @@
 use std/runtime/libc/io;
 global pub;
 
-!pub external fn __internal_stdin() -> FILE *;
-!pub external fn __internal_stdout() -> FILE *;
-!pub external fn __internal_stderr() -> FILE *;
+external let stdin: FILE *;
+external let stdout: FILE *;
+external let stderr: FILE *;
 
-const stdin = __internal_stdin();
-const stdout = __internal_stdout();
-const stderr = __internal_stderr();
-
-!pub fn __internal_get_errno() @cfg(target = "macos") {
+fn __internal_get_errno() @cfg(target = "macos") {
     return __error();
 }
 
-!pub fn __internal_get_errno() @cfg(target = "linux") {
+fn __internal_get_errno() @cfg(target = "linux") {
     return __errno_location();
 }
 
-const errno = *__internal_get_errno();
+let errno = *__internal_get_errno();
+
 fn os_get_last_error() -> string {
     return strerror(errno);
 }
