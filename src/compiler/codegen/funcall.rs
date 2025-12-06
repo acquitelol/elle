@@ -576,7 +576,11 @@ impl Codegen<'_> for FunctionCall {
                         if arg_len > 0 { "..." } else { "" }
                     )
                 } else if tmp_function.variadic {
-                    format!("This function is variadic and requires {} argument{}", arg_len, if arg_len == 1 { "" } else { "s" })
+                    format!(
+                        "This function is variadic and requires {} argument{}",
+                        arg_len,
+                        if arg_len == 1 { "" } else { "s" }
+                    )
                 } else {
                     String::new()
                 })
@@ -584,7 +588,11 @@ impl Codegen<'_> for FunctionCall {
                     "Function named `{}({})` takes {}{} argument{}, but you {}passed {}\n{}",
                     name.replace('.', "::"),
                     if arg_len > 0 { "..." } else { "" },
-                    if tmp_function.variadic { "at least " } else { "" },
+                    if tmp_function.variadic {
+                        "at least "
+                    } else {
+                        ""
+                    },
                     arg_len,
                     if arg_len == 1 { "" } else { "s" },
                     only,
