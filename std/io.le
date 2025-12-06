@@ -2,7 +2,6 @@ use std/libc/io;
 use std/core;
 
 global pub, external;
-external let EOF: i64;
 
 fn io::dbg(ElleMeta meta, ...args) @fmt;
 fn io::print(ElleMeta meta, ...args) @fmt;

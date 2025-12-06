@@ -2,8 +2,6 @@ use std/runtime/string;
 use std/core;
 global pub;
 
-let EOF: i64 = -1;
-
 !pub fn __print(i64 args, ElleMeta meta, bool wrap, bool full, bool newline) {
     for let i = 0; i < meta.arity; i += 1 {
         let ty = meta.types[i];
