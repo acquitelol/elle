@@ -438,6 +438,46 @@ fn string::pop(string *self) -> char {
     return last_char;
 }
 
+fn string::strip_left(string self) {
+    n := self.len();
+    i := 0;
+    for; i < n && self[i] == ' '; i += 1 {}
+    return self.slice(i, n);
+}
+
+fn string::strip_left_with(string self, char c) {
+    if self.is_empty() { return self; }
+    n := self.len();
+    i := 0;
+    for; i < n && self[i] == c; i += 1 {}
+    return self.slice(i, n);
+}
+
+fn string::strip_left(string self) {
+    return self.strip_left_with(' ');
+}
+
+fn string::strip_right_with(string self, char c) {
+    if self.is_empty() { return self; }
+    n := self.len() - 1;
+    for; n >= 0 && self[n] == c; n -= 1 {
+        if n == 0 { return ""; }
+    }
+    return self.slice(0, n + 1);
+}
+
+fn string::strip_right(string self) {
+    return self.strip_right_with(' ');
+}
+
+fn string::strip_with(string self, char c) {
+    return self.strip_left_with(c).strip_right_with(c);
+}
+
+fn string::strip(string self) {
+    return self.strip_left().strip_right();
+}
+
 fn string::push(string *self, char c) {
     let length = (*self).len();
     let result = #alloc(char, length + 2);
@@ -622,6 +662,14 @@ fn string::format(ElleMeta meta, string fmt, ...args) @fmt -> string {
     }
 
     return __internal_fmt(fmt, meta, args);
+}
+
+fn string::justify_left(string self, u64 amount) {
+    return "{}{}".__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(self, " ".repeat(amount - self.len()));
+}
+
+fn string::justify_right(string self, u64 amount) {
+    return "{}{}".__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(" ".repeat(amount - self.len()), self);
 }
 
 fn string::ascii_lower() {

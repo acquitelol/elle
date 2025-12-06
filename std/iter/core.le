@@ -73,11 +73,11 @@ fn Iterator::reduce<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, T) -> T cb) -
 }
 
 fn Iterator::sum<T, AnyEnded>(Iterator<T, AnyEnded> self) {
-    return self.fold(0, fn(acc, cur) acc + cur);
+    return self.fold(#cast(T, 0), fn(acc, cur) acc + cur);
 }
 
 fn Iterator::product<T, AnyEnded>(Iterator<T, AnyEnded> self) {
-    return self.fold(1, fn(acc, cur) acc * cur);
+    return self.fold(#cast(T, 1), fn(acc, cur) acc * cur);
 }
 
 fn Iterator::max<T, AnyEnded>(Iterator<T, AnyEnded> self) -> Option<T> {
