@@ -23,8 +23,10 @@ fn string::strip_with(string self, char c) -> string;
 fn string::strip_left(string self) -> string;
 fn string::strip_right(string self) -> string;
 fn string::strip(string self) -> string;
-fn string::justify_left(string self, u64 width) -> string;
-fn string::justify_right(string self, u64 width) -> string;
+fn string::pad_left_with(string self, u64 width, string sb) -> string;
+fn string::pad_right_with(string self, u64 width, string sb) -> string;
+fn string::pad_left(string self, u64 width) -> string;
+fn string::pad_right(string self, u64 width) -> string;
 fn string::first(string self) -> char;
 fn string::last(string self) -> char;
 

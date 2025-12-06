@@ -664,12 +664,20 @@ fn string::format(ElleMeta meta, string fmt, ...args) @fmt -> string {
     return __internal_fmt(fmt, meta, args);
 }
 
-fn string::justify_left(string self, u64 amount) {
-    return "{}{}".__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(self, " ".repeat(amount - self.len()));
+fn string::pad_left_with(string self, u64 width, string sb) {
+    return "{}{}".__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(self, sb.repeat(width - self.len()));
 }
 
-fn string::justify_right(string self, u64 amount) {
-    return "{}{}".__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(" ".repeat(amount - self.len()), self);
+fn string::pad_right_with(string self, u64 width, string sb) {
+    return "{}{}".__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(sb.repeat(width - self.len()), self);
+}
+
+fn string::pad_left(string self, u64 amount) {
+    return self.pad_left_with(amount, " ");
+}
+
+fn string::pad_right_with(string self, u64 amount, string c) {
+    return self.pad_right_with(amount, " ");
 }
 
 fn string::ascii_lower() {
