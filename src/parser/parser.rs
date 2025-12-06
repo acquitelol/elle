@@ -7,11 +7,11 @@ use crate::{
     misc::colors::*,
     parser::{
         constant::Constant,
-        enums::{AstNode, Declare, FunctionSource, GlobalSource, Return},
+        enums::{AstNode, Declare, FunctionSource, GlobalSource},
         function::Function,
         global::Global,
         r#enum::Enum,
-        r#struct::Struct
+        r#struct::Struct,
     },
     Warnings, GENERIC_END, GENERIC_IDENTIFIER,
 };
@@ -839,7 +839,7 @@ impl Parser {
 
                     if let Some(statement) = statement
                         && let Primitive::Global(GlobalSource {
-                            name_token,
+                            name,
                             method_name,
                             location,
                             value,
@@ -870,15 +870,12 @@ impl Parser {
                                 body: if external {
                                     vec![]
                                 } else {
-                                    vec![AstNode::Return(Return {
-                                        value: Box::new(AstNode::Declare(Declare {
-                                            name: name_token,
-                                            r#type: None,
-                                            value,
-                                            location: location.clone(),
-                                            value_location: location.clone(),
-                                        })),
+                                    vec![AstNode::Declare(Declare {
+                                        name: Token::from_ident(&name),
+                                        r#type: None,
+                                        value,
                                         location: location.clone(),
+                                        value_location: location.clone(),
                                     })]
                                 },
                                 location: location.clone(),
