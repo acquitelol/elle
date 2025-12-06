@@ -159,11 +159,19 @@ impl Codegen<'_> for Declare {
 
                 let addr_val = Value::Global(plain_name.clone());
 
-                ctx.func.borrow_mut().add_instruction(Instruction::Store(
-                    data_ty.clone(),
-                    addr_val.clone(),
-                    data_val,
-                ));
+                if data_ty.is_struct() || data_ty.is_static_array() {
+                    ctx.func.borrow_mut().add_instruction(Instruction::Blit(
+                        data_val.clone(),
+                        addr_val.clone(),
+                        data_ty.size(ctx.module),
+                    ));
+                } else {
+                    ctx.func.borrow_mut().add_instruction(Instruction::Store(
+                        data_ty.clone(),
+                        addr_val.clone(),
+                        data_val,
+                    ));
+                }
 
                 let tmp = gen.new_temporary(None, false);
 
