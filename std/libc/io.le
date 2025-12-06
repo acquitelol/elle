@@ -13,8 +13,8 @@ fn __internal_get_errno() @cfg(target = "linux") {
     return __errno_location();
 }
 
-let errno = *__internal_get_errno();
+let io::errno = *__internal_get_errno();
 
 fn os_get_last_error() -> string {
-    return strerror(errno);
+    return strerror(io::errno);
 }
