@@ -52,7 +52,7 @@ external fn Option::Some<T>(T value) @alias(Some) -> Option<T>;
 external fn Option::None<T>() @alias(None) -> Option<T>;
 
 !external fn __internal_option_throw<T>(Option<T> self, string message, ElleMeta meta) {
-    io::fprintf(stderr, "Function %s panicked at %s:%d:%d:\n%s\n",
+    io::fprintf(io::stderr, "Function %s panicked at %s:%d:%d:\n%s\n",
         meta.caller, meta.file, meta.line, meta.column,
         message ?: "No further information was provided."
     );

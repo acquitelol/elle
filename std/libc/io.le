@@ -1,9 +1,9 @@
 use std/runtime/libc/io;
 global pub;
 
-external let stdin: FILE *;
-external let stdout: FILE *;
-external let stderr: FILE *;
+external let io::stdin: FILE *;
+external let io::stdout: FILE *;
+external let io::stderr: FILE *;
 
 fn __internal_get_errno() @cfg(target = "macos") {
     return __error();

@@ -621,13 +621,13 @@ fn __internal_fmt(string fmt, ElleMeta meta, i64 args) {
             arg += 1;
 
             if c != '}' {
-                io::fprintf(stderr, "Invalid format for argument '%d' at position '%d' (%c)\n", arg, i, c);
+                io::fprintf(io::stderr, "Invalid format for argument '%d' at position '%d' (%c)\n", arg, i, c);
                 return "";
             }
 
 
             if arg >= meta.arity {
-                io::fprintf(stderr, "Failed to format argument '%d' at position '%d': Ran out of arguments (%c)\n", arg, i, c);
+                io::fprintf(io::stderr, "Failed to format argument '%d' at position '%d': Ran out of arguments (%c)\n", arg, i, c);
                 libc::abort();
             }
 
