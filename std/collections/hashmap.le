@@ -282,7 +282,7 @@ fn HashMap::keys<T, U>(HashMap<T, U> *self) -> Iterator<T, SingleEnded> {
                 }
                 env.i += 1;
             }
-            return Option::None<U>();
+            return Option::None<T>();
         },
         next_back = nil
     };
