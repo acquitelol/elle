@@ -9,7 +9,7 @@ fn GCAllocator::free(GCAllocator *self) {}
 
 struct __internal_ElleGC_Header @nofmt {
     bool marked,
-    i32 size,
+    i64 size,
     void *data
 }
 
@@ -27,7 +27,7 @@ struct GCAllocator @nofmt {
     __internal_ElleGC_HeaderNode *head // linked list to track allocations
 }
 
-fn __internal_ElleGC_Header::new(i32 size) {
+fn __internal_ElleGC_Header::new(i64 size) {
     __internal_ElleGC_Header *self = mem::malloc(#size(__internal_ElleGC_Header));
 
     self.marked = false;
@@ -175,7 +175,7 @@ fn GCAllocator::collect(GCAllocator *self) {
     }
 }
 
-fn GCAllocator::alloc(GCAllocator *self, i32 size) {
+fn GCAllocator::alloc(GCAllocator *self, i64 size) {
     if self.total_size + size > self.threshold {
         self.collect();
     }
@@ -193,7 +193,7 @@ fn GCAllocator::alloc(GCAllocator *self, i32 size) {
     return header.data;
 }
 
-fn GCAllocator::realloc(GCAllocator *self, void *ptr, i32 new_size) {
+fn GCAllocator::realloc(GCAllocator *self, void *ptr, i64 new_size) {
     if !ptr {
         return self.alloc(new_size);
     }
