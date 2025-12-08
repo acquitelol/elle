@@ -1,0 +1,72 @@
+use std/collections/array;
+
+struct MinHeap<T> {
+    T[] inner,
+    fn(T, T) -> i64 cmp
+}
+
+fn MinHeap::__fmt__<T>(MinHeap<T> self, u64 nesting) {
+    return self.inner.__fmt__(nesting);
+}
+
+fn MinHeap::__iter__<T>(MinHeap<T> self) {
+    return self.inner.iter();
+}
+
+external fn MinHeap::__iter__<T>(MinHeap<T> self) @alias(MinHeap::iter) -> Iterator<T, DoubleEnded>;
+
+fn MinHeap::new<T>(fn(T, T) -> i64 cmp) -> MinHeap<T> {
+    return MinHeap { inner = [], cmp };
+}
+
+fn MinHeap::pop<T>(MinHeap<T> self) -> Option<T> {
+    if self.inner.is_empty() { return None(); }
+    result := self.inner.first();
+    self.inner[0] = self.inner.pop().unwrap();
+    if self.inner.is_empty() { return result; }
+
+    i := 0;
+    cmp := self.cmp;
+
+    for ;; {
+        smallest := i;
+        left := 2 * i + 1;
+        right := 2 * i + 2;
+
+        if left < self.inner.len() && cmp(self.inner[left], self.inner[smallest]) < 0 {
+            smallest = left;
+        }
+
+        if right < self.inner.len() && cmp(self.inner[right], self.inner[smallest]) < 0 {
+            smallest = right;
+        }
+
+        if smallest == i { break; }
+
+        temp := self.inner[i];
+        self.inner[i] = self.inner[smallest];
+        self.inner[smallest] = temp;
+
+        i = smallest;
+    }
+
+    return result;
+}
+
+fn MinHeap::push<T>(MinHeap<T> self, T value) {
+    self.inner.push(value);
+    cmp := self.cmp;
+
+    for i := self.inner.len() - 1; i > 0; {
+        parent := (i - 1) / 2;
+
+        if cmp(self.inner[parent], self.inner[i]) <= 0 {
+            break;
+        }
+
+        temp := self.inner[i];
+        self.inner[i] = self.inner[parent];
+        self.inner[parent] = temp;
+        i = parent;
+    }
+}
