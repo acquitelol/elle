@@ -10,6 +10,7 @@ use std/collections/tuple;
 use std/collections/array;
 use std/collections/stack;
 use std/collections/deque;
+use std/vectors;
 use std/option;
 use std/result;
 use std/limits;

@@ -61,13 +61,7 @@ fn bool::try_parse(string str, bool *res) {
 }
 
 fn i32::parse(string str) -> i32 {
-    let valid = __internal_is_valid_with_err(str, "i32");
-
-    if valid {
-        return str.atoi();
-    }
-
-    return 0;
+    return str.atoi();
 }
 
 fn i32::try_parse(string str, i32 *res) -> bool {
@@ -82,13 +76,7 @@ fn i32::try_parse(string str, i32 *res) -> bool {
 }
 
 fn i64::parse(string str) -> i64 {
-    let valid = __internal_is_valid_with_err(str, "i64");
-
-    if valid {
-        return str.atol();
-    }
-
-    return 0;
+    return str.atol();
 }
 
 fn i64::try_parse(string str, i64 *res) -> bool {
