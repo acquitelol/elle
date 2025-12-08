@@ -198,16 +198,20 @@ fn Array::clear<T>(T[] self) {
 }
 
 // Sorts in-place and returns the sorted array
-fn Array::sort<T>(T[] self) {
+fn Array::sort_with<T>(T[] self, fn(T, T) -> i64 cmp) {
     if self.is_empty() || self.len() <= 1 {
         return self;
     }
 
-    __internal_qsort(self.elements, 0, self.len() - 1);
+    __internal_qsort(self, 0, self.len() - 1, cmp);
     return self;
 }
 
-!pub fn __internal_qsort<T>(T *array, i64 low, i64 high) {
+fn Array::sort<T>(T[] self) {
+    return self.sort_with(fn(a, b) a - b);
+}
+
+!pub fn __internal_qsort<T>(T[] array, i64 low, i64 high, fn(T, T) -> i64 cmp) {
     if low >= high {
         return;
     }
@@ -216,8 +220,8 @@ fn Array::sort<T>(T[] self) {
     i64 i = low;
 
     for i64 j = low; j < high; j += 1 {
-        if array[j] < pivot {
-            T temp = array[i];
+        if cmp(array[j], pivot) < 0 {
+            temp := array[i];
             array[i] = array[j];
             array[j] = temp;
             i += 1;
@@ -228,8 +232,8 @@ fn Array::sort<T>(T[] self) {
     array[i] = array[high];
     array[high] = temp;
 
-    __internal_qsort(array, low, i - 1);
-    __internal_qsort(array, i + 1, high);
+    __internal_qsort(array, low, i - 1, cmp);
+    __internal_qsort(array, i + 1, high, cmp);
 }
 
 fn Array::cartesian_product<T>(T[] self, i32 n) {
@@ -249,13 +253,44 @@ fn Array::cartesian_product<T>(T[] self, i32 n) {
 !pub fn __internal_cartesian_product_generate<T>(T[] self, T[] current, i32 n, T[][] results) {
     if current.len() == n {
         T[] combination = current.clone();
-        results.push(#cast(T, combination));
+        results.push(combination);
         return;
     }
 
     for u64 i = 0; i < self.len(); i += 1 {
         current.push(self[i]);
         __internal_cartesian_product_generate(self, current, n, results);
+        current.pop();
+    }
+}
+
+fn Array::combinations<T>(T[] self, i64 k) {
+    T[][] results = [];
+    T[] current = [];
+
+    if k == 0 {
+        T[] combo = [];
+        results.push(combo);
+        return results;
+    }
+
+    __internal_combinations_generate(self, 0, current, k, results);
+    return results;
+}
+
+!pub fn __internal_combinations_generate<T>(T[] self, u64 start, T[] current, i64 k, T[][] results) {
+    if current.len() == k {
+        T[] combo = current.clone();
+        results.push(combo);
+        return;
+    }
+
+    u64 need = #cast(u64, k - #cast(i64, current.len()));
+    if start + need > self.len() { return; }
+
+    for u64 i = start; i < self.len(); i += 1 {
+        current.push(self[i]);
+        __internal_combinations_generate(self, i + 1, current, k, results);
         current.pop();
     }
 }
