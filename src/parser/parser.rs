@@ -630,6 +630,7 @@ impl Parser {
         do_only: &DoOnly,
         new_struct_pool: Option<StructPool>,
         new_enum_pool: Option<EnumPool>,
+        new_init_methods: Option<Vec<String>>,
     ) -> (Vec<Primitive>, StructPool, EnumPool, Vec<String>) {
         if let Some(pool) = new_struct_pool {
             self.struct_pool = RefCell::new(pool);
@@ -637,6 +638,10 @@ impl Parser {
 
         if let Some(pool) = new_enum_pool {
             self.enum_pool = RefCell::new(pool);
+        }
+
+        if let Some(init_methods) = new_init_methods {
+            self.init_methods = RefCell::new(init_methods);
         }
 
         self.position = 0;
@@ -855,9 +860,13 @@ impl Parser {
                                 namespace_token: token.clone(),
                                 name_token: token,
                                 name: method_name.clone(),
-                                public,
+                                public: if local {
+                                    false
+                                } else {
+                                    global_public || public
+                                },
                                 usable: true,
-                                imported: false,
+                                imported: true,
                                 variadic: false,
                                 external,
                                 builtin: false,

@@ -187,7 +187,7 @@ pub fn lex_and_parse(
     let mut tree = existing_tree.unwrap_or(&mut fallback);
 
     let (mut imports, new_struct_pool, new_enum_pool, new_init_methods, ..) =
-        parser.parse(&DoOnly::Imports, None, None);
+        parser.parse(&DoOnly::Imports, None, None, None);
     struct_pool.replace_with(|_| new_struct_pool);
     enum_pool.replace_with(|_| new_enum_pool);
     init_methods.replace_with(|_| new_init_methods);
@@ -413,6 +413,7 @@ pub fn lex_and_parse(
         &DoOnly::StructsAndEnums,
         Some(struct_pool.borrow().to_owned()),
         Some(enum_pool.borrow().to_owned()),
+        Some(init_methods.borrow().to_owned()),
     );
     struct_pool.replace_with(|_| new_struct_pool);
     enum_pool.replace_with(|_| new_enum_pool);
@@ -423,6 +424,7 @@ pub fn lex_and_parse(
         &DoOnly::FunctionsAndConstants,
         Some(struct_pool.borrow().to_owned()),
         Some(enum_pool.borrow().to_owned()),
+        Some(init_methods.borrow().to_owned()),
     );
 
     struct_pool.replace_with(|_| new_struct_pool);
