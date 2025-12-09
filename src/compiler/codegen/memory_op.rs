@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use crate::{
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
+        lib::convert::convert_to_type,
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
     elle_error, is_generic,
@@ -240,21 +241,32 @@ impl Codegen<'_> for MemoryOperation {
                     )))
                 });
 
-            if val_ty.is_struct() || val_ty.is_static_array() {
+            let (final_ty, final_val) = convert_to_type(
+                gen,
+                ctx.func,
+                val_ty,
+                inner,
+                compiled,
+                &self.left_location,
+                &self.right_location,
+                false,
+            );
+
+            if final_ty.is_struct() || final_ty.is_static_array() {
                 ctx.func.borrow_mut().add_instruction(Instruction::Blit(
-                    compiled.clone(),
+                    final_val.clone(),
                     compiled_location,
-                    val_ty.size(ctx.module),
+                    final_ty.size(ctx.module),
                 ));
             } else {
                 ctx.func.borrow_mut().add_instruction(Instruction::Store(
-                    inner.clone(),
+                    final_ty.clone(),
                     compiled_location,
-                    compiled.clone(),
+                    final_val.clone(),
                 ));
             }
 
-            return Some((inner, compiled));
+            return Some((final_ty, final_val));
         }
 
         let res = if self.addr_only {

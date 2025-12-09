@@ -162,16 +162,16 @@ fn Vector3::from(f32 scalar) {
     };
 }
 
-fn Vector3::dot(Vector3 self, Vector3 v2) {
-    return self.x * v2.x + self.y * v2.y + self.z * v2.z;
-}
-
 fn Vector3::cross(Vector3 self, Vector3 v2) {
     return Vector3 {
         x = self.y * v2.z - self.z * v2.y,
         y = self.z * v2.x - self.x * v2.z,
         z = self.x * v2.y - self.y * v2.x,
     };
+}
+
+fn Vector3::dot(Vector3 self, Vector3 v2) {
+    return self.x * v2.x + self.y * v2.y + self.z * v2.z;
 }
 
 fn Vector3::length_sq(Vector3 self) {
