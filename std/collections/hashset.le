@@ -11,7 +11,7 @@ struct HashSet<T> {
     HashMap<T, bool> *map
 }
 
-fn HashSet::__fmt__<T>(HashSet<T> self) {
+fn HashSet::__fmt__<T>(HashSet<T> self, u64 nesting) {
     return "{{ {} }".format(self.map.keys().intersperse(", ").collect());
 }
 

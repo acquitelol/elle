@@ -1,0 +1,26 @@
+use std/collections/hashmap;
+
+struct DefaultMap<K, V> {
+    HashMap<K, V> *inner,
+    fn() -> V gen
+}
+
+fn DefaultMap::new<K, V>(fn() -> V gen) {
+    self := #alloc(DefaultMap<K, V>);
+    self.inner = HashMap::new();
+    self.gen = gen;
+    return self;
+}
+
+fn DefaultMap::__fmt__<K, V>(DefaultMap<K, V> self, u64 nesting) {
+    return self.inner.__fmt__(nesting);
+}
+
+fn DefaultMap::__load__<K, V>(DefaultMap<K, V> *self, K key) {
+    gen := self.gen;
+    return self.inner.get_or_insert(key, gen());
+}
+
+fn DefaultMap::__store__<K, V>(DefaultMap<K, V> *self, K key, V value) {
+    self.inner[key] = value;
+}
