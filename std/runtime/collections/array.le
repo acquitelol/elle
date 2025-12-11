@@ -302,6 +302,38 @@ fn Array::combinations<T>(T[] self, i64 k) {
     }
 }
 
+fn Array::permutations<T>(T[] self) {
+    T[][] out = [];
+    T[] work = [];
+
+    __internal_permutations_generate(self, work, out);
+    return out;
+}
+
+!pub fn __internal_permutations_generate<T>(T[] left, T[] work, T[][] out) {
+    if left.len() == 0 {
+        T[] p = work.clone();
+        out.push(p);
+        return;
+    }
+
+    for u64 i = 0; i < left.len(); i += 1 {
+        T item = left[i];
+        work.push(item);
+
+        T[] next_left = [];
+        next_left.resize(left.len() - 1);
+        for u64 j = 0; j < left.len(); j += 1 {
+            if j != i {
+                next_left.push(left[j]);
+            }
+        }
+
+        __internal_permutations_generate(next_left, work, out);
+        work.pop();
+    }
+}
+
 fn Array::clone<T>(T[] self) -> T[] {
     T[] clone = Array::with_capacity(self.len());
 
