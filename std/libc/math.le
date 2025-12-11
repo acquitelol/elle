@@ -33,3 +33,5 @@ fn fmod(f64 x, f64 y) @alias(math::fmod) -> f64;
 fn fmin(f64 x, f64 y) @alias(math::fmin) -> f64;
 fn fmax(f64 x, f64 y) @alias(math::fmax) -> f64;
 fn round(f64 x) @alias(math::round) -> f64;
+fn roundf(f32 x) @alias(math::roundf) -> f32;
+fn labs(i64 x) @alias(math::labs) -> i64;

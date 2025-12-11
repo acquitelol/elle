@@ -1,6 +1,7 @@
 use std/runtime/collections/array;
 use std/iter/iterator;
 use std/vectors;
+use std/hashes;
 use std/math;
 global pub;
 
@@ -64,6 +65,19 @@ fn Array::to_vec2<T>(T[] self) {
 
 fn Array::to_vec3<T>(T[] self) {
     return Vector3::new(#cast(T, self[0]), #cast(T, self[1]), #cast(T, self[2]));
+}
+
+fn Array::__hash__<T>(T[] self, u64 cap) {
+    u64 total = 0;
+
+    for u64 i = 0; i < self.len(); i += 1 {
+        a := self[i];
+        b := self[(i + 1) % self.len()];
+
+        total += a.__hash__(cap) * 31 + b.__hash__(cap);
+    }
+
+    return hash::mod(total, cap);
 }
 
 struct ArrayEnv<T> {

@@ -1,3 +1,4 @@
+use std/hashes;
 namespace __arr__;
 global pub;
 
@@ -77,4 +78,17 @@ fn __arr__::__tuple__<T>(T[2] self) {
 
 fn __arr__::__triple__<T>(T[3] self) {
     return $$(self[0], self[1], self[2]);
+}
+
+fn __arr__::__hash__<T, N>(T[N] self, u64 cap) {
+    u64 total = 0;
+
+    for u64 i = 0; i < self.len(); i += 1 {
+        a := self[i];
+        b := self[(i + 1) % self.len()];
+
+        total += a.__hash__(cap) * 31 + b.__hash__(cap);
+    }
+
+    return hash::mod(total, cap);
 }

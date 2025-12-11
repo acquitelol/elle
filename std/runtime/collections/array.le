@@ -68,22 +68,27 @@ fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
     return result.elements;
 }
 
-fn Array::__load__<T>(ElleMeta meta, T[] self, u64 i) {
+fn Array::__load__<T>(ElleMeta meta, T[] self, i64 i) {
+    if i < 0 { i = self.len() + i; }
     __internal_array_bounds_check(meta.file, meta.line, meta.column, i, self.len());
     return self.elements[i];
 }
 
-fn Array::__load_ref__<T>(ElleMeta meta, T[] self, u64 i) -> T * {
+fn Array::__load_ref__<T>(ElleMeta meta, T[] self, i64 i) -> T * {
+    if i < 0 { i = self.len() + i; }
     __internal_array_bounds_check(meta.file, meta.line, meta.column, i, self.len());
     return &self.elements[i];
 }
 
-fn Array::__store__<T>(ElleMeta meta, T[] self, u64 i, T value) {
+fn Array::__store__<T>(ElleMeta meta, T[] self, i64 i, T value) {
+    if i < 0 { i = self.len() + i; }
     __internal_array_bounds_check(meta.file, meta.line, meta.column, i, self.len());
     self.elements[i] = value;
 }
 
-fn Array::get<T>(ElleMeta meta, T[] self, u64 i) -> Option<T> {
+fn Array::get<T>(T[] self, i64 i) -> Option<T> {
+    if i < 0 { i = self.len() + i; }
+
     if i + 1 > self.size {
         return None();
     }
@@ -92,6 +97,8 @@ fn Array::get<T>(ElleMeta meta, T[] self, u64 i) -> Option<T> {
 }
 
 fn Array::get_ref<T>(ElleMeta meta, T[] self, u64 i) -> Option<T *> {
+    if i < 0 { i = self.len() - i; }
+
     if i + 1 > self.size {
         return None();
     }
@@ -543,10 +550,6 @@ fn Array::min<T>(T[] self) -> Option<T> {
 }
 
 fn Array::slice<T>(T[] self, i64 start, i64 end) -> T[] {
-    if end == -1 {
-        end = self.len();
-    }
-
     if start < 0 {
         start = self.len() + start;
     }
@@ -574,8 +577,9 @@ fn Array::slice<T>(T[] self, i64 start, i64 end) -> T[] {
     length := end - start;
     temp := Array::with_capacity<T>(length);
 
-    temp.elements = self.elements + (start * #size(T));
-    temp.size = length;
+    for i := start; i < end; i += 1 {
+        temp.push(self[i]);
+    }
 
     return temp;
 }
