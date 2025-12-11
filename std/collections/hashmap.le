@@ -118,7 +118,7 @@ fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
         self.resize(self.table.capacity * 2);
     }
 
-    u64 idx = key.__hash__(self.table.capacity);
+    u64 idx = key.__hash__(self.table.capacity) % self.table.capacity;
     start_idx := idx;
 
     while true {
@@ -146,7 +146,7 @@ fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
 external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) @alias(HashMap::set) -> bool;
 
 !pub fn __internal_hashmap_get<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
-    u64 idx = key.__hash__(self.table.capacity);
+    u64 idx = key.__hash__(self.table.capacity) % self.table.capacity;
     start_idx := idx;
 
     while self.table[idx].full {
@@ -185,7 +185,7 @@ fn HashMap::get<T, U>(HashMap<T, U> *self, T key) {
 }
 
 fn HashMap::remove<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
-    u64 idx = key.__hash__(self.table.capacity);
+    u64 idx = key.__hash__(self.table.capacity) % self.table.capacity;
     start_idx := idx;
 
     while self.table[idx].full {
@@ -207,7 +207,7 @@ fn HashMap::remove<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
 }
 
 fn HashMap::contains_key<T, U>(HashMap<T, U> *self, T key) -> bool {
-    u64 idx = key.__hash__(self.table.capacity);
+    u64 idx = key.__hash__(self.table.capacity) % self.table.capacity;
     start_idx := idx;
 
     while self.table[idx].full {

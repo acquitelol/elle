@@ -249,7 +249,7 @@ fn Array::cartesian_product<T>(T[] self, i32 n) {
 
     if n == 0 {
         T[] combination = [];
-        results.push(#cast(T, combination));
+        results.push(combination);
         return results;
     }
 
