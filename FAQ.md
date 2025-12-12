@@ -1,6 +1,6 @@
 ### ♡ **How is this better than C?**
 
-- This question depends heavily on the way in which you define "better". For performance, C is substationally better. For ease of use, Elle is progressing towards being better than C.
+- This question depends heavily on the way in which you define "better". For performance, C is substantially better. For ease of use, Elle is progressing towards being better than C.
 
 ### ♡ **Feature list**
 
@@ -29,7 +29,7 @@
 | Custom Allocators        | Yes     | The allocator can be changed at runtime, but must be GC or Arena by default.                                 |
 | Lambdas (Closures)       | Partial | Lambdas exist, but don't capture their surrounding scopes.                                                   |
 | Pattern matching         | No      | Support planned in the future.                                                                               |
-| Operator overloading     | Partial | Can overload `x[y]`, `&x[y]`, `x[y] = z` `x == y`, `*x = y`, aswell as length, hash, tuple, triple, & iter.  |
+| Operator overloading     | Partial | Can overload `x[y]`, `&x[y]`, `x[y] = z` `x == y`, `*x = y`, as well as length, hash, tuple, triple, & iter. |
 | First class functions    | Yes     | Functions can be passed around, and their interface can be expressed in the type system.                     |
 | Lazy Iterators           | Yes     | Due to QBE identifier length limitations, only 8-9 adapters can be chained at once. OK for most usecases.    |
 | Generics                 | Partial | Generic functions and structs exist, generic enums do not currently exist but are planned.                   |
