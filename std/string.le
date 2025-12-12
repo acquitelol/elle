@@ -95,6 +95,38 @@ struct StringEnv @nofmt {
     u64 end
 }
 
+!external fn string::nums<T>(string self) {
+    T[] numbers = [];
+    string current = "";
+    bool hit = false;
+
+    for i32 i = 0; i < self.len(); i += 1 {
+        if (i < self.len() - 1) && (self[i] == '-') && (self[i + 1].is_digit()) {
+            current.push(self[i]);
+            hit = true;
+            continue;
+        }
+
+        if self[i].is_digit() {
+            current.push(self[i]);
+            hit = true;
+            continue;
+        }
+
+        if hit {
+            numbers.push(T::parse(current));
+            current = "";
+            hit = false;
+        }
+    }
+
+    if !current.is_empty() {
+        numbers.push(T::parse(current));
+    }
+
+    return numbers;
+}
+
 external fn `Box.0.StringEnv.1`(StringEnv env) -> Box<StringEnv>;
 external fn `Option.Some.0.15.1`(char value) -> Option<char>;
 external fn `Option.None.0.15.1`() -> Option<char>;
