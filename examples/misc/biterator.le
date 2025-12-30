@@ -4,7 +4,7 @@ struct Biterator<T> {
     T inner,
 }
 
-struct BiteratorEnv<T> {
+struct BiteratorEnv {
     u8 *bytes,
     u64 byte_count,
     i64 front_bit,
@@ -16,7 +16,7 @@ fn Biterator::new<T>(T inner) -> Biterator<T> {
 }
 
 fn Biterator::iter<T>(Biterator<T> *self) -> Iterator<u8, DoubleEnded> {
-    BiteratorEnv<T> env = BiteratorEnv {
+    env := BiteratorEnv {
         bytes = #cast(u8 *, &self.inner),
         byte_count = #size(T),
         front_bit = 0,
@@ -25,7 +25,7 @@ fn Biterator::iter<T>(Biterator<T> *self) -> Iterator<u8, DoubleEnded> {
 
     return Iterator {
         env = Box::new(env).to_ptr(),
-        next = fn(BiteratorEnv<T> *env) {
+        next = fn(BiteratorEnv *env) {
             if env.front_bit > env.back_bit { return None(); }
 
             byte := env.bytes[env.front_bit / 8];
@@ -34,7 +34,7 @@ fn Biterator::iter<T>(Biterator<T> *self) -> Iterator<u8, DoubleEnded> {
             env.front_bit += 1;
             return Some<u8>(bit);
         },
-        next_back = fn(BiteratorEnv<T> *env) {
+        next_back = fn(BiteratorEnv *env) {
             if env.front_bit > env.back_bit { return None(); }
 
             byte := env.bytes[env.back_bit / 8];
