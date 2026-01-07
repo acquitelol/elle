@@ -1,11 +1,10 @@
 use std/prelude;
 
-enum State @repr(u8) { S0, S1, S2, S3, S4, S5 }
-external fn u8::__hash__(State self, u64 capacity) @alias(State::__hash__) -> u64;
+enum State { S0, S1, S2, S3, S4, End }
 
 let states = $map(
     $(State::S0, $map(
-        $(50, $(State::S5, 0)),
+        $(50, $(State::End, 0)),
         $(10, $(State::S1, 40)),
         $(20, $(State::S2, 30)),
     )),
@@ -19,10 +18,10 @@ let states = $map(
     )),
     $(State::S3, $map(
         $(10, $(State::S4, 10)),
-        $(20, $(State::S5, 0)),
+        $(20, $(State::End, 0)),
     )),
     $(State::S4, $map(
-        $(10, $(State::S5, 0)),
+        $(10, $(State::End, 0)),
     ))
 );
 
