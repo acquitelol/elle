@@ -767,6 +767,8 @@ pub enum Attribute {
     NoFormat,
     // Ensures no equality method is set by default on a struct marked by this
     NoEq,
+    // Ensures no hash method is defined for enums, otherwise uses the repr's hash method.
+    NoHash,
     // Automatically runs the formatter on every parameter of a function marked by this
     Format,
     // Representation of the inner type in an enum
@@ -794,6 +796,7 @@ impl Token {
             "volatile" => Attribute::Volatile,
             "nofmt" => Attribute::NoFormat,
             "noeq" => Attribute::NoEq,
+            "nohash" => Attribute::NoHash,
             "fmt" => Attribute::Format,
             "repr" => Attribute::Repr,
             "cfg" => Attribute::Cfg,

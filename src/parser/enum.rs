@@ -7,7 +7,7 @@ use crate::{
     lexer::enums::{Attribute, Location, MutRc, Token, TokenKind, ValueKind},
     misc::{
         colors::{get_GREEN, get_RESET, GREEN, RESET},
-        constants::{EQUALS_CONSTANT, FORMAT_CONSTANT},
+        constants::{EQUALS_CONSTANT, FORMAT_CONSTANT, HASH_CONSTANT},
     },
     parser::enums::{
         Argument, AstNode, BinaryOperation, Conversion, FunctionSource, IfStatement, Literal,
@@ -59,6 +59,7 @@ impl<'a> Enum<'a> {
         let mut ty = None;
         let mut should_add_fmt_builtin = true;
         let mut should_add_eq_builtin = true;
+        let mut should_add_hash_builtin = true;
         let mut should_compile = true;
 
         if self.parser.match_token(TokenKind::Attribute, false) {
@@ -74,6 +75,10 @@ impl<'a> Enum<'a> {
                     }
                     Attribute::NoEq => {
                         should_add_eq_builtin = false;
+                        self.parser.advance();
+                    }
+                    Attribute::NoHash => {
+                        should_add_hash_builtin = false;
                         self.parser.advance();
                     }
                     Attribute::Repr => {
@@ -317,6 +322,45 @@ impl<'a> Enum<'a> {
                     })),
                     location: location.clone(),
                 })],
+                location: location.clone(),
+                return_location: location.clone(),
+            }));
+        }
+
+        if should_add_hash_builtin {
+            builtins.push(Primitive::Function(FunctionSource {
+                namespace_token: Token::from_ident(&name),
+                name_token: Token::from_ident(HASH_CONSTANT),
+                name: format!("{name}.{HASH_CONSTANT}",),
+                public,
+                usable: true,
+                imported: false,
+                variadic: false,
+                external: true,
+                builtin: true,
+                volatile: false,
+                format: false,
+                unaliased: Some(format!(
+                    "{}.{HASH_CONSTANT}",
+                    ty.clone().unwrap_or(Type::Word).display()
+                )),
+                generics: vec![],
+                arguments: vec![
+                    Argument {
+                        name: "self".into(),
+                        r#type: Type::Enum(name.clone(), Box::new(ty.clone())),
+                        no_fmt: false,
+                        is_unused: false,
+                    },
+                    Argument {
+                        name: "capacity".into(),
+                        r#type: Type::UnsignedLong,
+                        no_fmt: false,
+                        is_unused: false,
+                    },
+                ],
+                r#return: Some(Type::UnsignedLong),
+                body: vec![],
                 location: location.clone(),
                 return_location: location.clone(),
             }));
