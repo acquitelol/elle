@@ -1,10 +1,9 @@
 use std/prelude;
 
-enum State { S0, S1, S2, S3, S4, S5 }
-const State::__hash__ = fn (State self, u64 capacity)
-    #cast(u8, self).__hash__(capacity);
+enum State @repr(u8) { S0, S1, S2, S3, S4, S5 }
+external fn u8::__hash__(State self, u64 capacity) @alias(State::__hash__) -> u64;
 
-const states = $map(
+let states = $map(
     $(State::S0, $map(
         $(50, $(State::S5, 0)),
         $(10, $(State::S1, 40)),
@@ -28,9 +27,9 @@ const states = $map(
 );
 
 fn main() {
+    state := State::S0;
+    output := 50;
     while true {
-        state := State::S0;
-        output := 50;
         input := io::input("Enter an input -> ")
             .replace(" ", "")
             .split(",")
@@ -41,7 +40,7 @@ fn main() {
                 ? states[state][item]
                 : $(state, output);
 
-            $println(output);
+            $printf("{}: {}", state, output);
         }
     }
 }
