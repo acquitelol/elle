@@ -662,6 +662,7 @@ pub struct GlobalSource {
     pub usable: bool,
     pub imported: bool,
     pub external: bool,
+    pub expand_main: bool,
     pub r#type: Option<Type>,
     pub value: Option<Box<AstNode>>,
     pub location: MutRc<Location>,

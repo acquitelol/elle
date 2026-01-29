@@ -775,6 +775,8 @@ pub enum Attribute {
     Repr,
     // Only compile if the thing inside is true
     Cfg,
+    // Expands the default value for a global inside of main instead of its own function
+    ExpandMain,
     // Suppresses the warning when a struct is initialized this field
     Unused,
 }
@@ -800,6 +802,7 @@ impl Token {
             "fmt" => Attribute::Format,
             "repr" => Attribute::Repr,
             "cfg" => Attribute::Cfg,
+            "expandmain" => Attribute::ExpandMain,
             "unused" => Attribute::Unused,
             _ => todo!("more attributes: {attribute}"),
         }

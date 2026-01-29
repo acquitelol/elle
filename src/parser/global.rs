@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use crate::{
     elle_error,
-    lexer::enums::{Location, MutRc, Token, TokenKind, ValueKind},
+    lexer::enums::{Attribute, Location, MutRc, Token, TokenKind, ValueKind},
     parser::enums::GlobalSource,
     set_end, INTERNAL_GLOBAL_INIT_FORMAT,
 };
@@ -92,6 +92,31 @@ impl<'a> Global<'a> {
             self.parser.advance();
         }
 
+        let mut expand_main = false;
+
+        if self.parser.match_token(TokenKind::Attribute, false) {
+            while self.parser.current_token().kind == TokenKind::Attribute && !self.parser.is_eof()
+            {
+                self.parser.advance();
+                let attribute = self.parser.current_token().parse_attribute();
+
+                match attribute {
+                    Attribute::ExpandMain => {
+                        expand_main = true;
+                        self.parser.advance();
+                    }
+                    _ => elle_error!(self.parser.current_token().location.borrow().error(format!(
+                        "Unknown attribute for global '{}'",
+                        self.parser
+                            .current_token()
+                            .value
+                            .get_string_inner()
+                            .unwrap()
+                    ))),
+                }
+            }
+        }
+
         if external {
             self.parser.expect_tokens(&[TokenKind::Semicolon]);
             self.parser.advance();
@@ -108,6 +133,7 @@ impl<'a> Global<'a> {
                 usable: true,
                 imported: false,
                 external: true,
+                expand_main,
                 location,
             }));
         }
@@ -173,6 +199,7 @@ impl<'a> Global<'a> {
             usable: true,
             imported: false,
             external: false,
+            expand_main,
             location,
         }))
     }

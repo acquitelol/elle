@@ -29,7 +29,7 @@
 ; If the regex doesn't match, at least it's right once
 (enum_definition (identifier) @type)
 (struct_definition (identifier) @type)
-(constant_definition (identifier) @constant)
+(global_definition (identifier) @constant)
 
 ; Types
 (type) @type
@@ -85,7 +85,7 @@
 "break" @keyword
 "continue" @keyword
 "struct" @keyword
-"const" @keyword
+"let" @keyword
 "use" @keyword
 "namespace" @keyword
 "global" @keyword

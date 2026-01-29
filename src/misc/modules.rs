@@ -15,7 +15,7 @@ use crate::lexer::enums::{MutRc, Token};
 use crate::parser::enums::{
     ConstantSource, EnumSource, FunctionSource, GlobalSource, Literal, StructSource, UseSource,
 };
-use crate::parser::parser::EnumPool;
+use crate::parser::parser::{EnumPool, GlobalInit};
 use crate::{
     elapsed_with_color,
     lexer::{
@@ -40,7 +40,7 @@ pub fn lex_and_parse(
     struct_pool: &RefCell<StructPool>,
     enum_pool: &RefCell<EnumPool>,
     parsed_modules: &RefCell<HashSet<SymbolU32>>,
-    init_methods: &RefCell<Vec<String>>,
+    init_methods: &RefCell<GlobalInit>,
     warnings: &Warnings,
     no_strings: bool,
     no_alloc: bool,

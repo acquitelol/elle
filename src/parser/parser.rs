@@ -34,6 +34,9 @@ pub type StructPool = HashMap<String, (Vec<String>, Vec<Argument>, MutRc<Locatio
 // Enum name -> (Ordered variants (name, loc, offset value), Optional repr type)
 pub type EnumPool = HashMap<String, (Vec<Variant>, Option<Type>)>;
 
+// Vec of either String (init method name) OR init value (if @expandmain)
+pub type GlobalInit = Vec<Result<String, GlobalSource>>;
+
 pub fn create_generic_struct(
     name: &str,
     generic_name: &str,
@@ -458,7 +461,7 @@ pub struct Parser {
     // Map of struct name to members and generics
     pub struct_pool: RefCell<StructPool>,
     pub enum_pool: RefCell<EnumPool>,
-    pub init_methods: RefCell<Vec<String>>,
+    pub init_methods: RefCell<GlobalInit>,
     pub global_public: bool,
     pub global_external: bool,
     pub warnings: Warnings,
@@ -469,7 +472,7 @@ impl Parser {
         tokens: Vec<Token>,
         struct_pool: StructPool,
         enum_pool: EnumPool,
-        init_methods: Vec<String>,
+        init_methods: GlobalInit,
         warnings: Warnings,
     ) -> Self {
         Self {
@@ -630,8 +633,8 @@ impl Parser {
         do_only: &DoOnly,
         new_struct_pool: Option<StructPool>,
         new_enum_pool: Option<EnumPool>,
-        new_init_methods: Option<Vec<String>>,
-    ) -> (Vec<Primitive>, StructPool, EnumPool, Vec<String>) {
+        new_init_methods: Option<GlobalInit>,
+    ) -> (Vec<Primitive>, StructPool, EnumPool, GlobalInit) {
         if let Some(pool) = new_struct_pool {
             self.struct_pool = RefCell::new(pool);
         }
@@ -843,55 +846,54 @@ impl Parser {
                     );
 
                     if let Some(statement) = statement
-                        && let Primitive::Global(GlobalSource {
-                            name,
-                            method_name,
-                            location,
-                            value,
-                            ..
-                        }) = statement.clone()
+                        && let Primitive::Global(this) = statement.clone()
                     {
-                        let token = Token::from_ident(&method_name);
+                        let token = Token::from_ident(&this.method_name);
 
                         self.tree.borrow_mut().push(statement);
-                        self.tree
-                            .borrow_mut()
-                            .push(Primitive::Function(FunctionSource {
-                                namespace_token: token.clone(),
-                                name_token: token,
-                                name: method_name.clone(),
-                                public: if local {
-                                    false
-                                } else {
-                                    global_public || public
-                                },
-                                usable: true,
-                                imported: true,
-                                variadic: false,
-                                external,
-                                builtin: false,
-                                volatile: false,
-                                format: false,
-                                unaliased: None,
-                                generics: vec![],
-                                arguments: vec![],
-                                r#return: None,
-                                body: if external || value.is_none() {
-                                    vec![]
-                                } else {
-                                    vec![AstNode::Declare(Declare {
-                                        name: Token::from_ident(&name),
-                                        r#type: None,
-                                        value,
-                                        location: location.clone(),
-                                        value_location: location.clone(),
-                                    })]
-                                },
-                                location: location.clone(),
-                                return_location: location,
-                            }));
 
-                        self.init_methods.borrow_mut().push(method_name);
+                        if this.expand_main {
+                            self.init_methods.borrow_mut().push(Err(this.clone()));
+                        } else {
+                            self.tree
+                                .borrow_mut()
+                                .push(Primitive::Function(FunctionSource {
+                                    namespace_token: token.clone(),
+                                    name_token: token,
+                                    name: this.method_name.clone(),
+                                    public: if local {
+                                        false
+                                    } else {
+                                        global_public || public
+                                    },
+                                    usable: true,
+                                    imported: true,
+                                    variadic: false,
+                                    external,
+                                    builtin: false,
+                                    volatile: false,
+                                    format: false,
+                                    unaliased: None,
+                                    generics: vec![],
+                                    arguments: vec![],
+                                    r#return: None,
+                                    body: if external || this.value.is_none() {
+                                        vec![]
+                                    } else {
+                                        vec![AstNode::Declare(Declare {
+                                            name: Token::from_ident(&this.name),
+                                            r#type: None,
+                                            value: this.value,
+                                            location: this.location.clone(),
+                                            value_location: this.location.clone(),
+                                        })]
+                                    },
+                                    location: this.location.clone(),
+                                    return_location: this.location,
+                                }));
+
+                            self.init_methods.borrow_mut().push(Ok(this.method_name));
+                        }
                     }
 
                     clean!();

@@ -883,19 +883,31 @@ async fn main() -> ExitCode {
     for primitive in &mut tree {
         match primitive {
             Primitive::Function(FunctionSource { name, body, .. }) if name == get_MAIN_ID!() => {
-                for call in init_methods.borrow().iter().rev().map(|method| {
-                    let token = Token::from_ident(method);
+                for call in init_methods.borrow().iter().rev().filter_map(|method| {
+                    if let Ok(method) = method {
+                        let token = Token::from_ident(method);
 
-                    AstNode::FunctionCall(FunctionCall {
-                        namespace_token: token.clone(),
-                        name_token: token.clone(),
-                        name: method.clone(),
-                        generics: vec![],
-                        parameters: vec![],
-                        type_method: false,
-                        ignore_no_def: false,
-                        location: MutRc::new(RefCell::new(Location::base())),
-                    })
+                        Some(AstNode::FunctionCall(FunctionCall {
+                            namespace_token: token.clone(),
+                            name_token: token.clone(),
+                            name: method.clone(),
+                            generics: vec![],
+                            parameters: vec![],
+                            type_method: false,
+                            ignore_no_def: false,
+                            location: MutRc::new(RefCell::new(Location::base())),
+                        }))
+                    } else {
+                        let this = method.as_ref().unwrap_err();
+
+                        Some(AstNode::Declare(Declare {
+                            name: Token::from_ident(&this.name),
+                            r#type: None,
+                            value: this.value.clone(),
+                            location: this.location.clone(),
+                            value_location: this.location.clone(),
+                        }))
+                    }
                 }) {
                     body.insert(0, call);
                 }
