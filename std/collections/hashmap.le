@@ -48,6 +48,11 @@ fn HashMap::__load__<T, U>(ElleMeta meta, HashMap<T, U> *self, T key) {
     return self.unsafe_get(key);
 }
 
+fn HashMap::__load_ref__<T, U>(ElleMeta meta, HashMap<T, U> *self, T key) {
+    __internal_key_exists_check(self, key, meta);
+    return Box::new(self.unsafe_get(key)).to_ptr();
+}
+
 fn HashMap::__store__<T, U>(HashMap<T, U> *self, T key, U value) {
     self.put(key, value);
 }

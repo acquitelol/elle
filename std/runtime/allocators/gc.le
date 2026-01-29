@@ -41,7 +41,7 @@ fn GCAllocator::new() {
     GCAllocator *self = mem::malloc(#size(GCAllocator));
 
     self.total_size = 0;
-    self.min_threshold = 32 * 1024;
+    self.min_threshold = 4 * 1024;
     // start with a threshold bigger than minimum
     // allow the gc to bring it down to min if necessary
     self.threshold = self.min_threshold * 4;

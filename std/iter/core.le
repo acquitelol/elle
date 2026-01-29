@@ -1,7 +1,7 @@
-use std/box;
-use std/option;
 use std/runtime/collections/array;
 use std/type_info;
+use std/option;
+use std/box;
 global pub;
 
 namespace SingleEnded;
@@ -17,6 +17,14 @@ struct Iterator<T, AnyEnded> @nofmt {
     // than to use an Option<T> but that has its
     // own downsides and isnt always ideal
     fn(void *) -> Option<T> next_back
+}
+
+fn Iterator::sum<T, AnyEnded>(Iterator<T, AnyEnded> self) {
+    return self.fold(#cast(T, 0), fn(acc, cur) acc + cur);
+}
+
+fn Iterator::product<T, AnyEnded>(Iterator<T, AnyEnded> self) {
+    return self.fold(#cast(T, 1), fn(acc, cur) acc * cur);
 }
 
 fn Iterator::__fmt__<T, AnyEnded>(Iterator<T, AnyEnded> self, i32 nesting) {
@@ -70,14 +78,6 @@ fn Iterator::reduce<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, T) -> T cb) -
     }
 
     return Some(self.fold(first, cb));
-}
-
-fn Iterator::sum<T, AnyEnded>(Iterator<T, AnyEnded> self) {
-    return self.fold(#cast(T, 0), fn(acc, cur) acc + cur);
-}
-
-fn Iterator::product<T, AnyEnded>(Iterator<T, AnyEnded> self) {
-    return self.fold(#cast(T, 1), fn(acc, cur) acc * cur);
 }
 
 fn Iterator::max<T, AnyEnded>(Iterator<T, AnyEnded> self) -> Option<T> {

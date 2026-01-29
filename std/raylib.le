@@ -1407,7 +1407,7 @@ fn DrawBillboardPro(Camera camera, Texture texture, Rectangle source, Vector3 po
 
 // Mesh management functions
 fn UploadMesh(Mesh *mesh, bool dynamic)                                               @alias(rl::upload_mesh);                          // Upload mesh vertex data in GPU and provide VAO/VBO ids
-fn UpdateMeshBuffer(Mesh mesh, i32 index, void *data, i32 dataSize, i32 offset)       @alias(rl::upload_mesh_buffer);                   // Update mesh vertex data in GPU for a specific buffer index
+fn UpdateMeshBuffer(Mesh mesh, i32 index, void *data, i32 dataSize, i32 offset)       @alias(rl::update_mesh_buffer);                   // Update mesh vertex data in GPU for a specific buffer index
 fn UnloadMesh(Mesh mesh)                                                              @alias(rl::unload_mesh);                          // Unload mesh data from CPU and GPU
 fn DrawMesh(Mesh mesh, Material material, Matrix transform)                           @alias(rl::draw_mesh);                            // Draw a 3d mesh with material and transform
 fn DrawMeshInstanced(Mesh mesh, Material material, Matrix *transforms, i32 instances) @alias(rl::draw_mesh_instanced);                  // Draw multiple mesh instances with material and different transforms
