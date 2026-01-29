@@ -256,6 +256,14 @@ impl Compiler {
                 let global = tmp_module.data.get(name.as_str());
 
                 if let Some(data) = global.cloned() {
+                    // structs are placed directly into the static memory verbatim
+                    // it is unwise to dereference here
+                    if let Some(ref ty) = data.ty
+                        && ty.is_struct()
+                    {
+                        return Some((ty.clone(), Value::Global(data.name.clone())));
+                    }
+
                     let tmp = self.new_temporary(None, false);
 
                     func.expect("Could not find current function")
