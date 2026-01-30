@@ -211,6 +211,7 @@ struct Mesh {
 // Shader
 struct Shader {
     u32 id,                 // Shader program id
+    u32 _0,                 // Padding
     i32 *locs,              // Shader locations array (RL_MAX_SHADER_LOCATIONS)
 }
 
