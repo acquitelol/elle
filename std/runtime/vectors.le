@@ -128,6 +128,13 @@ fn Vector2::set(Vector2 *self, u64 i, f32 value) {
     else if i == 1 { self.y = value; }
 }
 
+fn Vector2::abs(Vector2 self) {
+    return Vector2 {
+        x = math::fabsf(self.x),
+        y = math::fabsf(self.y)
+    };
+}
+
 // ----- Vector3 methods -----
 
 fn Vector3::zero() {
@@ -296,4 +303,12 @@ fn Vector3::set(Vector3 *self, u64 i, f32 value) {
     if i == 0 { self.x = value; }
     else if i == 1 { self.y = value; }
     else if i == 2 { self.z = value; }
+}
+
+fn Vector3::abs(Vector3 self) {
+    return Vector3 {
+        x = math::fabsf(self.x),
+        y = math::fabsf(self.y),
+        z = math::fabsf(self.z)
+    };
 }

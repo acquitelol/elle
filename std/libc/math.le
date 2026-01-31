@@ -6,6 +6,7 @@ fn asin(f64 x) @alias(math::asin) -> f64;
 fn atan(f64 slope) @alias(math::atan) -> f64;
 fn atan2(f64 y, f64 x) @alias(math::atan2) -> f64;
 fn cos(f64 x) @alias(math::cos) -> f64;
+fn cosf(f32 x) @alias(math::cosf) -> f32;
 fn cosh(f64 x) @alias(math::cosh) -> f64;
 fn sin(f64 x) @alias(math::sin) -> f64;
 fn sinf(f32 x) @alias(math::sinf) -> f32;

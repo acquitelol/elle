@@ -36,6 +36,7 @@ fn Vector2::new(f32 x, f32 y) @alias(Vector2::xy) -> Vector2;
 fn Vector2::__equals__(Vector2 self, Vector2 v2) -> bool;
 fn Vector2::get(Vector2 self, u64 i) -> f32;
 fn Vector2::set(Vector2 *self, u64 i, f32 value);
+fn Vector2::abs(Vector2 self) -> Vector2;
 
 fn Vector3::zero() -> Vector3;
 fn Vector3::clone(Vector3 self) -> Vector3;
@@ -60,3 +61,4 @@ fn Vector3::new(f32 x, f32 y, f32 z) @alias(Vector3::xyz) -> Vector3;
 fn Vector3::__equals__(Vector3 self, Vector3 v2) -> bool;
 fn Vector3::get(Vector3 self, u64 i) -> f32;
 fn Vector3::set(Vector3 *self, u64 i, f32 value);
+fn Vector3::abs(Vector3 self) -> Vector3;
