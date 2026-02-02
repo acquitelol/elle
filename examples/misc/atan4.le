@@ -1,0 +1,15 @@
+use std/prelude;
+
+// this is a joke
+fn math::atan4(f64 a, f64 b, bool dir) {
+    x, y := #[&a, &b].iter()
+        .map(fn(x) #cast(i64 *, x))
+        .collect();
+    dir && *x ^= *y ^ *y = *x;
+    return math::atan2(a, b);
+}
+
+fn main() {
+    $dbg(math::atan4(3, 4, true));
+    $dbg(math::atan4(3, 4, false));
+}
