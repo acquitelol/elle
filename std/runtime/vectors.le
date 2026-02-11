@@ -243,7 +243,7 @@ fn Vector3::angle(Vector3 self, Vector3 v2) {
     dot := self.dot(v2);
     lengths := self.length() * v2.length();
 
-    if math::absf(lengths) < 1.0e-7 { return 0.0; }
+    if math::fabsf(lengths) < 1.0e-7 { return 0.0; }
     cos_theta := math::fclampf(dot / lengths, -1.0, 1.0);
 
     // Unwrap the cos(θ) into just θ

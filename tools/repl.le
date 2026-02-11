@@ -10,11 +10,16 @@ fn main(string[] args) {
 
     lines := []string;
 
-    while true {
+    for ;; {
         line := io::input(".ೃ࿔* -> ");
 
         if line.ends_with(";") {
             line.pop();
+        }
+
+        if line.starts_with("<!>") {
+            lines.push(line.replace("<!>", ""));
+            continue;
         }
 
         backlog := "{}{}".format(
@@ -22,7 +27,7 @@ fn main(string[] args) {
             lines.len() > 0 ? ";" : ""
         );
 
-        let code = "
+        code := "
             use std/prelude;
 
             fn main() {{
@@ -54,7 +59,7 @@ fn main(string[] args) {
             io::remove(exec_path);
 
             if !exec_code {
-                lines.push(line);
+
             }
         }
     }
