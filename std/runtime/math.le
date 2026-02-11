@@ -20,3 +20,7 @@ fn math::fact(i64 n) -> i64 {
 fn math::fclamp(f64 value, f64 min_value, f64 max_value) -> f64 {
     return math::fmax(min_value, math::fmin(value, max_value));
 }
+
+fn math::fclampf(f32 value, f32 min_value, f32 max_value) -> f32 {
+    return math::fmaxf(min_value, math::fminf(value, max_value));
+}
