@@ -33,8 +33,8 @@ fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
         return "[{}]".format(inline_parts.join(", "));
     }
 
-    base_indent := " ".repeat(nesting * 4);
-    child_indent := base_indent <> "    ";
+    base_indent := "    ".repeat(nesting);
+    child_indent := "    ";
     base_indent_arr := Array::from_string(base_indent);
 
     result := ['[', '\n'];
