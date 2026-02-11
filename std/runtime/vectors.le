@@ -15,31 +15,19 @@ struct Vector2 @nofmt {
 // ----- Vector2 methods -----
 
 fn Vector2::zero() {
-    return Vector2 {
-        x = 0,
-        y = 0
-    };
+    return Vector2 { x = 0, y = 0 };
 }
 
 fn Vector2::clone(Vector2 self) {
-    return Vector2 {
-        x = self.x,
-        y = self.y
-    };
+    return self;
 }
 
 fn Vector2::new(f32 x, f32 y) {
-    return Vector2 {
-        x = x,
-        y = y
-    };
+    return Vector2 { x, y };
 }
 
 fn Vector2::from(f32 scalar) {
-    return Vector2 {
-        x = scalar,
-        y = scalar
-    };
+    return Vector2 { x = scalar, y = scalar };
 }
 
 fn Vector2::dot(Vector2 self, Vector2 v2) {
@@ -99,8 +87,8 @@ fn Vector2::normalize(Vector2 self) {
 }
 
 fn Vector2::rotate(Vector2 self, f32 angle) {
-    f32 s = math::sin(angle);
-    f32 c = math::cos(angle);
+    f32 s = math::sinf(angle);
+    f32 c = math::cosf(angle);
 
     return Vector2 {
         x = self.x * c - self.y * s,
@@ -109,7 +97,7 @@ fn Vector2::rotate(Vector2 self, f32 angle) {
 }
 
 fn Vector2::angle(Vector2 self, Vector2 v2) {
-    return #cast(f32, math::atan2(v2.y, v2.x) - math::atan2(self.y, self.x));
+    return #cast(f32, math::atan2f(v2.y, v2.x) - math::atan2f(self.y, self.x));
 }
 
 fn Vector2::__equals__(Vector2 self, Vector2 v2) {
@@ -118,14 +106,11 @@ fn Vector2::__equals__(Vector2 self, Vector2 v2) {
 }
 
 fn Vector2::get(Vector2 self, u64 i) {
-    if i == 0 { return self.x; }
-    if i == 1 { return self.y; }
-    return 0;
+    return #cast(f32[2], self)[i];
 }
 
 fn Vector2::set(Vector2 *self, u64 i, f32 value) {
-    if i == 0 { self.x = value; }
-    else if i == 1 { self.y = value; }
+    #cast(f32[2], self)[i] = value;
 }
 
 fn Vector2::abs(Vector2 self) {
@@ -138,35 +123,19 @@ fn Vector2::abs(Vector2 self) {
 // ----- Vector3 methods -----
 
 fn Vector3::zero() {
-    return Vector3 {
-        x = 0,
-        y = 0,
-        z = 0
-    };
+    return Vector3 { x = 0, y = 0, z = 0 };
 }
 
 fn Vector3::clone(Vector3 self) {
-    return Vector3 {
-        x = self.x,
-        y = self.y,
-        z = self.z
-    };
+    return self;
 }
 
 fn Vector3::new(f32 x, f32 y, f32 z) {
-    return Vector3 {
-        x = x,
-        y = y,
-        z = z
-    };
+    return Vector3 { x, y, z };
 }
 
 fn Vector3::from(f32 scalar) {
-    return Vector3 {
-        x = scalar,
-        y = scalar,
-        z = scalar
-    };
+    return Vector3 { x = scalar, y = scalar, z = scalar };
 }
 
 fn Vector3::cross(Vector3 self, Vector3 v2) {
@@ -247,10 +216,9 @@ fn Vector3::normalize(Vector3 self) {
 // ⋅ denotes the dot product
 // ----------
 fn Vector3::rotate(Vector3 self, Vector3 axis, f32 angle) {
-    let u = axis.normalize();
-
-    f32 sin_theta = math::sin(angle);
-    f32 cos_theta = math::cos(angle);
+    u := axis.normalize();
+    sin_theta := math::sinf(angle);
+    cos_theta := math::cosf(angle);
 
     let term1 = self.scale(cos_theta);
     let term2 = u.cross(self).scale(sin_theta);
@@ -272,18 +240,14 @@ fn Vector3::rotate(Vector3 self, Vector3 axis, f32 angle) {
 // ||x|| denotes the magnitude
 // ----------
 fn Vector3::angle(Vector3 self, Vector3 v2) {
-    f32 dot = self.dot(v2);
-    f32 lengths = self.length() * v2.length();
+    dot := self.dot(v2);
+    lengths := self.length() * v2.length();
 
-    if lengths == 0.0 {
-        return 0.0;
-    }
-
-    f32 cos_theta = dot / lengths;
-    cos_theta = math::fclamp(cos_theta, -1.0, 1.0);
+    if math::absf(lengths) < 1.0e-7 { return 0.0; }
+    cos_theta := math::fclampf(dot / lengths, -1.0, 1.0);
 
     // Unwrap the cos(θ) into just θ
-    return #cast(f32, math::acos(cos_theta));
+    return math::acosf(cos_theta);
 }
 
 fn Vector3::__equals__(Vector3 self, Vector3 v2) {
@@ -293,16 +257,11 @@ fn Vector3::__equals__(Vector3 self, Vector3 v2) {
 }
 
 fn Vector3::get(Vector3 self, u64 i) {
-    if i == 0 { return self.x; }
-    if i == 1 { return self.y; }
-    if i == 2 { return self.z; }
-    return 0;
+    return #cast(f32[3], self)[i];
 }
 
 fn Vector3::set(Vector3 *self, u64 i, f32 value) {
-    if i == 0 { self.x = value; }
-    else if i == 1 { self.y = value; }
-    else if i == 2 { self.z = value; }
+    #cast(f32[3], self)[i] = value;
 }
 
 fn Vector3::abs(Vector3 self) {
