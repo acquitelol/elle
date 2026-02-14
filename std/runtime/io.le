@@ -158,7 +158,7 @@ fn io::input(string message) -> string {
 fn io::read_to_string(string path) -> string {
     file := io::fopen(path, "rb");
     defer io::fclose(file);
-    io::assert(file, "Failed to open file {}".format(path));
+    io::assert(file, "Failed to open file {}: {}".format(path, os_get_last_error()));
 
     io::fseek(file, 0, 2);
     file_size := io::ftell(file);
@@ -174,10 +174,11 @@ fn io::read_to_string(string path) -> string {
     return data.elements;
 }
 
+
 fn io::read_file_binary(string path) -> u8[] {
     file := io::fopen(path, "rb");
     defer io::fclose(file);
-    io::assert(file, "Failed to open file {}".format(path));
+    io::assert(file, "Failed to open file {}: {}".format(path, os_get_last_error()));
 
     io::fseek(file, 0, 2);
     file_size := io::ftell(file);

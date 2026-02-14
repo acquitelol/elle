@@ -15,7 +15,7 @@ fn TcpServer::bind(u16 port) -> Result<TcpServer, Errno> {
     fd := socket(AddressFamily::INET, SocketType::STREAM, 0);
 
     if fd < 0 {
-        return Result::Err(#cast(Errno, io::errno));
+        return Result::Err(#cast(Errno, *io::errno));
     }
 
     addr := sockaddr_in {
@@ -25,38 +25,33 @@ fn TcpServer::bind(u16 port) -> Result<TcpServer, Errno> {
     };
 
     if bind(fd, #cast(sockaddr *, &addr), #size(addr)) < 0 {
-        TcpConnection::close(TcpConnection { fd = fd });
-        return Result::Err(#cast(Errno, io::errno));
+        TcpConnection::close(TcpConnection { fd });
+        return Result::Err(#cast(Errno, *io::errno));
     }
 
     if listen(fd, 0) < 0 {
-        TcpConnection::close(TcpConnection { fd = fd });
-        return Result::Err(#cast(Errno, io::errno));
+        TcpConnection::close(TcpConnection { fd });
+        return Result::Err(#cast(Errno, *io::errno));
     }
 
-    return Result::Ok(TcpServer {
-        fd = fd,
-        port = port
-    });
+    return Result::Ok(TcpServer { fd, port });
 }
 
 fn TcpServer::accept(TcpServer self) -> Result<TcpConnection, Errno> {
     fd := accept(self.fd, nil, nil);
 
     if fd < 0 {
-        return Result::Err(#cast(Errno, io::errno));
+        return Result::Err(#cast(Errno, *io::errno));
     }
 
-    return Result::Ok(TcpConnection {
-        fd = fd
-    });
+    return Result::Ok(TcpConnection { fd });
 }
 
 fn TcpServer::close(TcpServer self) -> Result<Unit, Errno> {
     res := close(self.fd);
 
     if res < 0 {
-        return Result::Err(#cast(Errno, io::errno));
+        return Result::Err(#cast(Errno, *io::errno));
     }
 
     return Result::Ok(_);
