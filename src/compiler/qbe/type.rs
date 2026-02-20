@@ -296,14 +296,15 @@ impl Type {
             }
             Self::Function(inner) if let Some(inner) = (**inner).clone() => {
                 format!(
-                    "{GENERIC_FUNCTION}.{GENERIC_IDENTIFIER}.{}.{}.{GENERIC_END}",
+                    "{GENERIC_FUNCTION}.{GENERIC_IDENTIFIER}.{}.{}.{}.{GENERIC_END}",
+                    inner.variadic,
                     inner
                         .arguments
                         .iter()
                         .map(|((ty, _), _)| ty.to_internal_id())
                         .collect::<Vec<_>>()
                         .join("."),
-                    inner.return_type.unwrap_or(Type::Void).to_internal_id()
+                    inner.return_type.unwrap_or(Type::Void).to_internal_id(),
                 )
             }
             Self::Struct(name) => name.clone(),
@@ -409,6 +410,7 @@ impl Type {
                         Some(Type::Size(size))
                     } else if part == GENERIC_FUNCTION {
                         assert_eq!(parts.next().unwrap(), GENERIC_IDENTIFIER);
+                        let variadic = parts.next().unwrap().parse::<bool>().unwrap();
                         let mut res = vec![];
                         let mut nesting = 0;
 
@@ -433,7 +435,7 @@ impl Type {
 
                         Some(Type::Function(Box::new(Some(
                             crate::compiler::qbe::function::Function {
-                                variadic: false,
+                                variadic,
                                 external: true,
                                 builtin: false,
                                 volatile: false,
