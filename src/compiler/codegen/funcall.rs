@@ -340,8 +340,13 @@ impl Codegen<'_> for FunctionCall {
             );
         }
 
-        let meta_struct =
-            generate_meta_struct(ctx.func, &params, &parameters, call_location.clone());
+        let meta_struct = generate_meta_struct(
+            ctx.func,
+            name.clone(),
+            &params,
+            &parameters,
+            call_location.clone(),
+        );
 
         if tmp_function.format {
             for (i, ((ty, val), no_fmt)) in params.iter_mut().enumerate() {

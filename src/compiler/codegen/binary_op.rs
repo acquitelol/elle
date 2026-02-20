@@ -173,6 +173,7 @@ impl Codegen<'_> for BinaryOperation {
                 if has_meta {
                     let meta = generate_meta_struct(
                         ctx.func,
+                        func_name.clone(),
                         &params,
                         &[
                             (self.location.clone(), *self.left),

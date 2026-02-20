@@ -11,6 +11,7 @@ use crate::{
 
 pub fn generate_meta_struct(
     func: &RefCell<Function>,
+    name: String,
     params: &[((Type, Value), bool)],
     parameters: &[(MutRc<Location>, AstNode)],
     location: MutRc<Location>,
@@ -173,6 +174,15 @@ pub fn generate_meta_struct(
                 })),
             ),
             (
+                "name".into(),
+                Box::new(AstNode::Literal(Literal {
+                    kind: TokenKind::StringLiteral,
+                    value: ValueKind::String(name),
+                    location: location.clone(),
+                    tagged: false,
+                })),
+            ),
+            (
                 "file".into(),
                 Box::new(AstNode::Literal(Literal {
                     kind: TokenKind::StringLiteral,
@@ -212,7 +222,7 @@ pub fn generate_meta_struct(
         ],
         spreads: vec![],
         location,
-        allow_empty: false
+        allow_empty: false,
     });
 
     node

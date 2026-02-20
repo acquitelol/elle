@@ -1,7 +1,6 @@
 ### ♡ **Variable declarations**
 
 - Variables can be declared in 3 ways:
-
   - Using their type (useful for inference of information based on the left-hand side like generics)
   - Using let (useful for inferring based on the right-hand side)
   - Using the walrus operator `:=` (cannot be used with a type, equivalent to `let`)
@@ -289,6 +288,7 @@ struct ElleMeta {
     string *types, // An array of the type of every argument supplied to the function
     i32 arity,     // The number of arguments. This does NOT include the ElleMeta argument.
     string caller, // The caller of the function as a string
+    string name,   // The name of the function being called
     string file,   // The file where the function was called from
     i32 line,      // The line number of the function call + 1
     i32 column,    // The column number of the function call + 1

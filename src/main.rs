@@ -365,6 +365,14 @@ async fn main() -> ExitCode {
             no_fmt: false,
             is_unused: false,
         },
+        // Holds the name of the called function as a string
+        Argument {
+            name: "name".into(),
+            // string
+            r#type: Type::Pointer(Box::new(Type::Char)),
+            no_fmt: false,
+            is_unused: false,
+        },
         // The name of the file that the struct was generated in
         Argument {
             name: "file".into(),
