@@ -170,18 +170,15 @@ impl Codegen<'_> for Literal {
                         .tmp_name_with_debug_assertions(&ctx.func.borrow_mut().name.clone(), true);
                     let escaped = val.replace('\n', "\\n");
 
-                    let data = gen
-                        .data_sections
-                        .entry(escaped.clone())
-                        .or_insert(Data::new(
-                            Linkage::private(),
-                            name.clone(),
-                            None,
-                            vec![
-                                (Type::Byte, DataItem::String(escaped)),
-                                (Type::Byte, DataItem::Const(0)),
-                            ],
-                        ));
+                    let data = gen.data_sections.entry(name.clone()).or_insert(Data::new(
+                        Linkage::private(),
+                        name.clone(),
+                        None,
+                        vec![
+                            (Type::Byte, DataItem::String(escaped)),
+                            (Type::Byte, DataItem::Const(0)),
+                        ],
+                    ));
 
                     let res = (
                         Type::Pointer(Box::new(Type::Char)),
