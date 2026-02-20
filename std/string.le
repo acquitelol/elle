@@ -58,7 +58,7 @@ fn string::extend(ElleMeta meta, string *self, ...args);
 fn string::clone(string self) -> string;
 fn string::color(string self, string color) -> string;
 fn string::reset(string self) -> string;
-fn string::capitalize(string self);
+fn string::capitalize(string self) -> string;
 fn string::replace(string self, string needle, string replacement) -> string;
 fn string::repeat(string self, i32 count) -> string;
 fn string::insert(string *self, i32 index, char c);
