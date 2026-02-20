@@ -409,8 +409,17 @@ macro_rules! get_type {
                         $self.advance();
 
                         let mut args = vec![];
+                        let mut variadic = false;
 
                         while $self.current_token().kind != TokenKind::RightParenthesis {
+                            if $self.next_token().is_some_and(|token| token.kind == TokenKind::RightParenthesis)
+                                && $self.current_token().kind == TokenKind::Ellipsis
+                            {
+                                variadic = true;
+                                $self.advance();
+                                continue;
+                            }
+
                             args.push($self.get_type($generics));
                             $self.advance();
 
@@ -430,7 +439,7 @@ macro_rules! get_type {
                         };
 
                         ty = Type::Function(Box::new(Some(crate::compiler::qbe::function::Function {
-                            variadic: false,
+                            variadic,
                             external: true,
                             builtin: false,
                             volatile: false,
