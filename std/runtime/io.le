@@ -155,6 +155,10 @@ fn io::input(string message) -> string {
     return result;
 }
 
+fn io::file_exists(string path) -> bool {
+    return io::access(path, 0) == 0;
+}
+
 fn io::read_to_string(string path) -> string {
     file := io::fopen(path, "rb");
     defer io::fclose(file);

@@ -29,6 +29,10 @@ fn putc(char character, i64 stream) @alias(io::putc) -> i32;
 fn putchar(char character) @alias(io::putchar) -> i32;
 fn puts(string str) @alias(io::puts) -> i32;
 
+fn open(string pathname, i32 flags, ...) @alias(io::open) -> i32;
+fn access(string pathname, i32 flags) @alias(io::access) -> i32;
+fn close(i32 fd) @alias(io::close) -> i32;
+
 fn fopen(string filename, string mode) @alias(io::fopen) -> i64;
 fn fclose(FILE *stream) @alias(io::fclose) -> i32;
 fn fread(void *ptr, i64 size, i64 nmemb, FILE *stream) @alias(io::fread) -> i64;

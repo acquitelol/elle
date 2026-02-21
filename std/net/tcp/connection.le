@@ -41,14 +41,7 @@ fn TcpConnection::write_raw<T>(TcpConnection self, T *buffer, u64 size) -> Resul
 }
 
 fn TcpConnection::write<T>(TcpConnection self, T[] buffer) -> Result<i64, Errno> {
-    res := self.write_raw(buffer.elements, buffer.len() * #size(T));
-
-    /// Automatically set length when written
-    if res.is_ok() {
-        buffer.size = res.unwrap() / #size(T);
-    }
-
-    return res;
+    return self.write_raw(buffer.elements, buffer.len() * #size(T));
 }
 
 fn TcpConnection::close(TcpConnection self) -> Result<Unit, Errno> {

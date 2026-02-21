@@ -18,6 +18,7 @@ fn io::assert(ElleMeta meta, bool condition, ...);
 
 // These functions shouldn't have aliases because they're not as common
 fn io::input(string message) -> string;
+fn io::file_exists(string path) -> bool;
 fn io::read_to_string(string path) -> string;
 fn io::read_file_binary(string path) -> u8[];
 fn io::write_to_file(string path, string content) -> bool;
