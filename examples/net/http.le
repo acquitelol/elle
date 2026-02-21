@@ -1,0 +1,35 @@
+use std/prelude;
+use std/net/tcp;
+
+let port = 3939;
+
+fn main() {
+    server := TcpServer::bind(port).unwrap();
+    defer server.close().unwrap();
+
+    $printf("Server is listening on port {}", port);
+    buf := Array::bytes(4096);
+
+    for ;; {
+        connection := server.accept().unwrap();
+        defer connection.close().unwrap();
+
+        while (_, received := connection.read(buf)) && received != 0 {
+            parts := buf.to_repr<char>().join("").split_iter(" ").take(2).collect();
+            $assert(parts.remove(0).unwrap() == "GET");
+
+            path := ".{}".format(parts[0]);
+            status, body := io::file_exists(path)
+                ? $("200 OK", io::read_to_string(path))
+                : $(s := "404 Not Found", s);
+
+            res := "HTTP/1.0 {}\r\n".format(status);
+            res.extend("Content-Type: text/html\r\n");
+            res.extend("Content-Length: {}\r\n\r\n".format(body.len()));
+            res.extend(body);
+
+            connection.write(Array::from_string(res)).unwrap();
+            break;
+        }
+    }
+}
