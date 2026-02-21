@@ -17,6 +17,7 @@ fn string::to_upper(string self) -> string;
 fn string::to_lower(string self) -> string;
 fn string::split(string self, string delimiter) -> string[];
 fn string::split(string self, string delimiter) @alias(string::explode) -> string[];
+fn string::split_iter(string self, string delimiter) -> Iterator<string, DoubleEnded>;
 fn string::strip_left_with(string self, char c) -> string;
 fn string::strip_right_with(string self, char c) -> string;
 fn string::strip_with(string self, char c) -> string;
@@ -95,6 +96,13 @@ struct StringEnv @nofmt {
     u64 end
 }
 
+struct SplitStringEnv @nofmt {
+    string base,
+    string delim,
+    u64 front,
+    u64 back
+}
+
 !external fn string::nums<T>(string self) {
     T[] numbers = [];
     string current = "";
@@ -128,8 +136,12 @@ struct StringEnv @nofmt {
 }
 
 external fn `Box.0.StringEnv.1`(StringEnv env) -> Box<StringEnv>;
+external fn `Box.0.SplitStringEnv.1`(SplitStringEnv env) -> Box<SplitStringEnv>;
 external fn `Option.Some.0.15.1`(char value) -> Option<char>;
 external fn `Option.None.0.15.1`() -> Option<char>;
+external fn `Option.Some.0.2.15.1`(string value) -> Option<string>;
+external fn `Option.None.0.2.15.1`() -> Option<string>;
 external fn StringEnv::__fmt__(StringEnv self, u64 nesting) -> string;
+external fn SplitStringEnv::__fmt__(StringEnv self, u64 nesting) -> string;
 external fn string::__iter__(string self) -> Iterator<char, DoubleEnded>;
 external fn string::__iter__(string self) @alias(string::iter) -> Iterator<char, DoubleEnded>;

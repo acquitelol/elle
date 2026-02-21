@@ -313,6 +313,90 @@ fn string::split(string self, string delimiter) -> string[] {
     return parts;
 }
 
+struct SplitStringEnv {
+    string base,
+    string delim,
+    u64 front,
+    u64 back
+}
+
+fn string::split_iter(string self, string delimiter) -> Iterator<string, DoubleEnded> {
+    env := SplitStringEnv {
+        base = self,
+        delim = delimiter,
+        front = 0,
+        back = self.len()
+    };
+
+    return Iterator {
+        env = Box::new(env).to_ptr(),
+        next = fn(SplitStringEnv *env) {
+            if env.front > env.back { return None<string>(); }
+            if env.delim.len() == 0 {
+                if env.front == 0 {
+                    env.front = env.back + 1;
+                    return Some(env.base);
+                }
+                return None<string>();
+            }
+
+            start := env.front;
+            for i := start; i <= env.back - env.delim.len(); i += 1 {
+                _match := true;
+
+                for j := 0; j < env.delim.len(); j += 1 {
+                    if env.base[i + j] != env.delim[j] {
+                        _match = false;
+                        break;
+                    }
+                }
+
+                if _match {
+                    env.front = i + env.delim.len();
+                    return Some(env.base.slice(start, i));
+                }
+            }
+
+            env.front = env.back + 1;
+            return Some(env.base.slice(start, env.back));
+        },
+        next_back = fn(SplitStringEnv *env) {
+            if env.front > env.back { return None<string>(); }
+            if env.delim.len() == 0 {
+                if env.back == env.base.len() {
+                    env.back = 0;
+                    env.front = 1;
+                    return Some(env.base);
+                }
+                return None<string>();
+            }
+
+            end := env.back;
+            for i := end; i >= env.front + env.delim.len(); i -= 1 {
+                pos := i - env.delim.len();
+                _match := true;
+
+                for j := 0; j < env.delim.len(); j += 1 {
+                    if env.base[pos + j] != env.delim[j] {
+                        _match = false;
+                        break;
+                    }
+                }
+
+                if _match {
+                    env.back = pos;
+                    return Some(env.base.slice(pos + env.delim.len(), end));
+                }
+
+                if pos == env.front { break; }
+            }
+
+            env.back = env.front - 1;
+            return Some(env.base.slice(env.front, end));
+        }
+    };
+}
+
 fn string::replace(string self, string needle, string replacement) -> string {
     let needle_len = needle.len();
     let replacement_len = replacement.len();

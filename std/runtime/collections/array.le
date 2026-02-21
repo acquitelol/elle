@@ -388,7 +388,7 @@ fn Array::remove<T>(T[] self, u64 index) -> Option<T> {
         return Option::None();
     }
 
-    T removedElement = self[index];
+    removedElement := self[index];
 
     for let i = index; i < self.size - 1; i += 1 {
         self[i] = self[i + 1];

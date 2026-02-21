@@ -59,7 +59,7 @@ fn main(string[] args) {
             io::remove(exec_path);
 
             if !exec_code {
-
+                lines.push(line);
             }
         }
     }

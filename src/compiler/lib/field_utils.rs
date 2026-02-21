@@ -20,8 +20,9 @@ pub fn member_to_offset(
     struct_name: &String,
     member_name: &String,
 ) -> Option<(Option<Type>, u64)> {
-    match gen.struct_pool.get(struct_name) {
-        Some((_, members, ..)) => {
+    gen.struct_pool
+        .get(struct_name)
+        .and_then(|(_, members, ..)| {
             if !members.iter().any(|member| &member.name == member_name) {
                 return None;
             }
@@ -39,9 +40,7 @@ pub fn member_to_offset(
             }
 
             Some((ty, offset))
-        }
-        _ => None,
-    }
+        })
 }
 
 pub fn process_field_access(
