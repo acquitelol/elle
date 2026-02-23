@@ -398,7 +398,6 @@ This structure is also not defined in Elle code (like `ElleMeta`), but its equiv
 struct ElleEnv {
     ArbitraryAllocator *allocator,
     TAllocator *default_allocator,
-    void *buffer // arbitrary user data, may be treated as global
 }
 ```
 
@@ -1281,8 +1280,8 @@ fn main() {
 This can also be used for negative or positive values:
 
 ```rs
-const i64 MAX_SIGNED_LONG = 9_223_372_036_854_775_807;
-const i64 MIN_SIGNED_LONG = -MAX_SIGNED_LONG - 1;
+let MAX_SIGNED_LONG: f64 = 9_223_372_036_854_775_807;
+let MIN_SIGNED_LONG: f64 = -MAX_SIGNED_LONG - 1;
 ```
 
 Using unary `-` will multiply the expression by -1 while unary `+` will multiply the expression by 1.
@@ -1424,33 +1423,6 @@ fn main() {
 
 #
 
-### ♡ **Constants**
-
-- A constant is a value that cannot be redeclared. In Elle, constants can only be defined at the top level of files, and vice versa too, where the top level of files can _only_ be constants and functions. You cannot define normal variables at the top level.
-- Constants can be public, declared using the `pub` keyword.
-- Constants that create pointers (such as string literals) are referenced as the first statement of each function to bring them in scope.
-
-Consider this example that uses constants:
-
-```rs
-use std/io;
-
-const i32 WIDTH = 100;
-const i32 HEIGHT = 24;
-const i32 SIZE = WIDTH * HEIGHT;
-
-pub fn main() {
-    io::println(SIZE);
-    return 0;
-}
-```
-
-In the above code, all of the constants are technically function definitions that return the value after the `=` sign. However, when they're referenced, the function is automatically called. Therefore, you dont need to type `SIZE()` or similar, you can just directly reference `SIZE` as if it was a constant.
-
-It is labelled as a "`constant`", because although it can return a different value (it can call any function), it cannot be redeclared.
-
-#
-
 ### ♡ **Non-base-10 literals**
 
 - These are literal numbers which are not declared in base 10.
@@ -1499,7 +1471,7 @@ The syntax to export a symbol from your current file is as follows:
 
 ```rs
 // ./module.le
-pub const i32 myFavouriteNumber = 7;
+pub let myFavouriteNumber = 7;
 
 pub fn foo() {
     return 1;
@@ -2327,7 +2299,7 @@ $ ellec main.le foo.o && ./main
 
 ### ♡ **External symbols**
 
-- An external symbol is a definition for a function or constant that was defined elsewhere (such as in C) and is implicitly defined in Elle. This is used to give definition and context to functions that were not defined in Elle but you wish to use in when writing Elle code.
+- An external symbol is a definition for a function or global that was defined elsewhere (such as in C) and is implicitly defined in Elle. This is used to give definition and context to functions that were not defined in Elle but you wish to use in when writing Elle code.
   <br/>
 
 You can do this with the following example:
@@ -2355,15 +2327,107 @@ pub external fn InitWindow(i32 width, i32 height, string title) @alias(raylib::i
 // You can now call raylib::init_window() and it will internally reference the InitWindow symbol
 ```
 
-**Technical note:** This declaration does not emit any IR code. This means that all these definitions do is provide more information and context to the compiler. They do not change the output of the program directly.
+You can also reference external globals:
+
+````rs
+// foo.le
+let foo = 42;
+```
+```rs
+// main.le
+external let foo: i32;
+```
+
+**Technical note:** This declaration does not emit any IR code. This means that all these definitions do is provide more information and context to the compiler.
+
+#
+
+### ♡ **Globals**
+
+A global is a static memory allocation of the size of the specified type. By default, the default initializer value of the global will be put into a function which is automatically called in `main`.
+
+This means that this declaration:
+
+```rs
+let foo = 42;
+let bar = [1, 2, 3];
+
+fn main() {
+    $dbg(foo, bar);
+}
+```
+
+will be desugared to this:
+
+```rs
+let foo: i32;
+let bar: i32[];
+
+fn `__internal.elle.init_foo`() {
+    foo = 42;
+}
+
+fn `__internal.elle.init_bar`() {
+    bar = [1, 2, 3];
+}
+
+fn main() {
+    `__internal.elle.init_foo`();
+    `__internal.elle.init_bar`();
+    $dbg(foo, bar);
+}
+```
+
+The reason why these are seperate functions and not directly inlined in `main` is because if you declare an external global which is defined within another object, Elle will automatically call its initializer function in `main` for you.
+
+Notice how this would be problematic:
+
+```rs
+let foo = &0;
+
+fn main() {
+    $dbg(foo);
+}
+```
+
+Since it would desugar to taking the address of a stack variable which is within a function which returns, which is UB. For cases where this sort of behavior is intended, you may use the `@expandmain` attribute:
+
+```rs
+let foo @expandmain = &0;
+
+fn main() {
+    $dbg(foo);
+}
+```
+
+which will directly inline the declaration of `foo` into `main` instead of generating a seperate function for it. Note that due to the nature of this attribute's functionality, globals which use `@expandmain` within other modules will not be automatically initialized by the compiler within `main` if declared as an external global.
+
+Without `@expandmain`, you may have a program as follows:
+
+```rs
+// foo.le - will compile to object file seperately
+// ellec foo.le -c --nostd --nofmt --nosm
+pub let foo = 42;
+```
+```rs
+// main.le - uses the object
+// ellec main.le foo.o --run
+external let foo: i32;
+
+fn main() {
+    $dbg(foo);
+}
+```
+
+and the globals will be automatically initialized for you by calling their respective initializer function.
 
 #
 
 ### ♡ **C FFI**
 
-Elle is entirely C ABI compliant. This means that C code is directly callable from within Elle:
+Elle is almost entirely C ABI compliant. This means that C code is directly callable from within Elle:
 
-- Structs are packed like C
+- Structs are packed (unlike C), however aligned reads are planned soon. In the meantime you can manually calculate and add padding fields to your structs.
 - Strings are null terminated
 - Nothing is mangled
 
@@ -2371,7 +2435,7 @@ Elle is entirely C ABI compliant. This means that C code is directly callable fr
 
 ```rs
 external fn ClearBackground(Color color);
-```
+````
 
 - Structs are packed by default:
 
