@@ -14,22 +14,22 @@ fn main() {
         connection := server.accept().unwrap();
         defer connection.close().unwrap();
 
-        while (_, received := connection.read(buf)) && received != 0 {
-            parts := buf.to_repr<char>().join("").split_iter(" ").take(2).collect();
-            $assert(parts.remove(0).unwrap() == "GET");
+        is_ok, received := connection.read(buf);
+        if !is_ok || !received { continue; }
 
-            path := ".{}".format(parts[0]);
-            status, body := io::file_exists(path)
-                ? $("200 OK", io::read_to_string(path))
-                : $(s := "404 Not Found", s);
+        parts := buf.to_repr<char>().join("").split_iter(" ").take(2).collect();
+        $assert(parts.remove(0).unwrap() == "GET");
 
-            res := "HTTP/1.0 {}\r\n".format(status);
-            res.extend("Content-Type: text/html\r\n");
-            res.extend("Content-Length: {}\r\n\r\n".format(body.len()));
-            res.extend(body);
+        path := ".{}".format(parts[0]);
+        status, body := io::file_exists(path)
+            ? $("200 OK", io::read_to_string(path))
+            : $(s := "404 Not Found", s);
 
-            connection.write(Array::from_string(res)).unwrap();
-            break;
-        }
+        res := "HTTP/1.0 {}\r\n".format(status);
+        res.extend("Content-Type: text/html\r\n");
+        res.extend("Content-Length: {}\r\n\r\n".format(body.len()));
+        res.extend(body);
+
+        connection.write(Array::from_string(res)).unwrap();
     }
 }
