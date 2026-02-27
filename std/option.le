@@ -9,7 +9,7 @@ struct Option<T> @nofmt {
 
 fn Option::__fmt__<T>(Option<T> self, i32 nesting) {
     if self.__is_some {
-        return "Some({})".format(self.unwrap().__fmt__(nesting));
+        return "Some({})".format(self.unwrap());
     }
 
     return "None";
