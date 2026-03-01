@@ -1949,14 +1949,20 @@ impl<'a> Statement<'a> {
 
         let mut arguments = vec![];
         let mut return_ty = None;
+        let mut variadic_name = None;
+        let mut variadic = false;
 
         while self.current_token().kind != TokenKind::RightParenthesis && !self.is_eof() {
             if self.current_token().kind == TokenKind::Ellipsis {
-                elle_error!(self
-                    .current_token()
-                    .location
-                    .borrow()
-                    .error("Cannot create a variadic lambda function..."))
+                self.advance();
+
+                if self.current_token().kind == TokenKind::Identifier {
+                    variadic_name = Some(self.current_token());
+                    self.advance();
+                }
+
+                variadic = true;
+                break;
             }
 
             let mut no_fmt = false;
@@ -2015,12 +2021,23 @@ impl<'a> Statement<'a> {
             self.advance();
         }
 
+        let variadic_node = variadic_name.map(|name| {
+            AstNode::VariadicStart(VariadicStart {
+                name,
+                location: self.current_token().location,
+            })
+        });
+
         if self.current_token().kind == TokenKind::LeftCurlyBrace {
             self.expect_tokens(&[TokenKind::LeftCurlyBrace]);
             self.advance();
 
-            let body = self.yield_block(true); // Lambdas are expressions
+            let mut body = self.yield_block(true); // Lambdas are expressions
             self.position -= 1;
+
+            if variadic && let Some(node) = variadic_node {
+                body.insert(0, node);
+            }
 
             set_end!(location, self);
 
@@ -2029,6 +2046,7 @@ impl<'a> Statement<'a> {
                 return_ty,
                 value: body,
                 location,
+                variadic,
             })
         } else {
             let mut nesting = 0;
@@ -2084,14 +2102,21 @@ impl<'a> Statement<'a> {
             let value = Statement::new(tokens, 0, self.body, self.shared).parse().0;
             set_end!(location, self);
 
+            let mut body = vec![AstNode::Return(Return {
+                value: Box::new(value),
+                location: location.clone(),
+            })];
+
+            if variadic && let Some(node) = variadic_node {
+                body.insert(0, node);
+            }
+
             AstNode::Lambda(Lambda {
                 arguments,
                 return_ty,
-                value: vec![AstNode::Return(Return {
-                    value: Box::new(value),
-                    location: location.clone(),
-                })],
+                value: body,
                 location,
+                variadic,
             })
         }
     }

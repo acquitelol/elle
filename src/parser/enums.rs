@@ -167,6 +167,7 @@ pub struct Lambda {
     pub value: Vec<AstNode>,
     pub return_ty: Option<Type>,
     pub location: MutRc<Location>,
+    pub variadic: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

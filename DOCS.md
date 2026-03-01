@@ -996,7 +996,6 @@ fn main() {
 Please note the following:
 
 - These lambdas do **not** capture surrounding variables
-- They are not automatically passed ElleMeta by the compiler (because there is not enough context to do so)
 
 This means that these examples won't work:
 

@@ -57,7 +57,7 @@ impl Codegen<'_> for Lambda {
                 name_token: Token::from_ident(&lambda_name),
                 name: lambda_name.clone(),
                 public: false,
-                variadic: false,
+                variadic: self.variadic,
                 external: false,
                 builtin: false,
                 volatile: false,
