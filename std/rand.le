@@ -6,3 +6,4 @@ fn rand() @alias(rand::rand) -> i32;
 
 // inclusive on both ends
 fn rand::random(i32 lower, i32 upper) -> i32;
+fn rand::randomf(f32 lower, f32 upper) -> f32;

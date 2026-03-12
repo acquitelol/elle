@@ -7,3 +7,8 @@ fn rand() @alias(rand::rand) -> i32;
 !external fn rand::random(i32 lower, i32 upper) {
     return rand::rand() % (upper - lower + 1) + lower;
 }
+
+!external fn rand::randomf(f32 lower, f32 upper) -> f32 {
+    value := #cast(f32, rand::rand()) / 0x7fffffff;
+    return lower + value * (upper - lower);
+}

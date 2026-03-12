@@ -1,9 +1,9 @@
-use std/io;
+use std/prelude;
 
 fn add(ElleMeta meta, ...args) {
-    let res = 0;
+    res := 0;
 
-    for let i = 0; i < meta.arity; i += 1 {
+    for i := 0; i < meta.arity; i += 1 {
         res += args.yield(i32);
     }
 
