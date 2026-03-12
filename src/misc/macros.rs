@@ -317,7 +317,7 @@ macro_rules! struct_hover {
             }
 
             elle_error!(format!(
-                "hover\n{}\n{}\nstruct {}{} {{\n{}\n}};",
+                "hover\n{}\n{}\nstruct {}{} {{\n{}\n}}",
                 $token.location.borrow().display_plain(false),
                 $token.location.borrow().display_plain(true),
                 Type::Struct($token.value.get_string_inner().unwrap()).display(),
@@ -328,7 +328,7 @@ macro_rules! struct_hover {
                 },
                 $members
                     .iter()
-                    .map(|x| format!("\t{} {};", x.r#type.display(), x.name))
+                    .map(|x| format!("\t{} {},", x.r#type.display(), x.name))
                     .collect::<Vec<String>>()
                     .join("\n")
             ));
