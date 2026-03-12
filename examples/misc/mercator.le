@@ -9,26 +9,26 @@
 // [2] mercator math = https://en.wikipedia.org/wiki/Web_Mercator_projection
 use std/prelude;
 
-const CUTOFF = 85.051129;
-const TILE_SIZE = 1000;
+let CUTOFF = 85.051129;
+let TILE_SIZE = 1000;
 
-const anchor = $map(
-  $("coord", $map(
+let anchor = $map(#[
+  $("coord", $map(#[
       $("lon", -95.64706087822267),
       $("lat", 64.11823816973708)
-  )),
-  $("tile", $map(
+  ])),
+  $("tile", $map(#[
       $("x", 479.0),
       $("y", 544.0)
-  )),
-  $("pixel", $map(
+  ])),
+  $("pixel", $map(#[
       $("x", 874.0),
       $("y", 650.0)
-  ))
-);
+  ]))
+]);
 
-const anchor_x = anchor["tile"]["x"] * TILE_SIZE + anchor["pixel"]["x"];
-const anchor_y = anchor["tile"]["y"] * TILE_SIZE + anchor["pixel"]["y"];
+let anchor_x = anchor["tile"]["x"] * TILE_SIZE + anchor["pixel"]["x"];
+let anchor_y = anchor["tile"]["y"] * TILE_SIZE + anchor["pixel"]["y"];
 
 fn lonlat_to_tile(f64 lon, f64 lat) {
     if lat > CUTOFF { lat = CUTOFF; }
@@ -40,7 +40,7 @@ fn lonlat_to_tile(f64 lon, f64 lat) {
     a := lat * PI / 180.0;
     y := (1.0 - math::log(math::tan(a) + 1.0 / math::cos(a)) / PI) / 2.0 * world;
 
-    tile := [x / TILE_SIZE, y / TILE_SIZE].map(math::floor);
+    tile := [x / TILE_SIZE, y / TILE_SIZE].map(fn(x) math::floor(x));
     pixel := [math::floor(x) - tile[0] * TILE_SIZE, math::floor(y) - tile[1] * TILE_SIZE];
     return [tile, pixel].concat().map(fn(x) #cast(i32, x));
 }

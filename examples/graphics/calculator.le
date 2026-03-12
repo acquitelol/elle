@@ -2,17 +2,17 @@ use std/collections/hashmap;
 use std/prelude;
 use std/raylib;
 
-const SCALING_FACTOR = 2;
+let SCALING_FACTOR = 2;
 
-const SCREEN_WIDTH = 150 * SCALING_FACTOR;
-const SCREEN_HEIGHT = 185 * SCALING_FACTOR;
-const PADDING = 6 * SCALING_FACTOR;
-const FONT_SIZE = 20 * SCALING_FACTOR;
-const LINE_THICKNESS = 2 * SCALING_FACTOR;
+let SCREEN_WIDTH = 150 * SCALING_FACTOR;
+let SCREEN_HEIGHT = 185 * SCALING_FACTOR;
+let PADDING = 6 * SCALING_FACTOR;
+let FONT_SIZE = 20 * SCALING_FACTOR;
+let LINE_THICKNESS = 2 * SCALING_FACTOR;
 
-const BUTTON_UNHOVER = rl::get_color(0x777777FF);
-const BUTTON_HOVER = rl::get_color(0x555555FF);
-const BACKGROUND = rl::get_color(0x181818FF);
+let BUTTON_UNHOVER = rl::get_color(0x777777FF);
+let BUTTON_HOVER = rl::get_color(0x555555FF);
+let BACKGROUND = rl::get_color(0x181818FF);
 
 struct State {
     string input,
@@ -69,12 +69,12 @@ fn State::handle_operation(State *self, Button *btn) {
 }
 
 fn State::perform_computation(State *self) {
-    mapping := HashMap::from_entries(
+    mapping := HashMap::from_entries(#[
         $("+", fn(State *self) self.lhs + self.rhs),
         $("-", fn(State *self) self.lhs - self.rhs),
         $("*", fn(State *self) self.lhs * self.rhs),
         $("/", fn(State *self) self.lhs / self.rhs),
-    );
+    ]);
 
     if self.rhs == 0 {
         self.rhs = i32::parse(self.input);
@@ -119,25 +119,25 @@ fn State::draw_buttons(State *self) {
             Button::new("7", fn(self, state) state.input <>= self.kind),
             Button::new("4", fn(self, state) state.input <>= self.kind),
             Button::new("1", fn(self, state) state.input <>= self.kind),
-            Button::new("+", fn(self, state) state.handle_operation(self)),
+            Button::new("x", fn(self, state) state.clear()),
         ],
         [
             Button::new("8", fn(self, state) state.input <>= self.kind),
             Button::new("5", fn(self, state) state.input <>= self.kind),
             Button::new("2", fn(self, state) state.input <>= self.kind),
-            Button::new("-", fn(self, state) state.handle_operation(self)),
+            Button::new("0", fn(self, state) state.input <>= self.kind),
         ],
         [
             Button::new("9", fn(self, state) state.input <>= self.kind),
             Button::new("6", fn(self, state) state.input <>= self.kind),
             Button::new("3", fn(self, state) state.input <>= self.kind),
-            Button::new("*", fn(self, state) state.handle_operation(self)),
+            Button::new("=", fn(self, state) state.perform_computation()),
         ],
         [
-            Button::new("x", fn(self, state) state.clear()),
-            Button::new("0", fn(self, state) state.input <>= self.kind),
-            Button::new("=", fn(self, state) state.perform_computation()),
+            Button::new("*", fn(self, state) state.handle_operation(self)),
             Button::new("/", fn(self, state) state.handle_operation(self)),
+            Button::new("+", fn(self, state) state.handle_operation(self)),
+            Button::new("-", fn(self, state) state.handle_operation(self)),
         ],
     ];
 

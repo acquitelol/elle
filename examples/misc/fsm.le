@@ -2,28 +2,28 @@ use std/prelude;
 
 enum State { S0, S1, S2, S3, S4, End }
 
-let states = $map(
-    $(State::S0, $map(
+let states = $map(#[
+        $(State::S0, $map(#[
         $(50, $(State::End, 0)),
         $(10, $(State::S1, 40)),
         $(20, $(State::S2, 30)),
-    )),
-    $(State::S1, $map(
+    ])),
+    $(State::S1, $map(#[
         $(10, $(State::S2, 30)),
         $(20, $(State::S3, 20)),
-    )),
-    $(State::S2, $map(
+    ])),
+    $(State::S2, $map(#[
         $(20, $(State::S4, 10)),
         $(10, $(State::S3, 20)),
-    )),
-    $(State::S3, $map(
+    ])),
+    $(State::S3, $map(#[
         $(10, $(State::S4, 10)),
         $(20, $(State::End, 0)),
-    )),
-    $(State::S4, $map(
+    ])),
+    $(State::S4, $map(#[
         $(10, $(State::End, 0)),
-    ))
-);
+    ]))
+]);
 
 fn main() {
     state := State::S0;
