@@ -28,7 +28,7 @@ use crate::{
         enums::{AstNode, Primitive},
         parser::{DoOnly, Parser, StructPool},
     },
-    Warnings, PRIMARY_ALLOCATOR_MODULE, SHORT_EXTENSION, STD_LIB_PATH,
+    Warnings, INTERNAL_GLOBAL_INIT_FORMAT, PRIMARY_ALLOCATOR_MODULE, SHORT_EXTENSION, STD_LIB_PATH,
 };
 use crate::{elle_error, get_STD_LIB_PATH, ARBITRARY_ALLOCATOR_MODULE, BACKUP_ALLOCATOR_MODULE};
 
@@ -437,22 +437,24 @@ pub fn lex_and_parse(
     if nesting == 0 {
         tree.insert(
             0,
-            Primitive::Constant(ConstantSource {
+            Primitive::Global(GlobalSource {
                 namespace_token: Token::from_ident(""),
                 name_token: Token::from_ident("nil"),
                 name: "nil".into(),
+                method_name: format!(INTERNAL_GLOBAL_INIT_FORMAT!(), "nil"),
                 public: false,
                 usable: true,
-                imported: false,
-                // void *
+                imported: true,
+                external: false,
+                expand_main: false,
                 r#type: Some(Type::Pointer(Box::new(Type::Void))),
-                value: Box::new(AstNode::Literal(Literal {
-                    kind: TokenKind::LongLiteral,
-                    value: ValueKind::Number(0),
-                    location: loc.clone(),
+                value: Some(Box::new(AstNode::Literal(Literal {
+                    kind: TokenKind::StringLiteral,
+                    value: ValueKind::String("\0".into()),
+                    location: import_location.clone(),
                     tagged: false,
-                })),
-                location: loc.clone(),
+                }))),
+                location: import_location.clone(),
             }),
         );
     }
