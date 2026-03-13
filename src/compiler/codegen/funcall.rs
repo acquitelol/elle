@@ -138,9 +138,7 @@ impl Codegen<'_> for FunctionCall {
                     &name,
                     Some(ctx.func),
                     Some(ctx.module),
-                    &VariableInfo {
-                        dont_call_constants: true,
-                    },
+                    &VariableInfo { is_declare: false },
                 )
                 .map(|(ty, val)| {
                     let ty = match ty {
@@ -678,9 +676,7 @@ impl Codegen<'_> for FunctionCall {
                 &name,
                 Some(ctx.func),
                 Some(ctx.module),
-                &VariableInfo {
-                    dont_call_constants: true,
-                },
+                &VariableInfo { is_declare: false },
             )
             .unwrap_or((Type::Long, Value::Global(name)))
             .1

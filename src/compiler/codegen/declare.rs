@@ -30,7 +30,7 @@ impl Codegen<'_> for Declare {
                     plain_name.as_str(),
                     Some(ctx.func),
                     Some(ctx.module),
-                    &VariableInfo::default(),
+                    &VariableInfo { is_declare: true },
                 )
                 .is_err();
 

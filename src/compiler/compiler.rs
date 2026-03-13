@@ -57,7 +57,7 @@ pub trait Codegen<'a> {
 
 #[derive(Default)]
 pub struct VariableInfo {
-    pub dont_call_constants: bool,
+    pub is_declare: bool,
 }
 
 pub struct Compiler {
@@ -150,53 +150,57 @@ impl Compiler {
                 )
             });
 
-        if var.is_err() {
-            if let Some(module) = module {
-                if let Some(val) = module.borrow().functions.get(name) {
-                    let is_constant = val.constant;
-
-                    if !val.usable && !val.imported {
-                        // TODO: Take call location here
-                        elle_error!(Location::base().basic_error(format!(
-                            "{} named '{}' was not imported and can't be used",
-                            if is_constant { "Constant" } else { "Function" },
-                            name.replace('.', "::")
-                        )))
-                    }
-
-                    let ty = val.return_type.clone();
-
-                    if is_constant {
-                        if state.dont_call_constants && !ty.as_ref().unwrap().is_function() {
-                            return Ok((ty.unwrap(), Value::Global(name.into())));
-                        }
-
-                        let temp = self.new_temporary(Some("constant"), true);
-
-                        func.unwrap().borrow_mut().assign_instruction(
-                            &temp,
-                            &ty.clone().unwrap(),
-                            Instruction::Call(Value::Global(name.into()), vec![]),
-                        );
-
-                        return Ok((ty.unwrap(), temp));
-                    }
-
-                    return Ok((
-                        Type::Function(Box::new(Some(val.to_owned()))),
-                        Value::Global(name.into()),
-                    ));
-                } else if let Some(Primitive::Function(val)) = self.generic_functions.get(name) {
-                    if !val.usable && !val.imported {
-                        // TODO: Take call location here
-                        elle_error!(Location::base().basic_error(format!(
-                            "Function named '{}' was not imported and can't be used",
-                            name.replace('.', "::")
-                        )))
-                    }
-
-                    return Ok((Type::Function(Box::new(None)), Value::Global(name.into())));
+        if var.is_err()
+            && let Some(module) = module
+        {
+            if let Some(val) = module.borrow().functions.get(name) {
+                if !val.usable && !val.imported {
+                    // TODO: Take call location here
+                    elle_error!(Location::base().basic_error(format!(
+                        "Function named '{}' was not imported and can't be used",
+                        name.replace('.', "::")
+                    )))
                 }
+
+                return Ok((
+                    Type::Function(Box::new(Some(val.to_owned()))),
+                    Value::Global(name.into()),
+                ));
+            } else if let Some(Primitive::Function(val)) = self.generic_functions.get(name) {
+                if !val.usable && !val.imported {
+                    // TODO: Take call location here
+                    elle_error!(Location::base().basic_error(format!(
+                        "Function named '{}' was not imported and can't be used",
+                        name.replace('.', "::")
+                    )))
+                }
+
+                return Ok((Type::Function(Box::new(None)), Value::Global(name.into())));
+            } else if let Some(data) = module.borrow().data.get(name)
+                && !state.is_declare
+            {
+                // structs are placed directly into the static memory verbatim
+                // it is unwise to dereference here
+                if let Some(ref ty) = data.ty
+                    && ty.is_struct()
+                {
+                    return Ok((ty.clone(), Value::Global(data.name.clone())));
+                }
+
+                let tmp = self.new_temporary(None, false);
+
+                func.expect("Could not find current function")
+                    .borrow_mut()
+                    .assign_instruction(
+                        &tmp,
+                        &data.ty.clone().unwrap(),
+                        Instruction::Load(
+                            data.ty.clone().unwrap(),
+                            Value::Global(data.name.clone()),
+                        ),
+                    );
+
+                return Ok((data.ty.clone().unwrap(), tmp));
             }
         }
 
@@ -244,40 +248,6 @@ impl Compiler {
                             name, msg
                         )))
                     };
-                }
-
-                if module.is_none() {
-                    undefined_error!();
-                }
-
-                // If it fails to get the variable from the current scope
-                // then attempt to get it from a global instead
-                let tmp_module = module.unwrap().borrow();
-                let global = tmp_module.data.get(name.as_str());
-
-                if let Some(data) = global.cloned() {
-                    // structs are placed directly into the static memory verbatim
-                    // it is unwise to dereference here
-                    if let Some(ref ty) = data.ty
-                        && ty.is_struct()
-                    {
-                        return Some((ty.clone(), Value::Global(data.name.clone())));
-                    }
-
-                    let tmp = self.new_temporary(None, false);
-
-                    func.expect("Could not find current function")
-                        .borrow_mut()
-                        .assign_instruction(
-                            &tmp,
-                            &data.ty.clone().unwrap(),
-                            Instruction::Load(
-                                data.ty.clone().unwrap(),
-                                Value::Global(data.name.clone()),
-                            ),
-                        );
-
-                    return Some((data.ty.unwrap(), tmp));
                 }
 
                 undefined_error!()
