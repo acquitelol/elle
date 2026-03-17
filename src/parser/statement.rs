@@ -1014,6 +1014,8 @@ impl<'a> Statement<'a> {
                     && !self
                         .next_token()
                         .is_some_and(|token| token.kind == TokenKind::LeftCurlyBrace))
+                    // lambda
+                    && self.current_token().kind != TokenKind::Function
             {
                 let loc = self.current_token().location;
                 let ty = self.get_type(Some(self.shared.generics));

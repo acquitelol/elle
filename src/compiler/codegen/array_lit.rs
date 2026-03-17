@@ -70,7 +70,7 @@ impl Codegen<'_> for ArrayLiteral {
                                     r#type: Some(ty.clone()),
                                     value: Box::new(node),
                                     location: loc,
-                                    explicit: false,
+                                    explicit: ty.is_function(),
                                 }),
                             )
                         })
@@ -139,7 +139,7 @@ impl Codegen<'_> for ArrayLiteral {
             results.push(val);
 
             if let Some(first_type) = first_type.clone() {
-                if ty != first_type {
+                if !ty.function_eq(&first_type, Some(&self.location)) {
                     elle_error!(location.borrow().error(format!(
                         "Inconsistent array types '{}' and '{}' (possibly more)",
                         first_type.display(),
@@ -147,19 +147,23 @@ impl Codegen<'_> for ArrayLiteral {
                     )));
                 }
 
-                if inner_ty.is_some() && inner_ty.clone().unwrap() != first_type {
+                if let Some(ref inner_ty) = inner_ty
+                    && !inner_ty.function_eq(&first_type, Some(&self.location))
+                {
                     elle_error!(location.borrow().error(format!(
                         "Invalid type of element in array '{}' when the array type is '{}'",
                         ty.display(),
-                        inner_ty.unwrap().display(),
+                        inner_ty.display(),
                     )))
                 }
             } else {
-                if inner_ty.is_some() && inner_ty.clone().unwrap() != ty {
+                if let Some(ref inner_ty) = inner_ty
+                    && !inner_ty.function_eq(&ty, Some(&self.location))
+                {
                     elle_error!(location.borrow().error(format!(
                         "Invalid type of element in array '{}' when the array type is '{}'",
                         ty.display(),
-                        inner_ty.unwrap().display(),
+                        inner_ty.display(),
                     )))
                 }
 

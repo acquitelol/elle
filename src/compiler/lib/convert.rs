@@ -156,7 +156,7 @@ pub fn convert_to_type(
     if let Type::StaticArray(ref lhs, ref lhs_size) = first
         && let Type::StaticArray(ref rhs, ref rhs_size) = second
     {
-        if lhs == rhs && (lhs_size == rhs_size || explicit) {
+        if lhs.function_eq(rhs, Some(&left_location)) && (lhs_size == rhs_size || explicit) {
             return (second, val);
         }
 
