@@ -6,7 +6,7 @@ struct Zip<T, U, AnyEnded> {
     Iterator<U, AnyEnded> b,
 }
 
-fn Iterator::zip<T, U, AnyEnded>(
+fn Iterator::zip_internal<T, U, AnyEnded>(
     Iterator<T, AnyEnded> a,
     Iterator<U, AnyEnded> b
 ) -> Iterator<(T, U), AnyEnded> {
@@ -38,4 +38,8 @@ fn Iterator::zip<T, U, AnyEnded>(
             return Option::Some($(a.unwrap(), b.unwrap()));
         } : nil
     };
+}
+
+fn Iterator::zip<T, U, AnyEnded>(Iterator<T, AnyEnded> self, U other) {
+    return self.zip_internal(other.__iter__());
 }
