@@ -1,0 +1,17 @@
+use std/prelude;
+
+fn main() {
+    let ops = #[
+        fn(i32 x) #cast(f32, x),
+        fn(i32 x) math::logf(x),
+        fn(i32 x) #cast(f32, x * x),
+        fn(i32 x) math::powf(2, x),
+        fn(i32 x) #cast(f32, math::fact(x)),
+    ];
+    
+    a := ops.iter().map(fn(op) (1..4).map(op).collect()).collect();
+    b := ops.iter().flat_map(fn(op) (1..4).map(op)).chunks(3).collect();
+    
+    $dbg(a, b);
+    $assert(a == b);
+}

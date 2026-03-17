@@ -1,0 +1,14 @@
+use std/prelude;
+
+fn is_prime<T>(T x) {
+   return x > 1 && (2..#cast(T, math::sqrtf(x)))
+       .all_with(fn(y, x) x % y != 0, x);
+}
+
+fn main() {
+    $dbg(is_prime(2));
+    $dbg(is_prime(10));
+    $dbg(is_prime(23));
+    $dbg(is_prime(103));
+    $dbg(is_prime(105));
+}
