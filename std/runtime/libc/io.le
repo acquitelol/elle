@@ -40,22 +40,3 @@ fn fwrite(void *ptr, i64 size, i64 nmemb, FILE *stream) @alias(io::fwrite) -> i6
 fn ftell(FILE *stream) @alias(io::ftell) -> i64;
 fn fseek(FILE *stream, i64 offset, i32 whence) @alias(io::fseek) -> i32;
 fn remove(string path) @alias(io::remove) -> i32;
-
-fn perror(string s);
-fn strerror(i32 errno) -> string;
-fn __error() -> i32 *;
-fn __errno_location() -> i32 *;
-
-!external fn __internal_get_errno() @cfg(target = "macos") {
-    return __error();
-}
-
-!external fn __internal_get_errno() @cfg(target = "linux") {
-    return __errno_location();
-}
-
-let io::errno = __internal_get_errno();
-
-!external fn os_get_last_error() -> string {
-    return strerror(*io::errno);
-}

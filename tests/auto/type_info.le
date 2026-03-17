@@ -9,7 +9,7 @@ fn `type_of_val.works`() {
     $assert(TypeInfo::type_of_val([$(1, 2)]) == "(i32, i32)[]");
     $assert(TypeInfo::type_of_val($$(1, 2, "a")) == "(i32, i32, string)");
     $assert(TypeInfo::type_of_val([$$(1, 2, "a")]) == "(i32, i32, string)[]");
-    $assert(TypeInfo::type_of_val(HashMap::with_entries($("a", 1))) == "HashMap<string, i32>*");
+    $assert(TypeInfo::type_of_val(HashMap::with_entries(#[$("a", 1)])) == "HashMap<string, i32>*");
 }
 
 fn `type_of.works`() {

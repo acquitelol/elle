@@ -1,19 +1,19 @@
 use std/prelude;
 
 struct Meow { i32 int } // 英語
-const Meow::print = fn(Meow self) $printf("self: {}", self.int);
+let Meow::print = fn(Meow self) $printf("self: {}", self.int);
 
 struct にゃ { i32 整数 } // 日本語
-const にゃ::プリント = fn(にゃ 自分) $printf("自分: {}", 自分.整数);
+let にゃ::プリント = fn(にゃ 自分) $printf("自分: {}", 自分.整数);
 
 struct мяу { i32 инт } // ロシア語
-const мяу::печатать = fn(мяу себя) $printf("себя: {}", себя.инт);
+let мяу::печатать = fn(мяу себя) $printf("себя: {}", себя.инт);
 
 struct ʍoǝɯ { i32 ʇuᴉ } // オーストラリア語
-const ʍoǝɯ::ʇuᴉɹd = fn(ʍoǝɯ ɟlǝs) $printf("ɟlǝs: {}", ɟlǝs.ʇuᴉ);
+let ʍoǝɯ::ʇuᴉɹd = fn(ʍoǝɯ ɟlǝs) $printf("ɟlǝs: {}", ɟlǝs.ʇuᴉ);
 
 struct `🐱` { i32 `1️⃣` } // 絵文字
-const `🐱`::`🖨️` = fn(`🐱` `💁‍♀️`) $printf("💁‍♀️: {}", `💁‍♀️`.`1️⃣`);
+let `🐱`::`🖨️` = fn(`🐱` `💁‍♀️`) $printf("💁‍♀️: {}", `💁‍♀️`.`1️⃣`);
 
 fn main() {
     foo := Meow { int = 3 };
