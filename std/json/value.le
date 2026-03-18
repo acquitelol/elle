@@ -1,0 +1,91 @@
+global pub;
+
+enum JsonValueKind { 
+    Null, 
+    Number, 
+    String, 
+    Bool, 
+    Array, 
+    Object 
+}
+
+struct JsonValue @nofmt {
+    JsonValueKind tag,
+    @unused f64 number,
+    @unused string string,
+    @unused bool bool,
+    @unused JsonValue[] array,
+    @unused HashMap<string, JsonValue> *object
+}
+
+fn JsonValue::__fmt__(JsonValue self, u64 nesting) -> string {
+    fmt := "{}({})";
+    
+    if self.tag == JsonValueKind::Null {
+        return "Null";
+    } else if self.tag == JsonValueKind::Number {
+        return fmt.format(self.tag, self.number);
+    } else if self.tag == JsonValueKind::String {
+        return fmt.format(self.tag, self.string);
+    } else if self.tag == JsonValueKind::Bool {
+        return fmt.format(self.tag, self.bool);
+    } else if self.tag == JsonValueKind::Array {
+        return fmt.format(self.tag, self.array.__fmt__(nesting));
+    } else if self.tag == JsonValueKind::Object {
+        return fmt.format(self.tag, self.object.__fmt__(nesting));
+    } else { 
+        $die();
+    }
+}
+
+!pub fn JsonValue::check_tag(JsonValue self, JsonValueKind tag, ElleMeta meta) {
+    if self.tag != tag {
+        $panic_at(
+            "[{}:{}:{}]".format(meta.caller, meta.line, meta.column),
+            "Attempted to interpret a JsonValue::{} as JsonValue::{}.\nThis error occured in this expression: '{}'",
+            self.tag, tag, meta.exprs[0]
+        );
+    }
+}
+
+fn JsonValue::as_null(ElleMeta meta, JsonValue self) {
+    self.check_tag(JsonValueKind::Null, meta);
+    return nil;
+}
+
+fn JsonValue::as_number(ElleMeta meta, JsonValue self) {
+    self.check_tag(JsonValueKind::Number, meta);
+    return self.number;
+}
+
+fn JsonValue::as_string(ElleMeta meta, JsonValue self) {
+    self.check_tag(JsonValueKind::String, meta);
+    return self.string;
+}
+
+fn JsonValue::as_bool(ElleMeta meta, JsonValue self) {
+    self.check_tag(JsonValueKind::Bool, meta);
+    return self.bool;
+}
+
+fn JsonValue::as_array(ElleMeta meta, JsonValue self) {
+    self.check_tag(JsonValueKind::Array, meta);
+    return self.array;
+}
+
+fn JsonValue::as_object(ElleMeta meta, JsonValue self) {
+    self.check_tag(JsonValueKind::Object, meta);
+    return self.object;
+}
+
+fn `JsonValue.__load__.0.11.1`(ElleMeta meta, JsonValue self, i32 i) {
+    self.check_tag(JsonValueKind::Array, meta);
+    return self.array[i]; 
+}
+
+fn `JsonValue.__load__.0.2.15.1`(ElleMeta meta, JsonValue self, string i) { 
+    self.check_tag(JsonValueKind::Object, meta);
+    return self.object[i]; 
+}
+
+external fn JsonValue::__load__<T>(ElleMeta meta, JsonValue self, T i) -> JsonValue;
