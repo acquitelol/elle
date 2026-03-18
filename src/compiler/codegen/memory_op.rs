@@ -71,9 +71,11 @@ impl Codegen<'_> for MemoryOperation {
                     .unwrap()
             };
 
-            if (self.value.is_some() && exists!(struct_name, STORE_CONSTANT))
-                || (self.addr_only && exists!(struct_name, LOAD_REF_CONSTANT))
-                || exists!(struct_name, LOAD_CONSTANT)
+            if self.value.is_some() && exists!(struct_name, STORE_CONSTANT)
+                || (self.value.is_none()
+                    && self.addr_only
+                    && exists!(struct_name, LOAD_REF_CONSTANT))
+                || (self.value.is_none() && exists!(struct_name, LOAD_CONSTANT))
             {
                 let mut parameters = vec![
                     (self.left_location.clone(), *self.left),
