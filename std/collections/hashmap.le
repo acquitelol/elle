@@ -22,7 +22,7 @@ fn HashMapBucket::new<T, U>() {
     return self;
 }
 
-struct HashMap<T, U> {
+struct HashMap<T, U> @nofmt {
     HashMapBucket<T, U> *[] table,
     u64 size
 }
@@ -58,7 +58,8 @@ fn HashMap::__store__<T, U>(HashMap<T, U> *self, T key, U value) {
 }
 
 fn HashMap::__fmt__<T, U>(HashMap<T, U> self, i32 nesting) {
-    res := "{\n";
+    res := "{";
+    if !self.is_empty() { res.push('\n'); }
 
     for u64 i = 0; i < self.table.len(); i += 1 {
         key := self.table[i].key;
@@ -75,7 +76,7 @@ fn HashMap::__fmt__<T, U>(HashMap<T, U> self, i32 nesting) {
         res.push('\n');
     }
 
-    res.extend(" ".repeat(4 * nesting));
+    if !self.is_empty() { res.extend(" ".repeat(4 * nesting)); }
     res.push('}');
     return res;
 }
