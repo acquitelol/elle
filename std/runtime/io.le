@@ -87,7 +87,22 @@ fn io::panic(ElleMeta meta, string fmt, ...args) @fmt {
         "Fatal error in function {}:\n[{}:{}:{}] "
             .format(meta.caller, meta.file, meta.line, meta.column)
             .color("red"),
-        __internal_fmt(fmt, meta, args)
+        __internal_fmt(fmt, meta, args).reset()
+    );
+
+    libc::abort();
+}
+
+fn io::panic_at(ElleMeta meta, string at, string fmt, ...args) @fmt {
+    for let i = 0; i < meta.arity; i += 1 {
+        meta.types[i] = "string";
+    }
+
+    io::println(
+        "Fatal error in function {}:\n{} "
+            .format(meta.caller, at)
+            .color("red"),
+        __internal_fmt(fmt, meta, args).reset(),
     );
 
     libc::abort();
