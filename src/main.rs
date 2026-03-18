@@ -230,7 +230,7 @@ async fn main() -> ExitCode {
                     unsafe { RUNTIME_PATH = Some(leaked) };
                 }
             }
-            "--cpfmt" | "--clean-ptr-fmt" => unsafe { POINTER_ID = Some("__clean_ptr__") },
+            "--fpfmt" | "--full-ptr-fmt" => unsafe { POINTER_ID = Some("__ptr__") },
             "--hush" | "--silent" => {
                 hush = true;
             }

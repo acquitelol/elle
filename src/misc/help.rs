@@ -155,8 +155,8 @@ pub fn print_help(program: &str) {
                     "Disables ANSI color output (alternative to NO_COLOR=1)",
                 ),
                 (
-                    "--cpfmt, --clean-ptr-fmt",
-                    "Cleans up formatting for pointer types when printing to the console.",
+                    "--fpfmt, --full-ptr-fmt",
+                    "Uses a fancier formatter for pointer types when printing to the console.",
                 ),
             ],
         ),

@@ -21,7 +21,7 @@ fn __void_ptr__::__fmt__(void *self, i32 nesting) -> string;
 !external fn __ptr__::__fmt__<T>(T *self, i32 nesting) {
     let res = "invalid";
 
-    if #cast(bool, self) {
+    if self {
         res = (*self).__fmt__(nesting);
     }
 
@@ -31,9 +31,9 @@ fn __void_ptr__::__fmt__(void *self, i32 nesting) -> string;
 !external fn __clean_ptr__::__fmt__<T>(T *self, i32 nesting) {
     let res = "invalid";
 
-    if #cast(bool, self) {
-        res = (*self).__fmt__(nesting);
+    if self {
+        res = #cast(T, *self).__fmt__(nesting);
     }
 
-    return "{}".__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(res);
+    return "&{}".__internal_formatter_do_not_use_unless_you_know_what_youre_doing__(res);
 }
