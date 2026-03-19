@@ -41,6 +41,34 @@ fn JsonValue::Array(JsonValue[] array) {
 fn JsonValue::Object(HashMap<string, JsonValue> *object) {
     return JsonValue { tag = JsonValueKind::Object, object };
 }
+
+fn JsonValue::to_string(JsonValue self) -> string {
+    // SAFETY: we are checking tags so its 
+    // safe to use unchecked variants
+    if self.tag == JsonValueKind::Null {
+        return "null";
+    } else if self.tag == JsonValueKind::Number {
+        return "{}".format(self.number);
+    } else if self.tag == JsonValueKind::String {
+        return "\"{}\"".format(self.string);
+    } else if self.tag == JsonValueKind::Bool {
+        return "{}".format(self.bool);
+    } else if self.tag == JsonValueKind::Array {
+        return "[{}]".format(self.array.map(JsonValue::to_string).join(","));
+    } else if self.tag == JsonValueKind::Object {
+        res := self.object.iter()
+            .map(fn(entry) {
+                key, value := entry;
+                return "\"{}\": {}".format(key, value.to_string());
+            })
+            .collect()
+            .join(",");
+        return "{{{}}".format(res);
+    } else { 
+        $panic("Invalid tag found: {}", self.tag);
+    }
+}
+
 fn JsonValue::__fmt__(JsonValue self, u64 nesting) -> string {
     fmt := "{}({})";
     
