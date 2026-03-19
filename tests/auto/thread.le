@@ -1,0 +1,23 @@
+use std/prelude;
+
+fn main() {
+    counter := Mutex::new(0);
+    threads := (0..5)
+        .map_with(fn(_, arg) 
+            Thread::spawn_with(fn(counter) {
+                value := counter.lock();
+                defer counter.unlock();
+                return *value += 1;
+            }, arg), counter)
+        .collect();
+    
+    res := threads
+        .iter()
+        .map(fn(thread) thread.join())
+        .map(fn(x) (*x))
+        .collect();
+    
+    $assert(*counter.lock() == 5);
+    $assert(res == (1..=5).collect());
+    $println("All `thread` tests have passed!".color("green").reset());
+}
