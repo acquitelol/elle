@@ -1,0 +1,119 @@
+use std/prelude;
+
+fn `parse.null.works`() {
+    $assert("null".parse_json().is_ok_and(fn(value) value.tag == JsonValueKind::Null));
+    $assert("null".parse_json().unwrap().as_null() == nil);
+}
+
+fn `parse.number.works`() {
+    a := "123".parse_json();
+    $assert(a.is_ok_and(fn(value) value.tag == JsonValueKind::Number));
+    $assert(a.unwrap().as_number() - 123.0 < 1.0e-6);
+    
+    b := "3.93939".parse_json();
+    $assert(b.is_ok_and(fn(value) value.tag == JsonValueKind::Number));
+    $assert(b.unwrap().as_number() - 3.93939 < 1.0e-6);
+    
+    c := "-6.742".parse_json();
+    $assert(c.is_ok_and(fn(value) value.tag == JsonValueKind::Number));
+    $assert(c.unwrap().as_number() - -6.742 < 1.0e-6);
+}
+
+fn `parse.string.works`() {
+    a := "\"\"".parse_json();
+    $assert(a.is_ok_and(fn(value) value.tag == JsonValueKind::String));
+    $assert(a.unwrap().as_string() == "");
+    
+    b := "\"hello world!\"".parse_json();
+    $assert(b.is_ok_and(fn(value) value.tag == JsonValueKind::String));
+    $assert(b.unwrap().as_string() == "hello world!");
+    
+    c := "\"foo \\\"bar\\\" \nhello!\tawrf!!!\"".parse_json();
+    $assert(c.is_ok_and(fn(value) value.tag == JsonValueKind::String));
+    $assert(c.unwrap().as_string() == "foo \"bar\" \nhello!\tawrf!!!");
+}
+
+fn `parse.bool.works`() {
+    a := "true".parse_json();
+    $assert(a.is_ok_and(fn(value) value.tag == JsonValueKind::Bool));
+    $assert(a.unwrap().as_bool() == true);
+    
+    b := "false".parse_json();
+    $assert(b.is_ok_and(fn(value) value.tag == JsonValueKind::Bool));
+    $assert(b.unwrap().as_bool() == false);
+}
+
+fn `parse.array.works`() {
+    a := "[]".parse_json();
+    $assert(a.is_ok_and(fn(value) value.tag == JsonValueKind::Array));
+    $assert(a.unwrap().as_array() == []JsonValue);
+    
+    b := "[true, 1, {}, { \"a\": [], \"b\": [13.81] }, [], \"a\", null, [1, 2, []]]".parse_json();
+    $assert(b.is_ok_and(fn(value) value.tag == JsonValueKind::Array));
+    $assert(b.unwrap() == JsonValue::Array([
+        JsonValue::Bool(true), 
+        JsonValue::Number(1),
+        JsonValue::Object(HashMap::new()),
+        JsonValue::Object($map(#[
+            $("a", JsonValue::Array([])),
+            $("b", JsonValue::Array([JsonValue::Number(13.81)]))
+        ])),
+        JsonValue::Array([]),
+        JsonValue::String("a"),
+        JsonValue::Null(),
+        JsonValue::Array([
+            JsonValue::Number(1),
+            JsonValue::Number(2),
+            JsonValue::Array([])
+        ])
+    ]));
+}
+
+fn `parse.object.works`() {
+    a := "{}".parse_json();
+    $assert(a.is_ok_and(fn(value) value.tag == JsonValueKind::Object));
+    $assert(a.unwrap().as_object() == HashMap::new<string, JsonValue>());
+    
+    b := "{ 
+        \"a\": 1, 
+        \"b\": \"hello world!\",
+        \"foo\": [1, 2.2, -1.3], 
+        \"bar\": { 
+            \"baz\": [{}, {}, { 
+                \"qux\": null, 
+                \"quux\": false 
+            }] 
+        } 
+    }".parse_json();
+    
+    $assert(b.is_ok_and(fn(value) value.tag == JsonValueKind::Object));
+    $assert(b.unwrap() == JsonValue::Object($map(#[
+        $("a", JsonValue::Number(1)),
+        $("b", JsonValue::String("hello world!")),
+        $("foo", JsonValue::Array([
+            JsonValue::Number(1),
+            JsonValue::Number(2.2),
+            JsonValue::Number(-1.3),
+        ])),
+        $("bar", JsonValue::Object($map(#[
+            $("baz", JsonValue::Array([
+                JsonValue::Object(HashMap::new()),
+                JsonValue::Object(HashMap::new()),
+                JsonValue::Object($map(#[
+                    $("qux", JsonValue::Null()),
+                    $("quux", JsonValue::Bool(false))
+                ])),
+            ]))
+        ])))
+    ])));
+}
+
+fn main() {
+    `parse.null.works`();
+    `parse.number.works`();
+    `parse.string.works`();
+    `parse.bool.works`();
+    `parse.array.works`();
+    `parse.object.works`();
+    $println("All `json parsing` tests have passed!".color("green").reset());
+}
