@@ -18,9 +18,34 @@ struct JsonValue @nofmt {
     @unused HashMap<string, JsonValue> *object
 }
 
+fn JsonValue::Null() {
+    return JsonValue { tag = JsonValueKind::Null };
+}
+
+fn JsonValue::Number(f64 number) {
+    return JsonValue { tag = JsonValueKind::Number, number };
+}
+
+fn JsonValue::String(string string) {
+    return JsonValue { tag = JsonValueKind::String, string };
+}
+
+fn JsonValue::Bool(bool bool) {
+    return JsonValue { tag = JsonValueKind::Bool, bool };
+}
+
+fn JsonValue::Array(JsonValue[] array) {
+    return JsonValue { tag = JsonValueKind::Array, array };
+}
+
+fn JsonValue::Object(HashMap<string, JsonValue> *object) {
+    return JsonValue { tag = JsonValueKind::Object, object };
+}
 fn JsonValue::__fmt__(JsonValue self, u64 nesting) -> string {
     fmt := "{}({})";
     
+    // SAFETY: we are checking tags so its 
+    // safe to use unchecked variants
     if self.tag == JsonValueKind::Null {
         return "Null";
     } else if self.tag == JsonValueKind::Number {
@@ -34,7 +59,7 @@ fn JsonValue::__fmt__(JsonValue self, u64 nesting) -> string {
     } else if self.tag == JsonValueKind::Object {
         return fmt.format(self.tag, self.object.__fmt__(nesting));
     } else { 
-        $die();
+        $panic("Invalid tag found: {}", self.tag);
     }
 }
 
@@ -89,3 +114,27 @@ fn `JsonValue.__load__.0.2.15.1`(ElleMeta meta, JsonValue self, string i) {
 }
 
 external fn JsonValue::__load__<T>(ElleMeta meta, JsonValue self, T i) -> JsonValue;
+
+fn JsonValue::__equals__(JsonValue self, JsonValue other) -> bool {
+    if self.tag != other.tag { return false; }
+    
+    // SAFETY: we checked tag above so its safe to
+    // do unchecked loads for variants in `other`
+    if self.tag == JsonValueKind::Null {
+        return true; // The tags match
+    } else if self.tag == JsonValueKind::Number {
+        return self.number == other.number
+            || math::fabs(self.number - other.number) < 1.0e-6
+            || #cast(i64, self.number * 1e6) == #cast(i64, other.number * 1e6);
+    } else if self.tag == JsonValueKind::String {
+        return self.string == other.string;
+    } else if self.tag == JsonValueKind::Bool {
+        return self.bool == other.bool;
+    } else if self.tag == JsonValueKind::Array {
+        return self.array == other.array;
+    } else if self.tag == JsonValueKind::Object {
+        return self.object == other.object;
+    } else {
+        $panic("Invalid tag found: {}", self.tag);
+    }
+}
