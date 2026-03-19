@@ -27,3 +27,4 @@ use std/box;
 use std/io;
 
 use std/json/index;
+use std/sync/index;

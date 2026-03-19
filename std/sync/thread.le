@@ -1,0 +1,41 @@
+use std/libc/pthread;
+global pub;
+
+struct Thread<T> {
+    void *thread
+}
+
+fn Thread::spawn_with<T, Arg>(fn(Arg) -> T func, Arg arg) -> Thread<T> {
+    thread := nil;
+    
+    pthread_create(&thread, nil, fn(args) {
+        f, arg := #cast((fn(Arg) -> T, Arg) *, args);
+        return Box::new(f(arg)).to_ptr();
+    }, Box::new($(func, arg)).to_ptr());
+    
+    return Thread { thread };
+}
+
+fn Thread::spawn<T>(fn() -> T func) -> Thread<T> {
+    return Thread::spawn_with(fn(arg) arg(), func);
+}
+
+fn Thread::join<T>(Thread<T> self) {
+    res := nil;
+    pthread_join(self.thread, &res);
+    return #cast(T *, res);
+}
+
+fn Thread::detach<T>(Thread<T> self) {
+    pthread_detach(self.thread);
+}
+
+fn Thread::self() -> Thread<void> {
+    return Thread { thread = pthread_self() };
+}
+
+fn Thread::equal<T, U>(Thread<T> self, Thread<U> other) {
+    return pthread_equal(self.thread, other.thread);
+}
+
+external fn Thread::equal<T, U>(Thread<T> self, Thread<U> other) @alias(Thread::__equal__) -> bool;

@@ -1,0 +1,13 @@
+global pub, external;
+
+fn pthread_mutex_init(void *mutex, void *attr) -> i32;
+fn pthread_mutex_destroy(void *mutex) -> i32;
+fn pthread_mutex_lock(void *mutex) -> i32;
+fn pthread_mutex_unlock(void *mutex) -> i32;
+
+fn pthread_create(void *thread, void *attr, fn(void *) -> void *start, void *arg) -> i32;
+fn pthread_join(void *thread, void **retval) -> i32;
+fn pthread_exit(void *retval);
+fn pthread_detach(void *thread);
+fn pthread_self() -> void *;
+fn pthread_equal(void *t1, void *t2) -> i32;

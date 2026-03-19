@@ -1,0 +1,30 @@
+use std/libc/pthread;
+global pub;
+
+struct Mutex<T> {
+    Box<T> value,
+    void *store
+}
+
+fn Mutex::new<T>(T value) -> Mutex<T> {
+    Mutex<T> mutex = Mutex { 
+        value = Box::new(value),
+        store = #alloc(u8, 64)
+    };
+    
+    pthread_mutex_init(mutex.store, nil);
+    return mutex;
+}
+
+fn Mutex::lock<T>(Mutex<T> *self) {
+    pthread_mutex_lock(self.store);
+    return self.value.to_ptr();
+}
+
+fn Mutex::unlock<T>(Mutex<T> *self) {
+    pthread_mutex_unlock(self.store);
+}
+
+fn Mutex::destroy<T>(Mutex<T> self) {
+    pthread_mutex_destroy(self.store);
+}
