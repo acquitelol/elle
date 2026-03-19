@@ -1,72 +1,90 @@
 global pub;
 
 fn string::parse_json_at(string self, i32 *i) -> Option<JsonValue> {
-    skip_whitespace := fn(string self, i32 *i) while self[*i].is_whitespace() { *i += 1; };
+    skip_whitespace := fn(string self, i32 *i) 
+        while *i < self.len() && self[*i].is_whitespace() { *i += 1; };
     skip_whitespace(self, i);
+    if *i >= self.len() { return None(); }
 
     if self[*i].is_digit() || self[*i] == '-' {
         start := *i;
-        while self[*i].is_digit() || self[*i] == '.' || self[*i] == '-' { *i += 1; }
-        number := f64::parse(self.slice(start, *i));
-
-        return Some(JsonValue { tag = JsonValueKind::Number, number });
+        if self[*i] == '-' { *i += 1; }
+        while *i < self.len() && (self[*i].is_digit() || self[*i] == '.') { *i += 1; }
+        value := f64::parse(self.slice(start, *i));
+        return Some(JsonValue::Number(value));
     }
 
     if self[*i].is_alphabetic() {
         start := *i;
-        while self[*i].is_alphabetic() { *i += 1; }
+        while *i < self.len() && self[*i].is_alphabetic() { *i += 1; }
         value := self.slice(start, *i);
         out := false;
 
         if value == "null" {
-            return Some(JsonValue { tag = JsonValueKind::Null });
+            return Some(JsonValue::Null());
         } else if bool::try_parse(value, &out) {
-            return Some(JsonValue { tag = JsonValueKind::Bool, bool = out });
+            return Some(JsonValue::Bool(out));
         }
 
         return None();
     }
 
     if self[*i] == '"' {
-        start := *i += 1;
-        while self[*i] != '"' { *i += 1; }
-
-        value := self.slice(start, *i);
         *i += 1;
-
-        return Some(JsonValue { tag = JsonValueKind::String, string = value });
+        buf := "";
+    
+        while *i < self.len() {
+            if self[*i] == '"' {
+                *i += 1;
+                return Some(JsonValue::String(buf));
+            }
+    
+            if self[*i] == '\\' {
+                *i += 1;
+                if *i >= self.len() { return None(); }
+                
+                buf.push(self[*i]);
+                *i += 1;
+                continue;
+            }
+    
+            buf.push(self[*i]);
+            *i += 1;
+        }
+    
+        return None();
     }
 
     if self[*i] == '[' {
         *i += 1;
-        array := []JsonValue;
+        values := []JsonValue;
 
-        for ;; {
+        while *i < self.len() {
             skip_whitespace(self, i);
-            if self[*i] == ']' { *i += 1; break; }
+            if *i < self.len() && self[*i] == ']' { *i += 1; break; }
 
             if _, value := self.parse_json_at(i) {
-                array.push(value);
+                values.push(value);
             } else {
                 return None();
             }
 
             skip_whitespace(self, i);
-            if self[*i] == ',' { *i += 1; continue; }
-            if self[*i] == ']' { *i += 1; break; }
+            if *i < self.len() && self[*i] == ',' { *i += 1; continue; }
+            if *i < self.len() && self[*i] == ']' { *i += 1; break; }
             return None();
         }
 
-        return Some(JsonValue { tag = JsonValueKind::Array, array });
+        return Some(JsonValue::Array(values));
     }
 
     if self[*i] == '{' {
         *i += 1;
-        object := HashMap::new<string, JsonValue>();
+        entries := HashMap::new<string, JsonValue>();
 
         for ;; {
             skip_whitespace(self, i);
-            if self[*i] == '}' { *i += 1; break; }
+            if *i < self.len() && self[*i] == '}' { *i += 1; break; }
             key := self.parse_json_at(i);
             
             if key.is_none_or(fn(value) value.tag != JsonValueKind::String) { 
@@ -76,23 +94,23 @@ fn string::parse_json_at(string self, i32 *i) -> Option<JsonValue> {
             key := key.unwrap().as_string();
             skip_whitespace(self, i);
 
-            if self[*i] != ':' { return None(); }
+            if *i >= self.len() || self[*i] != ':' { return None(); }
             *i += 1;
             skip_whitespace(self, i);
 
             if _, value := self.parse_json_at(i) {
-                object[key] = value;
+                entries[key] = value;
             } else {
                 return None();
             }
 
             skip_whitespace(self, i);
-            if self[*i] == ',' { *i += 1; continue; }
-            if self[*i] == '}' { *i += 1; break; }
+            if *i < self.len() && self[*i] == ',' { *i += 1; continue; }
+            if *i < self.len() && self[*i] == '}' { *i += 1; break; }
             return None();
         }
 
-        return Some(JsonValue { tag = JsonValueKind::Object, object });
+        return Some(JsonValue::Object(entries));
     }
 
     return None();
@@ -102,5 +120,6 @@ fn string::parse_json(string self) {
     i := 0;
     
     return self.parse_json_at(&i)
-        .ok_or("Syntax error near '{}' at position {}".format(self[i], i));
+        .ok_or("Syntax error near '{}' at position {}"
+            .format(i < self.len() ? self[i] : '?', i));
 }
