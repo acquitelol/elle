@@ -81,6 +81,14 @@ fn HashMap::__fmt__<T, U>(HashMap<T, U> self, i32 nesting) {
     return res;
 }
 
+fn HashMap::__equals__<T, U>(HashMap<T, U> *self, HashMap<T, U> *other) {
+    for key, value in self {
+        if !other.contains_key(key) || value != other[key] { return false; }
+    }
+    
+    return true;
+}
+
 fn HashMap::with_capacity<T, U>(u64 initial_capacity) -> HashMap<T, U> * {
     self := #alloc(HashMap<T, U>);
 
