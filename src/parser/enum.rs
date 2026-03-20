@@ -56,6 +56,16 @@ impl<'a> Enum<'a> {
         let name = self.parser.get_identifier();
         self.parser.advance();
 
+        let mut inserted = false;
+
+        if !self.parser.enum_pool.borrow().contains_key(&name) {
+            inserted = true;
+            self.parser
+                .enum_pool
+                .borrow_mut()
+                .insert(name.clone(), (vec![], None));
+        }
+
         let mut ty = None;
         let mut should_add_fmt_builtin = true;
         let mut should_add_eq_builtin = true;
@@ -101,6 +111,10 @@ impl<'a> Enum<'a> {
                     ))),
                 }
             }
+        }
+
+        if inserted {
+            self.parser.enum_pool.borrow_mut().remove(&name);
         }
 
         // Collect enums during the import pass
