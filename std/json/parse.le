@@ -1,7 +1,7 @@
 global pub;
 
-fn string::parse_json_at(string self, i32 *i) -> Option<JsonValue> {
-    skip_whitespace := fn(string self, i32 *i) 
+fn Array::parse_json_at(char[] self, i32 *i) -> Option<JsonValue> {
+    skip_whitespace := fn(char[] self, i32 *i) 
         while *i < self.len() && self[*i].is_whitespace() { *i += 1; };
     skip_whitespace(self, i);
     if *i >= self.len() { return None(); }
@@ -10,14 +10,14 @@ fn string::parse_json_at(string self, i32 *i) -> Option<JsonValue> {
         start := *i;
         if self[*i] == '-' { *i += 1; }
         while *i < self.len() && (self[*i].is_digit() || self[*i] == '.') { *i += 1; }
-        value := f64::parse(self.slice(start, *i));
+        value := f64::parse(self.slice(start, *i).join(""));
         return Some(JsonValue::Number(value));
     }
 
     if self[*i].is_alphabetic() {
         start := *i;
         while *i < self.len() && self[*i].is_alphabetic() { *i += 1; }
-        value := self.slice(start, *i);
+        value := self.slice(start, *i).join("");
         out := false;
 
         if value == "null" {
@@ -31,12 +31,12 @@ fn string::parse_json_at(string self, i32 *i) -> Option<JsonValue> {
 
     if self[*i] == '"' {
         *i += 1;
-        buf := "";
+        buf := []char;
     
         while *i < self.len() {
             if self[*i] == '"' {
                 *i += 1;
-                return Some(JsonValue::String(buf));
+                return Some(JsonValue::String(buf.join("")));
             }
     
             if self[*i] == '\\' {
@@ -119,7 +119,7 @@ fn string::parse_json_at(string self, i32 *i) -> Option<JsonValue> {
 fn string::parse_json(string self) {
     i := 0;
     
-    return self.parse_json_at(&i)
+    return Array::from_string(self).parse_json_at(&i)
         .ok_or("Syntax error near '{}' at position {}"
             .format(i < self.len() ? self[i] : '?', i));
 }
