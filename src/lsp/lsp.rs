@@ -50,8 +50,15 @@ impl LanguageServer for Backend {
     async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult, Error> {
         Ok(InitializeResult {
             capabilities: ServerCapabilities {
-                text_document_sync: Some(TextDocumentSyncCapability::Kind(
-                    TextDocumentSyncKind::FULL,
+                text_document_sync: Some(TextDocumentSyncCapability::Options(
+                    TextDocumentSyncOptions {
+                        open_close: Some(true),
+                        change: Some(TextDocumentSyncKind::FULL),
+                        save: Some(TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
+                            include_text: Some(false),
+                        })),
+                        ..Default::default()
+                    },
                 )),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 ..Default::default()
