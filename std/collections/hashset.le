@@ -76,8 +76,11 @@ fn HashSet::__iter__<T>(HashSet<T> *self) {
     return self.map.keys();
 }
 
-external fn HashSet::__iter__<T>(HashSet<T> *self) @alias(HashSet::iter) -> Iterator<T, SingleEnded>;
-external fn HashSet::__iter__<T>(HashSet<T> *self) @alias(HashSet::values) -> Iterator<T, SingleEnded>;
+external fn HashSet::__iter__<T>(HashSet<T> *self) 
+    @alias(HashSet::iter) -> Iterator<T, SingleEnded>;
+    
+external fn HashSet::__iter__<T>(HashSet<T> *self) 
+    @alias(HashSet::values) -> Iterator<T, SingleEnded>;
 
 fn HashSet::clone<T>(HashSet<T> *self) -> HashSet<T> * {
     new_set := HashSet::with_capacity<T>(self.size());

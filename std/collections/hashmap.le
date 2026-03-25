@@ -154,7 +154,8 @@ fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
     return false;
 }
 
-external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) @alias(HashMap::set) -> bool;
+external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) 
+    @alias(HashMap::set) -> bool;
 
 !pub fn __internal_hashmap_get<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
     u64 idx = key.__hash__(self.table.capacity) % self.table.capacity;
@@ -340,5 +341,7 @@ fn HashMap::__iter__<T, U>(HashMap<T, U> *self) -> Iterator<(T, U), SingleEnded>
     };
 }
 
-external fn HashMap::__iter__<T, U>(HashMap<T, U> *self) @alias(HashMap::iter) -> Iterator<(T, U), SingleEnded>;
-external fn HashMap::__iter__<T, U>(HashMap<T, U> *self) @alias(HashMap::entries) -> Iterator<(T, U), SingleEnded>;
+external fn HashMap::__iter__<T, U>(HashMap<T, U> *self) 
+    @alias(HashMap::iter) -> Iterator<(T, U), SingleEnded>;
+external fn HashMap::__iter__<T, U>(HashMap<T, U> *self) 
+    @alias(HashMap::entries) -> Iterator<(T, U), SingleEnded>;
