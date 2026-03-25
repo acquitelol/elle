@@ -12,7 +12,7 @@ struct HashSet<T> {
 }
 
 fn HashSet::__fmt__<T>(HashSet<T> self, u64 nesting) {
-    return "{{ {} }".format(self.map.keys().intersperse(", ").collect());
+    return "{{ {} }".format(self.map.keys().collect().join(", "));
 }
 
 fn HashSet::new<T>() -> HashSet<T> * {
@@ -27,16 +27,21 @@ fn HashSet::with_capacity<T>(u64 capacity) -> HashSet<T> * {
     return self;
 }
 
-fn HashSet::with_entries<T>(ElleMeta meta, T first, ...args) -> HashSet<T> * {
-    self := HashSet::with_capacity<T>(4);
-    self.add(first);
+fn HashSet::with_entries<T, N>(T[N] elements) -> HashSet<T> * {
+    self := HashSet::with_capacity<T>(elements.len());
 
-    for i32 i = 0; i < meta.arity - 1; i += 1 {
-        self.add(args.yield(T));
+    for i := 0; i < elements.len(); i += 1 {
+        self.add(elements[i]);
     }
 
     return self;
 }
+
+external fn HashSet::with_entries<T, N>(T[N] elements) 
+    @alias(HashSet::from_entries) -> HashSet<T> *;
+
+external fn HashSet::with_entries<T, N>(T[N] elements) 
+    @alias($set) -> HashSet<T> *;
 
 fn HashSet::add<T>(HashSet<T> *self, T value) -> bool {
     if self.map.contains_key(value) {
