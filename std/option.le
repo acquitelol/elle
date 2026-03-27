@@ -7,9 +7,9 @@ struct Option<T> @nofmt {
     @unused T __value
 }
 
-fn Option::__fmt__<T>(Option<T> self, i32 nesting) {
+fn Option::__fmt__<T>(Option<T> self, u64 nesting) {
     if self.__is_some {
-        return "Some({})".format(self.unwrap());
+        return "Some({})".format(self.unwrap().__fmt__(nesting));
     }
 
     return "None";

@@ -9,12 +9,12 @@ struct Result<T, E> @nofmt {
     @unused E __error
 }
 
-fn Result::__fmt__<T, E>(Result<T, E> self, i32 nesting) {
+fn Result::__fmt__<T, E>(Result<T, E> self, u64 nesting) {
     if self.is_ok() {
-        return "Ok({})".format(self.unwrap());
+        return "Ok({})".format(self.unwrap().__fmt__(nesting));
     }
 
-    return "Err({})".format(self.__error);
+    return "Err({})".format(self.__error.__fmt__(nesting));
 }
 
 fn Result::__equals__<T, E>(Result<T, E> self, Result<T, E> other) {
