@@ -182,7 +182,7 @@ impl Compiler {
                 // structs are placed directly into the static memory verbatim
                 // it is unwise to dereference here
                 if let Some(ref ty) = data.ty
-                    && ty.is_struct()
+                    && (ty.is_struct() || ty.is_static_array())
                 {
                     return Ok((ty.clone(), Value::Global(data.name.clone())));
                 }
@@ -200,6 +200,8 @@ impl Compiler {
                         ),
                     );
 
+                self.address_pool
+                    .insert(tmp.clone(), Value::Global(data.name.clone()));
                 return Ok((data.ty.clone().unwrap(), tmp));
             }
         }
