@@ -277,6 +277,7 @@ struct Ray {
 // RayCollision, ray hit information
 struct RayCollision {
     bool hit,               // Did the ray hit something?
+    bool[3] _pad,           // Padding
     f32 distance,           // Distance to the nearest hit
     Vector3 point,          // Point of the nearest hit
     Vector3 normal,         // Surface normal of hit
@@ -919,7 +920,8 @@ fn SetShaderValueTexture(Shader shader, i32 locIndex, Texture texture)          
 fn UnloadShader(Shader shader)                                                           @alias(rl::unload_shader);                         // Unload shader from GPU memory (VRAM)
 
 // Screen-space-related functions
-fn GetMouseRay(Vector2 mousePosition, Camera camera)                      @alias(rl::get_mouse_ray)             -> Ray;          // Get a ray trace from mouse position
+fn GetScreenToWorldRay(Vector2 mousePosition, Camera camera)                      @alias(rl::get_mouse_ray)     -> Ray;          // Get a ray trace from mouse position
+fn GetScreenToWorldRay(Vector2 mousePosition, Camera camera)                      @alias(rl::get_screen_world_ray)-> Ray;        // Get a ray trace from mouse position
 fn GetCameraMatrix(Camera camera)                                         @alias(rl::get_camera_matrix)         -> Matrix;       // Get camera transform matrix (view matrix)
 fn GetCameraMatrix2D(Camera2D camera)                                     @alias(rl::get_camera_matrix_2d)      -> Matrix;       // Get camera 2d transform matrix
 fn GetWorldToScreen(Vector3 pos, Camera camera)                           @alias(rl::get_world_to_screen)       -> Vector2;      // Get the screen space position for a 3d world space position

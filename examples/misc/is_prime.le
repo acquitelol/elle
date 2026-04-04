@@ -1,9 +1,8 @@
 use std/prelude;
 
-fn is_prime<T>(T x) {
-   return x > 1 && (2..#cast(T, math::sqrtf(x)))
+let is_prime = fn(i32 x) 
+    x > 1 && (2..#cast(i32, math::sqrtf(x)))
        .all_with(fn(y, x) x % y != 0, x);
-}
 
 fn main() {
     $dbg(is_prime(2));

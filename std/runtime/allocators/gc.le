@@ -5,7 +5,7 @@ global pub;
 // and not be optimized into registers so that the GC can detect
 // them as a root when scanning the stack for valid roots
 fn __internal_gc_noop(void *x) {}
-fn GCAllocator::free(GCAllocator *self) {}
+fn GCAllocator::free(GCAllocator *self, void *ptr) {}
 
 struct __internal_ElleGC_Header @nofmt {
     bool marked,

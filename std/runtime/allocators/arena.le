@@ -5,6 +5,9 @@ global pub;
     return (n + 7) & ~7;
 }
 
+// stub
+fn ArenaAllocator::free(ArenaAllocator *self, void *ptr) {}
+
 struct __internal_Arena @nofmt {
     void *buffer,
     i64 size,

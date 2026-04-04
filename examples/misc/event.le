@@ -1,23 +1,34 @@
 use std/prelude;
 
+struct EventClosure @nofmt {
+    // Arg     Payload
+    fn(void *, void *) event,
+    void *arg
+}
+
 struct EventEmitter @nofmt {
-    HashMap<string, fn(void *)[]> *listeners
+    HashMap<string, EventClosure[]> *listeners
 }
 
 fn EventEmitter::new() {
-    return EventEmitter {
-        listeners = HashMap::new()
-    };
+    return EventEmitter { listeners = HashMap::new() };
 }
 
-fn EventEmitter::on(EventEmitter *self, string event, fn(void *) cb) {
-    event := self.listeners.get_or_insert(event, []fn(void *));
-    event.push(cb);
+fn EventEmitter::on_with<Arg>(EventEmitter *self, string name, fn(Arg *, void *) event, Arg arg) {
+    self.listeners.get_or_insert(name, []EventClosure).push(EventClosure {
+        event, arg = Box::new(arg).to_ptr()
+    });
+    
+    return event;
 }
 
-fn EventEmitter::off(EventEmitter *self, string event, fn(void *) cb) {
+fn EventEmitter::on(EventEmitter *self, string name, fn(void *) event) {
+    return self.on_with(name, fn(arg, payload) { (arg := *arg) && arg(payload); }, event);
+}
+
+fn EventEmitter::off(EventEmitter *self, string event, fn(void *, void *) cb) {
     if !self.listeners.contains_key(event) { return; }
-    position := self.listeners[event].iter().position_with(fn(x, cb) x == cb, cb);
+    position := self.listeners[event].iter().position_with(fn(x, cb) x.event == cb, cb);
 
     if _, position := position {
         self.listeners[event].remove(position);
@@ -28,14 +39,16 @@ fn EventEmitter::emit(EventEmitter *self, string event, void *payload) {
     if !self.listeners.contains_key(event) { return; }
 
     for cb in self.listeners[event] {
-        cb(payload);
+        f := cb.event;
+        f(cb.arg, payload);
     }
 }
 
 fn main() {
     emitter := EventEmitter::new();
     emitter.on("foo", fn(string x) $dbg(x));
-    emitter.on("foo", cb := fn() $println("event from foo"));
+    emitter.on_with("foo", fn(arg, string x) $dbg(arg, x), "im so roie");
+    cb := emitter.on("foo", fn() $println("event from foo"));
     emitter.emit("foo", "hello, world!");
     emitter.off("foo", cb);
     emitter.emit("foo", "hello again!");
