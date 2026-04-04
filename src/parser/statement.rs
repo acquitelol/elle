@@ -25,7 +25,7 @@ use crate::{
     not_valid_struct_or_type, token_to_node, GENERIC_END, GENERIC_IDENTIFIER,
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Shared<'a> {
     pub struct_pool: &'a RefCell<StructPool>,
     pub enum_pool: &'a RefCell<EnumPool>,
@@ -1620,7 +1620,18 @@ impl<'a> Statement<'a> {
             }
         }
 
-        let mut expression = Statement::new(tokens, 0, self.body, self.shared).parse().0;
+        // dbg!(&self.shared);
+        let mut expression = Statement::new(
+            tokens,
+            0,
+            self.body,
+            &Shared {
+                addr_only: false,
+                ..*self.shared
+            },
+        )
+        .parse()
+        .0;
 
         self.expect_tokens(&[TokenKind::RightParenthesis]);
         set_end!(location, self);
@@ -2656,7 +2667,17 @@ impl<'a> Statement<'a> {
                 self.position -= 1;
                 set_end!(location, self);
                 self.position += 1;
-                let value = Statement::new(tokens, 0, self.body, self.shared).parse().0;
+                let value = Statement::new(
+                    tokens,
+                    0,
+                    self.body,
+                    &Shared {
+                        addr_only: false,
+                        ..*self.shared
+                    },
+                )
+                .parse()
+                .0;
                 spreads.push((location, value));
             }
 
@@ -2735,7 +2756,19 @@ impl<'a> Statement<'a> {
                 }
             }
 
-            let value = Box::new(Statement::new(tokens, 0, self.body, self.shared).parse().0);
+            let value = Box::new(
+                Statement::new(
+                    tokens,
+                    0,
+                    self.body,
+                    &Shared {
+                        addr_only: false,
+                        ..*self.shared
+                    },
+                )
+                .parse()
+                .0,
+            );
             values.push((name, value));
         }
 
