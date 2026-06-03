@@ -1,0 +1,37 @@
+use std/prelude;
+
+let width = 9;
+let height = 9;
+let bombs = math::round(width * height * 0.12);
+
+let _ @expandmain = rand::seed(time(nil));
+
+struct Node @nofmt {
+    bool is_bomb,
+    u8 nbors
+}
+
+let Node::__fmt__ = fn(Node self, u64 nesting) self.is_bomb ? "X" : "{}".format(self.nbors);
+let Node::new = fn() Node { is_bomb = false, nbors = 0 };
+
+fn main() {
+    grid := (0..width * height).map(Node::new).collect();
+    for i in 0..bombs { grid[i].is_bomb = true; }
+    grid.sort_with(fn() rand::random(-1, 1));
+    
+    for i, _ in grid.iter().enumerate().filter(fn(p) p.y.is_bomb) {
+        y, x := $(i / width, i % width);
+        
+        for dy, dx in (-1..=1).collect().cartesian_product(2) {
+            ny, nx := $(y + dy, x + dx);
+            
+            if (!dy && !dx) || ny < 0 || ny >= height || nx < 0 || nx >= width { 
+                continue; 
+            }
+            
+            grid[ny * width + nx].nbors += 1;
+        }
+    }
+    
+    $dbg(grid.iter().chunks(width).collect());
+}
