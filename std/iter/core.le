@@ -80,26 +80,34 @@ fn Iterator::reduce<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, T) -> T cb) -
     return Some(self.fold(first, cb));
 }
 
-fn Iterator::max<T, AnyEnded>(Iterator<T, AnyEnded> self) -> Option<T> {
+fn Iterator::max_by<T, AnyEnded, Ret>(Iterator<T, AnyEnded> self, fn(T, T) -> Ret compare) -> Option<T> {
     res := None<T>();
 
     while _, val := self.next() {
         is_some, cur := res;
-        if !is_some || val > cur { res = Some(val); }
+        if !is_some || compare(val, cur) > 0 { res = Some(val); }
+    }
+
+    return res;
+}
+
+fn Iterator::max<T, AnyEnded>(Iterator<T, AnyEnded> self) -> Option<T> {
+    return self.max_by(fn(a, b) a - b);
+}
+
+fn Iterator::min_by<T, AnyEnded, Ret>(Iterator<T, AnyEnded> self, fn(T, T) -> Ret compare) -> Option<T> {
+    res := None<T>();
+
+    while _, val := self.next() {
+        is_some, cur := res;
+        if !is_some || compare(val, cur) < 0 { res = Some(val); }
     }
 
     return res;
 }
 
 fn Iterator::min<T, AnyEnded>(Iterator<T, AnyEnded> self) -> Option<T> {
-    res := None<T>();
-
-    while _, val := self.next() {
-        is_some, cur := res;
-        if !is_some || val < cur { res = Some(val); }
-    }
-
-    return res;
+    return self.min_by(fn(a, b) a - b);
 }
 
 fn Iterator::nth<T, AnyEnded>(Iterator<T, AnyEnded> self, u64 n) {
