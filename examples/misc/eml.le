@@ -1,0 +1,15 @@
+use std/prelude;
+
+namespace eml;
+let eml::eml = fn(f32 x, f32 y) math::expf(x) - math::logf(y);
+let eml::exp = fn(f32 x) eml::eml(x, 1);
+let eml::ln  = fn(f32 x) eml::eml(1, eml::eml(eml::eml(1, x), 1));
+let eml::add = fn(f32 x, f32 y) eml::eml(eml::ln(x), eml::exp(-y));
+let eml::sub = fn(f32 x, f32 y) eml::eml(eml::ln(x), eml::exp(y));
+let eml::mul = fn(f32 x, f32 y) eml::eml(eml::add(eml::ln(x), eml::ln(y)), 1);
+let eml::div = fn(f32 x, f32 y) eml::eml(eml::sub(eml::ln(x), eml::ln(y)), 1);
+
+fn main() {
+    res := eml::sub(eml::div(eml::mul(eml::add(3, 4), eml::sub(103, 3)), eml::add(6, 4)), 3);
+    $dbg(res);
+}
