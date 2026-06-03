@@ -10,11 +10,22 @@ use crate::{
 
 impl Codegen<'_> for FieldAccess {
     fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let (ty, left) = self.left.compile(gen, ctx).unwrap_or_else(|| {
-            elle_error!(self.location.borrow().error(
+        let (ty, left) = self
+            .left
+            .clone()
+            .compile(
+                gen,
+                &CodegenContext {
+                    // only matters to take the address if being assigned to
+                    is_field_access: self.value.is_some(),
+                    ..ctx.clone()
+                },
+            )
+            .unwrap_or_else(|| {
+                elle_error!(self.location.borrow().error(
                 "Unexpected error when trying to compile the left side of a struct field access",
             ))
-        });
+            });
 
         let (field_ty, offset_tmp) = process_field_access(
             gen,

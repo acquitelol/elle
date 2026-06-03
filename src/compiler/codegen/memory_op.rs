@@ -73,7 +73,7 @@ impl Codegen<'_> for MemoryOperation {
 
             if self.value.is_some() && exists!(struct_name, STORE_CONSTANT)
                 || (self.value.is_none()
-                    && self.addr_only
+                    && (self.addr_only || ctx.is_field_access)
                     && exists!(struct_name, LOAD_REF_CONSTANT))
                 || (self.value.is_none() && exists!(struct_name, LOAD_CONSTANT))
             {
@@ -88,7 +88,7 @@ impl Codegen<'_> for MemoryOperation {
 
                 let constant = if self.value.is_some() {
                     STORE_CONSTANT
-                } else if self.addr_only {
+                } else if self.addr_only || ctx.is_field_access {
                     LOAD_REF_CONSTANT
                 } else {
                     LOAD_CONSTANT
@@ -102,10 +102,30 @@ impl Codegen<'_> for MemoryOperation {
                     parameters,
                     type_method: true,
                     ignore_no_def: false,
-                    location: self.left_location,
+                    location: self.left_location.clone(),
                 });
 
-                return node.compile(gen, ctx);
+                let (ty, val) = node.compile(gen, ctx)?;
+
+                if ctx.is_field_access
+                    && ty.is_pointer()
+                    && ty
+                        .get_pointer_inner()
+                        .is_some_and(|inner| inner.is_pointer())
+                {
+                    let tmp = gen.new_temporary(None, false);
+                    let res_ty = ty.get_pointer_inner().unwrap();
+
+                    ctx.func.borrow_mut().assign_instruction(
+                        &tmp,
+                        &res_ty.clone(),
+                        Instruction::Load(res_ty.clone(), val.clone()),
+                    );
+
+                    return Some((res_ty, tmp));
+                }
+
+                return Some((ty, val));
             }
         }
 

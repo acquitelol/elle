@@ -69,6 +69,7 @@ pub fn generate_function(
         value: None,
         is_return: false,
         is_generic: false,
+        is_field_access: false,
     };
 
     for argument in &this.arguments {

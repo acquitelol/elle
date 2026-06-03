@@ -171,6 +171,7 @@ pub fn create_monomorphized_function(
                             value: None,
                             is_return: false,
                             is_generic: true,
+                            is_field_access: false,
                         }
                     )
                     .unwrap_or_else(|| elle_error!(parameter.0.borrow().error(
@@ -300,6 +301,7 @@ pub fn create_monomorphized_function(
                                         .any(|((ty, _), _)| ty.has_generic_type())
                                 })
                             }),
+                            is_field_access: false,
                         },
                     )
                     .unwrap()

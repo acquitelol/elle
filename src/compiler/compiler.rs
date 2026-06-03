@@ -31,6 +31,7 @@ pub struct CodegenContext<'a> {
     pub value: Option<Value>,
     pub is_return: bool,
     pub is_generic: bool,
+    pub is_field_access: bool,
 }
 
 impl CodegenContext<'_> {

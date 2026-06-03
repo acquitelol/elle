@@ -45,6 +45,7 @@ pub fn handle_short_circuiting_operation(
                 value: None,
                 is_return,
                 is_generic: false,
+                is_field_access: false,
             },
         )
         .unwrap_or_else(|| {
@@ -110,6 +111,7 @@ pub fn handle_short_circuiting_operation(
                 value: None,
                 is_return,
                 is_generic: false,
+                is_field_access: false,
             },
         )
         .unwrap_or_else(|| {

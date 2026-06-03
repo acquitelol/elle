@@ -31,6 +31,7 @@ pub fn generate_global(this: GlobalSource, gen: &mut Compiler, module: &RefCell<
                     value: None,
                     is_return: false,
                     is_generic: false,
+                    is_field_access: false,
                 },
             )
             .unwrap()
