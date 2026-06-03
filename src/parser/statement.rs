@@ -2034,6 +2034,29 @@ impl<'a> Statement<'a> {
             self.advance();
         }
 
+        // Because we can't make `)` a unary context token
+        // these hacks are necessary to allow `fn() -x` to
+        // work as expected.
+        {
+            if self.current_token().kind == TokenKind::Add {
+                self.tokens[self.position].kind = TokenKind::Unary;
+                self.tokens[self.position].value = ValueKind::Number(1);
+            }
+
+            if self.current_token().kind == TokenKind::Subtract {
+                self.tokens[self.position].kind = TokenKind::Unary;
+                self.tokens[self.position].value = ValueKind::Number(-1);
+            }
+
+            if self.current_token().kind == TokenKind::BitwiseAnd {
+                self.tokens[self.position].kind = TokenKind::Address;
+            }
+
+            if self.current_token().kind == TokenKind::Multiply {
+                self.tokens[self.position].kind = TokenKind::Deref;
+            }
+        }
+
         let variadic_node = variadic_name.map(|name| {
             AstNode::VariadicStart(VariadicStart {
                 name,

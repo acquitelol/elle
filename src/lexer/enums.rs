@@ -233,6 +233,10 @@ impl TokenKind {
         )
     }
 
+    pub const fn is_unary(self) -> bool {
+        matches!(self, Self::Deref | Self::Address | Self::Unary)
+    }
+
     pub const fn is_unary_context(self) -> bool {
         matches!(
             self,
@@ -254,6 +258,7 @@ impl TokenKind {
                 | Self::Comment
         ) || self.is_declarative()
             || self.is_arithmetic()
+            || self.is_unary()
     }
 
     pub fn to_non_declarative(self) -> Self {

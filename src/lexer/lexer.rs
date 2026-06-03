@@ -333,13 +333,7 @@ impl Lexer<'_> {
                         self.advance();
                         (TokenKind::BitwiseOrEqual, ValueKind::Nil)
                     }
-                    _ => {
-                        if self.is_unary_context() {
-                            (TokenKind::None, ValueKind::Nil)
-                        } else {
-                            (TokenKind::BitwiseOr, ValueKind::Nil)
-                        }
-                    }
+                    _ => (TokenKind::BitwiseOr, ValueKind::Nil),
                 }
             }
             '"' => (
