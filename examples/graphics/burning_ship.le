@@ -1,9 +1,9 @@
 use std/raylib;
 use std/prelude;
 
-const SCREEN_FACTOR = 80;
-const SCREEN_WIDTH = 12 * SCREEN_FACTOR;
-const SCREEN_HEIGHT = 12 * SCREEN_FACTOR;
+let SCREEN_FACTOR = 80;
+let SCREEN_WIDTH = 12 * SCREEN_FACTOR;
+let SCREEN_HEIGHT = 12 * SCREEN_FACTOR;
 
 fn main() {
     rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Burning Ship");
@@ -43,7 +43,7 @@ fn main() {
     rl::set_shader_value(shader, locs["z0"], &Vector2::from(0).x, ShaderUniformDataType::SHADER_UNIFORM_VEC2);
 
     mandelbrot := false;
-    rl::set_shader_value(shader, locs["mandelbrot"], &mandelbrot, ShaderUniformDataType::SHADER_UNIFORM_INT);
+    rl::set_shader_value(shader, locs["mandelbrot"], &#cast(i32, mandelbrot), ShaderUniformDataType::SHADER_UNIFORM_INT);
 
     while !rl::window_should_close() {
         mouse := rl::get_mouse_position();
@@ -68,7 +68,7 @@ fn main() {
 
         if rl::is_key_pressed(KeyboardKey::KEY_D) {
             mandelbrot = !mandelbrot;
-            rl::set_shader_value(shader, locs["mandelbrot"], &mandelbrot, ShaderUniformDataType::SHADER_UNIFORM_INT);
+            rl::set_shader_value(shader, locs["mandelbrot"], &#cast(i32, mandelbrot), ShaderUniformDataType::SHADER_UNIFORM_INT);
         }
 
         wheel := rl::get_mouse_wheel_move();

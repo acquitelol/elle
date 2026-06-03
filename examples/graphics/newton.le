@@ -1,34 +1,32 @@
 use std/raylib;
 use std/prelude;
 
-const SCREEN_FACTOR = 80;
-const SCREEN_WIDTH = 12 * SCREEN_FACTOR;
-const SCREEN_HEIGHT = 12 * SCREEN_FACTOR;
+let SCREEN_FACTOR = 80;
+let SCREEN_WIDTH = 12 * SCREEN_FACTOR;
+let SCREEN_HEIGHT = 12 * SCREEN_FACTOR;
 
-const MAX_SAMPLES_PER_UPDATE = 4096;
-const MAX_SAMPLES = 512;
-const CHANNELS = 1;
-const SIZE = 16;
+let MAX_SAMPLES_PER_UPDATE = 4096;
+let MAX_SAMPLES = 512;
+let CHANNELS = 1;
+let SIZE = 16;
 
-struct Globals {
-    f32 frequency,
-    f32 sample_rate,
-    i32 overtones,
-    @unused f32[] phase,
-    @unused f32[] notes,
-}
+let frequency = 440.0;
+let sample_rate = 44100.0;
+let overtones = 4;
+let phase = (0..overtones).map(fn() 0.0).collect();
+let notes = (0..overtones)
+    .map(fn(i) frequency * math::powf(2.0, (i * 3.0) / 12.0))
+    .collect();
 
 fn audio_input_callback(i16 *buffer, u32 frames) {
-    globals := #cast(Globals *, #env.buffer);
-
     for i := 0; i < frames; i += 1 {
         mix := 0.0;
 
-        for j := 0; j < globals.overtones; j += 1 {
-            s := globals.notes[j] / globals.sample_rate;
-            mix += math::sinf(2 * PI * globals.phase[j]) * 0.25;
-            globals.phase[j] += s;
-            if globals.phase[j] >= 1 { globals.phase[j] -= 1; }
+        for j := 0; j < overtones; j += 1 {
+            s := notes[j] / sample_rate;
+            mix += math::sinf(2 * PI * phase[j]) * 0.25;
+            phase[j] += s;
+            if phase[j] >= 1 { phase[j] -= 1; }
         }
 
         mix = math::clamp(mix, -1, 1);
@@ -37,18 +35,6 @@ fn audio_input_callback(i16 *buffer, u32 frames) {
 }
 
 fn main() {
-    globals := Globals {
-        frequency = 440.0,
-        sample_rate = 44100,
-        overtones = 4,
-    };
-
-    globals.phase = (0..globals.overtones).map(fn() 0.0).collect();
-    globals.notes = (0..globals.overtones)
-        .map_with(fn(i, globals) globals.frequency * math::powf(2.0, (i * 3.0) / 12.0), globals)
-        .collect();
-    #env.buffer = &globals;
-
     rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Newton Fractal");
     defer rl::close_window();
 
@@ -103,7 +89,7 @@ fn main() {
 
     rl::set_audio_stream_buffer_size_default(MAX_SAMPLES_PER_UPDATE);
 
-    stream := rl::load_audio_stream(globals.sample_rate, SIZE, CHANNELS);
+    stream := rl::load_audio_stream(sample_rate, SIZE, CHANNELS);
     defer rl::unload_audio_stream(stream);
 
     rl::set_audio_stream_callback(stream, audio_input_callback);
@@ -174,9 +160,9 @@ fn main() {
                     dist += roots[grabbed].sub(root).length_sq();
                 }
 
-                globals.frequency = (1 / (math::sqrt(dist) + 0.0001)) * 880;
-                globals.notes = (0..globals.overtones)
-                    .map_with(fn(i, globals) globals.frequency * math::powf(2.0, (i * 3.0) / 12.0), globals)
+                frequency = (1 / (math::sqrt(dist) + 0.0001)) * 880;
+                notes = (0..overtones)
+                    .map(fn(i) frequency * math::powf(2.0, (i * 3.0) / 12.0))
                     .collect();
             }
 
@@ -234,8 +220,6 @@ fn main() {
 
                 rl::draw_circle(s.x, s.y, 4, BLACK);
             }
-
-            rl::draw_text("{}".format(globals), 10, 700, 10, BLACK);
 
             rl::draw_fps(4, 4);
         rl::end_drawing();

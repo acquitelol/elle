@@ -59,7 +59,7 @@ fn JsonValue::to_string(JsonValue self) -> string {
         res := self.object.iter()
             .map(fn(entry) {
                 key, value := entry;
-                return "\"{}\": {}".format(key, value.to_string());
+                return "\"{}\":{}".format(key, value.to_string());
             })
             .collect()
             .join(",");
