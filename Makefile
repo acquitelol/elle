@@ -41,7 +41,7 @@ compile-release:
 
 .PHONY: test-file
 test-file:
-	@PATH="$(BIN_PATH):$(PATH)" ellec $(TEST_FILE) -o __ellec_test_tmp $(if $(VERBOSE),,--hush);
+	@PATH="$(BIN_PATH):$(PATH)" ellec $(TEST_FILE) -o __ellec_test_tmp $(if $(VERBOSE),,--hush) --nogc;
 	-@./__ellec_test_tmp foo bar baz;
 	@rm -f ./__ellec_test_tmp $(if $(VERBOSE),,> /dev/null);
 

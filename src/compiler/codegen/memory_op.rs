@@ -6,11 +6,14 @@ use crate::{
         lib::convert::convert_to_type,
         qbe::{instruction::Instruction, r#type::Type, value::Value},
     },
-    elle_error, is_generic,
+    elle_error, get_GREEN, get_RESET, is_generic,
     lexer::enums::{Token, TokenKind, ValueKind},
-    misc::constants::{DEREF_LOAD_CONSTANT, DEREF_STORE_CONSTANT, LOAD_REF_CONSTANT},
+    misc::{
+        colors::get_RED,
+        constants::{DEREF_LOAD_CONSTANT, DEREF_STORE_CONSTANT, LOAD_REF_CONSTANT},
+    },
     parser::enums::{AstNode, BinaryOperation, FunctionCall, Literal, MemoryOperation},
-    LOAD_CONSTANT, STORE_CONSTANT,
+    GREEN, LOAD_CONSTANT, RED, RESET, STORE_CONSTANT,
 };
 
 impl Codegen<'_> for MemoryOperation {
@@ -86,9 +89,27 @@ impl Codegen<'_> for MemoryOperation {
                     parameters.push((self.value_location, *self.value.clone().unwrap()));
                 }
 
-                let constant = if self.value.is_some() {
+                if ctx.is_field_access && !exists!(struct_name, LOAD_REF_CONSTANT) {
+                    elle_error!(self.left_location.borrow().error(format!(
+                        "Despite overloading `{RED}{}[]{RESET}` (`{RED}{}::{LOAD_CONSTANT}{RESET}`), {GREEN}{}{RESET} doesn't overload \n`{GREEN}&{}[]{RESET}` (`{GREEN}{}::{LOAD_REF_CONSTANT}{RESET}`). This is necessary because `{GREEN}{}::{LOAD_CONSTANT}{RESET}`\nis being used as part of a field assignment (`{GREEN}x[y].z = w{RESET}`).\n\nPlease define `{GREEN}{}::{LOAD_REF_CONSTANT}(...){RESET}`.", 
+                        left_ty.display(),
+                        left_ty.display(),
+                        left_ty.display(),
+                        left_ty.display(),
+                        left_ty.display(),
+                        left_ty.display(),
+                        left_ty.display(),
+                        RED = get_RED!(),
+                        GREEN = get_GREEN!(),
+                        RESET = get_RESET!()
+                    )))
+                }
+
+                let constant = if self.value.is_some() && exists!(struct_name, STORE_CONSTANT) {
                     STORE_CONSTANT
-                } else if self.addr_only || ctx.is_field_access {
+                } else if (self.addr_only || ctx.is_field_access)
+                    && exists!(struct_name, LOAD_REF_CONSTANT)
+                {
                     LOAD_REF_CONSTANT
                 } else {
                     LOAD_CONSTANT
@@ -107,6 +128,8 @@ impl Codegen<'_> for MemoryOperation {
 
                 let (ty, val) = node.compile(gen, ctx)?;
 
+                // we know __load_ref__ MUST exist
+                // at this point if is_field_access
                 if ctx.is_field_access
                     && ty.is_pointer()
                     && ty
