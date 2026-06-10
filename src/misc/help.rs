@@ -135,10 +135,6 @@ pub fn print_help(program: &str) {
                     "Disables Elle allocation. You won't be able to use most std methods.",
                 ),
                 (
-                    "--nogc, --no-garbage-collector",
-                    "Doesn't use garbage collection, switches default allocator to arenas",
-                ),
-                (
                     "--nofmt, --no-primitive-formatters",
                     "Doesn't import the primitive formatter module.",
                 ),
@@ -157,6 +153,10 @@ pub fn print_help(program: &str) {
                 (
                     "--fpfmt, --full-ptr-fmt",
                     "Uses a fancier formatter for pointer types when printing to the console.",
+                ),
+                (
+                    "--gc, --garbage-collector",
+                    "Enables garbage collection, by default allocation uses ArenaAllocator.",
                 ),
             ],
         ),

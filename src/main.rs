@@ -141,7 +141,7 @@ async fn main() -> ExitCode {
     let mut no_strings = false; // no string module
     let mut no_std = false; // no stdlib
     let mut no_alloc = false; // no arbitrary allocator
-    let mut no_gc = false; // no gc uses arena by default instead, doesnt need --noalloc
+    let mut no_gc = true; // no gc uses arena by default instead, doesnt need --noalloc
     let mut no_fmt = false; // no primitive fmt methods
     let mut pedantic = true; // extra checks in type conversions
     let mut lsp = false; // LSP support for IDEs
@@ -239,7 +239,7 @@ async fn main() -> ExitCode {
                 no_alloc = true;
                 no_gc = true;
             }
-            "--nogc" | "--no-garbage-collector" => no_gc = true,
+            "--gc" | "--garbage-collector" => no_gc = false,
             "--nostd" | "--no-stdlib" => no_std = true,
             "--nofmt" | "--no-primitive-formatters" => no_fmt = true,
             "--noclr" | "--no-ansi" => disable_colors!(),

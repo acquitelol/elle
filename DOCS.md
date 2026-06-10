@@ -333,9 +333,9 @@ fn main() {
 Elle has a moderately complicated allocator system. Here's how it works:
 
 - By default:
-  - garbage collection
-- Using the `--nogc` flag at compilation:
-  - arena-based allocation
+  - arena allocation using ArenaAllocator.
+- Using the `--gc` flag at compilation:
+  - garbage collection based allocation (WIP, requires static variables to be accessible as roots which hasn't been implemented yet)
 
 #### **Changing the allocator:**
 
@@ -407,7 +407,7 @@ The allocator is completely abstracted away from you, which means that depending
 
 Typically, you should be safe to assume that you have `#alloc` and `#realloc`. In specific environments you can also assume you have `#free`, but this usually set to a `noop`.
 
-By default, memory deallocation is managed by the compiler via garbage collection. You can disable this by adding the `--nogc` flag, which will switch to using an `ArenaAllocator` model instead. If you prefer to manually manage memory altogether, you can either:
+By default, memory deallocation is managed by the developer using `ArenaAllocator`. You can enable garbage collection by adding the `--gc` flag, which will switch to using a `GCAllocator` model instead. If you prefer to manually manage memory altogether, you can either:
 
 ```rs
 // Add this flag to your compilation command
@@ -436,7 +436,7 @@ ptr := #alloc(i32, 5); // same as mem::malloc(#size(i32) * 5)
 ```
 
 > [!IMPORTANT]
-> Standard library functions do not free their memory because of the assumption of an auto-freeing allocator. If you use standard library functions with manual memory management, expect memory leaks.
+> Standard library functions do not free their memory because of the assumption of an auto-freeing allocator. If you use standard library functions with manual memory management, expect memory leaks. If using an allocator such as `ArenaAllocator`, the responsibility of freeing this memory is up to the developer.
 
 #
 
