@@ -22,7 +22,7 @@ fn main() {
     for i, _ in grid.iter().enumerate().filter(fn(p) p.y.is_bomb) {
         y, x := $(i / width, i % width);
         
-        for dy, dx in (-1..=1).collect().cartesian_product(2) {
+        for dy, dx in (-1..=1).cartesian_product(-1..=1).collect() {
             ny, nx := $(y + dy, x + dx);
             
             if (!dy && !dx) || ny < 0 || ny >= height || nx < 0 || nx >= width { 
