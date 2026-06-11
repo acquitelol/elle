@@ -3,39 +3,39 @@ global pub;
 
 struct CartesianPEnv<T, U, AnyEnded> {
     Iterator<T, AnyEnded> self,
-    Iterator<U, AnyEnded> other,
     Option<T> self_value,
-    U[] collected_other
+    U[] other,
+    u64 i
 }
 
 fn Iterator::cartesian_product<T, U, AnyEnded>(
     Iterator<T, AnyEnded> self, 
     Iterator<U, AnyEnded> other
-) -> Iterator<(T, U), AnyEnded> {
+) -> Iterator<(T, U), SingleEnded> {
     CartesianPEnv<T, U, AnyEnded> env = CartesianPEnv { 
-        self, other, self_value = None(),
-        collected_other = other.collect()
+        self, self_value = None(), i = 0,
+        other = other.collect(),
     };
     
     return Iterator {
         env = Box::new(env).to_ptr(),
         next = fn(CartesianPEnv<T, U, AnyEnded> *env) {
-            other_next := env.other.next();
-
-            if other_next.is_none() {
-                env.self_value = env.self.next();
-                env.other = env.collected_other.iter();
-                other_next = env.other.next();
-                if other_next.is_none() { return None(); }
+            if (_, self_value := env.self_value) && env.i < env.other.len() {
+                other_value := env.other[env.i];
+                env.i += 1;
+                return Some($(self_value, other_value));
             }
 
-            if env.self_value.is_none() {
-                env.self_value = env.self.next();
-                if env.self_value.is_none() { return None(); }
-            }
+            if env.other.is_empty() { return None(); }
 
-            _, self_value := env.self_value;
-            _, other_value := other_next;
+            next_self := env.self.next();
+            if next_self.is_none() { return None(); }
+            env.self_value = next_self;
+            
+            env.i = 0;
+            self_value := next_self.unwrap();
+            other_value := env.other[0];
+            env.i = 1;
             return Some($(self_value, other_value));
         },
         next_back = nil
