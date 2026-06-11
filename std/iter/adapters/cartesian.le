@@ -1,0 +1,43 @@
+use std/iter/core;
+global pub;
+
+struct CartesianPEnv<T, U, AnyEnded> {
+    Iterator<T, AnyEnded> self,
+    Iterator<U, AnyEnded> other,
+    Option<T> self_value,
+    U[] collected_other
+}
+
+fn Iterator::cartesian_product<T, U, AnyEnded>(
+    Iterator<T, AnyEnded> self, 
+    Iterator<U, AnyEnded> other
+) -> Iterator<(T, U), AnyEnded> {
+    CartesianPEnv<T, U, AnyEnded> env = CartesianPEnv { 
+        self, other, self_value = None(),
+        collected_other = other.collect()
+    };
+    
+    return Iterator {
+        env = Box::new(env).to_ptr(),
+        next = fn(CartesianPEnv<T, U, AnyEnded> *env) {
+            other_next := env.other.next();
+
+            if other_next.is_none() {
+                env.self_value = env.self.next();
+                env.other = env.collected_other.iter();
+                other_next = env.other.next();
+                if other_next.is_none() { return None(); }
+            }
+
+            if env.self_value.is_none() {
+                env.self_value = env.self.next();
+                if env.self_value.is_none() { return None(); }
+            }
+
+            _, self_value := env.self_value;
+            _, other_value := other_next;
+            return Some($(self_value, other_value));
+        },
+        next_back = nil
+    };
+}

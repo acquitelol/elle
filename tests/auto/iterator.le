@@ -364,6 +364,29 @@ fn `flat_map.works`() {
     $assert((0..4).flat_map(fn(x) 0..x).collect() == [0, 0, 1, 0, 1, 2]);
 }
 
+fn `cartesian_product.works`() {
+    $assert((-1..=1).cartesian_product(-1..=1).collect() == [
+        $(-1, -1),
+        $(-1, 0),
+        $(-1, 1),
+        $(0, -1),
+        $(0, 0),
+        $(0, 1),
+        $(1, -1),
+        $(1, 0),
+        $(1, 1)
+    ]);
+
+    $assert((1..=2).cartesian_product('a'..='c').collect() == [
+        $(1, 'a'),
+        $(1, 'b'),
+        $(1, 'c'),
+        $(2, 'a'),
+        $(2, 'b'),
+        $(2, 'c')
+    ]);
+}
+
 fn `adapters.map_filter_take`() {
     result := (0..10)
         .map(fn(x) x * 2)
@@ -594,6 +617,7 @@ fn main() {
     `chain.works`();
     `peekable.works`();
     `flat_map.works`();
+    `cartesian_product.works`();
     `adapters.map_filter_take`();
     `adapters.skip_enumerate_collect`();
     `adapters.chain_filter_map`();

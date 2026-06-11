@@ -8,9 +8,7 @@ fn Box::new<T>(T value) -> Box<T> {
     ptr := #alloc(T);
     *ptr = value;
 
-    return Box {
-        value = ptr
-    };
+    return Box { value = ptr };
 }
 
 fn Box::__fmt__<T>(Box<T> self, i32 nesting) {

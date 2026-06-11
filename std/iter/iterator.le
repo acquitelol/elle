@@ -15,3 +15,4 @@ use std/iter/adapters/enumerate;
 use std/iter/adapters/zip;
 use std/iter/adapters/chain;
 use std/iter/adapters/peekable;
+use std/iter/adapters/cartesian;
