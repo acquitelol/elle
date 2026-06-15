@@ -87,12 +87,8 @@ fn Array::__store__<T>(ElleMeta meta, T[] self, i64 i, T value) {
 }
 
 fn Array::get<T>(T[] self, i64 i) -> Option<T> {
-    if i < 0 { i = self.len() + i; }
-
-    if i + 1 > self.size {
-        return None();
-    }
-
+    if i < 0 { i += self.len(); }
+    if i + 1 > self.size { return None(); }
     return Some(self.elements[i]);
 }
 

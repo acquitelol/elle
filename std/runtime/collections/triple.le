@@ -29,8 +29,16 @@ fn Triple::__triple__<T, U, V>(Triple<T, U, V> self) {
     return self;
 }
 
+fn Triple::sum<T, U, V>((T, U, V) self) {
+    return self.x + self.y + self.z;
+}
+
+fn Triple::product<T, U, V>((T, U, V) self) {
+    return self.x * self.y * self.z;
+}
+
 fn Triple::new<T, U, V>(T x, U y, V z) -> Triple<T, U, V> {
-    return Triple { x = x, y = y, z = z };
+    return Triple { x, y, z };
 }
 
 external fn Triple::new<T, U, V>(T x, U y, V z) @alias($$) -> Triple<T, U, V>;
