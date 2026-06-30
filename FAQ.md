@@ -8,7 +8,7 @@
 | ----------------- | --------------- | ------------------------------------------------------------------------------------------- |
 | Syntax            | C/Rust style    | Can look like C or rust depending on the features used.                                     |
 | Paradigm          | Procedural      | Functions can be values, but primarily the language is procedural                           |
-| Memory management | GC              | GC by default, can become Arena by default, can be swapped to anything                      |
+| Memory management | GC              | Arena by default, can be swapped to anything                                                |
 | Typing            | Static          | The language is strongly statically typed                                                   |
 | Mutability        | Mutable         | All variables are mutable, always                                                           |
 | Lifetimes         | N/A             | GC means the lifetime of objects is not explicitly managed by the developer                 |

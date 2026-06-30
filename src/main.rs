@@ -149,6 +149,7 @@ async fn main() -> ExitCode {
     let mut release_mode = false; // enables dead code elimation
     let mut run = false; // should also run the executable
     let mut should_parse_exec_args = false;
+    let mut help = false;
     let mut exec_args = vec![]; // args to be passed to executable if ran with --run
 
     let mut object_files: Vec<String> = vec![];
@@ -208,13 +209,8 @@ async fn main() -> ExitCode {
             "-x" | "--diagnostic-only" => unsafe { RAW_ERRORS = Some(true) },
             "--nop" | "--no-pedantic" => pedantic = false,
             "-o" => output_path = args.next(),
-            "-h" | "--help" => {
-                print_help(&program);
-                exit(0);
-            }
-            "-c" | "--compile-only" => {
-                object_output = true;
-            }
+            "-h" | "--help" => help = true,
+            "-c" | "--compile-only" => object_output = true,
             "-z" | "--link-flag" => linker_flags.push(args.next()),
             "-Z" | "--link-path" => linker_path = args.next().unwrap_or_else(|| "cc".into()),
             "-Q" | "--qbe-path" => qbe_path = args.next().unwrap_or_else(|| "qbe".into()),
@@ -291,6 +287,11 @@ async fn main() -> ExitCode {
                 )))
             }
         }
+    }
+
+    if help {
+        print_help(&program);
+        exit(0);
     }
 
     if should_parse_exec_args {
