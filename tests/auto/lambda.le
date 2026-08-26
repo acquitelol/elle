@@ -99,11 +99,64 @@ fn `in.struct.works`() {
     $assert(cb("Hello, World!") == "hello, world!");
 }
 
+fn `shorthand.it.1`(fn(i32) -> i32 x) {
+    return x(39);
+}
+
+fn `shorthand.it.2`(fn(i32, i32) -> i32 x) {
+    return x(39, 42);
+}
+
+fn `shorthand.xN.1`(fn(i32) -> i32 x) {
+    return x(39);
+}
+
+fn `shorthand.xN.2`(fn(i32, i32) -> i32 x) {
+    return x(39, 42);
+}
+
+fn `shorthand.mixed.1`(fn(i32) -> i32 x) {
+    return x(39);
+}
+
+fn `shorthand.mixed.2`(fn(i32, i32) -> i32 x) {
+    return x(39, 42);
+}
+
+struct Shorthand {
+    i32 a
+}
+
+fn `shorthand.struct.1`(fn(Shorthand) -> Shorthand x) {
+    return x(Shorthand { a = 39 });
+}
+
+fn `shorthand.struct.2`(fn(Shorthand) -> i32 x) {
+    return x(Shorthand { a = 39 });
+}
+
+fn `shorthand.struct.3`(fn(Shorthand) -> bool x) {
+    return x(Shorthand { a = 39 });
+}
+
+fn `shorthand.works`() {
+    $assert(`shorthand.it.1`(fn: it) == 39);
+    $assert(`shorthand.it.2`(fn: it + x1) == 81);
+    $assert(`shorthand.xN.1`(fn: x0) == 39);
+    $assert(`shorthand.xN.2`(fn: x0 + x1) == 81);
+    $assert(`shorthand.mixed.1`(fn: x0 + it) == 78);
+    $assert(`shorthand.mixed.2`(fn: x0 + it + x1) == 120);
+    $assert(`shorthand.struct.1`(fn: it).a == 39);
+    $assert(`shorthand.struct.2`(fn: it.a) == 39);
+    $assert(`shorthand.struct.3`(fn: #cast(void *, it) == #cast(void *, x0)));
+}
+
 fn main() {
     `basic.inline`();
     `contravariance.works`();
     `any.return.works`();
     `generic.args.works`();
     `in.struct.works`();
+    `shorthand.works`();
     $println("All `lambda` tests have passed!".color("green").reset());
 }
