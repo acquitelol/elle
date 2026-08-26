@@ -38,6 +38,7 @@ fn main() {
 | **Black Hole** | A simplified black hole simulation in real time using Raylib and OpenGL.                                                                          | <img src="https://github.com/acquitelol/blackhole/raw/mistress/assets/out2.gif?raw=1" width="240">       | [![view]](https://github.com/acquitelol/blackhole) |
 | **Peephole**   | A speculative dystopia horror game designed around looking through a peephole.                                                                    | <img src="https://github.com/acquitelol/peephole/raw/mistress/assets/example.png?raw=1" width="240">     | [![view]](https://github.com/acquitelol/peephole)  |
 | **AOC2025**    | All [Advent of Code](https://adventofcode.com/) problems in 2025 completed in Elle, running in 404.1ms ± 3.6ms cumulatively on an M4 MacBook Air. |                                                                                                          | [![view]](https://github.com/acquitelol/aoc2025)   |
+| **Pomee**      | A 4-key 2D Virtual Scroller Rhythm Game with original music                                                                                       | <img src="https://github.com/acquitelol/pomee/raw/mistress/images/pomee.png?raw=1" width="240">          | [![view]](https://github.com/acquitelol/pomee)     |
 
 #
 
