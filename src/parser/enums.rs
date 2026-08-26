@@ -163,7 +163,7 @@ pub struct ArrayLength {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Lambda {
     /// Either inferred variable name, or explicitly typed
-    pub arguments: Vec<Result<Token, Argument>>,
+    pub arguments: Option<Vec<Result<Token, Argument>>>,
     pub value: Vec<AstNode>,
     pub return_ty: Option<Type>,
     pub location: MutRc<Location>,
@@ -361,14 +361,16 @@ fn modify_type_in_node(
         AstNode::Lambda(Lambda {
             arguments, value, ..
         }) => {
-            for arg in arguments {
-                match arg {
-                    // Err holds our explicitly typed parameter
-                    Err(arg) => {
-                        arg.r#type =
-                            modify_type(&arg.r#type, generics, known_types, struct_pool, tree);
+            if let Some(ref mut arguments) = arguments {
+                for arg in arguments {
+                    match arg {
+                        // Err holds our explicitly typed parameter
+                        Err(arg) => {
+                            arg.r#type =
+                                modify_type(&arg.r#type, generics, known_types, struct_pool, tree);
+                        }
+                        _ => {}
                     }
-                    _ => {}
                 }
             }
 

@@ -148,6 +148,10 @@ impl TokenKind {
         matches!(self, Self::Colon)
     }
 
+    pub const fn is_lambda_shorthand(self) -> bool {
+        matches!(self, Self::Colon)
+    }
+
     pub const fn is_arithmetic(self) -> bool {
         matches!(
             self,

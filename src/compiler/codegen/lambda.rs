@@ -5,20 +5,38 @@ use crate::{
         qbe::{r#type::Type, value::Value},
     },
     elle_error, hashmap,
-    lexer::enums::Token,
+    lexer::enums::{Token, TokenKind, ValueKind},
     misc::colors::{get_GREEN, get_RESET, GREEN, RESET},
-    parser::enums::{Argument, FunctionSource, Lambda},
+    parser::enums::{Argument, AstNode, Conversion, Declare, FunctionSource, Lambda, Literal},
+    LAMBDA_SHORTHAND_SCHEME,
 };
 
 impl Codegen<'_> for Lambda {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(mut self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         gen.tmp_counter += 1;
         let lambda_name = format!("lambda.{}", gen.tmp_counter);
 
         let scopes = gen.scopes.clone();
         gen.scopes = vec![hashmap![]];
+        let mut is_shorthand = false;
 
-        let patched_arguments = self.arguments.into_iter().enumerate().map(|(i, arg)| match arg {
+        if self.arguments.is_none() {
+            is_shorthand = true;
+            if let Some(ty) = ctx.ty.clone()
+                && ty.is_function()
+                && let Some(func) = ty.get_function_inner()
+            {
+                self.arguments = Some(
+                    (0..func.arguments.len())
+                        .map(|i| Ok(Token::from_ident(&format!(LAMBDA_SHORTHAND_SCHEME!(), i))))
+                        .collect(),
+                );
+            } else {
+                elle_error!(self.location.borrow().error("Failed to infer the number of arguments of this lambda.\nThis lambda cannot be created using the shorthand.\nPlease create it explicitly."))
+            }
+        }
+
+        let patched_arguments = self.arguments.unwrap().into_iter().enumerate().map(|(i, arg)| match arg {
             Ok(name) => {
                 let normal_name = name.value.get_string_inner().unwrap();
 
@@ -50,6 +68,56 @@ impl Codegen<'_> for Lambda {
             }
             Err(arg) => arg,
         }).collect::<Vec<_>>();
+
+        if is_shorthand && patched_arguments.len() > 0 {
+            let shorthand_name = format!(LAMBDA_SHORTHAND_SCHEME!(), "0");
+            let shorthand_ty = patched_arguments[0].clone().r#type;
+
+            self.value.insert(
+                0,
+                AstNode::Declare(Declare {
+                    name: Token::from_ident("it"),
+                    r#type: Some(Type::Infer),
+                    value: Some(Box::new(AstNode::Conversion(Conversion {
+                        r#type: Some(shorthand_ty.clone()),
+                        // yes, Struct -> void * -> Struct is INTENTIONAL
+                        // it is not intended to be Struct * -> void * -> Struct *
+                        // it ensures that no shallow copy of the struct is made.
+                        // elle allows turning a struct into its direct pointer
+                        // representing it.
+                        //
+                        // as of 26/08/2026, version 0.91.1 of elle core,
+                        // direct struct reassignments, i.e x := y where y
+                        // is a struct, already doesn't copy. this is proofing
+                        // for the future, because this is incorrect behaviour.
+                        value: Box::new(if shorthand_ty.is_struct() {
+                            AstNode::Conversion(Conversion {
+                                r#type: Some(Type::Pointer(Box::new(Type::Void))),
+                                value: Box::new(AstNode::Literal(Literal {
+                                    kind: TokenKind::Identifier,
+                                    value: ValueKind::String(shorthand_name),
+                                    location: self.location.clone(),
+                                    tagged: false,
+                                })),
+                                location: self.location.clone(),
+                                explicit: true,
+                            })
+                        } else {
+                            AstNode::Literal(Literal {
+                                kind: TokenKind::Identifier,
+                                value: ValueKind::String(shorthand_name),
+                                location: self.location.clone(),
+                                tagged: false,
+                            })
+                        }),
+                        location: self.location.clone(),
+                        explicit: true,
+                    }))),
+                    location: self.location.clone(),
+                    value_location: self.location.clone(),
+                }),
+            );
+        }
 
         let mut lambda_func = generate_function(
             FunctionSource {

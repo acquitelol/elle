@@ -1957,76 +1957,83 @@ impl<'a> Statement<'a> {
         self.expect_tokens(&[TokenKind::Function]);
         self.advance();
 
-        self.expect_tokens(&[TokenKind::LeftParenthesis]);
-        self.advance();
-
-        let mut arguments = vec![];
+        let mut arguments = None;
         let mut return_ty = None;
         let mut variadic_name = None;
         let mut variadic = false;
 
-        while self.current_token().kind != TokenKind::RightParenthesis && !self.is_eof() {
-            if self.current_token().kind == TokenKind::Ellipsis {
-                self.advance();
+        if self.current_token().kind.is_lambda_shorthand() {
+            self.advance();
+        } else {
+            self.expect_tokens(&[TokenKind::LeftParenthesis]);
+            self.advance();
 
-                if self.current_token().kind == TokenKind::Identifier {
-                    variadic_name = Some(self.current_token());
+            let mut collected_args = vec![];
+
+            while self.current_token().kind != TokenKind::RightParenthesis && !self.is_eof() {
+                if self.current_token().kind == TokenKind::Ellipsis {
                     self.advance();
-                }
 
-                variadic = true;
-                break;
-            }
-
-            let mut no_fmt = false;
-
-            if self.current_token().kind == TokenKind::Attribute {
-                self.advance();
-
-                match self.current_token().parse_attribute() {
-                    Attribute::NoFormat => {
-                        no_fmt = true;
+                    if self.current_token().kind == TokenKind::Identifier {
+                        variadic_name = Some(self.current_token());
                         self.advance();
                     }
-                    _ => {}
+
+                    variadic = true;
+                    break;
                 }
-            }
 
-            if self.current_token().kind == TokenKind::Identifier
-                && let Some(next) = self.next_token()
-                && [TokenKind::Comma, TokenKind::RightParenthesis].contains(&next.kind)
-            {
-                let name = self.current_token();
+                let mut no_fmt = false;
 
+                if self.current_token().kind == TokenKind::Attribute {
+                    self.advance();
+
+                    match self.current_token().parse_attribute() {
+                        Attribute::NoFormat => {
+                            no_fmt = true;
+                            self.advance();
+                        }
+                        _ => {}
+                    }
+                }
+
+                if self.current_token().kind == TokenKind::Identifier
+                    && let Some(next) = self.next_token()
+                    && [TokenKind::Comma, TokenKind::RightParenthesis].contains(&next.kind)
+                {
+                    let name = self.current_token();
+
+                    self.advance();
+                    if self.current_token().kind == TokenKind::Comma {
+                        self.advance();
+                    }
+
+                    collected_args.push(Ok(name));
+                    continue;
+                }
+
+                let ty = self.get_type(Some(self.shared.generics));
                 self.advance();
+
+                let name = self.get_identifier();
+                self.advance();
+
                 if self.current_token().kind == TokenKind::Comma {
                     self.advance();
                 }
 
-                arguments.push(Ok(name));
-                continue;
+                collected_args.push(Err(Argument {
+                    r#type: ty,
+                    name,
+                    no_fmt,
+                    is_unused: false,
+                }));
             }
 
-            let ty = self.get_type(Some(self.shared.generics));
+            self.expect_tokens(&[TokenKind::RightParenthesis]);
             self.advance();
-
-            let name = self.get_identifier();
-            self.advance();
-
-            if self.current_token().kind == TokenKind::Comma {
-                self.advance();
-            }
-
-            arguments.push(Err(Argument {
-                r#type: ty,
-                name,
-                no_fmt,
-                is_unused: false,
-            }));
+            arguments = Some(collected_args);
         }
-
-        self.expect_tokens(&[TokenKind::RightParenthesis]);
-        self.advance();
 
         if self.current_token().kind == TokenKind::RightArrow {
             self.advance();
@@ -4291,9 +4298,9 @@ impl<'a> Statement<'a> {
             }
             // Lambda expression `fn(i32 a, i32 b) -> val`
             TokenKind::Function
-                if self
-                    .next_token()
-                    .is_some_and(|next| next.kind == TokenKind::LeftParenthesis) =>
+                if self.next_token().is_some_and(|next| {
+                    next.kind == TokenKind::LeftParenthesis || next.kind.is_lambda_shorthand()
+                }) =>
             {
                 self.parse_lambda()
             }

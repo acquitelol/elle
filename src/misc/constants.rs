@@ -106,3 +106,10 @@ macro_rules! INTERNAL_GLOBAL_INIT_FORMAT {
         "__internal.elle.init_{}"
     };
 }
+
+#[macro_export]
+macro_rules! LAMBDA_SHORTHAND_SCHEME {
+    () => {
+        "x{}"
+    };
+}
