@@ -12,4 +12,4 @@ languages = ["Elle"]
 
 [grammars.elle]
 repository = "https://github.com/acquitelol/tree-sitter-elle/"
-rev = "c39d624e175b9d51baf0e852432cf796063fc460"
+rev = "33679ed05b7d7abfce165b34a21efa1acc8ec5a0"
