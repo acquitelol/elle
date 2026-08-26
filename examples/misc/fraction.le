@@ -1,0 +1,99 @@
+use std/prelude;
+
+struct Fraction {
+    f64 factor,
+    f64 num,
+    f64 denom
+}
+
+fn f64::rem(f64 a, f64 b) {
+    return a - b * math::floor(a / b);
+}
+
+fn f64::digits(f64 x) {
+    if math::fabs(x - math::floor(x)) < 1.0e-6 { 
+        return #cast(u64, 0); 
+    }
+    
+    return "{}".format(x - math::floor(x)).len() - 2;
+}
+
+!pub fn Fraction::gcd(f64 x, f64 y) -> f64 {
+    if y == 0 { return x; }
+    return Fraction::gcd(y, x.rem(y));
+}
+
+!pub fn Fraction::simplify(Fraction self) {
+    gcd := Fraction::gcd(math::fabs(self.num), math::fabs(self.denom));
+
+    self.num /= gcd;
+    self.denom /= gcd;
+
+    if self.num < 0 && self.denom < 0 {
+        self.num *= -1;
+        self.denom *= -1;
+    }
+
+    return self;
+}
+
+!pub fn Fraction::get_common_ratios(Fraction self, Fraction other) {
+    return $$(
+        self.denom * other.denom,
+        self.num * other.denom,
+        other.num * self.denom
+    );
+}
+
+fn Fraction::new(f64 num, f64 denom) {
+    factor := math::powf(10, math::max(num.digits(), denom.digits()));
+    num *= factor;
+    denom *= factor;
+    return (Fraction { factor, num, denom }).simplify();
+}
+
+fn Fraction::__fmt__(Fraction self, u64 nesting) {
+    if self.denom == 0 { return "NaN"; }
+    if self.denom == 1 { return "{}".format(#cast(i64, self.num)); }
+    if self.num == 0 { return "0"; }
+    return "{}/{}".format(#cast(i64, self.num), #cast(i64, self.denom));
+}
+
+fn Fraction::reciprocal(Fraction self) {
+    return Fraction::new(self.denom, self.num);
+}
+
+fn Fraction::add(Fraction x, Fraction y) {
+    common, a, b := x.get_common_ratios(y);
+    return Fraction::new(a + b, common);
+}
+
+fn Fraction::sub(Fraction x, Fraction y) {
+    common, a, b := x.get_common_ratios(y);
+    return Fraction::new(a - b, common);
+}
+
+fn Fraction::mul(Fraction x, Fraction y) {
+    return Fraction::new(x.num * y.num, x.denom * y.denom);
+}
+
+fn Fraction::div(Fraction x, Fraction y) {
+    return x.mul(y.reciprocal());
+}
+
+fn main() {
+    $dbg(Fraction::new(25, 1)); // 25
+    $dbg(Fraction::new(100, 250)); // 2/5
+    $dbg(Fraction::new(1, 3)); // 1/3
+
+    a := Fraction::new(5, 4);
+    b := Fraction::new(1, 2).reciprocal();
+    c := Fraction::new(4, 10);
+    d := Fraction::new(1, 7);
+
+    $dbg(a.add(b)); // 13/4
+    $dbg(c.mul(d).div(a).add(b)); // 358/175
+
+    $dbg(Fraction::new(0.1, 15));
+    
+}
