@@ -1016,6 +1016,50 @@ fn main() {
 }
 ```
 
+Also note that lambdas have a shorthand. Replacing `fn(x, y, z)` with `fn:` will automatically name every parameter the lambda accepts.
+
+Note that for this, the arguments' types must be inferrable, as in, this lambda must be one passed to a function.
+
+Consider:
+
+```rs
+foo(fn(x) x * 2);
+foo(fn: it * 2); // identical
+```
+
+If the function accepts several arguments, you may access them using the `xN` naming scheme, where `N` is the parameter in question. Consider:
+
+```rs
+foo(fn(x, y, z) x + y * z);
+foo(fn: x0 + x1 * x2); // identical
+```
+
+Note that `it` and `x0` are both accessible in a lambda shorthand. In fact, they are aliases of eachother. If the argument happens to be one which is copyable, such as a struct or static array, they will both access the same memory regardless. `it` does not create a shallow copy of `x0`.
+
+This means you can also mix names:
+
+```rs
+foo(fn(x, y) x + x + y);
+foo(fn: it + x0 + x1); // identical
+```
+
+The name you choose for the 0th argument is entirely up to personal preference. The convention is that you would use `it` for single-argument lambdas, such as when operating on arrays, a la `[1, 2, 3].iter().map(fn: it * 2).collect()`, but use `x0` when accepting several values.
+
+Lastly, these shorthands may also be multiline:
+
+```rs
+foo(fn(x, y) {
+    z := x + y;
+    return z;
+});
+
+foo(fn: {
+    z := x0 + x1;
+    return z;
+}); // identical
+
+```
+
 #
 
 ### ♡ **Exact literals**
