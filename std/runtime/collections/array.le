@@ -53,7 +53,7 @@ fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
 
         indented := s
             .split("\n")
-            .map_with(fn(line, x) "{}{}".format(x, line), child_indent)
+            .map_with(fn: "{}{}".format(x1, x0), child_indent)
             .join("\n");
 
         for u64 j = 0; j < indented.len(); j += 1 {
@@ -211,7 +211,7 @@ fn Array::sort_with<T>(T[] self, fn(T, T) -> i64 cmp) {
 }
 
 fn Array::sort<T>(T[] self) {
-    return self.sort_with(fn(a, b) a - b);
+    return self.sort_with(fn: x0 - x1);
 }
 
 !pub fn __internal_qsort<T>(T[] array, i64 low, i64 high, fn(T, T) -> i64 cmp) {

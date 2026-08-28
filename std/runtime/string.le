@@ -608,11 +608,11 @@ fn __to_string(string ty, i64 args, bool wrap) {
     }
 
     if ty.starts_with("i8") {
-        return __internal_to_string<i8, i8>(args, "%d", fn(i8 *self) (*self &= 0xFF));
+        return __internal_to_string<i8, i8>(args, "%d", fn: (*it &= 0xFF));
     }
 
     if ty.starts_with("i16") {
-        return __internal_to_string<i16, i16>(args, "%d", fn(i16 *self) (*self &= 0xFFFF));
+        return __internal_to_string<i16, i16>(args, "%d", fn: (*it &= 0xFFFF));
     }
 
     if ty.starts_with("i32") {
@@ -624,11 +624,11 @@ fn __to_string(string ty, i64 args, bool wrap) {
     }
 
     if ty.starts_with("u8") {
-        return __internal_to_string<u8, u8>(args, "%u", fn(u8 *self) (*self & 0xFF));
+        return __internal_to_string<u8, u8>(args, "%u", fn: (*it & 0xFF));
     }
 
     if ty.starts_with("u16") {
-        return __internal_to_string<u16, u16>(args, "%u", fn(u16 *self) (*self &= 0xFFFF));
+        return __internal_to_string<u16, u16>(args, "%u", fn: (*it &= 0xFFFF));
     }
 
     if ty.starts_with("u32") {

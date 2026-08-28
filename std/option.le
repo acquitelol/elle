@@ -154,7 +154,7 @@ fn Option::is_some_and_with<T, Arg>(Option<T> self, fn(T, Arg) -> bool cb, Arg a
 }
 
 fn Option::is_some_and<T>(Option<T> self, fn(T) -> bool cb) {
-    return self.is_some_and_with(fn(x, cb) cb(x), cb);
+    return self.is_some_and_with(fn: x1(it), cb);
 }
 
 fn Option::is_none_or_with<T, Arg>(Option<T> self, fn(T, Arg) -> bool cb, Arg arg) {
@@ -166,7 +166,7 @@ fn Option::is_none_or_with<T, Arg>(Option<T> self, fn(T, Arg) -> bool cb, Arg ar
 }
 
 fn Option::is_none_or<T>(Option<T> self, fn(T) -> bool cb) {
-    return self.is_none_or_with(fn(x, cb) cb(x), cb);
+    return self.is_none_or_with(fn: x1(it), cb);
 }
 
 
@@ -179,7 +179,7 @@ fn Option::map_with<T, U, Out>(Option<T> self, fn(T, U) -> Out cb, U arg) {
 }
 
 fn Option::map<T, Out>(Option<T> self, fn(T) -> Out cb) {
-    return self.map_with(fn(val, cb) cb(val), cb);
+    return self.map_with(fn: x1(it), cb);
 }
 
 fn Option::ok_or_with<T, E, Arg>(Option<T> self, fn(Arg) -> E cb, Arg arg) {
@@ -191,5 +191,5 @@ fn Option::ok_or_with<T, E, Arg>(Option<T> self, fn(Arg) -> E cb, Arg arg) {
 }
 
 fn Option::ok_or<T, E>(Option<T> self, E err) {
-    return self.ok_or_with(fn(err) err, err);
+    return self.ok_or_with(fn: it, err);
 }

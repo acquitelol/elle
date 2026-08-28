@@ -57,8 +57,8 @@ fn JsonValue::to_string(JsonValue self) -> string {
         return "[{}]".format(self.array.map(JsonValue::to_string).join(","));
     } else if self.tag == JsonValueKind::Object {
         res := self.object.iter()
-            .map(fn(entry) {
-                key, value := entry;
+            .map(fn: {
+                key, value := it;
                 return "\"{}\":{}".format(key, value.to_string());
             })
             .collect()

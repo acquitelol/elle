@@ -87,7 +87,7 @@ fn Array::parse_json_at(char[] self, i32 *i) -> Option<JsonValue> {
             if *i < self.len() && self[*i] == '}' { *i += 1; break; }
             key := self.parse_json_at(i);
             
-            if key.is_none_or(fn(value) value.tag != JsonValueKind::String) { 
+            if key.is_none_or(fn: it.tag != JsonValueKind::String) { 
                 return None(); 
             }
             

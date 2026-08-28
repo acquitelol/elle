@@ -8,8 +8,8 @@ struct Thread<T> {
 fn Thread::spawn_with<T, Arg>(fn(Arg) -> T func, Arg arg) -> Thread<T> {
     thread := nil;
     
-    pthread_create(&thread, nil, fn(args) {
-        f, arg := #cast((fn(Arg) -> T, Arg) *, args);
+    pthread_create(&thread, nil, fn: {
+        f, arg := #cast((fn(Arg) -> T, Arg) *, it);
         return Box::new(f(arg)).to_ptr();
     }, Box::new($(func, arg)).to_ptr());
     
@@ -17,7 +17,7 @@ fn Thread::spawn_with<T, Arg>(fn(Arg) -> T func, Arg arg) -> Thread<T> {
 }
 
 fn Thread::spawn<T>(fn() -> T func) -> Thread<T> {
-    return Thread::spawn_with(fn(arg) arg(), func);
+    return Thread::spawn_with(fn: it(), func);
 }
 
 fn Thread::join<T>(Thread<T> self) {
