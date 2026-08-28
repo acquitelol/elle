@@ -102,12 +102,13 @@ fn main() {
     ];
 
     groups := lines.assign_groups();
-    colors := []Color;
-
-    for i in 0..=groups.iter().max().unwrap_or(0) {
-        hue := ((i * 2) * 360 / (math::max(groups.len(), 1)));
-        colors.push(rl::color_from_hsv(hue, 1.0, 1.0));
-    }
+    colors := groups.map_with(
+        fn: {
+            hue := ((it * 2) * 360 / (math::max(x1.len(), 1)));
+            return rl::color_from_hsv(hue, 1.0, 1.0);
+        }, 
+        groups
+    );
 
     rl::init_window(800, 600, "Lines");
     defer rl::close_window();

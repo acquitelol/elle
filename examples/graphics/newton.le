@@ -13,9 +13,9 @@ let SIZE = 16;
 let frequency = 440.0;
 let sample_rate = 44100.0;
 let overtones = 4;
-let phase = (0..overtones).map(fn() 0.0).collect();
+let phase = (0..overtones).map(fn: 0.0).collect();
 let notes = (0..overtones)
-    .map(fn(i) frequency * math::powf(2.0, (i * 3.0) / 12.0))
+    .map(fn: frequency * math::powf(2.0, (it * 3.0) / 12.0))
     .collect();
 
 fn audio_input_callback(i16 *buffer, u32 frames) {
@@ -162,7 +162,7 @@ fn main() {
 
                 frequency = (1 / (math::sqrt(dist) + 0.0001)) * 880;
                 notes = (0..overtones)
-                    .map(fn(i) frequency * math::powf(2.0, (i * 3.0) / 12.0))
+                    .map(fn: frequency * math::powf(2.0, (it * 3.0) / 12.0))
                     .collect();
             }
 
