@@ -28,6 +28,8 @@ fn main() {
 }
 ```
 
+#### ♡ **AOC2025 Day 12 Solution**
+
 ```rs
 use std/prelude;
 
@@ -48,6 +50,8 @@ fn main(string[] args) {
     $dbg(solve(blocks));
 }
 ```
+
+#### ♡ **Basic echo server**
 
 ```rs
 use std/prelude;
