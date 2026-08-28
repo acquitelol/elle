@@ -28,7 +28,7 @@ fn main() {
 }
 ```
 
-#### ♡ **AOC2025 Day 12 Solution**
+#### ♡ **AOC2025 Day 12 Solution** [(source)](https://github.com/acquitelol/aoc2025/blob/mistress/solutions/12/solution.le)
 
 ```rs
 use std/prelude;
@@ -51,7 +51,7 @@ fn main(string[] args) {
 }
 ```
 
-#### ♡ **Basic echo server**
+#### ♡ **Basic echo server** [(source)](https://github.com/acquitelol/elle/blob/rewrite/examples/net/http.le)
 
 ```rs
 use std/prelude;
