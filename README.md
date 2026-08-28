@@ -28,6 +28,27 @@ fn main() {
 }
 ```
 
+```rs
+use std/prelude;
+
+fn solve(string[] blocks) {
+    sizes := blocks.slice(0, 6).iter().map(fn: it.iter().map(fn: it == '#').sum()).collect();
+    total := 0;
+
+    for part in blocks[6].nums<i32>().iter().chunks(8).map(fn: it.iter()) {
+        area := part.take(2).product();
+        total += area > sizes.iter().zip(part).map(fn: it.x * it.y).sum();
+    }
+
+    return total;
+}
+
+fn main(string[] args) {
+    blocks := io::read_to_string(args[1]).split("\n\n");
+    $dbg(solve(blocks));
+}
+```
+
 #
 
 #### ♡ **Projects made in Elle**
