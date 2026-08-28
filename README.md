@@ -49,6 +49,34 @@ fn main(string[] args) {
 }
 ```
 
+```rs
+use std/prelude;
+use std/net/tcp;
+
+let BUF_SIZE = 1024;
+
+fn main() {
+    server := TcpServer::bind(port := 8080);
+
+    while server.is_err_and(fn: it == Errno::EADDRINUSE) {
+        server = TcpServer::bind(port += 1);
+    }
+
+    server := server.unwrap();
+    defer server.close().unwrap();
+    $printf("Server is listening on port {}", port);
+
+    connection := server.accept().unwrap();
+    defer connection.close().unwrap();
+    buf := Array::bytes(BUF_SIZE);
+
+    while (_, received := connection.read(buf)) && received != 0 {
+        $printf("Received {} bytes: {}", received, buf.join("").replace("\n", ""));
+        connection.write(buf).expect("Failed to send response");
+    }
+}
+```
+
 #
 
 #### ♡ **Projects made in Elle**

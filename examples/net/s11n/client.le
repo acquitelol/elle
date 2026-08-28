@@ -2,12 +2,12 @@ use std/prelude;
 use std/net/tcp;
 use shared;
 
-const BUF_SIZE = 1024;
+let BUF_SIZE = 1024;
 
 fn main() {
     client := TcpClient::connect("127.0.0.1", port := 8080);
 
-    while client.is_err_and(fn(err) [Errno::ELOOP, Errno::ECONNREFUSED].contains(err)) {
+    while client.is_err_and(fn: [Errno::ELOOP, Errno::ECONNREFUSED].contains(it)) {
         client = TcpClient::connect("127.0.0.1", port += 1);
     }
 

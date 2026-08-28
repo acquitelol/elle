@@ -5,7 +5,7 @@ use shared;
 fn main() {
     server := TcpServer::bind(port := 8080);
 
-    while server.is_err_and(fn(err) err == Errno::EADDRINUSE) {
+    while server.is_err_and(fn: it == Errno::EADDRINUSE) {
         server = TcpServer::bind(port += 1);
     }
 
