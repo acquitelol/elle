@@ -177,7 +177,7 @@ fn Result::map_with<T, E, Arg, Out>(Result<T, E> self, fn(T, Arg) -> Out cb, Arg
 }
 
 fn Result::map<T, E, Out>(Result<T, E> self, fn(T) -> Out cb) {
-    return self.map_with(fn: x1(it), cb);
+    return self.map_with(fn: x1(x0), cb);
 }
 
 fn Result::map_err_with<T, E, U, Out>(Result<T, E> self, fn(E, U) -> Out cb, U arg) {
@@ -189,7 +189,7 @@ fn Result::map_err_with<T, E, U, Out>(Result<T, E> self, fn(E, U) -> Out cb, U a
 }
 
 fn Result::map_err<T, E, Out>(Result<T, E> self, fn(E) -> Out cb) {
-    return self.map_err_with(fn: x1(it), cb);
+    return self.map_err_with(fn: x1(x0), cb);
 }
 
 fn Result::or_else<T, E, F>(Result<T, E> self, fn(E) -> Result<T, F> cb) -> Result<T, F> {

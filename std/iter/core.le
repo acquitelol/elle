@@ -159,7 +159,7 @@ fn Iterator::find_with<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, U) -> b
 }
 
 fn Iterator::find<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> bool predicate) {
-    return self.find_with(fn: x1(it), predicate);
+    return self.find_with(fn: x1(x0), predicate);
 }
 
 fn Iterator::any_with<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, U) -> bool predicate, U arg) {
@@ -173,7 +173,7 @@ fn Iterator::any_with<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, U) -> bo
 }
 
 fn Iterator::any<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> bool predicate) {
-    return self.any_with(fn: x1(it), predicate);
+    return self.any_with(fn: x1(x0), predicate);
 }
 
 fn Iterator::all_with<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, U) -> bool predicate, U arg) {
@@ -187,7 +187,7 @@ fn Iterator::all_with<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, U) -> bo
 }
 
 fn Iterator::all<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> bool predicate) {
-    return self.all_with(fn: x1(it), predicate);
+    return self.all_with(fn: x1(x0), predicate);
 }
 
 fn Iterator::position_with<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, U) -> bool predicate, U arg) {
@@ -205,7 +205,7 @@ fn Iterator::position_with<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, U) 
 }
 
 fn Iterator::position<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> bool predicate) {
-    return self.position_with(fn: x1(it), predicate);
+    return self.position_with(fn: x1(x0), predicate);
 }
 
 fn Iterator::for_each_with<T, Arg, Any, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, Arg) -> Any cb, Arg value) {
@@ -215,7 +215,7 @@ fn Iterator::for_each_with<T, Arg, Any, AnyEnded>(Iterator<T, AnyEnded> self, fn
 }
 
 fn Iterator::for_each<T, Any, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> Any predicate) {
-    return self.for_each_with(fn: x1(it), predicate);
+    return self.for_each_with(fn: x1(x0), predicate);
 }
 
 fn Iterator::flat_map<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> U predicate) {
