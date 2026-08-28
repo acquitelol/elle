@@ -93,7 +93,8 @@ fn main() {
 
 #### ♡ **How to run**
 
-- Ensure you have [Rust](https://www.rust-lang.org/), [Cargo](https://crates.io/) and the [QBE](https://c9x.me/compile/) compiler backend.
+> [!IMPORTANT]
+> Ensure you have [Rust](https://www.rust-lang.org/), [Cargo](https://crates.io/) and the [QBE](https://c9x.me/compile/) compiler backend.
 
 ```terminal
 git clone https://github.com/acquitelol/elle
