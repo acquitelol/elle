@@ -122,8 +122,8 @@ fn main() {
     );
 
     $assert(
-        #env.allocator.free == ArbitraryAllocator::noop,
-        "The freeing function should have switched to `{}::noop`.".format(kind)
+        #env.allocator.free == ArenaAllocator::free,
+        "The freeing function should have switched to `{}::free`.".format(kind)
     );
 
     $assert(
