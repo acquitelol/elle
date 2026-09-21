@@ -17,7 +17,7 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::remove_file;
 use std::path::Path;
-use std::process::{exit, Command, ExitCode, Stdio};
+use std::process::{Command, ExitCode, Stdio, exit};
 use std::rc::Rc;
 use std::time::Instant;
 use std::{cell::RefCell, fs};
@@ -185,8 +185,10 @@ async fn main() -> ExitCode {
             "-i" | "--info_pos" => {
                 macro_rules! loc_err {
                     () => {
-                        elle_error!(Location::base()
-                            .basic_error("Expected a position in the format `row:col`"))
+                        elle_error!(
+                            Location::base()
+                                .basic_error("Expected a position in the format `row:col`")
+                        )
                     };
                 }
 
@@ -986,13 +988,10 @@ async fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    let parsed_output_path = output_path.map_or_else(
-        || {
-            let tmp = Path::new(&input_path).file_stem().unwrap();
-            tmp.to_str().unwrap().into()
-        },
-        |output_path| output_path,
-    );
+    let parsed_output_path = output_path.unwrap_or_else(|| {
+        let tmp = Path::new(&input_path).file_stem().unwrap();
+        tmp.to_str().unwrap().into()
+    });
 
     let out = if emit_qbe {
         let path = Path::new(&parsed_output_path).with_extension("ssa");
@@ -1036,37 +1035,37 @@ async fn main() -> ExitCode {
             );
         }
 
-        if let EmitKind::Executable(path) = out {
-            if run {
-                let exec = Path::new(&path).to_path_buf();
-                let with_slash = Path::new(".").join(&exec);
+        if let EmitKind::Executable(path) = out
+            && run
+        {
+            let exec = Path::new(&path).to_path_buf();
+            let with_slash = Path::new(".").join(&exec);
 
-                Command::new(&if exec.components().count() > 1 {
-                    exec
-                } else {
-                    with_slash
-                })
-                .args(exec_args)
-                .stdin(Stdio::inherit())
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .output()
-                .unwrap_or_else(|err| {
-                    panic!(
-                        "{}Failed to execute {path}: {err}{}",
-                        get_RED!(),
-                        get_RESET!()
-                    )
-                });
+            Command::new(&if exec.components().count() > 1 {
+                exec
+            } else {
+                with_slash
+            })
+            .args(exec_args)
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .output()
+            .unwrap_or_else(|err| {
+                panic!(
+                    "{}Failed to execute {path}: {err}{}",
+                    get_RED!(),
+                    get_RESET!()
+                )
+            });
 
-                remove_file(&path).unwrap_or_else(|err| {
-                    panic!(
-                        "{}Failed to delete file {path}: {err}{}",
-                        get_RED!(),
-                        get_RESET!()
-                    )
-                });
-            }
+            remove_file(&path).unwrap_or_else(|err| {
+                panic!(
+                    "{}Failed to delete file {path}: {err}{}",
+                    get_RED!(),
+                    get_RESET!()
+                )
+            });
         }
 
         ExitCode::SUCCESS
