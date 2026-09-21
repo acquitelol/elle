@@ -317,15 +317,14 @@ impl<'a> Function<'a> {
 
                         let mut alias = self.parser.get_identifier();
 
-                        if let Some(token) = self.parser.tokens.get(self.parser.position + 1) {
-                            if token.kind == TokenKind::DoubleColon {
+                        if let Some(token) = self.parser.tokens.get(self.parser.position + 1)
+                            && token.kind == TokenKind::DoubleColon {
                                 self.parser.advance(); // past namespace
                                 self.parser.advance(); // past ::
 
                                 let identifier = self.parser.get_identifier();
                                 alias = format!("{alias}.{identifier}");
                             }
-                        }
 
                         if external {
                             unaliased = Some(name);

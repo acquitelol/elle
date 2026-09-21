@@ -25,7 +25,7 @@ impl Codegen<'_> for Return {
                 compiler,
                 ctx.func,
                 ty.clone(),
-                ret_ty.clone(),
+                ret_ty,
                 val.clone(),
                 &self.location,
                 &self.location,

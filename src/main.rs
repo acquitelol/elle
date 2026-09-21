@@ -899,7 +899,7 @@ async fn main() -> ExitCode {
 
                         Some(AstNode::FunctionCall(FunctionCall {
                             namespace_token: token.clone(),
-                            name_token: token.clone(),
+                            name_token: token,
                             name: method.clone(),
                             generics: vec![],
                             parameters: vec![],

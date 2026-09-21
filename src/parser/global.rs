@@ -100,20 +100,17 @@ impl<'a> Global<'a> {
                 self.parser.advance();
                 let attribute = self.parser.current_token().parse_attribute();
 
-                match attribute {
-                    Attribute::ExpandMain => {
-                        expand_main = true;
-                        self.parser.advance();
-                    }
-                    _ => elle_error!(self.parser.current_token().location.borrow().error(format!(
-                        "Unknown attribute for global '{}'",
-                        self.parser
-                            .current_token()
-                            .value
-                            .get_string_inner()
-                            .unwrap()
-                    ))),
-                }
+                if let Attribute::ExpandMain = attribute {
+                    expand_main = true;
+                    self.parser.advance();
+                } else { elle_error!(self.parser.current_token().location.borrow().error(format!(
+                    "Unknown attribute for global '{}'",
+                    self.parser
+                        .current_token()
+                        .value
+                        .get_string_inner()
+                        .unwrap()
+                ))) }
             }
         }
 
@@ -128,7 +125,7 @@ impl<'a> Global<'a> {
                 method_name: format!(INTERNAL_GLOBAL_INIT_FORMAT!(), name),
                 name,
                 public,
-                r#type: ty.clone(),
+                r#type: ty,
                 value: None,
                 usable: true,
                 imported: false,

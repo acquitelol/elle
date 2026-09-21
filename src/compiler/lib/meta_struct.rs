@@ -16,7 +16,9 @@ pub fn generate_meta_struct(
     parameters: &[(MutRc<Location>, AstNode)],
     location: MutRc<Location>,
 ) -> AstNode {
-    let node = AstNode::StructLiteral(StructLiteral {
+    
+
+    AstNode::StructLiteral(StructLiteral {
         name: Token::from_ident(META_STRUCT_NAME),
         values: vec![
             (
@@ -223,7 +225,5 @@ pub fn generate_meta_struct(
         spreads: vec![],
         location,
         allow_empty: false,
-    });
-
-    node
+    })
 }

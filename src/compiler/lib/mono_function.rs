@@ -91,7 +91,7 @@ pub fn create_monomorphized_function(
                     break;
                 }
 
-                *name = unaliased.clone().unwrap_or_else(|| (*name).to_string());
+                *name = unaliased.clone().unwrap_or_else(|| (*name).clone());
             }
             _ => {}
         }
@@ -106,15 +106,14 @@ pub fn create_monomorphized_function(
         Primitive::Function(this) => {
             // Reassign it if the function is generic
             // as the function won't have been found last time
-            if let Some(inner) = this.arguments.first() {
-                if inner.r#type.is_struct() {
+            if let Some(inner) = this.arguments.first()
+                && inner.r#type.is_struct() {
                     let name = inner.r#type.get_struct_inner().unwrap();
 
                     if name == META_STRUCT_NAME {
                         *add_meta = true;
                     }
                 }
-            }
 
             // Add base known generics
             // If the function takes <T, U, V>
@@ -131,11 +130,11 @@ pub fn create_monomorphized_function(
 
             let mut tmp_known_generics = known_generics.clone();
 
-            if let Some(other) = this.r#return.clone() {
-                if let Some(ty) = ty
+            if let Some(other) = this.r#return.clone()
+                && let Some(ty) = ty
                     && other.has_generic_type()
                     && tmp_known_generics.len() < this.generics.len()
-                    && let Some(inner) = ty.deduce_generic_type(&other, &call_location)
+                    && let Some(inner) = ty.deduce_generic_type(&other, call_location)
                 {
                     insert_known_generics!(
                         tmp_known_generics,
@@ -147,7 +146,6 @@ pub fn create_monomorphized_function(
                         false
                     );
                 }
-            }
 
             let mut deferred_generics = vec![];
             let struct_pool = RefCell::new(compiler.struct_pool.clone());
@@ -223,7 +221,7 @@ pub fn create_monomorphized_function(
                 .unwrap_or(Type::Void);
 
                 if other.has_generic_type()
-                    && let Some(inner) = ty.deduce_generic_type(&other, &call_location)
+                    && let Some(inner) = ty.deduce_generic_type(&other, call_location)
                 {
                     insert_known_generics!(
                         known_generics,
@@ -253,7 +251,7 @@ pub fn create_monomorphized_function(
                     && let Some(other) = this.r#return.clone()
                     && let Some(ty) = func.borrow().return_type.clone()
                     && other.has_generic_type()
-                    && let Some(inner) = ty.deduce_generic_type(&other, &call_location)
+                    && let Some(inner) = ty.deduce_generic_type(&other, call_location)
                 {
                     insert_known_generics!(
                         known_generics,
@@ -323,7 +321,7 @@ pub fn create_monomorphized_function(
                 }
                 .unwrap_or(Type::Void);
 
-                if let Some(inner) = ty.deduce_generic_type(&other, &call_location) {
+                if let Some(inner) = ty.deduce_generic_type(&other, call_location) {
                     // as this is a fn def, its deductions are carefully cherry-picked
                     // in the deduce_generic_type fn, so this should be safe to do
                     // without the macro which is used above
@@ -337,7 +335,7 @@ pub fn create_monomorphized_function(
                         format!(
                             "Attempted to monomorphize with too many generics.\nExpected {GREEN}{}{RESET} generic{} but got {RED}{}{RESET} instead",
                             this.generics.len(),
-                            if this.generics.len() != 1 { "s" } else { "" },
+                            if this.generics.len() == 1 { "" } else { "s" },
                             known_generics.len(),
                             GREEN = get_GREEN!(),
                             RED = get_RED!(),

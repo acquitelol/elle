@@ -76,7 +76,9 @@ pub fn lex_and_parse(
             relative_path.to_path_buf()
         };
 
-        let content = match fs::read_to_string(&final_path) {
+        
+
+        match fs::read_to_string(&final_path) {
             Ok(content) => content,
             Err(err) => {
                 eprintln!(
@@ -96,9 +98,7 @@ pub fn lex_and_parse(
 
                 return vec![];
             }
-        };
-
-        content
+        }
     };
 
     let sym = interner.get_or_intern(final_path.canonicalize().unwrap().to_string_lossy());
@@ -231,7 +231,7 @@ pub fn lex_and_parse(
             0,
             Primitive::Use(UseSource {
                 module: ARBITRARY_ALLOCATOR_MODULE.into(),
-                location: loc.clone(),
+                location: loc,
             }),
         );
     }

@@ -760,7 +760,7 @@ impl Lexer<'_> {
 
             match base {
                 ParseResult::Float(val) => {
-                    literal = (val * 10_f64.powf(f64::from(exponent))).to_string();
+                    literal = (val * 10_f64.powf(exponent)).to_string();
 
                     if !literal.contains('.') {
                         literal.push_str(".0");
@@ -775,7 +775,7 @@ impl Lexer<'_> {
         if float {
             (
                 TokenKind::FloatingPoint,
-                ValueKind::String(literal.to_string()),
+                ValueKind::String(literal.clone()),
             )
         } else {
             (

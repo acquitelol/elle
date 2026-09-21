@@ -38,15 +38,15 @@ pub enum Type {
     Zeroed,      // internal type for zero initialized static data
     Size(usize), // for allowing static arrays to monomorphize with generic sizes
     // Inner type
-    Pointer(Box<Type>),
+    Pointer(Box<Self>),
     Struct(String),
-    Enum(String, Box<Option<Type>>),
+    Enum(String, Box<Option<Self>>),
     // Unknown generic
     Unknown(String),
     Function(Box<Option<Function>>),
     // first is inner type of the static array
     // second MUST be Unknown or Size (though this can't be enforced well)
-    StaticArray(Box<Type>, Box<Type>),
+    StaticArray(Box<Self>, Box<Self>),
 }
 
 impl Type {
@@ -125,7 +125,7 @@ impl Type {
                         "fn{}{}({}{}){}",
                         if inner.lambda { "" } else { " " },
                         if inner.lambda {
-                            "".into()
+                            String::new()
                         } else {
                             let namespaced = inner
                                 .name
@@ -184,7 +184,7 @@ impl Type {
                                 "{}{}",
                                 arg.0 .0.display(),
                                 if inner.lambda {
-                                    "".into()
+                                    String::new()
                                 } else {
                                     format!(
                                         " {}",
@@ -285,7 +285,7 @@ impl Type {
                     .to_internal_id()
             ),
             Self::StaticArray(ty, size) => {
-                let Type::Size(size) = **size else {
+                let Self::Size(size) = **size else {
                     elle_error!(Location::internal_error(format!(
                         "Static array with type {} has a size which cannot be generic at this stage",
                         ty.display()
@@ -304,7 +304,7 @@ impl Type {
                         .map(|((ty, _), _)| ty.to_internal_id())
                         .collect::<Vec<_>>()
                         .join("."),
-                    inner.return_type.unwrap_or(Type::Void).to_internal_id(),
+                    inner.return_type.unwrap_or(Self::Void).to_internal_id(),
                 )
             }
             Self::Struct(name) => name.clone(),
@@ -758,7 +758,7 @@ impl Type {
                 Self::StaticArray(known_inner, known_size),
                 Self::StaticArray(generic_inner, generic_size),
             ) => {
-                let mut map = hashmap![String, Type];
+                let mut map = hashmap![String, Self];
 
                 known_inner
                     .deduce_generic_type(generic_inner, location)
@@ -799,8 +799,8 @@ impl Type {
                         }
                     }
 
-                    let known_return_ty = known_inner.return_type.unwrap_or(Type::Void);
-                    let generic_return_ty = generic_inner.return_type.unwrap_or(Type::Void);
+                    let known_return_ty = known_inner.return_type.unwrap_or(Self::Void);
+                    let generic_return_ty = generic_inner.return_type.unwrap_or(Self::Void);
                     if let Some(new_map) =
                         known_return_ty.deduce_generic_type(&generic_return_ty, location)
                     {
@@ -1016,8 +1016,8 @@ impl Type {
             (Self::Enum(lhs, _), Self::Enum(rhs, _)) => lhs == rhs,
             (Self::Struct(lhs), Self::Struct(rhs)) => {
                 if is_generic!(lhs) && is_generic!(rhs) {
-                    let (lhs_name, lhs_parts) = Self::from_internal_id(&lhs);
-                    let (rhs_name, rhs_parts) = Self::from_internal_id(&rhs);
+                    let (lhs_name, lhs_parts) = Self::from_internal_id(lhs);
+                    let (rhs_name, rhs_parts) = Self::from_internal_id(rhs);
 
                     lhs_name == rhs_name
                         && lhs_parts
@@ -1070,8 +1070,8 @@ impl Type {
                     }
                 }
 
-                let lreturn_ty = lhs.return_type.as_ref().unwrap_or(&Type::Void);
-                let rreturn_ty = rhs.return_type.as_ref().unwrap_or(&Type::Void);
+                let lreturn_ty = lhs.return_type.as_ref().unwrap_or(&Self::Void);
+                let rreturn_ty = rhs.return_type.as_ref().unwrap_or(&Self::Void);
                 lreturn_ty.function_eq(rreturn_ty, location) || lreturn_ty.contextual_eq(rreturn_ty)
             }
             (x, y) => x.contextual_eq(y),
@@ -1193,7 +1193,9 @@ impl Type {
     pub fn size(&self, module: &RefCell<Module>) -> u64 {
         match self {
             Self::Struct(val, ..) => {
-                let size = module
+                
+
+                module
                     .borrow()
                     .types
                     .iter()
@@ -1204,12 +1206,10 @@ impl Type {
                             self.display()
                         )))
                     })
-                    .size(module) as u64;
-
-                size
+                    .size(module) as u64
             }
             Self::StaticArray(ty, size) => match *size.clone() {
-                Type::Size(size) => ty.size(module) * size as u64,
+                Self::Size(size) => ty.size(module) * size as u64,
                 other => elle_error!(Location::internal_error(format!("Static array with type {} has a size {other} which should not be generic at this stage", ty.display())))
             },
             Self::Unknown(..) | Self::Null => 0,

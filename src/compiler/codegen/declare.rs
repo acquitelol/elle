@@ -164,9 +164,9 @@ impl Codegen<'_> for Declare {
                 let (data_ty, data_val) = convert_to_type(
                     compiler,
                     ctx.func,
-                    ret_ty.clone(),
+                    ret_ty,
                     global.ty.clone().unwrap(),
-                    value.clone(),
+                    value,
                     &self.location,
                     &self.location,
                     false,
@@ -176,7 +176,7 @@ impl Codegen<'_> for Declare {
 
                 if data_ty.is_struct() || data_ty.is_static_array() {
                     ctx.func.borrow_mut().add_instruction(Instruction::Blit(
-                        data_val.clone(),
+                        data_val,
                         addr_val.clone(),
                         data_ty.size(ctx.module),
                     ));

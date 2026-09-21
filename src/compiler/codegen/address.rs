@@ -34,7 +34,7 @@ impl Codegen<'_> for Address {
             ctx.func.borrow_mut().add_instruction(Instruction::Store(
                 ty,
                 addr_val.clone(),
-                val.clone(),
+                val,
             ));
 
             Some((addr_ty, addr_val))

@@ -84,6 +84,6 @@ impl Codegen<'_> for TupleDeclare {
             compile_part!(third, "z");
         }
 
-        return Some(x_gen);
+        Some(x_gen)
     }
 }

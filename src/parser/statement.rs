@@ -142,7 +142,9 @@ impl<'a> Statement<'a> {
             )))
         }
 
-        let identifier = if let Token {
+        
+
+        if let Token {
             value: ValueKind::String(identifier),
             ..
         } = self.current_token()
@@ -153,9 +155,7 @@ impl<'a> Statement<'a> {
                 "Expected one of {:?} but got {:?}",
                 expected, token.kind
             ))
-        };
-
-        identifier
+        }
     }
 
     pub fn get_identifier(&self) -> String {
@@ -764,7 +764,7 @@ impl<'a> Statement<'a> {
                         .get(index + 1)
                         .is_some_and(|token| token.kind != TokenKind::Equal) =>
                 {
-                    ternary_nesting -= 1
+                    ternary_nesting -= 1;
                 }
                 TokenKind::Semicolon if block_nesting == 0 && curly_nesting == 0 => break,
                 _ => {}
@@ -963,7 +963,7 @@ impl<'a> Statement<'a> {
         set_end!(location, self);
 
         let mut expression = AstNode::Buffer(Buffer {
-            r#type: Some(ty.clone()),
+            r#type: Some(ty),
             size: Box::new(size),
             location: location.clone(),
         });
@@ -1651,7 +1651,7 @@ impl<'a> Statement<'a> {
 
                 other if other.is_arithmetic() => {
                     self.position = position;
-                    expression = self.parse_arithmetic()
+                    expression = self.parse_arithmetic();
                 }
 
                 _ => expect_eot!(token),

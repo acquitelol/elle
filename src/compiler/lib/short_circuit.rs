@@ -76,7 +76,7 @@ pub fn handle_short_circuiting_operation(
     func.borrow_mut().assign_instruction(
         &left_tmp_jmp,
         &left_ty,
-        Instruction::Copy(left_val.clone()),
+        Instruction::Copy(left_val),
     );
 
     match kind {
@@ -140,7 +140,7 @@ pub fn handle_short_circuiting_operation(
     func.borrow_mut().assign_instruction(
         &right_tmp_jmp,
         &right_ty,
-        Instruction::Copy(right_val.clone()),
+        Instruction::Copy(right_val),
     );
 
     // This is the same for AND and OR
@@ -170,7 +170,7 @@ pub fn handle_short_circuiting_operation(
         &mut left_tmp_jmp,
         &mut right_ty,
         &mut right_tmp_jmp,
-        &location,
+        location,
     );
 
     func.borrow_mut().add_instruction(Instruction::JumpNonZero(
@@ -226,8 +226,8 @@ pub fn handle_short_circuiting_operation(
             format!("{right_label}.jmp"),
             Value::Const(prefix.clone(), 0),
         ),
-        (left_matches_label, left_tmp_match.clone()),
-        (right_matches_label, right_tmp_match.clone()),
+        (left_matches_label, left_tmp_match),
+        (right_matches_label, right_tmp_match),
     ];
 
     if kind == TokenKind::And {

@@ -73,7 +73,7 @@ impl Codegen<'_> for Lambda {
             Err(arg) => arg,
         }).collect::<Vec<_>>();
 
-        if is_shorthand && patched_arguments.len() > 0 {
+        if is_shorthand && !patched_arguments.is_empty() {
             let shorthand_name = format!(LAMBDA_SHORTHAND_SCHEME!(), "0");
             let shorthand_ty = patched_arguments[0].clone().r#type;
 
@@ -146,7 +146,7 @@ impl Codegen<'_> for Lambda {
                         .clone()
                         .and_then(|ty| ty.get_function_inner())
                         .and_then(|func| func.return_type))
-                    .and_then(|ty| (!ty.has_generic_type()).then(|| ty)),
+                    .and_then(|ty| (!ty.has_generic_type()).then_some(ty)),
                 body: if ctx.is_generic { vec![] } else { self.value },
                 location: self.location.clone(),
                 return_location: self.location,

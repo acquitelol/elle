@@ -76,7 +76,7 @@ impl Module {
                 for statement in &block.statements {
                     match statement {
                         Statement::Assign(_, _, instr) | Statement::Volatile(instr) => {
-                            for (_, data) in &self.data {
+                            for data in self.data.values() {
                                 if instr.is_global_used(&data.name) {
                                     used_data_sections.insert(data.name.clone());
                                 }
@@ -133,7 +133,7 @@ impl fmt::Display for Module {
             print_type_recursively(f, &r#type.name, &self.types, &mut printed)?;
         }
 
-        for (_, data) in &self.data {
+        for data in self.data.values() {
             if !data.external {
                 writeln!(f, "{data}")?;
             }

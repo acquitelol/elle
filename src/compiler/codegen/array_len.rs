@@ -10,7 +10,7 @@ use crate::{
 
 impl Codegen<'_> for ArrayLength {
     fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let (mut ty, _) = self.value.clone().compile(compiler, ctx).unwrap();
+        let (mut ty, _) = self.value.compile(compiler, ctx).unwrap();
 
         loop {
             if let Type::StaticArray(inner, _) = ty.clone()
@@ -31,6 +31,6 @@ impl Codegen<'_> for ArrayLength {
             ));
         }
 
-        return None;
+        None
     }
 }

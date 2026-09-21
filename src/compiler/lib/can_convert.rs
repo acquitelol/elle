@@ -31,11 +31,10 @@ pub fn can_convert_to_type(
         return true;
     }
 
-    if first.is_function() && second.is_function() {
-        if explicit || first.function_eq(second, None) {
+    if first.is_function() && second.is_function()
+        && (explicit || first.function_eq(second, None)) {
             return true;
         }
-    }
 
     if (first.is_static_array()
         && second.is_pointer()

@@ -17,8 +17,8 @@ impl Backend {
 
 impl Backend {
     pub async fn try_report_diagnostics(&self, uri: &Url) {
-        if let Ok(path) = uri.to_file_path() {
-            if let Ok(output) = get_file_output(&path, None).await {
+        if let Ok(path) = uri.to_file_path()
+            && let Ok(output) = get_file_output(&path, None).await {
                 let diagnostics = get_diagnostics(&path, &output);
                 dbg!(&diagnostics);
 
@@ -26,7 +26,6 @@ impl Backend {
                     .publish_diagnostics(uri.clone(), diagnostics, None)
                     .await;
             }
-        }
     }
 
     pub async fn try_report_hover(&self, uri: &Url, pos: Position) -> Option<Hover> {

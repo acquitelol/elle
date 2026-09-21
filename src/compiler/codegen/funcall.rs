@@ -209,15 +209,14 @@ impl Codegen<'_> for FunctionCall {
         let mut params: Vec<((Type, Value), bool)> = vec![];
         let mut add_meta = false;
 
-        if let Some(inner) = tmp_function.arguments.first() {
-            if inner.0 .0.is_struct() {
+        if let Some(inner) = tmp_function.arguments.first()
+            && inner.0 .0.is_struct() {
                 let name = inner.0 .0.get_struct_inner().unwrap();
 
                 if name == META_STRUCT_NAME {
                     add_meta = true;
                 }
             }
-        }
 
         if compiler.generic_functions.contains_key(&name) {
             create_monomorphized_function(
@@ -251,8 +250,8 @@ impl Codegen<'_> for FunctionCall {
             ));
         }
 
-        if type_method {
-            if let Some((ty, _)) = first_param.clone() {
+        if type_method
+            && let Some((ty, _)) = first_param.clone() {
                 let parsed_ty = if ty.is_struct() && is_generic!(ty.get_struct_inner().unwrap()) {
                     Type::Struct(Type::from_internal_id(&ty.get_struct_inner().unwrap()).0)
                 } else {
@@ -267,7 +266,6 @@ impl Codegen<'_> for FunctionCall {
                     should_get_address = true;
                 }
             }
-        }
 
         for (i, mut parameter) in parameters.iter().cloned().enumerate() {
             let param_ty = {
@@ -278,8 +276,8 @@ impl Codegen<'_> for FunctionCall {
             let first_arg = tmp_function.arguments.get(usize::from(add_meta));
             let mut got_address = false;
 
-            if let Some(first_arg) = first_arg {
-                if i == 0
+            if let Some(first_arg) = first_arg
+                && i == 0
                     && type_method
                     && should_get_address
                     && first_param.is_some()
@@ -294,7 +292,6 @@ impl Codegen<'_> for FunctionCall {
                         location: call_location.clone(),
                     });
                 }
-            }
 
             let (ty, val) = if i == 0 && first_param.is_some() && !got_address {
                 first_param.clone().unwrap()
@@ -368,14 +365,12 @@ impl Codegen<'_> for FunctionCall {
                         .borrow()
                         .functions
                         .get(&func_name)
-                        .cloned()
-                        .map(|mut function| {
+                        .cloned().map_or_else(Function::default, |mut function| {
                             if let Some(name) = function.unaliased.clone() {
                                 function.name = name;
                             }
                             function
-                        })
-                        .unwrap_or_else(Function::default);
+                        });
 
                     if is_generic!(struct_name) {
                         let (real_struct_name, _) = Type::from_internal_id(&struct_name);
@@ -475,8 +470,7 @@ impl Codegen<'_> for FunctionCall {
                 }
 
                 if tmp_function
-                    .arguments
-                    .get(0)
+                    .arguments.first()
                     .is_some_and(|((ty, _), _)| *ty == Type::Struct(META_STRUCT_NAME.into()))
                 {
                     elle_error!(call_location.borrow().error(

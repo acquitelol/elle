@@ -53,7 +53,7 @@ pub fn create_generic_struct(
                 format!(
                     "Attempted to monomorphize with too many generics.\nExpected {GREEN}{}{RESET} generic{} but got {RED}{}{RESET} instead",
                     generics.len(),
-                    if generics.len() != 1 { "s" } else { "" },
+                    if generics.len() == 1 { "" } else { "s" },
                     known_generics.len(),
                     GREEN = get_GREEN!(),
                     RED = get_RED!(),
@@ -438,7 +438,7 @@ macro_rules! get_type {
                             None
                         };
 
-                        ty = Type::Function(Box::new(Some(crate::compiler::qbe::function::Function {
+                        ty = Type::Function(Box::new(Some($crate::compiler::qbe::function::Function {
                             variadic,
                             external: true,
                             builtin: false,
@@ -768,12 +768,11 @@ impl Parser {
                     }
 
                     // function pointer
-                    if let Some(next) = self.next_token() {
-                        if next.kind == TokenKind::Multiply {
+                    if let Some(next) = self.next_token()
+                        && next.kind == TokenKind::Multiply {
                             self.advance();
                             continue;
                         }
-                    }
 
                     let mut function = Function::new(self);
 

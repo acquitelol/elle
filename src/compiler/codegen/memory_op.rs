@@ -146,7 +146,7 @@ impl Codegen<'_> for MemoryOperation {
                     ctx.func.borrow_mut().assign_instruction(
                         &tmp,
                         &res_ty.clone(),
-                        Instruction::Load(res_ty.clone(), val.clone()),
+                        Instruction::Load(res_ty.clone(), val),
                     );
 
                     return Some((res_ty, tmp));

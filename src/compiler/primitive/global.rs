@@ -48,7 +48,7 @@ pub fn generate_global(this: GlobalSource, compiler: &mut Compiler, module: &Ref
         },
         name: this.name.clone(),
         align: None,
-        items: vec![(Type::Zeroed, DataItem::Const(ty.size(module) as i128))],
+        items: vec![(Type::Zeroed, DataItem::Const(i128::from(ty.size(module))))],
     };
 
     compiler

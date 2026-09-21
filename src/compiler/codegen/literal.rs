@@ -68,7 +68,7 @@ impl Codegen<'_> for Literal {
                             }
 
                             func.unaliased = None;
-                            *inner = Box::new(Some(func));
+                            **inner = Some(func);
                         }
                     }
 
@@ -177,7 +177,7 @@ impl Codegen<'_> for Literal {
                         .entry(name.clone())
                         .or_insert(Data::new(
                             Linkage::private(),
-                            name.clone(),
+                            name,
                             None,
                             vec![
                                 (Type::Byte, DataItem::String(escaped)),
