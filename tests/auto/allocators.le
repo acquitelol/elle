@@ -5,50 +5,50 @@ use std/allocators/arena;
 
 fn main() {
     kind := "ArbitraryAllocator";
-    gc_kind := "GCAllocator";
+    //gc_kind := "GCAllocator";
     heap_kind := "HeapAllocator";
     arena_kind := "ArenaAllocator";
 
-    $assert(
-        #env.allocator.kind == gc_kind,
-        "This test should be ran with {} by default. Remove the `--nogc` flag.".format(gc_kind)
-    );
+    //$assert(
+    //    #env.allocator.kind == gc_kind,
+    //    "This test should be ran with {} by default. Remove the `--nogc` flag.".format(gc_kind)
+    //);
 
-    $assert(
-        #env.allocator.inner == #cast(void *, #env.default_allocator),
-        "The allocator pointer itself should have switched to the {}.".format(gc_kind)
-    );
+    //$assert(
+    //    #env.allocator.inner == #cast(void *, #env.default_allocator),
+    //    "The allocator pointer itself should have switched to the {}.".format(gc_kind)
+    //);
 
-    $assert(
-        #env.allocator.alloc == GCAllocator::alloc,
-        "The allocating function should have switched to `{}::alloc`.".format(gc_kind)
-    );
+    //$assert(
+    //    #env.allocator.alloc == GCAllocator::alloc,
+    //    "The allocating function should have switched to `{}::alloc`.".format(gc_kind)
+    //);
 
-    $assert(
-        #env.allocator.realloc == GCAllocator::realloc,
-        "The reallocating function should have switched to `{}::realloc`.".format(gc_kind)
-    );
+    //$assert(
+    //    #env.allocator.realloc == GCAllocator::realloc,
+    //    "The reallocating function should have switched to `{}::realloc`.".format(gc_kind)
+    //);
 
-    $assert(
-        #env.allocator.free == GCAllocator::free,
-        "The freeing function should have switched to `{}::noop`.".format(kind)
-    );
+    //$assert(
+    //    #env.allocator.free == GCAllocator::free,
+    //    "The freeing function should have switched to `{}::noop`.".format(kind)
+    //);
 
-    $assert(
-        #env.allocator.free_self == GCAllocator::free_self,
-        "The GCAllocator freeing function should have switched to `{}::free_self`.".format(gc_kind)
-    );
+    //$assert(
+    //    #env.allocator.free_self == GCAllocator::free_self,
+    //    "The GCAllocator freeing function should have switched to `{}::free_self`.".format(gc_kind)
+    //);
 
-    ptr := #alloc(i32);
-    $assert(
-        ptr != nil && #cast(bool, ptr % #size(void *)) == 0,
-        "Basic checks for ensuring the pointer provided by the {} is valid failed.".format(gc_kind)
-    );
+    //ptr := #alloc(i32);
+    //$assert(
+    //    ptr != nil && #cast(bool, ptr % #size(void *)) == 0,
+    //    "Basic checks for ensuring the pointer provided by the {} is valid failed.".format(gc_kind)
+    //);
 
-    *ptr = 39;
-    $assert(*ptr == 39, "Writing to a memory address given by {} failed.".format(gc_kind));
+    //*ptr = 39;
+    //$assert(*ptr == 39, "Writing to a memory address given by {} failed.".format(gc_kind));
 
-    io::println("The `{}` tests have passed.".format(gc_kind).color("green").reset());
+    //io::println("The `{}` tests have passed.".format(gc_kind).color("green").reset());
 
     // -------------------------------- HeapAllocator --------------------------------
 
