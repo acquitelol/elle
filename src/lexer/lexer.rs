@@ -1,8 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    elle_error, misc::constants::get_INTROSPECTION_LOCATION, INTROSPECTION_LOCATION,
-    RESERVED_KEYWORDS,
+    INTROSPECTION_LOCATION, RESERVED_KEYWORDS, elle_error,
+    misc::constants::get_INTROSPECTION_LOCATION,
 };
 
 use super::enums::{Location, ParseResult, Position, Token, TokenKind, ValueKind};
@@ -20,7 +20,7 @@ pub struct Lexer<'a> {
 }
 
 impl Lexer<'_> {
-    pub fn new(file: String, input: &str, has_tagged: bool) -> Lexer {
+    pub fn new(file: String, input: &str, has_tagged: bool) -> Lexer<'_> {
         let mut line_starts = vec![0];
 
         for (i, c) in input.bytes().enumerate() {
@@ -455,9 +455,10 @@ impl Lexer<'_> {
                                 "set_allocator" => (TokenKind::SetAllocator, ValueKind::Nil),
                                 "reset_allocator" => (TokenKind::ResetAllocator, ValueKind::Nil),
                                 "cast" => (TokenKind::Cast, ValueKind::Nil),
-                                other => elle_error!(self
-                                    .get_location(start_row, start_col)
-                                    .error(format!("Unimplemented directive: '{other}'"))),
+                                other => elle_error!(
+                                    self.get_location(start_row, start_col)
+                                        .error(format!("Unimplemented directive: '{other}'"))
+                                ),
                             },
                             _ => unreachable!(),
                         }
@@ -466,9 +467,10 @@ impl Lexer<'_> {
             }
             _ => {
                 self.advance();
-                elle_error!(self
-                    .get_location(start_row, start_col)
-                    .error(format!("Unexpected character: '{c}'")))
+                elle_error!(
+                    self.get_location(start_row, start_col)
+                        .error(format!("Unexpected character: '{c}'"))
+                )
             }
         };
 
@@ -844,9 +846,10 @@ impl Lexer<'_> {
                 '0' => '\0',
                 '\'' => '\'',
                 '\\' => '\\',
-                _ => elle_error!(self
-                    .get_location(start_row, start_col)
-                    .error(format!("Invalid escape sequence: '{character}'"))),
+                _ => elle_error!(
+                    self.get_location(start_row, start_col)
+                        .error(format!("Invalid escape sequence: '{character}'"))
+                ),
             };
 
             self.advance();

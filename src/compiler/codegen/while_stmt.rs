@@ -8,23 +8,26 @@ use crate::{
 };
 
 impl Codegen<'_> for WhileLoopStatement {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        gen.scopes.push(hashmap![]);
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+        compiler.scopes.push(hashmap![]);
 
-        gen.tmp_counter += 1;
-        let cond_label = format!("loop.{}.cond", gen.tmp_counter);
-        let step_label = format!("loop.{}.step", gen.tmp_counter);
-        let body_label = format!("loop.{}.body", gen.tmp_counter);
-        let end_label = format!("loop.{}.end", gen.tmp_counter);
+        compiler.tmp_counter += 1;
+        let cond_label = format!("loop.{}.cond", compiler.tmp_counter);
+        let step_label = format!("loop.{}.step", compiler.tmp_counter);
+        let body_label = format!("loop.{}.body", compiler.tmp_counter);
+        let end_label = format!("loop.{}.end", compiler.tmp_counter);
 
-        gen.loop_labels.push(format!("loop.{}", gen.tmp_counter));
+        compiler
+            .loop_labels
+            .push(format!("loop.{}", compiler.tmp_counter));
         ctx.func.borrow_mut().add_block(cond_label.clone());
 
-        let (_, value) = self.condition.compile(gen, ctx).unwrap_or_else(|| {
-            elle_error!(self
-                .location
-                .borrow()
-                .error("Unexpected error when trying to compile the condition of a while loop"))
+        let (_, value) = self.condition.compile(compiler, ctx).unwrap_or_else(|| {
+            elle_error!(
+                self.location
+                    .borrow()
+                    .error("Unexpected error when trying to compile the condition of a while loop")
+            )
         });
 
         ctx.func
@@ -38,7 +41,7 @@ impl Codegen<'_> for WhileLoopStatement {
         ctx.func.borrow_mut().add_block(step_label.clone());
 
         if let Some(step) = self.step {
-            step.compile(gen, ctx);
+            step.compile(compiler, ctx);
         }
 
         ctx.func
@@ -48,7 +51,7 @@ impl Codegen<'_> for WhileLoopStatement {
         ctx.func.borrow_mut().add_block(body_label);
 
         for statement in &self.body {
-            statement.clone().compile(gen, ctx);
+            statement.clone().compile(compiler, ctx);
         }
 
         if !ctx
@@ -64,8 +67,8 @@ impl Codegen<'_> for WhileLoopStatement {
         }
 
         ctx.func.borrow_mut().add_block(end_label);
-        gen.loop_labels.pop();
-        gen.scopes.pop();
+        compiler.loop_labels.pop();
+        compiler.scopes.pop();
 
         None
     }

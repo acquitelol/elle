@@ -6,7 +6,7 @@ use crate::{
         lib::can_convert::can_convert_to_type,
         qbe::{
             function::Function, instruction::Instruction, linkage::Linkage, module::Module,
-            r#type::Type, statement::Statement, value::Value,
+            statement::Statement, r#type::Type, value::Value,
         },
     },
     elle_error, hashmap, is_generic,
@@ -16,7 +16,7 @@ use crate::{
 
 pub fn generate_function(
     this: FunctionSource,
-    gen: &mut Compiler,
+    compiler: &mut Compiler,
     lambda: bool,
     constant: bool,
     known_generics: HashMap<String, Type>,
@@ -55,7 +55,7 @@ pub fn generate_function(
         return func;
     }
 
-    gen.scopes.push(hashmap![]);
+    compiler.scopes.push(hashmap![]);
     func.add_block("start");
 
     let func_ref = RefCell::new(func.clone());
@@ -74,7 +74,7 @@ pub fn generate_function(
 
     for argument in &this.arguments {
         let ty = argument.r#type.clone();
-        let tmp = gen.new_variable(&ty, &argument.name, None, false, false);
+        let tmp = compiler.new_variable(&ty, &argument.name, None, false, false);
 
         let stmt = AstNode::Declare(Declare {
             name: Token::from_ident(&argument.name),
@@ -89,7 +89,7 @@ pub fn generate_function(
             value_location: loc.clone(),
         });
 
-        stmt.compile(gen, &ctx);
+        stmt.compile(compiler, &ctx);
         args.push(((ty, tmp), argument.no_fmt));
     }
 
@@ -106,7 +106,7 @@ pub fn generate_function(
     }
 
     for statement in &this.body {
-        statement.clone().compile(gen, &ctx);
+        statement.clone().compile(compiler, &ctx);
     }
 
     let mut first_ty: Option<Type> = None;
@@ -154,7 +154,7 @@ pub fn generate_function(
 
     macro_rules! handle_inconsistent_types {
         ($return_type:expr, $first_type:expr, $location:expr $(,)?) => {
-            if !can_convert_to_type(gen, $return_type, $first_type, false) {
+            if !can_convert_to_type(compiler, $return_type, $first_type, false) {
                 elle_error!(
                     ty_err_message!(
                         $return_type.display(),
@@ -195,20 +195,19 @@ pub fn generate_function(
                         && !matches!(val, Value::Const(_, _))
                         && !return_type.function_eq(first_type, Some(&location))
                     {
-                        elle_error!(
-                            ty_err_message!(
-                                return_type.display(),
+                        elle_error!(ty_err_message!(
+                            return_type.display(),
+                            first_type.display(),
+                            location.borrow().with_extra_info(format!(
+                                "This has the type '{}'",
+                                return_type.display()
+                            )),
+                            Some(format!(
+                                "This error was caused because you returned {} elsewhere, but returned {} here.",
                                 first_type.display(),
-                                location.borrow().with_extra_info(format!(
-                                    "This has the type '{}'",
-                                    return_type.display()
-                                )),
-                                Some(format!(
-                                    "This error was caused because you returned {} elsewhere, but returned {} here.",
-                                    first_type.display(), return_type.display()
-                                ))
-                            )
-                        )
+                                return_type.display()
+                            ))
+                        ))
                     }
                 }
             }
@@ -238,7 +237,7 @@ pub fn generate_function(
             ))));
     }
 
-    gen.scopes.pop();
+    compiler.scopes.pop();
 
     let mut owned_func = func_ref.borrow_mut().to_owned();
 

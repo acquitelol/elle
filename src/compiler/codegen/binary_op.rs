@@ -14,11 +14,11 @@ use crate::{
 };
 
 impl Codegen<'_> for BinaryOperation {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         // Implement conditional short circuiting for logical AND and OR
         if matches!(self.operator, TokenKind::And | TokenKind::Or) {
             return Some(handle_short_circuiting_operation(
-                gen,
+                compiler,
                 *self.left,
                 *self.right,
                 ctx.func,
@@ -58,7 +58,7 @@ impl Codegen<'_> for BinaryOperation {
 
             let (ty, val) = node
                 .compile(
-                    gen,
+                    compiler,
                     &CodegenContext {
                         value: None,
                         ..ctx.clone()
@@ -77,21 +77,24 @@ impl Codegen<'_> for BinaryOperation {
         let cloned_func = ctx.func.borrow_mut().to_owned();
 
         let (mut left_ty, mut left_val) =
-            self.left.clone().compile(gen, ctx).unwrap_or_else(|| {
+            self.left.clone().compile(compiler, ctx).unwrap_or_else(|| {
                 elle_error!(self.location.borrow().error(
                     "Unexpected error when trying to parse left side of an arithmetic operation",
                 ))
             });
 
-        let (mut right_ty, mut right_val) =
-            self.right.clone().compile(gen, ctx).unwrap_or_else(|| {
+        let (mut right_ty, mut right_val) = self
+            .right
+            .clone()
+            .compile(compiler, ctx)
+            .unwrap_or_else(|| {
                 elle_error!(self.location.borrow().error(
                     "Unexpected error when trying to parse right side of an arithmetic operation",
                 ))
             });
 
         handle_weighted_cast(
-            gen,
+            compiler,
             ctx.func,
             &mut left_ty,
             &mut left_val,
@@ -129,7 +132,7 @@ impl Codegen<'_> for BinaryOperation {
                 });
             }
 
-            let (ty, val) = node.compile(gen, ctx).unwrap_or_else(|| {
+            let (ty, val) = node.compile(compiler, ctx).unwrap_or_else(|| {
                 elle_error!(self.location.borrow().error(
                     "Unexpected error when trying to parse an equality arithmetic operation",
                 ))
@@ -182,7 +185,7 @@ impl Codegen<'_> for BinaryOperation {
                         self.location.clone(),
                     );
 
-                    let res = meta.compile(gen, ctx).unwrap_or_else(|| {
+                    let res = meta.compile(compiler, ctx).unwrap_or_else(|| {
                         elle_error!(self.location.borrow().error(
                             "Unexpected error when trying to compile the Elle metadata struct",
                         ))
@@ -202,7 +205,7 @@ impl Codegen<'_> for BinaryOperation {
                     Value::Global(func_name),
                     params.into_iter().map(|x| x.0).collect(),
                 );
-                let op_temp = gen.new_temporary(None, true);
+                let op_temp = compiler.new_temporary(None, true);
                 ctx.func
                     .borrow_mut()
                     .assign_instruction(&op_temp, &ty, instr);
@@ -280,7 +283,7 @@ impl Codegen<'_> for BinaryOperation {
                 .error(format!("Invalid operator token: {:?}", self.operator))),
         };
 
-        let op_temp = gen.new_temporary(None, true);
+        let op_temp = compiler.new_temporary(None, true);
 
         let final_ty = if self.operator.is_comparative() {
             Type::Boolean

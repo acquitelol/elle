@@ -11,7 +11,7 @@ use crate::{
 };
 
 impl Codegen<'_> for ArrayLiteral {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let inner_ty = ctx
             .ty
             .clone()
@@ -34,7 +34,7 @@ impl Codegen<'_> for ArrayLiteral {
                     .clone()
                     .1
                     .compile(
-                        gen,
+                        compiler,
                         &CodegenContext {
                             func: &RefCell::new(new_func),
                             ..ctx.to_nnf()
@@ -83,7 +83,7 @@ impl Codegen<'_> for ArrayLiteral {
                 location: self.location.clone(),
             });
 
-            let (ty, val) = node.compile(gen, ctx).unwrap_or_else(|| {
+            let (ty, val) = node.compile(compiler, ctx).unwrap_or_else(|| {
                 elle_error!(self
                     .location
                     .borrow()
@@ -120,7 +120,7 @@ impl Codegen<'_> for ArrayLiteral {
             let (ty, val) = node
                 .clone()
                 .compile(
-                    gen,
+                    compiler,
                     &CodegenContext {
                         ty: if inner_ty.is_some() {
                             inner_ty.clone()
@@ -193,7 +193,7 @@ impl Codegen<'_> for ArrayLiteral {
             0
         };
 
-        let tmp = gen.new_temporary(Some("array"), true);
+        let tmp = compiler.new_temporary(Some("array"), true);
         let size = Value::Const(String::new(), i128::from(array_size));
 
         ctx.func.borrow_mut().assign_instruction_front(
@@ -202,13 +202,13 @@ impl Codegen<'_> for ArrayLiteral {
             Instruction::Alloc8(size.clone()),
         );
 
-        gen.buf_metadata.insert(
+        compiler.buf_metadata.insert(
             ctx.value.clone().unwrap_or_else(|| tmp.clone()),
             (repr_ty, size),
         );
 
         for (i, value) in results.iter().enumerate() {
-            let value_ptr = gen.new_temporary(Some("array.offset"), true);
+            let value_ptr = compiler.new_temporary(Some("array.offset"), true);
 
             ctx.func.borrow_mut().assign_instruction(
                 &value_ptr,

@@ -1,18 +1,19 @@
 use std::{cell::RefCell, collections::HashMap, fs::File, io::Write};
 
 use crate::{
+    MAIN_ID, Warnings,
     compiler::primitive::global::generate_global,
     elle_error, get_MAIN_ID, hashmap,
     lexer::enums::{Location, MutRc, Token, ValueKind},
     misc::{
         colors::*,
-        constants::{get_RAW_ERRORS, RAW_ERRORS},
+        constants::{RAW_ERRORS, get_RAW_ERRORS},
     },
     parser::{
         enums::{AstNode, FunctionSource, Primitive, Return},
         parser::StructPool,
     },
-    struct_hover, Warnings, MAIN_ID,
+    struct_hover,
 };
 
 use super::{
@@ -53,7 +54,7 @@ impl CodegenContext<'_> {
 }
 
 pub trait Codegen<'a> {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'a>) -> Option<(Type, Value)>;
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'a>) -> Option<(Type, Value)>;
 }
 
 #[derive(Default)]
@@ -268,7 +269,7 @@ impl Compiler {
         no_gc: bool,
         string_module_methods: &[String],
     ) {
-        let mut gen = Self {
+        let mut compiler = Self {
             tmp_counter: 0,
             scopes: vec![],
             data_sections: hashmap![],
@@ -291,7 +292,7 @@ impl Compiler {
         // Each string data section needs to be added to the module
         let module_ref = RefCell::new(module);
 
-        if !gen
+        if !compiler
             .tree
             .iter()
             .any(|primitive|
@@ -307,7 +308,7 @@ impl Compiler {
             )))
         }
 
-        for primitive in gen.tree.clone() {
+        for primitive in compiler.tree.clone() {
             match primitive.clone() {
                 Primitive::Constant(this) => {
                     let function = generate_function(
@@ -334,7 +335,7 @@ impl Compiler {
                             location: this.location.clone(),
                             return_location: this.location,
                         },
-                        &mut gen,
+                        &mut compiler,
                         false,
                         true,
                         hashmap![],
@@ -343,7 +344,8 @@ impl Compiler {
 
                     if this.namespace_token.tagged {
                         let plain_name = this.namespace_token.value.get_string_inner().unwrap();
-                        if let Some((generics, members, _)) = gen.struct_pool.get(&plain_name) {
+                        if let Some((generics, members, _)) = compiler.struct_pool.get(&plain_name)
+                        {
                             struct_hover!(
                                 this.namespace_token,
                                 members.is_empty(),
@@ -384,7 +386,7 @@ impl Compiler {
 
                         let function = generate_function(
                             this,
-                            &mut gen,
+                            &mut compiler,
                             false,
                             false,
                             hashmap![],
@@ -393,7 +395,9 @@ impl Compiler {
 
                         if namespace_token.tagged {
                             let plain_name = namespace_token.value.get_string_inner().unwrap();
-                            if let Some((generics, members, _)) = gen.struct_pool.get(&plain_name) {
+                            if let Some((generics, members, _)) =
+                                compiler.struct_pool.get(&plain_name)
+                            {
                                 struct_hover!(
                                     namespace_token,
                                     members.is_empty(),
@@ -426,11 +430,11 @@ impl Compiler {
 
                         module_ref.borrow_mut().add_function(function);
 
-                        for func in gen.deferred_functions.clone() {
+                        for func in compiler.deferred_functions.clone() {
                             module_ref.borrow_mut().add_function(func);
                         }
 
-                        gen.deferred_functions.clear();
+                        compiler.deferred_functions.clear();
                     } else {
                         if this.name_token.tagged {
                             elle_error!(format!(
@@ -454,11 +458,11 @@ impl Compiler {
                             ));
                         }
 
-                        gen.generic_functions.insert(this.name, primitive);
+                        compiler.generic_functions.insert(this.name, primitive);
                     }
                 }
                 Primitive::Struct(this) => {
-                    let td = generate_struct(this.clone(), &mut gen);
+                    let td = generate_struct(this.clone(), &mut compiler);
                     struct_hover!(
                         this.name_token,
                         this.ignore_empty,
@@ -475,13 +479,13 @@ impl Compiler {
                     }
                 }
                 Primitive::Global(this) => {
-                    generate_global(this, &mut gen, &module_ref);
+                    generate_global(this, &mut compiler, &module_ref);
                 }
                 _ => {}
             }
         }
 
-        for data in gen.data_sections {
+        for data in compiler.data_sections {
             module_ref.borrow_mut().add_data(data);
         }
 

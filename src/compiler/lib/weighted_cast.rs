@@ -11,7 +11,7 @@ use crate::{
 use super::convert::convert_to_type;
 
 pub fn handle_weighted_cast(
-    gen: &mut Compiler,
+    compiler: &mut Compiler,
     func: &RefCell<Function>,
     left_ty: &mut Type,
     left_val: &mut Value,
@@ -22,7 +22,7 @@ pub fn handle_weighted_cast(
     match left_ty.weight().cmp(&right_ty.weight()) {
         Ordering::Greater => {
             let (ty, val) = convert_to_type(
-                gen,
+                compiler,
                 func,
                 right_ty.clone(),
                 left_ty.clone(),
@@ -37,7 +37,7 @@ pub fn handle_weighted_cast(
         }
         Ordering::Less => {
             let (ty, val) = convert_to_type(
-                gen,
+                compiler,
                 func,
                 left_ty.clone(),
                 right_ty.clone(),

@@ -8,10 +8,10 @@ use crate::{
 };
 
 impl Codegen<'_> for VariadicArgument {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let plain_name = self.name.value.get_string_inner().unwrap();
 
-        let ptr = gen
+        let (_, ptr) = compiler
             .get_variable_lazy(
                 &plain_name,
                 Some(ctx.func),
@@ -22,13 +22,12 @@ impl Codegen<'_> for VariadicArgument {
                 elle_error!(self.location.borrow().error(format!(
                     "Unexpected error when trying to get a variable named '{plain_name}'"
                 )))
-            })
-            .1;
+            });
 
         let ty = self
             .r#type
             .unwrap_or_else(|| Type::Pointer(Box::new(Type::Void)));
-        let tmp = gen.new_temporary(Some("next"), true);
+        let tmp = compiler.new_temporary(Some("next"), true);
 
         ctx.func
             .borrow_mut()

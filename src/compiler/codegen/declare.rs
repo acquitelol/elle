@@ -11,10 +11,10 @@ use crate::{
 };
 
 impl Codegen<'_> for Declare {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let plain_name = self.name.value.get_string_inner().unwrap();
 
-        let existing = match gen.get_variable(
+        let existing = match compiler.get_variable(
             plain_name.as_str(),
             Some(ctx.func),
             Some(ctx.module),
@@ -25,7 +25,7 @@ impl Codegen<'_> for Declare {
         };
 
         let undeclared = self.r#type.is_none()
-            && gen
+            && compiler
                 .get_variable(
                     plain_name.as_str(),
                     Some(ctx.func),
@@ -46,7 +46,7 @@ impl Codegen<'_> for Declare {
             )));
         }
 
-        let res = gen.get_variable(
+        let res = compiler.get_variable(
             &format!("{plain_name}.addr"),
             Some(ctx.func),
             Some(ctx.module),
@@ -59,7 +59,7 @@ impl Codegen<'_> for Declare {
         {
             None
         } else {
-            Some(gen.new_variable(&local_ty, &plain_name, Some(ctx.func), true, false))
+            Some(compiler.new_variable(&local_ty, &plain_name, Some(ctx.func), true, false))
         };
 
         let node = *self.value.unwrap_or_else(|| {
@@ -104,7 +104,7 @@ impl Codegen<'_> for Declare {
         });
 
         let parsed = node.compile(
-            gen,
+            compiler,
             &CodegenContext {
                 ty: if local_ty == Type::Infer
                     || (undeclared && ctx.module.borrow().data.contains_key(&plain_name))
@@ -122,9 +122,18 @@ impl Codegen<'_> for Declare {
             if local_ty == Type::Infer {
                 local_ty = ret_ty.clone();
 
-                temp = Some(gen.new_variable(&local_ty, &plain_name, Some(ctx.func), true, false));
+                temp = Some(compiler.new_variable(
+                    &local_ty,
+                    &plain_name,
+                    Some(ctx.func),
+                    true,
+                    false,
+                ));
 
-                let scope = gen.scopes.last_mut().expect("Expected last scope to exist");
+                let scope = compiler
+                    .scopes
+                    .last_mut()
+                    .expect("Expected last scope to exist");
                 scope.insert(
                     plain_name.clone(),
                     (local_ty.clone(), temp.clone().unwrap()),
@@ -141,13 +150,19 @@ impl Codegen<'_> for Declare {
                     .is_some_and(|ptr| ptr.get_unknown_inner().is_some_and(|inner| inner == "fn"))
             {
                 local_ty = ret_ty.clone();
-                temp = Some(gen.new_variable(&local_ty, &plain_name, Some(ctx.func), false, false));
+                temp = Some(compiler.new_variable(
+                    &local_ty,
+                    &plain_name,
+                    Some(ctx.func),
+                    false,
+                    false,
+                ));
             }
 
             // assuming its assigning to a global at this stage
             if undeclared && let Some(global) = ctx.module.borrow().data.get(&plain_name) {
                 let (data_ty, data_val) = convert_to_type(
-                    gen,
+                    compiler,
                     ctx.func,
                     ret_ty.clone(),
                     global.ty.clone().unwrap(),
@@ -173,7 +188,7 @@ impl Codegen<'_> for Declare {
                     ));
                 }
 
-                let tmp = gen.new_temporary(None, false);
+                let tmp = compiler.new_temporary(None, false);
 
                 ctx.func.borrow_mut().assign_instruction(
                     &tmp,
@@ -181,7 +196,7 @@ impl Codegen<'_> for Declare {
                     Instruction::Load(data_ty.clone(), addr_val.clone()),
                 );
 
-                gen.address_pool.insert(tmp.clone(), addr_val);
+                compiler.address_pool.insert(tmp.clone(), addr_val);
                 return Some((data_ty, tmp));
             }
 
@@ -189,7 +204,7 @@ impl Codegen<'_> for Declare {
                 (local_ty.clone(), value)
             } else {
                 convert_to_type(
-                    gen,
+                    compiler,
                     ctx.func,
                     ret_ty,
                     local_ty.clone(),
@@ -222,14 +237,14 @@ impl Codegen<'_> for Declare {
                     final_val.clone(),
                 ));
 
-                if addr_ty.is_pointer() && !gen.no_gc {
+                if addr_ty.is_pointer() && !compiler.no_gc {
                     ctx.func.borrow_mut().add_instruction(Instruction::Call(
                         Value::Global(GC_NOOP.into()),
                         vec![(addr_ty.clone(), addr_val.clone())],
                     ));
                 }
 
-                gen.address_pool.insert(temp.unwrap(), addr_val);
+                compiler.address_pool.insert(temp.unwrap(), addr_val);
                 let res = (addr_ty, final_val);
 
                 if self.name.tagged {
@@ -244,7 +259,7 @@ impl Codegen<'_> for Declare {
                 return Some(res);
             }
 
-            let addr_val = gen.new_variable(
+            let addr_val = compiler.new_variable(
                 &local_ty,
                 &format!("{plain_name}.addr"),
                 Some(ctx.func),
@@ -271,14 +286,14 @@ impl Codegen<'_> for Declare {
                 final_val.clone(),
             ));
 
-            if final_ty.is_pointer() && !gen.no_gc {
+            if final_ty.is_pointer() && !compiler.no_gc {
                 ctx.func.borrow_mut().add_instruction(Instruction::Call(
                     Value::Global(GC_NOOP.into()),
                     vec![(final_ty.clone(), addr_val.clone())],
                 ));
             }
 
-            gen.address_pool.insert(temp.unwrap(), addr_val);
+            compiler.address_pool.insert(temp.unwrap(), addr_val);
             let res = (final_ty, final_val);
 
             if self.name.tagged {

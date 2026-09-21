@@ -12,12 +12,16 @@ use crate::{
 };
 
 impl Codegen<'_> for Lambda {
-    fn compile(mut self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        gen.tmp_counter += 1;
-        let lambda_name = format!("lambda.{}", gen.tmp_counter);
+    fn compile(
+        mut self,
+        compiler: &mut Compiler,
+        ctx: &CodegenContext<'_>,
+    ) -> Option<(Type, Value)> {
+        compiler.tmp_counter += 1;
+        let lambda_name = format!("lambda.{}", compiler.tmp_counter);
 
-        let scopes = gen.scopes.clone();
-        gen.scopes = vec![hashmap![]];
+        let scopes = compiler.scopes.clone();
+        compiler.scopes = vec![hashmap![]];
         let mut is_shorthand = false;
 
         if self.arguments.is_none() {
@@ -147,7 +151,7 @@ impl Codegen<'_> for Lambda {
                 location: self.location.clone(),
                 return_location: self.location,
             },
-            gen,
+            compiler,
             true,
             false,
             hashmap![],
@@ -161,8 +165,8 @@ impl Codegen<'_> for Lambda {
             lambda_func.return_type = inner.return_type;
         }
 
-        gen.deferred_functions.push(lambda_func.clone());
-        gen.scopes = scopes;
+        compiler.deferred_functions.push(lambda_func.clone());
+        compiler.scopes = scopes;
 
         Some((
             Type::Function(Box::new(Some(lambda_func))),

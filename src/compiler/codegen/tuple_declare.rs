@@ -10,8 +10,8 @@ use crate::{
 };
 
 impl Codegen<'_> for TupleDeclare {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        let tuple_name = gen.new_temporary(None, false).get_string_inner();
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+        let tuple_name = compiler.new_temporary(None, false).get_string_inner();
         let dunder_name = if self.third.is_some() {
             TRIPLE_CONSTANT
         } else {
@@ -35,7 +35,7 @@ impl Codegen<'_> for TupleDeclare {
             value_location: self.value_location.clone(),
         });
 
-        node.compile(gen, ctx).unwrap_or_else(|| {
+        node.compile(compiler, ctx).unwrap_or_else(|| {
             elle_error!(self
                 .value_location
                 .borrow()
@@ -68,7 +68,7 @@ impl Codegen<'_> for TupleDeclare {
                     value_location: self.value_location.clone(),
                 })
             }
-            .compile(gen, ctx)
+            .compile(compiler, ctx)
             .unwrap_or_else(|| {
                 elle_error!(self
                     .value_location

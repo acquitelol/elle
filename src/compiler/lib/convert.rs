@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub fn convert_to_type(
-    gen: &mut Compiler,
+    compiler: &mut Compiler,
     func: &RefCell<Function>,
     first: Type,
     second: Type,
@@ -37,7 +37,7 @@ pub fn convert_to_type(
                 return (second, val);
             }
 
-            let tmp = gen.new_temporary(Some("load"), false);
+            let tmp = compiler.new_temporary(Some("load"), false);
 
             func.borrow_mut().assign_instruction(
                 &tmp,
@@ -114,7 +114,7 @@ pub fn convert_to_type(
             }
 
             return convert_to_type(
-                gen,
+                compiler,
                 func,
                 first.get_enum_repr().unwrap_or(first.clone()),
                 second.get_enum_repr().unwrap_or(second.clone()),
@@ -184,7 +184,7 @@ pub fn convert_to_type(
             .unwrap()
             .function_eq(&second.get_pointer_inner().unwrap(), Some(left_location)))
         && !explicit
-        && gen.pedantic
+        && compiler.pedantic
     {
         implicit_conversion_error!()
     }
@@ -192,7 +192,7 @@ pub fn convert_to_type(
     if first.weight() == second.weight() {
         (second, val)
     } else if (first.is_int() && second.is_int()) || (first.is_float() && second.is_float()) {
-        let conv = gen.new_temporary(Some("conv"), true);
+        let conv = compiler.new_temporary(Some("conv"), true);
         let is_first_higher = first.weight() > second.weight();
 
         func.borrow_mut().assign_instruction(
@@ -213,7 +213,7 @@ pub fn convert_to_type(
 
         (second, conv)
     } else {
-        let conv = gen.new_temporary(Some("conv"), true);
+        let conv = compiler.new_temporary(Some("conv"), true);
 
         func.borrow_mut().assign_instruction(
             &conv,

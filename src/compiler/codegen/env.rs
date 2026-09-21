@@ -12,10 +12,10 @@ use crate::{
 };
 
 impl Codegen<'_> for Environment {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         if let Some(value) = self.value {
-            if !gen.data_sections.contains_key(ENV_ID) {
-                gen.data_sections.insert(
+            if !compiler.data_sections.contains_key(ENV_ID) {
+                compiler.data_sections.insert(
                     ENV_ID.into(),
                     Data {
                         ty: None,
@@ -28,7 +28,7 @@ impl Codegen<'_> for Environment {
                 );
             }
 
-            let (ty, val) = value.compile(gen, ctx).unwrap_or_else(|| {
+            let (ty, val) = value.compile(compiler, ctx).unwrap_or_else(|| {
                 elle_error!(&self
                     .location
                     .borrow()
@@ -44,7 +44,7 @@ impl Codegen<'_> for Environment {
             Some((ty, val))
         } else {
             let ty = Type::Pointer(Box::new(Type::Struct(ENV_STRUCT_NAME.into())));
-            let val = gen.new_temporary(None, false);
+            let val = compiler.new_temporary(None, false);
 
             ctx.func.borrow_mut().assign_instruction(
                 &val,

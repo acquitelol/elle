@@ -57,7 +57,7 @@ macro_rules! insert_known_generics {
 }
 
 pub fn create_monomorphized_function(
-    gen: &mut Compiler,
+    compiler: &mut Compiler,
     name: &mut String,
     add_meta: &mut bool,
     base_known_generics: &[Type],
@@ -80,7 +80,12 @@ pub fn create_monomorphized_function(
 ) {
     // the aliasing could be multiple levels deep
     loop {
-        match gen.generic_functions.get(&name.clone()).unwrap().clone() {
+        match compiler
+            .generic_functions
+            .get(&name.clone())
+            .unwrap()
+            .clone()
+        {
             Primitive::Function(FunctionSource { unaliased, .. }) => {
                 if unaliased.is_none() {
                     break;
@@ -92,7 +97,12 @@ pub fn create_monomorphized_function(
         }
     }
 
-    match &gen.generic_functions.get(&name.clone()).unwrap().clone() {
+    match &compiler
+        .generic_functions
+        .get(&name.clone())
+        .unwrap()
+        .clone()
+    {
         Primitive::Function(this) => {
             // Reassign it if the function is generic
             // as the function won't have been found last time
@@ -130,7 +140,7 @@ pub fn create_monomorphized_function(
                     insert_known_generics!(
                         tmp_known_generics,
                         inner,
-                        gen,
+                        compiler,
                         name,
                         this,
                         call_location,
@@ -140,9 +150,9 @@ pub fn create_monomorphized_function(
             }
 
             let mut deferred_generics = vec![];
-            let struct_pool = RefCell::new(gen.struct_pool.clone());
+            let struct_pool = RefCell::new(compiler.struct_pool.clone());
             let tree = RefCell::new(vec![]);
-            struct_pool.borrow().clone_into(&mut gen.struct_pool);
+            struct_pool.borrow().clone_into(&mut compiler.struct_pool);
 
             for (i, parameter) in parameters.iter().cloned().enumerate() {
                 let param_ty = {
@@ -158,12 +168,12 @@ pub fn create_monomorphized_function(
                 };
 
                 // Use an empty func as to not cause duplicate codegen and/or side effects
-                let deferred_functions = gen.deferred_functions.clone();
+                let deferred_functions = compiler.deferred_functions.clone();
                 let mut tmp_func = func.borrow().clone();
                 tmp_func.add_block("start");
 
                 let (ty, _) = parameter.1.clone().compile(
-                        gen,
+                        compiler,
                         &CodegenContext {
                             func: &RefCell::new(tmp_func.clone()),
                             module,
@@ -202,7 +212,7 @@ pub fn create_monomorphized_function(
                 // as this is monomorphized with T = i32, and we know that `i32::__fmt__` exists so
                 // we can confidently generate that U = string, monomorphizing everything as a result.
                 if ty.is_function() {
-                    gen.deferred_functions = deferred_functions;
+                    compiler.deferred_functions = deferred_functions;
                     deferred_generics.push((i, param_ty.clone(), parameter.1));
                 }
 
@@ -218,7 +228,7 @@ pub fn create_monomorphized_function(
                     insert_known_generics!(
                         known_generics,
                         inner,
-                        gen,
+                        compiler,
                         name,
                         this,
                         call_location,
@@ -231,7 +241,7 @@ pub fn create_monomorphized_function(
                 insert_known_generics!(
                     known_generics,
                     tmp_known_generics,
-                    gen,
+                    compiler,
                     name,
                     this,
                     call_location,
@@ -248,7 +258,7 @@ pub fn create_monomorphized_function(
                     insert_known_generics!(
                         known_generics,
                         inner,
-                        gen,
+                        compiler,
                         name,
                         this,
                         call_location,
@@ -258,9 +268,9 @@ pub fn create_monomorphized_function(
             }
 
             for (i, mut param_ty, parameter) in deferred_generics {
-                let struct_pool = RefCell::new(gen.struct_pool.clone());
+                let struct_pool = RefCell::new(compiler.struct_pool.clone());
                 let tree = RefCell::new(vec![]);
-                struct_pool.borrow().clone_into(&mut gen.struct_pool);
+                struct_pool.borrow().clone_into(&mut compiler.struct_pool);
 
                 let mut tmp_func = func.borrow().clone();
                 tmp_func.add_block("start");
@@ -277,7 +287,7 @@ pub fn create_monomorphized_function(
                 for primitive in tree.borrow().to_owned() {
                     match primitive {
                         Primitive::Struct(this) => {
-                            let td = generate_struct(this, gen);
+                            let td = generate_struct(this, compiler);
                             module.borrow_mut().add_type(td);
                         }
                         _ => {}
@@ -286,7 +296,7 @@ pub fn create_monomorphized_function(
 
                 let ty = parameter
                     .compile(
-                        gen,
+                        compiler,
                         &CodegenContext {
                             func: &RefCell::new(tmp_func),
                             module,
@@ -368,10 +378,10 @@ pub fn create_monomorphized_function(
 
             if existing.is_none() {
                 // Temporarily empty the scopes
-                let scopes = gen.scopes.clone();
-                gen.scopes = vec![hashmap![]];
+                let scopes = compiler.scopes.clone();
+                compiler.scopes = vec![hashmap![]];
 
-                let struct_pool = RefCell::new(gen.struct_pool.clone());
+                let struct_pool = RefCell::new(compiler.struct_pool.clone());
                 let tree = RefCell::new(vec![]);
 
                 let parsed_arguments = &this
@@ -451,12 +461,12 @@ pub fn create_monomorphized_function(
                     Some(&tree),
                 );
 
-                struct_pool.borrow().clone_into(&mut gen.struct_pool);
+                struct_pool.borrow().clone_into(&mut compiler.struct_pool);
 
                 for primitive in tree.borrow().to_owned() {
                     match primitive {
                         Primitive::Struct(this) => {
-                            let td = generate_struct(this, gen);
+                            let td = generate_struct(this, compiler);
                             module.borrow_mut().add_type(td);
                         }
                         _ => {}
@@ -472,7 +482,7 @@ pub fn create_monomorphized_function(
                         body: parsed_body,
                         ..this.clone()
                     },
-                    gen,
+                    compiler,
                     false,
                     false,
                     known_generics.clone(),
@@ -483,7 +493,7 @@ pub fn create_monomorphized_function(
                 *tmp_function = function;
 
                 // Bring them back
-                gen.scopes = scopes;
+                compiler.scopes = scopes;
             } else {
                 *tmp_function = existing.unwrap();
             }

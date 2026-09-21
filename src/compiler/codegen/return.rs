@@ -8,9 +8,9 @@ use crate::{
 };
 
 impl Codegen<'_> for Return {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let mut res = self.value.compile(
-            gen,
+            compiler,
             &CodegenContext {
                 is_return: true,
                 ..ctx.clone()
@@ -22,7 +22,7 @@ impl Codegen<'_> for Return {
             && let Some(ret_ty) = ret_ty
         {
             res.replace(convert_to_type(
-                gen,
+                compiler,
                 ctx.func,
                 ty.clone(),
                 ret_ty.clone(),

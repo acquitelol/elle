@@ -12,7 +12,7 @@ use crate::{
 };
 
 impl Codegen<'_> for SetAllocator {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let mut tmp_func = Function::default();
         tmp_func.add_block("start");
 
@@ -20,7 +20,7 @@ impl Codegen<'_> for SetAllocator {
             .value
             .clone()
             .compile(
-                gen,
+                compiler,
                 &CodegenContext {
                     func: &RefCell::new(tmp_func),
                     ..ctx.clone()
@@ -56,7 +56,7 @@ impl Codegen<'_> for SetAllocator {
                     value: ValueKind::String(if ctx.module.borrow().functions.get(&method_name).is_some() {
                         method_name
                     } else {
-                        if gen.warnings.has_warning(Warning::AllocatorMethodsMissing) {
+                        if compiler.warnings.has_warning(Warning::AllocatorMethodsMissing) {
                             eprintln!(
                                 "{}",
                                 self.location.borrow().basic_warning(format!(
@@ -123,7 +123,7 @@ impl Codegen<'_> for SetAllocator {
                 location: self.location.clone(),
             });
 
-            node.compile(gen, ctx).unwrap_or_else(|| {
+            node.compile(compiler, ctx).unwrap_or_else(|| {
                 elle_error!(self
                     .location
                     .borrow()

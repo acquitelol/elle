@@ -11,7 +11,7 @@ use crate::{
     parser::enums::GlobalSource,
 };
 
-pub fn generate_global(this: GlobalSource, gen: &mut Compiler, module: &RefCell<Module>) {
+pub fn generate_global(this: GlobalSource, compiler: &mut Compiler, module: &RefCell<Module>) {
     let func = RefCell::new(Function::default());
     func.borrow_mut().add_block("start");
 
@@ -23,7 +23,7 @@ pub fn generate_global(this: GlobalSource, gen: &mut Compiler, module: &RefCell<
         this.value
             .unwrap()
             .compile(
-                gen,
+                compiler,
                 &CodegenContext {
                     func: &func,
                     module,
@@ -51,6 +51,8 @@ pub fn generate_global(this: GlobalSource, gen: &mut Compiler, module: &RefCell<
         items: vec![(Type::Zeroed, DataItem::Const(ty.size(module) as i128))],
     };
 
-    gen.data_sections.insert(this.name.clone(), data.clone());
+    compiler
+        .data_sections
+        .insert(this.name.clone(), data.clone());
     module.borrow_mut().add_data((this.name, data));
 }

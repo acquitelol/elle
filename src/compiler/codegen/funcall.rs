@@ -20,7 +20,7 @@ use crate::{
 };
 
 impl Codegen<'_> for FunctionCall {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let Self {
             namespace_token,
             name_token,
@@ -47,7 +47,7 @@ impl Codegen<'_> for FunctionCall {
                     .error("Tried to get the 0th parameter to parse struct call but failed"))
             });
 
-            let (mut ty, val) = parameter.1.clone().compile(gen, &ctx.to_nnf())
+            let (mut ty, val) = parameter.1.clone().compile(compiler, &ctx.to_nnf())
                 .unwrap_or_else(|| {
                     elle_error!(parameter
                         .0
@@ -133,7 +133,7 @@ impl Codegen<'_> for FunctionCall {
             func
         } else {
             // Function could be a callback pointer
-            let callback = gen
+            let callback = compiler
                 .get_variable(
                     &name,
                     Some(ctx.func),
@@ -177,7 +177,7 @@ impl Codegen<'_> for FunctionCall {
                 Ok((ty, _)) => {
                     if (ty.is_pointer() && ty.is_function())
                         || ignore_no_def
-                        || gen.generic_functions.contains_key(&name)
+                        || compiler.generic_functions.contains_key(&name)
                     {
                         is_callback = true;
                         fallback
@@ -219,9 +219,9 @@ impl Codegen<'_> for FunctionCall {
             }
         }
 
-        if gen.generic_functions.contains_key(&name) {
+        if compiler.generic_functions.contains_key(&name) {
             create_monomorphized_function(
-                gen,
+                compiler,
                 &mut name,
                 &mut add_meta,
                 &base_known_generics,
@@ -238,7 +238,7 @@ impl Codegen<'_> for FunctionCall {
 
         if namespace_token.tagged {
             let plain_name = namespace_token.value.get_string_inner().unwrap();
-            let (generics, members, _) = gen.struct_pool.get(&plain_name).unwrap();
+            let (generics, members, _) = compiler.struct_pool.get(&plain_name).unwrap();
             struct_hover!(namespace_token, members.is_empty(), generics, members);
         }
 
@@ -299,7 +299,7 @@ impl Codegen<'_> for FunctionCall {
             let (ty, val) = if i == 0 && first_param.is_some() && !got_address {
                 first_param.clone().unwrap()
             } else {
-                parameter.1.compile(gen, &CodegenContext {
+                parameter.1.compile(compiler, &CodegenContext {
                     ty: param_ty.clone(),
                     is_generic: false,
                     ..ctx.to_nnf()
@@ -321,7 +321,7 @@ impl Codegen<'_> for FunctionCall {
                 {
                     (
                         convert_to_type(
-                            gen,
+                            compiler,
                             ctx.func,
                             ty,
                             param_ty,
@@ -361,7 +361,7 @@ impl Codegen<'_> for FunctionCall {
                     let struct_name = ty.get_struct_inner().unwrap();
                     func_name = format!("{struct_name}.{FORMAT_CONSTANT}");
 
-                    fmt_tmp = gen.new_temporary(Some(&format!("{struct_name}.fmt")), false);
+                    fmt_tmp = compiler.new_temporary(Some(&format!("{struct_name}.fmt")), false);
                     fmt_ty = Type::Pointer(Box::new(Type::Char));
                     tmp_function = ctx
                         .module
@@ -381,9 +381,9 @@ impl Codegen<'_> for FunctionCall {
                         let (real_struct_name, _) = Type::from_internal_id(&struct_name);
                         func_name = format!("{real_struct_name}.{FORMAT_CONSTANT}");
 
-                        if gen.generic_functions.contains_key(&func_name) {
+                        if compiler.generic_functions.contains_key(&func_name) {
                             create_monomorphized_function(
-                                gen,
+                                compiler,
                                 &mut func_name,
                                 &mut false,
                                 &[],
@@ -412,7 +412,8 @@ impl Codegen<'_> for FunctionCall {
                 } else {
                     func_name = format!("{}.{FORMAT_CONSTANT}", ty.strict_id());
 
-                    fmt_tmp = gen.new_temporary(Some(&format!("{}.fmt", ty.strict_id())), false);
+                    fmt_tmp =
+                        compiler.new_temporary(Some(&format!("{}.fmt", ty.strict_id())), false);
                     fmt_ty = Type::Pointer(Box::new(Type::Char));
                     tmp_function = ctx
                         .module
@@ -428,9 +429,9 @@ impl Codegen<'_> for FunctionCall {
                         })
                         .unwrap_or_default();
 
-                    if gen.generic_functions.contains_key(&func_name) {
+                    if compiler.generic_functions.contains_key(&func_name) {
                         create_monomorphized_function(
-                            gen,
+                            compiler,
                             &mut func_name,
                             &mut false,
                             &[],
@@ -510,7 +511,7 @@ impl Codegen<'_> for FunctionCall {
         if add_meta {
             let res = meta_struct
                 .compile(
-                    gen,
+                    compiler,
                     &CodegenContext {
                         ty: Some(ty.clone()),
                         value: None,
@@ -643,10 +644,10 @@ impl Codegen<'_> for FunctionCall {
             }
         }
 
-        let tmp = gen.new_temporary(None, true);
+        let tmp = compiler.new_temporary(None, true);
         let val = if is_callback {
-            let tmp = gen.new_temporary(None, true);
-            let res = gen.get_variable(
+            let tmp = compiler.new_temporary(None, true);
+            let res = compiler.get_variable(
                 &format!("{name}.addr"),
                 Some(ctx.func),
                 Some(ctx.module),
@@ -662,24 +663,26 @@ impl Codegen<'_> for FunctionCall {
 
                 tmp
             } else {
-                gen.get_variable(
+                compiler
+                    .get_variable(
+                        &name,
+                        Some(ctx.func),
+                        Some(ctx.module),
+                        &VariableInfo::default(),
+                    )
+                    .unwrap_or((Type::Long, Value::Global(name)))
+                    .1
+            }
+        } else {
+            compiler
+                .get_variable(
                     &name,
                     Some(ctx.func),
                     Some(ctx.module),
-                    &VariableInfo::default(),
+                    &VariableInfo { is_declare: false },
                 )
                 .unwrap_or((Type::Long, Value::Global(name)))
                 .1
-            }
-        } else {
-            gen.get_variable(
-                &name,
-                Some(ctx.func),
-                Some(ctx.module),
-                &VariableInfo { is_declare: false },
-            )
-            .unwrap_or((Type::Long, Value::Global(name)))
-            .1
         };
 
         ctx.func.borrow_mut().assign_instruction(
@@ -689,7 +692,7 @@ impl Codegen<'_> for FunctionCall {
         );
 
         if ty.is_static_array() {
-            let res = gen.new_temporary(None, true);
+            let res = compiler.new_temporary(None, true);
 
             ctx.func.borrow_mut().assign_instruction_front(
                 &res,

@@ -361,7 +361,7 @@ fn modify_type_in_node(
         AstNode::Lambda(Lambda {
             arguments, value, ..
         }) => {
-            if let Some(ref mut arguments) = arguments {
+            if let Some(arguments) = arguments {
                 for arg in arguments {
                     match arg {
                         // Err holds our explicitly typed parameter

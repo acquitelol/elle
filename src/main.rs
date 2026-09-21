@@ -12,7 +12,6 @@
     clippy::cast_sign_loss,
     clippy::cast_possible_truncation
 )]
-#![feature(let_chains)]
 #![feature(if_let_guard)]
 use std::collections::{HashMap, HashSet};
 use std::env;

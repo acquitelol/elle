@@ -9,10 +9,10 @@ use crate::{
 };
 
 impl Codegen<'_> for VariadicStart {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let plain_name = self.name.value.get_string_inner().unwrap();
         let ty = Type::Pointer(Box::new(Type::Void));
-        let val = gen.new_variable(&ty, &plain_name, Some(ctx.func), false, false);
+        let val = compiler.new_variable(&ty, &plain_name, Some(ctx.func), false, false);
 
         ctx.func.borrow_mut().assign_instruction(
             &val,

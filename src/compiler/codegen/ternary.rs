@@ -9,18 +9,18 @@ use crate::{
 };
 
 impl Codegen<'_> for Ternary {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        gen.tmp_counter += 1;
-        let true_label = format!("ift.{}", gen.tmp_counter);
-        let false_label = format!("iff.{}", gen.tmp_counter);
-        let conv_label = format!("conv.{}", gen.tmp_counter);
-        let end_label = format!("end.{}", gen.tmp_counter);
-        let matches_true_label = format!("ift.match.{}", gen.tmp_counter);
-        let matches_false_label = format!("iff.match.{}", gen.tmp_counter);
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+        compiler.tmp_counter += 1;
+        let true_label = format!("ift.{}", compiler.tmp_counter);
+        let false_label = format!("iff.{}", compiler.tmp_counter);
+        let conv_label = format!("conv.{}", compiler.tmp_counter);
+        let end_label = format!("end.{}", compiler.tmp_counter);
+        let matches_true_label = format!("ift.match.{}", compiler.tmp_counter);
+        let matches_false_label = format!("iff.match.{}", compiler.tmp_counter);
 
         let (_, cond_val) =
             self.condition
-                .compile(gen, &ctx.to_nnf())
+                .compile(compiler, &ctx.to_nnf())
                 .unwrap_or_else(|| {
                     elle_error!(self.location.borrow().error(
                         "Unexpected error when trying to compile the `condition` of a ternary"
@@ -38,7 +38,7 @@ impl Codegen<'_> for Ternary {
         ctx.func.borrow_mut().add_block(true_label.clone());
 
         let (mut if_true_ty, mut if_true_val) =
-            self.if_true.compile(gen, ctx).unwrap_or_else(|| {
+            self.if_true.compile(compiler, ctx).unwrap_or_else(|| {
                 elle_error!(self
                     .location
                     .borrow()
@@ -54,7 +54,7 @@ impl Codegen<'_> for Ternary {
         ctx.func.borrow_mut().add_block(false_label.clone());
 
         let (mut if_false_ty, mut if_false_val) =
-            self.if_false.compile(gen, ctx).unwrap_or_else(|| {
+            self.if_false.compile(compiler, ctx).unwrap_or_else(|| {
                 elle_error!(self
                     .location
                     .borrow()
@@ -71,7 +71,7 @@ impl Codegen<'_> for Ternary {
 
         ctx.func.borrow_mut().add_block(conv_label);
 
-        let phi_tmp = gen.new_temporary(None, false);
+        let phi_tmp = compiler.new_temporary(None, false);
 
         ctx.func.borrow_mut().assign_instruction(
             &phi_tmp,
@@ -83,7 +83,7 @@ impl Codegen<'_> for Ternary {
         );
 
         handle_weighted_cast(
-            gen,
+            compiler,
             ctx.func,
             &mut if_true_ty,
             &mut if_true_val,
@@ -102,7 +102,7 @@ impl Codegen<'_> for Ternary {
 
         ctx.func.borrow_mut().add_block(matches_true_label.clone());
 
-        let if_true_tmp = gen.new_temporary(None, false);
+        let if_true_tmp = compiler.new_temporary(None, false);
 
         ctx.func.borrow_mut().assign_instruction(
             &if_true_tmp,
@@ -116,7 +116,7 @@ impl Codegen<'_> for Ternary {
 
         ctx.func.borrow_mut().add_block(matches_false_label.clone());
 
-        let if_false_tmp = gen.new_temporary(None, false);
+        let if_false_tmp = compiler.new_temporary(None, false);
 
         ctx.func.borrow_mut().assign_instruction(
             &if_false_tmp,
@@ -130,7 +130,7 @@ impl Codegen<'_> for Ternary {
 
         ctx.func.borrow_mut().add_block(end_label);
 
-        let res_tmp = gen.new_temporary(None, false);
+        let res_tmp = compiler.new_temporary(None, false);
 
         ctx.func.borrow_mut().assign_instruction(
             &res_tmp,

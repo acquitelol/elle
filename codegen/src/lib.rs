@@ -14,7 +14,7 @@ pub fn codegen(input: TokenStream) -> TokenStream {
     let variants = data_enum.variants.iter().filter_map(|variant| {
         if let Fields::Unnamed(_) = variant.fields {
             let ident = &variant.ident;
-            Some(quote! { Self::#ident(this) => this.compile(gen, ctx) })
+            Some(quote! { Self::#ident(this) => this.compile(compiler, ctx) })
         } else {
             None
         }
@@ -22,7 +22,7 @@ pub fn codegen(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         impl #name {
-            pub fn compile(self, gen: &mut Compiler, ctx: &CodegenContext) -> Option<(Type, Value)> {
+            pub fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext) -> Option<(Type, Value)> {
                 match self {
                     #(#variants,)*
                     _ => panic!("statement: {:?}", self),

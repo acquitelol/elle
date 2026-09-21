@@ -9,7 +9,7 @@ use crate::{
 };
 
 impl Codegen<'_> for Buffer {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let buf_ty = Type::Pointer(Box::new(self.r#type.clone().unwrap()));
 
         let node = if let Some(ref ty) = self.r#type {
@@ -35,11 +35,11 @@ impl Codegen<'_> for Buffer {
             })
         };
 
-        let (ty, val) = node.compile(gen, &ctx.to_nnf()).unwrap();
-        let tmp = gen.new_temporary(None, true);
+        let (ty, val) = node.compile(compiler, &ctx.to_nnf()).unwrap();
+        let tmp = compiler.new_temporary(None, true);
 
         let (_, converted_val) = convert_to_type(
-            gen,
+            compiler,
             ctx.func,
             ty,
             Type::Long,
@@ -55,7 +55,7 @@ impl Codegen<'_> for Buffer {
             Instruction::Alloc8(converted_val.clone()),
         );
 
-        gen.buf_metadata.insert(
+        compiler.buf_metadata.insert(
             tmp.clone(),
             (buf_ty.get_pointer_inner().unwrap(), converted_val),
         );

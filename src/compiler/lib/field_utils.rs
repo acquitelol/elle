@@ -15,12 +15,13 @@ use crate::{
 };
 
 pub fn member_to_offset(
-    gen: &Compiler,
+    compiler: &Compiler,
     module: &RefCell<Module>,
     struct_name: &String,
     member_name: &String,
 ) -> Option<(Option<Type>, u64)> {
-    gen.struct_pool
+    compiler
+        .struct_pool
         .get(struct_name)
         .and_then(|(_, members, ..)| {
             if !members.iter().any(|member| &member.name == member_name) {
@@ -44,7 +45,7 @@ pub fn member_to_offset(
 }
 
 pub fn process_field_access(
-    gen: &mut Compiler,
+    compiler: &mut Compiler,
     func: &RefCell<Function>,
     module: &RefCell<Module>,
     mut ty: Type,
@@ -79,17 +80,17 @@ pub fn process_field_access(
 
                 let struct_name = ty.get_struct_inner().unwrap();
 
-                let (member_ty, offset) = member_to_offset(gen, module, &struct_name, &field)
+                let (member_ty, offset) = member_to_offset(compiler, module, &struct_name, &field)
                     .unwrap_or_else(|| {
                         elle_error!(unknown_field!(
-                            gen.struct_pool.get(&struct_name).unwrap(),
+                            compiler.struct_pool.get(&struct_name).unwrap(),
                             ty,
                             field,
                             location
                         ))
                     });
 
-                let offset_tmp = gen.new_temporary(Some("offset"), true);
+                let offset_tmp = compiler.new_temporary(Some("offset"), true);
 
                 func.borrow_mut().assign_instruction(
                     &offset_tmp,
@@ -98,7 +99,7 @@ pub fn process_field_access(
                 );
 
                 if load && !member_ty.clone().unwrap().is_struct() {
-                    let tmp = gen.new_temporary(Some("load"), true);
+                    let tmp = compiler.new_temporary(Some("load"), true);
 
                     func.borrow_mut().assign_instruction(
                         &tmp,
@@ -148,7 +149,7 @@ pub fn process_field_access(
                 ..
             }) => {
                 let (nested_ty, nested_left_value) = process_field_access(
-                    gen,
+                    compiler,
                     func,
                     module,
                     ty,

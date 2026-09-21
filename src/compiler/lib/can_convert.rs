@@ -1,6 +1,11 @@
 use crate::compiler::{compiler::Compiler, qbe::r#type::Type};
 
-pub fn can_convert_to_type(gen: &Compiler, first: &Type, second: &Type, explicit: bool) -> bool {
+pub fn can_convert_to_type(
+    compiler: &Compiler,
+    first: &Type,
+    second: &Type,
+    explicit: bool,
+) -> bool {
     if first.is_struct() || second.is_struct() {
         let structs_are_the_same = first == second;
         let explicit_struct_to_ptr = explicit
@@ -45,7 +50,7 @@ pub fn can_convert_to_type(gen: &Compiler, first: &Type, second: &Type, explicit
     if ((first.is_pointer() && second.is_pointer())
         && first.get_pointer_inner().unwrap() != second.get_pointer_inner().unwrap())
         && !explicit
-        && gen.pedantic
+        && compiler.pedantic
     {
         return false;
     }

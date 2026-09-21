@@ -12,11 +12,11 @@ use crate::{
 };
 
 impl Codegen<'_> for Literal {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         match self.kind {
             TokenKind::Identifier | TokenKind::ExactLiteral => match self.value {
                 ValueKind::String(name) => {
-                    let mut res = gen.get_variable_lazy(
+                    let mut res = compiler.get_variable_lazy(
                         &name,
                         Some(ctx.func),
                         Some(ctx.module),
@@ -62,7 +62,7 @@ impl Codegen<'_> for Literal {
                             if let Some(ref unaliased) = func.unaliased {
                                 func.name = unaliased.clone();
 
-                                if let Value::Global(ref mut val) = value {
+                                if let Value::Global(val) = value {
                                     *val = unaliased.clone();
                                 }
                             }
@@ -77,29 +77,31 @@ impl Codegen<'_> for Literal {
                 _ => None,
             },
             TokenKind::Break => {
-                if let Some(label) = &gen.loop_labels.last() {
+                if let Some(label) = &compiler.loop_labels.last() {
                     ctx.func
                         .borrow_mut()
                         .add_instruction(Instruction::Jump(format!("{label}.end")));
                 } else {
-                    elle_error!(self
-                        .location
-                        .borrow()
-                        .error("Break can only be used in a loop"));
+                    elle_error!(
+                        self.location
+                            .borrow()
+                            .error("Break can only be used in a loop")
+                    );
                 }
 
                 None
             }
             TokenKind::Continue => {
-                if let Some(label) = &gen.loop_labels.last() {
+                if let Some(label) = &compiler.loop_labels.last() {
                     ctx.func
                         .borrow_mut()
                         .add_instruction(Instruction::Jump(format!("{label}.step")));
                 } else {
-                    elle_error!(self
-                        .location
-                        .borrow()
-                        .error("Continue can only be used in a loop"));
+                    elle_error!(
+                        self.location
+                            .borrow()
+                            .error("Continue can only be used in a loop")
+                    );
                 }
 
                 None
@@ -165,20 +167,23 @@ impl Codegen<'_> for Literal {
                     Some(res)
                 }
                 ValueKind::String(val) => {
-                    gen.tmp_counter += 1;
-                    let name = gen
+                    compiler.tmp_counter += 1;
+                    let name = compiler
                         .tmp_name_with_debug_assertions(&ctx.func.borrow_mut().name.clone(), true);
                     let escaped = val.replace('\n', "\\n");
 
-                    let data = gen.data_sections.entry(name.clone()).or_insert(Data::new(
-                        Linkage::private(),
-                        name.clone(),
-                        None,
-                        vec![
-                            (Type::Byte, DataItem::String(escaped)),
-                            (Type::Byte, DataItem::Const(0)),
-                        ],
-                    ));
+                    let data = compiler
+                        .data_sections
+                        .entry(name.clone())
+                        .or_insert(Data::new(
+                            Linkage::private(),
+                            name.clone(),
+                            None,
+                            vec![
+                                (Type::Byte, DataItem::String(escaped)),
+                                (Type::Byte, DataItem::Const(0)),
+                            ],
+                        ));
 
                     let res = (
                         Type::Pointer(Box::new(Type::Char)),
@@ -211,11 +216,11 @@ impl Codegen<'_> for Literal {
                     Some(res)
                 }
                 ValueKind::Nil => {
-                    gen.tmp_counter += 1;
-                    let name = gen
+                    compiler.tmp_counter += 1;
+                    let name = compiler
                         .tmp_name_with_debug_assertions(&ctx.func.borrow_mut().name.clone(), true);
 
-                    gen.data_sections.insert(
+                    compiler.data_sections.insert(
                         name.clone(),
                         Data::new(
                             Linkage::private(),

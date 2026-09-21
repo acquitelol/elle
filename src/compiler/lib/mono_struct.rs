@@ -11,13 +11,13 @@ use crate::{
 };
 
 pub fn create_monomorphized_struct(
-    gen: &mut Compiler,
+    compiler: &mut Compiler,
     module: &RefCell<Module>,
     generic_name: &str,
 ) {
     let (name, parts) = Type::from_internal_id(generic_name);
 
-    let (generics, members, ..) = gen
+    let (generics, members, ..) = compiler
         .struct_pool
         .get(&name)
         .unwrap_or_else(|| panic!("Base {name} should exist"));
@@ -28,7 +28,7 @@ pub fn create_monomorphized_struct(
         .map(|(i, generic)| (generic.clone(), parts[i].clone()))
         .collect::<HashMap<_, _>>();
 
-    let struct_pool = RefCell::new(gen.struct_pool.clone());
+    let struct_pool = RefCell::new(compiler.struct_pool.clone());
     let tree = RefCell::new(vec![]);
 
     let parsed_members = members
@@ -46,12 +46,12 @@ pub fn create_monomorphized_struct(
         })
         .collect::<Vec<Argument>>();
 
-    struct_pool.borrow().clone_into(&mut gen.struct_pool);
+    struct_pool.borrow().clone_into(&mut compiler.struct_pool);
 
     for primitive in tree.borrow().to_owned() {
         match primitive {
             Primitive::Struct(this) => {
-                let td = generate_struct(this, gen);
+                let td = generate_struct(this, compiler);
                 module.borrow_mut().add_type(td);
             }
             _ => {}
@@ -76,12 +76,14 @@ pub fn create_monomorphized_struct(
 
     module.borrow_mut().add_type(td);
 
-    gen.struct_pool.insert(
+    compiler.struct_pool.insert(
         generic_name.to_string(),
         (
             vec![],
             parsed_members,
-            Rc::new(RefCell::new(Location::default(gen.output_path.clone()))),
+            Rc::new(RefCell::new(Location::default(
+                compiler.output_path.clone(),
+            ))),
         ),
     );
 }

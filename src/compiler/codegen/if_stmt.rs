@@ -24,21 +24,21 @@ macro_rules! ensure_jumps {
 }
 
 impl Codegen<'_> for IfStatement {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
-        gen.scopes.push(hashmap![]);
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+        compiler.scopes.push(hashmap![]);
 
-        gen.tmp_counter += 1;
-        let mut current_false_label = format!("iff.{}", gen.tmp_counter);
-        let end_label = format!("end.{}", gen.tmp_counter);
+        compiler.tmp_counter += 1;
+        let mut current_false_label = format!("iff.{}", compiler.tmp_counter);
+        let end_label = format!("end.{}", compiler.tmp_counter);
 
-        let (_, if_value) = self.condition.compile(gen, ctx).unwrap_or_else(|| {
+        let (_, if_value) = self.condition.compile(compiler, ctx).unwrap_or_else(|| {
             elle_error!(self
                 .location
                 .borrow()
                 .error("Unexpected error when trying to compile the condition of an if statement"))
         });
 
-        let if_true_label = format!("ift.{}", gen.tmp_counter);
+        let if_true_label = format!("ift.{}", compiler.tmp_counter);
 
         ctx.func
             .borrow_mut()
@@ -54,19 +54,19 @@ impl Codegen<'_> for IfStatement {
 
         ctx.func.borrow_mut().add_block(if_true_label);
         for statement in &self.body {
-            statement.clone().compile(gen, ctx);
+            statement.clone().compile(compiler, ctx);
         }
 
         ensure_jumps!(ctx, end_label);
         let elifs_len = self.elifs.len();
 
         for (i, (elif_cond, elif_body)) in self.elifs.into_iter().enumerate() {
-            let elif_true_label = format!("elift.{}.{}", gen.tmp_counter, i);
-            let next_false_label = format!("eliff.{}.{}", gen.tmp_counter, i);
+            let elif_true_label = format!("elift.{}.{}", compiler.tmp_counter, i);
+            let next_false_label = format!("eliff.{}.{}", compiler.tmp_counter, i);
 
             ctx.func.borrow_mut().add_block(current_false_label.clone());
 
-            let (_, cond_val) = elif_cond.compile(gen, ctx).unwrap_or_else(|| {
+            let (_, cond_val) = elif_cond.compile(compiler, ctx).unwrap_or_else(|| {
                 elle_error!(self
                     .location
                     .borrow()
@@ -88,7 +88,7 @@ impl Codegen<'_> for IfStatement {
             ctx.func.borrow_mut().add_block(elif_true_label);
 
             for statement in elif_body {
-                statement.compile(gen, ctx);
+                statement.compile(compiler, ctx);
             }
 
             ensure_jumps!(ctx, end_label);
@@ -99,14 +99,14 @@ impl Codegen<'_> for IfStatement {
             ctx.func.borrow_mut().add_block(current_false_label);
 
             for statement in &self.else_body {
-                statement.clone().compile(gen, ctx);
+                statement.clone().compile(compiler, ctx);
             }
 
             ensure_jumps!(ctx, end_label);
         }
 
         ctx.func.borrow_mut().add_block(end_label);
-        gen.scopes.pop();
+        compiler.scopes.pop();
 
         None
     }

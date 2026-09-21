@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
+    Warning,
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         lib::{
@@ -11,11 +12,11 @@ use crate::{
     },
     elle_error, is_generic,
     parser::enums::StructLiteral,
-    struct_hover, Warning,
+    struct_hover,
 };
 
 impl Codegen<'_> for StructLiteral {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let mut plain_name = self.name.value.get_string_inner().unwrap();
         let inner = ctx.ty.clone().unwrap_or_else(|| {
             ctx.func
@@ -36,9 +37,9 @@ impl Codegen<'_> for StructLiteral {
             }
         }
 
-        if !gen.struct_pool.contains_key(&plain_name) {
+        if !compiler.struct_pool.contains_key(&plain_name) {
             if is_generic!(plain_name) {
-                create_monomorphized_struct(gen, ctx.module, &plain_name);
+                create_monomorphized_struct(compiler, ctx.module, &plain_name);
             } else {
                 elle_error!(
                     self.location.borrow().error(format!(
@@ -57,10 +58,11 @@ impl Codegen<'_> for StructLiteral {
             .into_iter()
             .find(|td| td.name == plain_name)
             .unwrap_or_else(|| {
-                elle_error!(self
-                    .location
-                    .borrow()
-                    .error(format!("Unable to find struct named '{plain_name}'")))
+                elle_error!(
+                    self.location
+                        .borrow()
+                        .error(format!("Unable to find struct named '{plain_name}'"))
+                )
             });
 
         if !td.usable && !ctx.func.borrow_mut().imported {
@@ -70,7 +72,7 @@ impl Codegen<'_> for StructLiteral {
             )))
         }
 
-        let struct_pool = gen.struct_pool.clone();
+        let struct_pool = compiler.struct_pool.clone();
         let struct_def = struct_pool.get(&plain_name).unwrap();
         let members = struct_def.1.clone();
         let member_names = members
@@ -84,7 +86,7 @@ impl Codegen<'_> for StructLiteral {
 
         // we're assuming that if you are spreading something,
         // all fields will automatically be set to some value
-        if gen.warnings.has_warning(Warning::StructFieldsMissing)
+        if compiler.warnings.has_warning(Warning::StructFieldsMissing)
             && self.spreads.is_empty()
             && !self.allow_empty
         {
@@ -108,7 +110,7 @@ impl Codegen<'_> for StructLiteral {
         let ty = Type::Struct(plain_name.clone());
         let size = ty.size(ctx.module);
 
-        let alloc_tmp = gen.new_temporary(Some(&format!("struct.{plain_name}")), true);
+        let alloc_tmp = compiler.new_temporary(Some(&format!("struct.{plain_name}")), true);
 
         #[cfg(debug_assertions)]
         ctx.func
@@ -124,7 +126,7 @@ impl Codegen<'_> for StructLiteral {
         for (location, spread) in self.spreads.iter().cloned() {
             let (spread_ty, value) = spread
                 .compile(
-                    gen,
+                    compiler,
                     &CodegenContext {
                         ty: Some(ty.clone()),
                         ..ctx.to_nnf()
@@ -141,7 +143,7 @@ impl Codegen<'_> for StructLiteral {
                 (spread_ty.clone(), value)
             } else {
                 convert_to_type(
-                    gen,
+                    compiler,
                     ctx.func,
                     spread_ty.clone(),
                     ty.clone(),
@@ -168,10 +170,10 @@ impl Codegen<'_> for StructLiteral {
             }
 
             let (member_ty, offset) =
-                member_to_offset(gen, ctx.module, &plain_name, &member_name).unwrap();
+                member_to_offset(compiler, ctx.module, &plain_name, &member_name).unwrap();
 
             let (mut ty, mut val) =
-                value.compile(gen, &CodegenContext {
+                value.compile(compiler, &CodegenContext {
                     ty: members
                         .iter()
                         .find(|member| member.name == member_name)
@@ -190,7 +192,7 @@ impl Codegen<'_> for StructLiteral {
 
             if let Some(member_ty) = member_ty {
                 let (new_ty, new_val) = convert_to_type(
-                    gen,
+                    compiler,
                     ctx.func,
                     ty.clone(),
                     member_ty.clone(),
@@ -204,7 +206,7 @@ impl Codegen<'_> for StructLiteral {
                 val = new_val;
             }
 
-            let offset_tmp = gen.new_temporary(Some("offset"), true);
+            let offset_tmp = compiler.new_temporary(Some("offset"), true);
 
             ctx.func.borrow_mut().assign_instruction(
                 &offset_tmp,

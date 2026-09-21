@@ -17,7 +17,7 @@ use crate::{
 };
 
 impl Codegen<'_> for MemoryOperation {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let mut tmp_func = ctx.func.borrow().clone();
         tmp_func.add_block("start");
 
@@ -26,16 +26,20 @@ impl Codegen<'_> for MemoryOperation {
             ..ctx.clone()
         };
 
-        let (left_ty, _) = self.left.clone().compile(gen, &tmp_ctx).unwrap_or_else(|| {
-            elle_error!(self.left_location.borrow().error(format!(
-                "Unexpected error when trying to compile the left side of a {} statement",
-                if self.value.is_some() {
-                    "store"
-                } else {
-                    "load"
-                }
-            )))
-        });
+        let (left_ty, _) = self
+            .left
+            .clone()
+            .compile(compiler, &tmp_ctx)
+            .unwrap_or_else(|| {
+                elle_error!(self.left_location.borrow().error(format!(
+                    "Unexpected error when trying to compile the left side of a {} statement",
+                    if self.value.is_some() {
+                        "store"
+                    } else {
+                        "load"
+                    }
+                )))
+            });
 
         macro_rules! exists {
             ($struct_name:expr, $constant:expr) => {
@@ -45,7 +49,7 @@ impl Codegen<'_> for MemoryOperation {
                     .get(&format!("{}.{}", $struct_name, $constant))
                     .is_some()
                     || (is_generic!($struct_name)
-                        && gen
+                        && compiler
                             .generic_functions
                             .get(&format!(
                                 "{}.{}",
@@ -53,7 +57,7 @@ impl Codegen<'_> for MemoryOperation {
                                 $constant
                             ))
                             .is_some())
-                    || gen
+                    || compiler
                         .generic_functions
                         .get(&format!("{}.{}", $struct_name, $constant))
                         .is_some() // The struct isn't generic but the function is
@@ -126,7 +130,7 @@ impl Codegen<'_> for MemoryOperation {
                     location: self.left_location.clone(),
                 });
 
-                let (ty, val) = node.compile(gen, ctx)?;
+                let (ty, val) = node.compile(compiler, ctx)?;
 
                 // we know __load_ref__ MUST exist
                 // at this point if is_field_access
@@ -136,7 +140,7 @@ impl Codegen<'_> for MemoryOperation {
                         .get_pointer_inner()
                         .is_some_and(|inner| inner.is_pointer())
                 {
-                    let tmp = gen.new_temporary(None, false);
+                    let tmp = compiler.new_temporary(None, false);
                     let res_ty = ty.get_pointer_inner().unwrap();
 
                     ctx.func.borrow_mut().assign_instruction(
@@ -155,7 +159,7 @@ impl Codegen<'_> for MemoryOperation {
         let (right_ty, _) = self
             .right
             .clone()
-            .compile(gen, &tmp_ctx)
+            .compile(compiler, &tmp_ctx)
             .unwrap_or_else(|| {
                 elle_error!(self.right_location.borrow().error(format!(
                     "Unexpected error when trying to compile the right side of a {} statement",
@@ -197,7 +201,7 @@ impl Codegen<'_> for MemoryOperation {
                 location: self.left_location,
             });
 
-            return node.compile(gen, ctx);
+            return node.compile(compiler, ctx);
         }
 
         if !(left_ty.is_pointer_like() || right_ty.is_pointer_like()) {
@@ -254,7 +258,7 @@ impl Codegen<'_> for MemoryOperation {
             location: self.right_location.clone(),
         });
 
-        let (_, compiled_location) = node.compile(gen, &ctx.to_nnf()).unwrap_or_else(|| {
+        let (_, compiled_location) = node.compile(compiler, &ctx.to_nnf()).unwrap_or_else(|| {
             elle_error!(self.right_location.borrow().error(format!(
                 "Unexpected error when trying to compile the offset of a {} statement",
                 if self.value.is_some() {
@@ -269,7 +273,7 @@ impl Codegen<'_> for MemoryOperation {
             let (val_ty, compiled) = val
                 .clone()
                 .compile(
-                    gen,
+                    compiler,
                     &CodegenContext {
                         ty: Some(inner.clone()),
                         ..ctx.clone()
@@ -287,7 +291,7 @@ impl Codegen<'_> for MemoryOperation {
                 });
 
             let (final_ty, final_val) = convert_to_type(
-                gen,
+                compiler,
                 ctx.func,
                 val_ty,
                 inner,
@@ -319,7 +323,7 @@ impl Codegen<'_> for MemoryOperation {
         } else if inner.is_struct() || inner.is_static_array() {
             (inner, compiled_location)
         } else {
-            let temp = gen.new_temporary(Some("load"), true);
+            let temp = compiler.new_temporary(Some("load"), true);
 
             ctx.func.borrow_mut().assign_instruction(
                 &temp,

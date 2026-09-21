@@ -9,12 +9,12 @@ use crate::{
 };
 
 impl Codegen<'_> for FieldAccess {
-    fn compile(self, gen: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
+    fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let (ty, left) = self
             .left
             .clone()
             .compile(
-                gen,
+                compiler,
                 &CodegenContext {
                     // only matters to take the address if being assigned to
                     is_field_access: self.value.is_some(),
@@ -28,7 +28,7 @@ impl Codegen<'_> for FieldAccess {
             });
 
         let (field_ty, offset_tmp) = process_field_access(
-            gen,
+            compiler,
             ctx.func,
             ctx.module,
             ty,
@@ -42,7 +42,7 @@ impl Codegen<'_> for FieldAccess {
         if let Some(value) = self.value {
             let (ty, compiled) = value
                 .compile(
-                    gen,
+                    compiler,
                     &CodegenContext {
                         ty: Some(field_ty.clone()),
                         is_return: false,
@@ -56,7 +56,7 @@ impl Codegen<'_> for FieldAccess {
                 });
 
             let (final_ty, final_val) = convert_to_type(
-                gen,
+                compiler,
                 ctx.func,
                 ty,
                 field_ty,
@@ -83,7 +83,7 @@ impl Codegen<'_> for FieldAccess {
             return Some((final_ty, offset_tmp));
         }
 
-        let temp = gen.new_temporary(Some("field"), true);
+        let temp = compiler.new_temporary(Some("field"), true);
 
         // Structs are stored in contiguous memory.
         // Any field that is a struct should not be dereferenced

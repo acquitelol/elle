@@ -16,7 +16,7 @@ use crate::{
 use super::weighted_cast::handle_weighted_cast;
 
 pub fn handle_short_circuiting_operation(
-    gen: &mut Compiler,
+    compiler: &mut Compiler,
     left: AstNode,
     right: AstNode,
     func: &RefCell<Function>,
@@ -26,18 +26,18 @@ pub fn handle_short_circuiting_operation(
     location: &MutRc<Location>,
     kind: TokenKind,
 ) -> (Type, Value) {
-    gen.tmp_counter += 1;
+    compiler.tmp_counter += 1;
 
-    let left_label = format!("{}.left.{}", kind, gen.tmp_counter);
-    let right_label = format!("{}.right.{}", kind, gen.tmp_counter);
-    let conv_label = format!("{}.match.{}", kind, gen.tmp_counter);
-    let left_matches_label = format!("{}.left.match.{}", kind, gen.tmp_counter);
-    let right_matches_label = format!("{}.right.match.{}", kind, gen.tmp_counter);
-    let end_label = format!("{}.end.{}", kind, gen.tmp_counter);
+    let left_label = format!("{}.left.{}", kind, compiler.tmp_counter);
+    let right_label = format!("{}.right.{}", kind, compiler.tmp_counter);
+    let conv_label = format!("{}.match.{}", kind, compiler.tmp_counter);
+    let left_matches_label = format!("{}.left.match.{}", kind, compiler.tmp_counter);
+    let right_matches_label = format!("{}.right.match.{}", kind, compiler.tmp_counter);
+    let end_label = format!("{}.end.{}", kind, compiler.tmp_counter);
 
     let (mut left_ty, left_val) = left
         .compile(
-            gen,
+            compiler,
             &CodegenContext {
                 func,
                 module,
@@ -56,7 +56,7 @@ pub fn handle_short_circuiting_operation(
 
     func.borrow_mut().add_block(left_label.clone());
 
-    let left_tmp = gen.new_temporary(Some(&format!("{kind}.left")), true);
+    let left_tmp = compiler.new_temporary(Some(&format!("{kind}.left")), true);
 
     func.borrow_mut().assign_instruction(
         &left_tmp,
@@ -71,7 +71,7 @@ pub fn handle_short_circuiting_operation(
 
     func.borrow_mut().add_block(format!("{left_label}.jmp"));
 
-    let mut left_tmp_jmp = gen.new_temporary(Some(&kind.to_string()), true);
+    let mut left_tmp_jmp = compiler.new_temporary(Some(&kind.to_string()), true);
 
     func.borrow_mut().assign_instruction(
         &left_tmp_jmp,
@@ -103,7 +103,7 @@ pub fn handle_short_circuiting_operation(
 
     let (mut right_ty, right_val) = right
         .compile(
-            gen,
+            compiler,
             &CodegenContext {
                 func,
                 module,
@@ -120,7 +120,7 @@ pub fn handle_short_circuiting_operation(
             ))
         });
 
-    let right_tmp = gen.new_temporary(Some(&format!("{kind}.right")), true);
+    let right_tmp = compiler.new_temporary(Some(&format!("{kind}.right")), true);
 
     func.borrow_mut().assign_instruction(
         &right_tmp,
@@ -135,7 +135,7 @@ pub fn handle_short_circuiting_operation(
 
     func.borrow_mut().add_block(format!("{right_label}.jmp"));
 
-    let mut right_tmp_jmp = gen.new_temporary(Some(&kind.to_string()), true);
+    let mut right_tmp_jmp = compiler.new_temporary(Some(&kind.to_string()), true);
 
     func.borrow_mut().assign_instruction(
         &right_tmp_jmp,
@@ -152,7 +152,7 @@ pub fn handle_short_circuiting_operation(
 
     func.borrow_mut().add_block(conv_label);
 
-    let phi_tmp = gen.new_temporary(None, false);
+    let phi_tmp = compiler.new_temporary(None, false);
 
     func.borrow_mut().assign_instruction(
         &phi_tmp,
@@ -164,7 +164,7 @@ pub fn handle_short_circuiting_operation(
     );
 
     handle_weighted_cast(
-        gen,
+        compiler,
         func,
         &mut left_ty,
         &mut left_tmp_jmp,
@@ -187,7 +187,7 @@ pub fn handle_short_circuiting_operation(
 
     func.borrow_mut().add_block(left_matches_label.clone());
 
-    let left_tmp_match = gen.new_temporary(Some(&kind.to_string()), true);
+    let left_tmp_match = compiler.new_temporary(Some(&kind.to_string()), true);
 
     func.borrow_mut().assign_instruction(
         &left_tmp_match,
@@ -200,7 +200,7 @@ pub fn handle_short_circuiting_operation(
 
     func.borrow_mut().add_block(right_matches_label.clone());
 
-    let right_tmp_match = gen.new_temporary(Some(&kind.to_string()), true);
+    let right_tmp_match = compiler.new_temporary(Some(&kind.to_string()), true);
 
     func.borrow_mut().assign_instruction(
         &right_tmp_match,
@@ -213,7 +213,7 @@ pub fn handle_short_circuiting_operation(
 
     func.borrow_mut().add_block(end_label);
 
-    let res_tmp = gen.new_temporary(None, false);
+    let res_tmp = compiler.new_temporary(None, false);
     let prefix = match left_ty {
         Type::Double => "d_",
         Type::Single => "s_",

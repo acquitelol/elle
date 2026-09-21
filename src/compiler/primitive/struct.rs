@@ -1,11 +1,11 @@
 use crate::{
+    GREEN, RESET,
     compiler::{compiler::Compiler, qbe::typedef::TypeDef},
     elle_error, get_GREEN, get_RESET,
     parser::enums::StructSource,
-    GREEN, RESET,
 };
 
-pub fn generate_struct(this: StructSource, gen: &mut Compiler) -> TypeDef {
+pub fn generate_struct(this: StructSource, compiler: &mut Compiler) -> TypeDef {
     let mut items = vec![];
 
     if this.members.is_empty() && !this.ignore_empty {
@@ -25,7 +25,7 @@ pub fn generate_struct(this: StructSource, gen: &mut Compiler) -> TypeDef {
         items.push((member.r#type, 1));
     }
 
-    gen.struct_pool.insert(
+    compiler.struct_pool.insert(
         this.name.clone(),
         (this.generics, this.members, this.keyword_location),
     );
