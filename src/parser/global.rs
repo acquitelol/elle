@@ -100,7 +100,7 @@ impl<'a> Global<'a> {
                 self.parser.advance();
                 let attribute = self.parser.current_token().parse_attribute();
 
-                if let Attribute::ExpandMain = attribute {
+                if matches!(attribute, Attribute::ExpandMain) {
                     expand_main = true;
                     self.parser.advance();
                 } else { elle_error!(self.parser.current_token().location.borrow().error(format!(

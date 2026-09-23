@@ -447,7 +447,7 @@ macro_rules! get_type {
                             lambda: true,
                             usable: true,
                             imported: true,
-                            arguments: args.iter().enumerate().map(|(i, x)| ((x.clone(), crate::compiler::qbe::value::Value::Temporary(format!("_{i}"))), false)).collect::<Vec<_>>(),
+                            arguments: args.iter().enumerate().map(|(i, x)| ((x.clone(), $crate::compiler::qbe::value::Value::Temporary(format!("_{i}"))), false)).collect::<Vec<_>>(),
                             return_type,
                             ..Default::default()
                         })));
