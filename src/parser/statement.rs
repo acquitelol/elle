@@ -10,19 +10,20 @@ use super::enums::{
     VariadicArgument, VariadicStart,
 };
 
-use super::parser::{create_generic_struct, EnumPool, StructPool};
+use super::parser::{EnumPool, StructPool, create_generic_struct};
 use crate::compiler::qbe::r#type::Type;
 use crate::lexer::enums::{Attribute, MutRc};
 use crate::misc::constants::ITER_CONSTANT;
 use crate::parser::enums::{BlockStatement, TupleDeclare, WhileLoopStatement};
 use crate::{
-    elle_error, enum_hover, expect_eot, get_type, is_type, set_end, INTERNAL_ITERATOR_FORMAT,
-    INTERNAL_VALUE_FORMAT,
-};
-use crate::{
+    GENERIC_END, GENERIC_IDENTIFIER,
     lexer::enums::{Location, Token, TokenKind, ValueKind},
     misc::colors::*,
-    not_valid_struct_or_type, token_to_node, GENERIC_END, GENERIC_IDENTIFIER,
+    not_valid_struct_or_type, token_to_node,
+};
+use crate::{
+    INTERNAL_ITERATOR_FORMAT, INTERNAL_VALUE_FORMAT, elle_error, enum_hover, expect_eot, get_type,
+    is_type, set_end,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -142,8 +143,6 @@ impl<'a> Statement<'a> {
             )))
         }
 
-        
-
         if let Token {
             value: ValueKind::String(identifier),
             ..
@@ -185,11 +184,12 @@ impl<'a> Statement<'a> {
         };
 
         if self.is_eof() {
-            elle_error!(self
-                .current_token()
-                .location
-                .borrow()
-                .error("Expected identifier here but got EOF."));
+            elle_error!(
+                self.current_token()
+                    .location
+                    .borrow()
+                    .error("Expected identifier here but got EOF.")
+            );
         }
 
         self.expect_identifier();
@@ -224,13 +224,15 @@ impl<'a> Statement<'a> {
             }
 
             set_end!(location, self);
-            elle_error!(location
-                .borrow()
-                .with_extra_info(format!(
-                    "Please use #alloca({}, count?) instead.",
-                    r#type.unwrap_or(Type::Void).display()
-                ))
-                .error("Buffers cannot be declared using this syntax."))
+            elle_error!(
+                location
+                    .borrow()
+                    .with_extra_info(format!(
+                        "Please use #alloca({}, count?) instead.",
+                        r#type.unwrap_or(Type::Void).display()
+                    ))
+                    .error("Buffers cannot be declared using this syntax.")
+            )
         }
 
         if self.is_eof() || self.current_token().kind == TokenKind::Semicolon {
@@ -381,10 +383,12 @@ impl<'a> Statement<'a> {
         };
 
         if !value.contains('.') {
-            elle_error!(token
-                .location
-                .borrow()
-                .error("Invalid float literal provided"));
+            elle_error!(
+                token
+                    .location
+                    .borrow()
+                    .error("Invalid float literal provided")
+            );
         }
 
         if token.tagged {
@@ -654,11 +658,12 @@ impl<'a> Statement<'a> {
                     if block_nesting > 0 {
                         block_nesting -= 1;
                     } else {
-                        elle_error!(self
-                            .current_token()
-                            .location
-                            .borrow()
-                            .error("Invalid balance of block braces"))
+                        elle_error!(
+                            self.current_token()
+                                .location
+                                .borrow()
+                                .error("Invalid balance of block braces")
+                        )
                     }
                 }
 
@@ -666,11 +671,12 @@ impl<'a> Statement<'a> {
                     if curly_nesting > 0 {
                         curly_nesting -= 1;
                     } else {
-                        elle_error!(self
-                            .current_token()
-                            .location
-                            .borrow()
-                            .error("Invalid balance of curly braces"))
+                        elle_error!(
+                            self.current_token()
+                                .location
+                                .borrow()
+                                .error("Invalid balance of curly braces")
+                        )
                     }
                 }
 
@@ -1079,11 +1085,12 @@ impl<'a> Statement<'a> {
                     if paren_nesting > 0 {
                         paren_nesting -= 1;
                     } else {
-                        elle_error!(self
-                            .current_token()
-                            .location
-                            .borrow()
-                            .error("Invalid balance of parenthesis"))
+                        elle_error!(
+                            self.current_token()
+                                .location
+                                .borrow()
+                                .error("Invalid balance of parenthesis")
+                        )
                     }
                 }
 
@@ -1099,11 +1106,12 @@ impl<'a> Statement<'a> {
                     if curly_nesting > 0 {
                         curly_nesting -= 1;
                     } else {
-                        elle_error!(self
-                            .current_token()
-                            .location
-                            .borrow()
-                            .error("Invalid balance of curly braces"))
+                        elle_error!(
+                            self.current_token()
+                                .location
+                                .borrow()
+                                .error("Invalid balance of curly braces")
+                        )
                     }
                 }
 
@@ -1823,7 +1831,7 @@ impl<'a> Statement<'a> {
                 }
                 TokenKind::Semicolon => {}
                 other if other.is_ternary_start() => {
-                    return self.parse_ternary_node(expression, location)
+                    return self.parse_ternary_node(expression, location);
                 }
                 other if other.is_arithmetic() => {
                     self.position = position;
@@ -2289,11 +2297,12 @@ impl<'a> Statement<'a> {
             let mut nesting = 0;
 
             if self.current_token().kind == TokenKind::Semicolon {
-                elle_error!(self
-                    .current_token()
-                    .location
-                    .borrow()
-                    .error("Expected size directive but got empty passthrough"))
+                elle_error!(
+                    self.current_token()
+                        .location
+                        .borrow()
+                        .error("Expected size directive but got empty passthrough")
+                )
             }
 
             loop {
@@ -2384,11 +2393,12 @@ impl<'a> Statement<'a> {
         let mut nesting = 0;
 
         if self.current_token().kind == TokenKind::Semicolon {
-            elle_error!(self
-                .current_token()
-                .location
-                .borrow()
-                .error("Expected array length directive but got empty passthrough"))
+            elle_error!(
+                self.current_token()
+                    .location
+                    .borrow()
+                    .error("Expected array length directive but got empty passthrough")
+            )
         }
 
         loop {
@@ -3505,10 +3515,12 @@ impl<'a> Statement<'a> {
             .get(&name)
             .cloned()
             .unwrap_or_else(|| {
-                elle_error!(name_token
-                    .location
-                    .borrow()
-                    .error(format!("Unknown enum '{name}'")))
+                elle_error!(
+                    name_token
+                        .location
+                        .borrow()
+                        .error(format!("Unknown enum '{name}'"))
+                )
             });
 
         enum_hover!(name_token, name, enum_def.0);
@@ -3833,11 +3845,12 @@ impl<'a> Statement<'a> {
         let mut block_nesting = 0;
 
         if self.is_eof() && self.current_token().kind == TokenKind::Address {
-            elle_error!(self
-                .current_token()
-                .location
-                .borrow()
-                .error("Expected to yield tokens for unary but got end of stream."))
+            elle_error!(
+                self.current_token()
+                    .location
+                    .borrow()
+                    .error("Expected to yield tokens for unary but got end of stream.")
+            )
         }
 
         self.yield_tokens_with_condition(|token, prev_token, next_token| {
@@ -3849,10 +3862,12 @@ impl<'a> Statement<'a> {
                 if nesting > 0 {
                     nesting -= 1;
                 } else {
-                    elle_error!(prev_token
-                        .location
-                        .borrow()
-                        .error("Unbalanced brackets found parsing this unary expression"))
+                    elle_error!(
+                        prev_token
+                            .location
+                            .borrow()
+                            .error("Unbalanced brackets found parsing this unary expression")
+                    )
                 }
             }
 
@@ -3864,10 +3879,12 @@ impl<'a> Statement<'a> {
                 if brace_nesting > 0 {
                     brace_nesting -= 1;
                 } else {
-                    elle_error!(prev_token
-                        .location
-                        .borrow()
-                        .error("Unbalanced curly braces found parsing this unary expression"))
+                    elle_error!(
+                        prev_token
+                            .location
+                            .borrow()
+                            .error("Unbalanced curly braces found parsing this unary expression")
+                    )
                 }
             }
 
@@ -3879,10 +3896,12 @@ impl<'a> Statement<'a> {
                 if block_nesting > 0 {
                     block_nesting -= 1;
                 } else {
-                    elle_error!(prev_token
-                        .location
-                        .borrow()
-                        .error("Unbalanced block braces found parsing this unary expression"))
+                    elle_error!(
+                        prev_token
+                            .location
+                            .borrow()
+                            .error("Unbalanced block braces found parsing this unary expression")
+                    )
                 }
             }
 
@@ -4180,11 +4199,12 @@ impl<'a> Statement<'a> {
                     self.parse_literal()
                 } else {
                     let next = self.next_token().unwrap_or_else(|| {
-                        elle_error!(self
-                            .current_token()
-                            .location
-                            .borrow()
-                            .error("Unexpected EOF when parsing an identifier"))
+                        elle_error!(
+                            self.current_token()
+                                .location
+                                .borrow()
+                                .error("Unexpected EOF when parsing an identifier")
+                        )
                     });
 
                     if next.kind == TokenKind::LeftParenthesis {
@@ -4242,9 +4262,7 @@ impl<'a> Statement<'a> {
                         let condition = AstNode::token_to_literal(self.current_token());
                         self.advance();
                         self.parse_ternary_node(condition, self.current_token().location)
-                    } else if next.kind == TokenKind::Identifier {
-                        not_valid_struct_or_type!(self)
-                    } else if next.kind == TokenKind::DoubleColon {
+                    } else if [TokenKind::Identifier, TokenKind::DoubleColon].contains(&next.kind) {
                         not_valid_struct_or_type!(self)
                     } else {
                         elle_error!(next.location.borrow().error(format!(
@@ -4276,9 +4294,11 @@ impl<'a> Statement<'a> {
 
                 location.borrow_mut().ctx = Rc::from(format!("{} ", location.borrow().ctx));
 
-                elle_error!(location
-                    .borrow()
-                    .error(format!("Expected semicolon here, but got {:?}", token.kind)))
+                elle_error!(
+                    location
+                        .borrow()
+                        .error(format!("Expected semicolon here, but got {:?}", token.kind))
+                )
             }
         }
 

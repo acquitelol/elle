@@ -1,4 +1,5 @@
 use crate::{
+    GC_NOOP,
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler, VariableInfo},
         lib::convert::convert_to_type,
@@ -7,7 +8,6 @@ use crate::{
     elle_error,
     lexer::enums::{Token, TokenKind, ValueKind},
     parser::enums::{AstNode, Buffer, Declare, Literal, StructLiteral},
-    GC_NOOP,
 };
 
 impl Codegen<'_> for Declare {
@@ -215,9 +215,9 @@ impl Codegen<'_> for Declare {
                 )
             };
 
-            if res.is_ok() && self.r#type.is_none() {
-                let (addr_ty, addr_val) = res.unwrap();
-
+            if let Ok((addr_ty, addr_val)) = res
+                && self.r#type.is_none()
+            {
                 if addr_ty != final_ty
                     && !(addr_ty.is_pointer()
                         && final_ty.is_pointer()

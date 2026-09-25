@@ -214,16 +214,13 @@ pub fn generate_function(
         }
     }
 
-    if first_ty.is_some() {
+    if let Some(ref first_ty) = first_ty {
         let return_ty = func_ref.borrow().return_type.clone();
 
-        if return_ty.is_none() {
-            func_ref.borrow_mut().return_type = first_ty;
+        if let Some(ref return_ty) = return_ty {
+            handle_inconsistent_types!(return_ty, first_ty, this.return_location);
         } else {
-            let return_type = return_ty.unwrap();
-            let first_type = first_ty.unwrap();
-
-            handle_inconsistent_types!(&return_type, &first_type, this.return_location);
+            func_ref.borrow_mut().return_type = Some(first_ty.clone());
         }
     }
 

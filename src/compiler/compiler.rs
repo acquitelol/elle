@@ -218,7 +218,7 @@ impl Compiler {
         module: Option<&RefCell<Module>>,
         location: &MutRc<Location>,
         // (ty, val)
-    ) -> Option<(Type, Value)> {
+    ) -> (Type, Value) {
         let val = self.get_variable(name, func, module, &VariableInfo::default());
 
         match val {
@@ -230,19 +230,17 @@ impl Compiler {
                     &VariableInfo::default(),
                 );
 
-                if res.is_ok() && func.is_some() {
-                    let (_, addr_val) = res.unwrap();
-
-                    func.unwrap().borrow_mut().assign_instruction(
+                if let Ok((_, addr_val)) = res
+                    && let Some(func) = func
+                {
+                    func.borrow_mut().assign_instruction(
                         &val,
                         &ty,
                         Instruction::Load(ty.clone(), addr_val),
                     );
-
-                    return Some((ty, val));
                 }
 
-                Some((ty, val))
+                (ty, val)
             }
             Err(msg) => {
                 macro_rules! undefined_error {

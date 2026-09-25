@@ -1,10 +1,10 @@
 use std::cell::RefCell;
 
 use crate::{
-    elle_error,
+    INTERNAL_GLOBAL_INIT_FORMAT, elle_error,
     lexer::enums::{Attribute, Location, MutRc, Token, TokenKind, ValueKind},
     parser::enums::GlobalSource,
-    set_end, INTERNAL_GLOBAL_INIT_FORMAT,
+    set_end,
 };
 
 use super::{
@@ -103,14 +103,16 @@ impl<'a> Global<'a> {
                 if matches!(attribute, Attribute::ExpandMain) {
                     expand_main = true;
                     self.parser.advance();
-                } else { elle_error!(self.parser.current_token().location.borrow().error(format!(
+                } else {
+                    elle_error!(self.parser.current_token().location.borrow().error(format!(
                     "Unknown attribute for global '{}'",
                     self.parser
                         .current_token()
                         .value
                         .get_string_inner()
                         .unwrap()
-                ))) }
+                )))
+                }
             }
         }
 
@@ -135,9 +137,7 @@ impl<'a> Global<'a> {
             }));
         }
 
-        let mut value = None;
-
-        if self.parser.current_token().kind == TokenKind::Equal || ty.is_none() {
+        let value = if self.parser.current_token().kind == TokenKind::Equal || ty.is_none() {
             self.parser.expect_tokens(&[TokenKind::Equal]);
             self.parser.advance();
 
@@ -149,7 +149,7 @@ impl<'a> Global<'a> {
             self.parser.advance();
 
             let body: RefCell<Vec<AstNode>> = RefCell::new(vec![]);
-            value = Some(
+            Some(
                 Statement::new(
                     tokens,
                     0,
@@ -166,11 +166,13 @@ impl<'a> Global<'a> {
                 )
                 .parse()
                 .0,
-            );
+            )
         } else {
             self.parser.expect_tokens(&[TokenKind::Semicolon]);
             self.parser.advance();
-        }
+
+            None
+        };
 
         set_end!(location, self.parser);
 

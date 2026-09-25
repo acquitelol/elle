@@ -84,10 +84,11 @@ impl Codegen<'_> for ArrayLiteral {
             });
 
             let (ty, val) = node.compile(compiler, ctx).unwrap_or_else(|| {
-                elle_error!(self
-                    .location
-                    .borrow()
-                    .error("Unexpected error when trying to compile a dynamic array"))
+                elle_error!(
+                    self.location
+                        .borrow()
+                        .error("Unexpected error when trying to compile a dynamic array")
+                )
             });
 
             return Some((ty, val));
@@ -106,16 +107,14 @@ impl Codegen<'_> for ArrayLiteral {
         }
 
         for (i, (location, value)) in self.values.iter().enumerate() {
-            let node = if let Some(ref ty) = inner_ty {
-                &AstNode::Conversion(Conversion {
+            let node = &inner_ty.as_ref().map_or(value.clone(), |ty: &Type| {
+                AstNode::Conversion(Conversion {
                     r#type: Some(ty.clone()),
                     value: Box::new(value.clone()),
                     location: location.clone(),
                     explicit: false,
                 })
-            } else {
-                value
-            };
+            });
 
             let (ty, val) = node
                 .clone()

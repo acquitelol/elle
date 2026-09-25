@@ -23,13 +23,15 @@ impl Codegen<'_> for Literal {
                         &self.location,
                     );
 
-                    if self.tagged && res.as_ref().is_some_and(|(ty, _)| !ty.has_generic_type()) {
-                        if res.clone().unwrap().0.is_function() {
+                    let (ref mut ty, ref mut value) = res;
+
+                    if self.tagged && !ty.has_generic_type() {
+                        if res.clone().0.is_function() {
                             elle_error!(format!(
                                 "hover\n{}\n{}\n{}",
                                 self.location.borrow().display_plain(false),
                                 self.location.borrow().display_plain(true),
-                                res.unwrap().0.display()
+                                res.0.display()
                             ));
                         }
 
@@ -46,24 +48,22 @@ impl Codegen<'_> for Literal {
                             self.location.borrow().display_plain(true),
                             if is_constant { "const" } else { "let" },
                             name.replace('.', "::"),
-                            res.unwrap().0.display()
+                            res.0.display()
                         ));
                     }
 
                     // unwrap aliases: math::floor -> floor
-                    if let Some((ty, value)) = res.as_mut()
-                        && ty.is_function()
-                    {
+                    if ty.is_function() {
                         let Type::Function(inner) = ty else {
                             unreachable!()
                         };
 
                         if let Some(mut func) = *inner.clone() {
                             if let Some(ref unaliased) = func.unaliased {
-                                func.name = unaliased.clone();
+                                func.name.clone_from(unaliased);
 
                                 if let Value::Global(val) = value {
-                                    *val = unaliased.clone();
+                                    val.clone_from(unaliased);
                                 }
                             }
 
@@ -72,7 +72,7 @@ impl Codegen<'_> for Literal {
                         }
                     }
 
-                    res
+                    Some(res)
                 }
                 _ => None,
             },

@@ -11,18 +11,12 @@ impl Codegen<'_> for VariadicArgument {
     fn compile(self, compiler: &mut Compiler, ctx: &CodegenContext<'_>) -> Option<(Type, Value)> {
         let plain_name = self.name.value.get_string_inner().unwrap();
 
-        let (_, ptr) = compiler
-            .get_variable_lazy(
-                &plain_name,
-                Some(ctx.func),
-                Some(ctx.module),
-                &self.location,
-            )
-            .unwrap_or_else(|| {
-                elle_error!(self.location.borrow().error(format!(
-                    "Unexpected error when trying to get a variable named '{plain_name}'"
-                )))
-            });
+        let (_, ptr) = compiler.get_variable_lazy(
+            &plain_name,
+            Some(ctx.func),
+            Some(ctx.module),
+            &self.location,
+        );
 
         let ty = self
             .r#type

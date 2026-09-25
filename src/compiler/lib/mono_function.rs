@@ -4,6 +4,7 @@ use std::{
 };
 
 use crate::{
+    GENERIC_END, GENERIC_IDENTIFIER, GREEN, META_STRUCT_NAME, RED, RESET, STATIC_ARRAY_ID,
     compiler::{
         compiler::{CodegenContext, Compiler},
         primitive::{function::generate_function, r#struct::generate_struct},
@@ -11,8 +12,7 @@ use crate::{
     },
     elle_error, get_GREEN, get_RED, get_RESET, get_STATIC_ARRAY_ID, hashmap,
     lexer::enums::{Location, MutRc},
-    parser::enums::{modify_type_in_ast, Argument, AstNode, FunctionSource, Primitive},
-    GENERIC_END, GENERIC_IDENTIFIER, GREEN, META_STRUCT_NAME, RED, RESET, STATIC_ARRAY_ID,
+    parser::enums::{Argument, AstNode, FunctionSource, Primitive, modify_type_in_ast},
 };
 
 use super::can_convert::can_convert_to_type;
@@ -107,13 +107,14 @@ pub fn create_monomorphized_function(
             // Reassign it if the function is generic
             // as the function won't have been found last time
             if let Some(inner) = this.arguments.first()
-                && inner.r#type.is_struct() {
-                    let name = inner.r#type.get_struct_inner().unwrap();
+                && inner.r#type.is_struct()
+            {
+                let name = inner.r#type.get_struct_inner().unwrap();
 
-                    if name == META_STRUCT_NAME {
-                        *add_meta = true;
-                    }
+                if name == META_STRUCT_NAME {
+                    *add_meta = true;
                 }
+            }
 
             // Add base known generics
             // If the function takes <T, U, V>
@@ -132,20 +133,20 @@ pub fn create_monomorphized_function(
 
             if let Some(other) = this.r#return.clone()
                 && let Some(ty) = ty
-                    && other.has_generic_type()
-                    && tmp_known_generics.len() < this.generics.len()
-                    && let Some(inner) = ty.deduce_generic_type(&other, call_location)
-                {
-                    insert_known_generics!(
-                        tmp_known_generics,
-                        inner,
-                        compiler,
-                        name,
-                        this,
-                        call_location,
-                        false
-                    );
-                }
+                && other.has_generic_type()
+                && tmp_known_generics.len() < this.generics.len()
+                && let Some(inner) = ty.deduce_generic_type(&other, call_location)
+            {
+                insert_known_generics!(
+                    tmp_known_generics,
+                    inner,
+                    compiler,
+                    name,
+                    this,
+                    call_location,
+                    false
+                );
+            }
 
             let mut deferred_generics = vec![];
             let struct_pool = RefCell::new(compiler.struct_pool.clone());
@@ -374,7 +375,9 @@ pub fn create_monomorphized_function(
             let existing = module.borrow().functions.get(&generic_name).cloned();
             name.clone_from(&generic_name);
 
-            if existing.is_none() {
+            if let Some(existing) = existing {
+                tmp_function.clone_from(&existing);
+            } else {
                 // Temporarily empty the scopes
                 let scopes = compiler.scopes.clone();
                 compiler.scopes = vec![hashmap![]];
@@ -492,8 +495,6 @@ pub fn create_monomorphized_function(
 
                 // Bring them back
                 compiler.scopes = scopes;
-            } else {
-                *tmp_function = existing.unwrap();
             }
         }
         _ => {}

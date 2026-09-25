@@ -2,18 +2,18 @@ use core::fmt;
 use std::{cell::RefCell, collections::HashMap, iter::Peekable, mem, num::ParseIntError};
 
 use crate::{
-    elle_error, ensure_ascii, get_POINTER_ID, has_unknown_part, hashmap, is_generic,
+    GENERIC_ARRAY, GENERIC_END, GENERIC_ENUM, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN,
+    POINTER_ID, STATIC_ARRAY_ID, VOID_POINTER_ID, elle_error, ensure_ascii, get_POINTER_ID,
+    has_unknown_part, hashmap, is_generic,
     lexer::enums::{Location, MutRc, Token},
     misc::{
-        colors::{get_GREEN, get_RED, get_RESET, GREEN, RED, RESET},
-        constants::{get_STATIC_ARRAY_ID, DISPLAY_NESTING_MAX, GENERIC_FUNCTION, GENERIC_SIZE},
+        colors::{GREEN, RED, RESET, get_GREEN, get_RED, get_RESET},
+        constants::{DISPLAY_NESTING_MAX, GENERIC_FUNCTION, GENERIC_SIZE, get_STATIC_ARRAY_ID},
     },
     parser::{
         enums::{Argument, Primitive, StructSource},
         parser::StructPool,
     },
-    GENERIC_ARRAY, GENERIC_END, GENERIC_ENUM, GENERIC_IDENTIFIER, GENERIC_POINTER, GENERIC_UNKNOWN,
-    POINTER_ID, STATIC_ARRAY_ID, VOID_POINTER_ID,
 };
 
 use super::{function::Function, module::Module};
@@ -149,7 +149,7 @@ impl Type {
                                     {
                                         name.replacen(
                                             get_STATIC_ARRAY_ID!(),
-                                            &inner.arguments[0].0 .0.display(),
+                                            &inner.arguments[0].0.0.display(),
                                             1,
                                         )
                                     } else {
@@ -169,7 +169,7 @@ impl Type {
                                 {
                                     name.replacen(
                                         get_STATIC_ARRAY_ID!(),
-                                        &inner.arguments[0].0 .0.display(),
+                                        &inner.arguments[0].0.0.display(),
                                         1,
                                     )
                                 } else {
@@ -182,14 +182,14 @@ impl Type {
                             .iter()
                             .map(|arg| format!(
                                 "{}{}",
-                                arg.0 .0.display(),
+                                arg.0.0.display(),
                                 if inner.lambda {
                                     String::new()
                                 } else {
                                     format!(
                                         " {}",
                                         arg.0
-                                             .1
+                                            .1
                                             .get_string_inner()
                                             .replace('%', "")
                                             .split('.')
@@ -396,16 +396,22 @@ impl Type {
                     } else if part == GENERIC_ARRAY {
                         let ty = internal_match(parts).unwrap();
                         let size = parts.next().unwrap();
-                        let size = size
-                            .parse::<usize>()
-                            .expect("Failed to parse static array size {size}");
+                        let size =
+                            size.parse::<usize>().unwrap_or_else(|_| {
+                                elle_error!(Location::base().basic_error(format!(
+                                    "Failed to parse static array size {size}"
+                                )))
+                            });
 
                         Some(Type::StaticArray(Box::new(ty), Box::new(Type::Size(size))))
                     } else if part == GENERIC_SIZE {
                         let size = parts.next().unwrap();
-                        let size = size
-                            .parse::<usize>()
-                            .expect("Failed to parse static array size {size}");
+                        let size =
+                            size.parse::<usize>().unwrap_or_else(|_| {
+                                elle_error!(Location::base().basic_error(format!(
+                                    "Failed to parse static array size {size}"
+                                )))
+                            });
 
                         Some(Type::Size(size))
                     } else if part == GENERIC_FUNCTION {
@@ -665,16 +671,12 @@ impl Type {
                         .join(".")
                 );
 
-                if struct_pool.is_some()
+                if let Some(struct_pool) = struct_pool
                     && tree.is_some()
-                    && !struct_pool.unwrap().borrow().contains_key(&generic_name)
+                    && !struct_pool.borrow().contains_key(&generic_name)
                 {
-                    let (generics, members, location) = struct_pool
-                        .unwrap()
-                        .borrow()
-                        .get(&original_name)
-                        .unwrap()
-                        .clone();
+                    let (generics, members, location) =
+                        struct_pool.borrow().get(&original_name).unwrap().clone();
 
                     let parsed_generics = generics
                         .iter()
@@ -687,7 +689,7 @@ impl Type {
                         .map(|member| Argument {
                             name: member.name.clone(),
                             r#type: member.r#type.clone().unknown_to_known(
-                                struct_pool,
+                                Some(struct_pool),
                                 tree,
                                 &generics,
                                 &parsed_generics,
@@ -714,7 +716,6 @@ impl Type {
                         }));
 
                     struct_pool
-                        .unwrap()
                         .borrow_mut()
                         .insert(generic_name.clone(), (vec![], parsed_members, location));
                 }
@@ -733,7 +734,7 @@ impl Type {
             Self::Unknown(_) => true,
             Self::Function(f) => {
                 if let Some(f) = (**f).clone() {
-                    f.arguments.iter().any(|x| x.0 .0.has_generic_type())
+                    f.arguments.iter().any(|x| x.0.0.has_generic_type())
                         || f.return_type.is_some_and(|x| x.has_generic_type())
                 } else {
                     false
@@ -768,11 +769,7 @@ impl Type {
                     .deduce_generic_type(generic_size, location)
                     .inspect(|known| map.extend(known.clone()));
 
-                if map.is_empty() {
-                    None
-                } else {
-                    Some(map)
-                }
+                if map.is_empty() { None } else { Some(map) }
             }
             (Self::Function(known_inner), Self::Function(generic_inner)) => {
                 let mut map = hashmap![];
@@ -787,8 +784,8 @@ impl Type {
                     } {
                         if let Some(new_map) = known_inner.arguments[i]
                             .0
-                             .0
-                            .deduce_generic_type(&generic_inner.arguments[i].0 .0, location)
+                            .0
+                            .deduce_generic_type(&generic_inner.arguments[i].0.0, location)
                         {
                             map.extend(
                                 new_map
@@ -1094,8 +1091,7 @@ impl Type {
         match self {
             Self::Pointer(x) if matches!(**x, Self::Struct(_)) => false,
             Self::Pointer(x) if matches!(**x, Self::Char) => false,
-            Self::StaticArray(..) => false,
-            Self::Struct(_) => false,
+            Self::StaticArray(..) | Self::Struct(_) => false,
             _ => true,
         }
     }
@@ -1192,25 +1188,24 @@ impl Type {
     /// Returns number of bytes
     pub fn size(&self, module: &RefCell<Module>) -> u64 {
         match self {
-            Self::Struct(val, ..) => {
-                
-
-                module
-                    .borrow()
-                    .types
-                    .iter()
-                    .find(|td| td.name == val.clone())
-                    .unwrap_or_else(|| {
-                        elle_error!(Location::internal_error(format!(
-                            "Unable to find aggregate type named '{}'.",
-                            self.display()
-                        )))
-                    })
-                    .size(module) as u64
-            }
+            Self::Struct(val, ..) => module
+                .borrow()
+                .types
+                .iter()
+                .find(|td| td.name == val.clone())
+                .unwrap_or_else(|| {
+                    elle_error!(Location::internal_error(format!(
+                        "Unable to find aggregate type named '{}'.",
+                        self.display()
+                    )))
+                })
+                .size(module) as u64,
             Self::StaticArray(ty, size) => match *size.clone() {
                 Self::Size(size) => ty.size(module) * size as u64,
-                other => elle_error!(Location::internal_error(format!("Static array with type {} has a size {other} which should not be generic at this stage", ty.display())))
+                other => elle_error!(Location::internal_error(format!(
+                    "Static array with type {} has a size {other} which should not be generic at this stage",
+                    ty.display()
+                ))),
             },
             Self::Unknown(..) | Self::Null => 0,
             _ => self.size_base(),
