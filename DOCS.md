@@ -661,6 +661,34 @@ fn Result::ok<T, E>(Result<T, E> self) -> Option<T>;
 fn Result::err<T, E>(Result<T, E> self) -> Option<E>;
 ```
 
+- Shorthand to unwrapping
+
+Elle allows you to use a `!` shorthand to unwrap a value, similar to languages like Rust.
+
+```rs
+Some(10)!;
+```
+
+is exact syntactic sugar for:
+
+```rs
+Some(10).unwrap();
+```
+
+This means that this works:
+
+```rs
+Some(Some(10))!!;
+```
+
+As well as for Result:
+
+```rs
+Ok<i32, i32>(10)!;
+```
+
+As well as any other type that implements an `unwrap` function on it. `foo!` is direct sugar for `foo.unwrap()` with no additional type checking.
+
 #
 
 ### ♡ **Variadic Functions**
