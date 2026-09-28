@@ -1,10 +1,14 @@
 use std/prelude;
 use std/net/tcp;
 
-let port = 3939;
+fn main(string[] args) {
+    server := TcpServer::bind(port := 3939);
+    
+    while server.is_err_and(fn: it == Errno::EADDRINUSE) {
+        server = TcpServer::bind(port += 1);
+    }
 
-fn main() {
-    server := TcpServer::bind(port).unwrap();
+    server := server.unwrap();
     defer server.close().unwrap();
 
     $printf("Server is listening on port {}", port);
