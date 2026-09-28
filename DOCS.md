@@ -617,6 +617,7 @@ fn Result::Err<T, E>(E error) -> Result<T, E>;
 
 // methods
 fn Result::expect<T, E>(ElleMeta meta, Result<T, E> self, string message) -> T;
+fn Result::expect_err<T, E>(ElleMeta meta, Result<T, E> self, string message) -> E;
 
 fn Result::unwrap<T, E>(ElleMeta meta, Result<T, E> self) -> T;
 fn Result::unwrap_err<T, E>(ElleMeta meta, Result<T, E> self) -> E;
@@ -624,12 +625,11 @@ fn Result::unwrap_or<T, E>(Result<T, E> self, T fallback) -> T;
 fn Result::unwrap_or_else_with<T, E, U>(Result<T, E> self, fn(U) -> T fallback, U arg) -> T;
 fn Result::unwrap_or_else<T, E>(Result<T, E> self, fn() -> T fallback) -> T;
 
-fn Result::is_ok<T, E>(Result<T, E> self) -> bool;
-fn Result::is_err<T, E>(Result<T, E> self) -> bool;
-
 fn Result::resolve_with<T, E, Arg, Out>(Result<T, E> self, fn(T, Arg) -> Out if_ok, fn(E, Arg) -> Out if_err, Arg arg) -> Out;
 fn Result::resolve<T, E, Out>(Result<T, E> self, fn(T) -> Out if_ok, fn(E) -> Out if_err) -> Out;
 
+fn Result::is_ok<T, E>(Result<T, E> self) -> bool;
+fn Result::is_err<T, E>(Result<T, E> self) -> bool;
 fn Result::is_ok_and<T, E>(Result<T, E> self, fn(T) -> bool cb) -> bool;
 fn Result::is_ok_or<T, E>(Result<T, E> self, fn(E) -> bool cb) -> bool;
 fn Result::is_err_and<T, E>(Result<T, E> self, fn(E) -> bool cb) -> bool;
@@ -639,7 +639,12 @@ fn Result::map_with<T, E, Arg, Out>(Result<T, E> self, fn(T, Arg) -> Out cb, Arg
 fn Result::map<T, E, Out>(Result<T, E> self, fn(T) -> Out cb) -> Out;
 fn Result::map_err_with<T, E, U, Out>(Result<T, E> self, fn(E, U) -> Out cb, U arg) -> Out;
 fn Result::map_err<T, E, Out>(Result<T, E> self, fn(E) -> Out cb) -> Out;
+fn Result::map_or_with<T, U, E, Arg>(Result<T, E> self, T fallback, fn(T, Arg) -> U cb, Arg arg) -> Result<U, E>;
+fn Result::map_or<T, U, E>(Result<T, E> self, T fallback, fn(T) -> U cb) -> Result<U, E>;
+fn Result::map_or_else_with<T, U, E, Arg>(Result<T, E> self, fn(T, Arg) -> U if_ok, fn(E, Arg) -> U if_err, Arg arg) -> Result<U, E>;
+fn Result::map_or_else<T, U, E>(Result<T, E> self, fn(T) -> U if_ok, fn(E) -> U if_err) -> Result<U, E>;
 
+fn Result::or<T, E>(Result<T, E> self, Result<T, E> other) -> Result<T, E>;
 fn Result::or_else<T, E, F>(Result<T, E> self, fn(E) -> Result<T, F> cb) -> Result<T, F>;
 fn Result::or_else_with<T, E, F, Arg>(Result<T, E> self, fn(E, Arg) -> Result<T, F> cb, Arg arg) -> Result<T, F>;
 

@@ -66,6 +66,15 @@ external fn Result::Err<T, E>(E error) @alias(Err) -> Result<T, E>;
     libc::abort();
 }
 
+!external fn __internal_result_ok_throw<T, E>(Result<T, E> self, string message, ElleMeta meta) {
+    $eprintf("Function {} panicked at {}:{}:{}:\n{}{}{}",
+        meta.caller, meta.file, meta.line, meta.column,
+        message
+    );
+
+    libc::abort();
+}
+
 /// Returns the inner T if the result is ok, otherwise aborts with a custom message
 fn Result::expect<T, E>(ElleMeta meta, Result<T, E> self, string message) -> T {
     if !self.__is_ok {
@@ -74,6 +83,15 @@ fn Result::expect<T, E>(ElleMeta meta, Result<T, E> self, string message) -> T {
 
     return self.__value;
 }
+
+fn Result::expect_err<T, E>(ElleMeta meta, Result<T, E> self, string message) -> E {
+    if self.__is_ok {
+        __internal_result_throw(self, message, meta);
+    }
+
+    return self.__error;
+}
+
 
 /// Returns the inner T if the result is ok, otherwise aborts
 fn Result::unwrap<T, E>(ElleMeta meta, Result<T, E> self) -> T {
@@ -202,6 +220,42 @@ fn Result::map_err_with<T, E, U, Out>(Result<T, E> self, fn(E, U) -> Out cb, U a
 
 fn Result::map_err<T, E, Out>(Result<T, E> self, fn(E) -> Out cb) {
     return self.map_err_with(fn: x1(x0), cb);
+}
+
+fn Result::map_or_with<T, U, E, Arg>(Result<T, E> self, T fallback, fn(T, Arg) -> U cb, Arg arg) -> Result<U, E> {
+    if self.is_err() {
+        return Ok(fallback);
+    }
+
+    return Ok(cb(self.__value, arg));
+}
+
+fn Result::map_or<T, U, E>(Result<T, E> self, T fallback, fn(T) -> U cb) -> Result<U, E> {
+    return self.map_or_with(fallback, fn: x1(x0), cb);
+}
+
+fn Result::map_or_else_with<T, U, E, Arg>(Result<T, E> self, fn(T, Arg) -> U if_ok, fn(E, Arg) -> U if_err, Arg arg) -> Result<U, E> {
+    if self.is_ok() {
+        return Ok(if_ok(self.__value, arg));
+    }
+
+    return Err(if_err(self.__error, arg));
+}
+
+fn Result::map_or_else<T, U, E>(Result<T, E> self, fn(T) -> U if_ok, fn(E) -> U if_err) -> Result<U, E> {
+    if self.is_ok() {
+        return Ok(if_ok(self.__value));
+    }
+
+    return Err(if_err(self.__error));
+}
+
+fn Result::or<T, E>(Result<T, E> self, Result<T, E> other) -> Result<T, E> {
+    if self.is_ok() {
+        return self;
+    }
+
+    return other;
 }
 
 fn Result::or_else<T, E, F>(Result<T, E> self, fn(E) -> Result<T, F> cb) -> Result<T, F> {
