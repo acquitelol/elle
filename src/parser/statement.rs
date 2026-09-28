@@ -441,23 +441,32 @@ impl<'a> Statement<'a> {
                     TokenKind::Semicolon => {
                         token_to_node!(&current, self)
                     }
+
+                    TokenKind::Not => {
+                        self.parse_unwrap_shorthand(location, token_to_node!(&current, self))
+                    }
+
                     TokenKind::LeftBlockBrace => self.parse_offset_store(Some((
                         position,
                         token_to_node!(&current, self),
                         location,
                     ))),
+
                     TokenKind::Dot => self.parse_field_access(Some((
                         position,
                         token_to_node!(&current, self),
                         location,
                     ))),
+
                     TokenKind::Question => {
                         self.parse_ternary_node(token_to_node!(&current, self), location)
                     }
+
                     other if other.is_arithmetic() => {
                         self.position = position;
                         self.parse_arithmetic()
                     }
+
                     _ => expect_eot!(token),
                 },
                 None => unreachable!(),
@@ -571,6 +580,9 @@ impl<'a> Statement<'a> {
                     TokenKind::Dot => {
                         expression =
                             self.parse_field_access(Some((position, expression, location)));
+                    }
+                    TokenKind::Not => {
+                        expression = self.parse_unwrap_shorthand(location, expression);
                     }
                     TokenKind::LeftBlockBrace => {
                         expression =
@@ -721,17 +733,24 @@ impl<'a> Statement<'a> {
                 TokenKind::Dot => {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
+
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
                 }
+
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     return self.parse_ternary_node(expression, location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     return self.parse_arithmetic();
                 }
+
                 _ => expect_eot!(token),
             }
         }
@@ -980,11 +999,14 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
                 }
 
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     expression = self.parse_ternary_node(expression, location);
                 }
@@ -993,6 +1015,7 @@ impl<'a> Statement<'a> {
                     self.position = position;
                     return self.parse_arithmetic();
                 }
+
                 _ => expect_eot!(self.current_token()),
             }
         }
@@ -1158,20 +1181,30 @@ impl<'a> Statement<'a> {
                 TokenKind::Dot => {
                     return self.parse_field_access(Some((position, expression!(), location)));
                 }
+
+                TokenKind::Not => {
+                    return self.parse_unwrap_shorthand(location.clone(), expression!());
+                }
+
                 TokenKind::LeftBlockBrace => {
                     return self.parse_offset_store(Some((position, expression!(), location)));
                 }
+
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     return self.parse_ternary_node(expression!(), location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     return self.parse_arithmetic();
                 }
+
                 _ if dynamic => {
                     inner_ty = Some(self.get_type(Some(self.shared.generics)));
                 }
+
                 _ => expect_eot!(token),
             }
         }
@@ -1649,10 +1682,15 @@ impl<'a> Statement<'a> {
                 TokenKind::Dot => {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
+
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
                 }
+
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     expression = self.parse_ternary_node(expression, location);
                 }
@@ -1660,6 +1698,49 @@ impl<'a> Statement<'a> {
                 other if other.is_arithmetic() => {
                     self.position = position;
                     expression = self.parse_arithmetic();
+                }
+
+                _ => expect_eot!(token),
+            }
+        }
+
+        expression
+    }
+
+    fn parse_unwrap_shorthand(&mut self, location: MutRc<Location>, node: AstNode) -> AstNode {
+        let mut expression = AstNode::FunctionCall(FunctionCall {
+            namespace_token: Token::from_ident(""),
+            name_token: Token::from_ident(""),
+            name: "unwrap".into(),
+            generics: vec![],
+            parameters: vec![(location.clone(), node)],
+            type_method: true,
+            ignore_no_def: false,
+            location: location.clone(),
+        });
+
+        if let Some(token) = self.advance_opt() {
+            match token.kind {
+                TokenKind::Dot => {
+                    expression =
+                        self.parse_field_access(Some((self.position, expression, location)));
+                }
+
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
+                TokenKind::LeftBlockBrace => {
+                    expression =
+                        self.parse_offset_store(Some((self.position, expression, location)));
+                }
+
+                TokenKind::Semicolon => {}
+
+                other if other.is_ternary_start() => {
+                    return self.parse_ternary_node(expression, location);
+                }
+
+                other if other.is_arithmetic() => {
+                    return self.parse_arithmetic();
                 }
 
                 _ => expect_eot!(token),
@@ -1797,6 +1878,7 @@ impl<'a> Statement<'a> {
 
                     self.consumed_addr = true;
                 }
+
                 TokenKind::Dot => {
                     expression = self.parse_field_access(Some((
                         position,
@@ -1813,6 +1895,7 @@ impl<'a> Statement<'a> {
                         location,
                     )));
                 }
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((
                         position,
@@ -1829,14 +1912,20 @@ impl<'a> Statement<'a> {
                         location,
                     )));
                 }
+
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     return self.parse_ternary_node(expression, location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     return self.parse_arithmetic();
                 }
+
                 _ => expect_eot!(token),
             }
         }
@@ -1888,10 +1977,15 @@ impl<'a> Statement<'a> {
                 TokenKind::Dot => {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
+
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
                 }
+
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     expression = self.parse_ternary_node(expression, location);
                 }
@@ -2239,10 +2333,15 @@ impl<'a> Statement<'a> {
                 TokenKind::Dot => {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
+
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
                 }
+
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     expression = self.parse_ternary_node(expression, location);
                 }
@@ -2251,6 +2350,7 @@ impl<'a> Statement<'a> {
                     self.position = position;
                     return self.parse_arithmetic();
                 }
+
                 _ => expect_eot!(token),
             }
         }
@@ -2353,17 +2453,24 @@ impl<'a> Statement<'a> {
                 TokenKind::Dot => {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
+
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
                 }
+
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     expression = self.parse_ternary_node(expression, location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     expression = self.parse_arithmetic();
                 }
+
                 _ => expect_eot!(token),
             }
         }
@@ -2447,17 +2554,24 @@ impl<'a> Statement<'a> {
                 TokenKind::Dot => {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
+
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
                 }
+
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     expression = self.parse_ternary_node(expression, location);
                 }
+
                 other if other.is_arithmetic() => {
                     self.position = position;
                     expression = self.parse_arithmetic();
                 }
+
                 _ => expect_eot!(token),
             }
         }
@@ -2827,10 +2941,15 @@ impl<'a> Statement<'a> {
                 TokenKind::Dot => {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
+
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
                 }
+
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     expression = self.parse_ternary_node(expression, location);
                 }
@@ -2839,6 +2958,7 @@ impl<'a> Statement<'a> {
                     self.position = position;
                     expression = self.parse_arithmetic();
                 }
+
                 _ => expect_eot!(token),
             }
         }
@@ -3203,6 +3323,8 @@ impl<'a> Statement<'a> {
                     });
                 }
 
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::Dot => {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
@@ -3343,11 +3465,14 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
                 }
 
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     expression = self.parse_ternary_node(expression, location);
                 }
@@ -3356,6 +3481,7 @@ impl<'a> Statement<'a> {
                     self.position = position;
                     return self.parse_arithmetic();
                 }
+
                 _ => expect_eot!(self.current_token()),
             }
         }
@@ -3475,6 +3601,8 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
                 }
@@ -3488,6 +3616,7 @@ impl<'a> Statement<'a> {
                     self.position = position;
                     return self.parse_arithmetic();
                 }
+
                 _ => expect_eot!(self.current_token()),
             }
         }
@@ -3570,11 +3699,14 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
                 }
 
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     expression = self.parse_ternary_node(expression, location);
                 }
@@ -3666,11 +3798,14 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
                 }
 
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     expression = self.parse_ternary_node(expression, location);
                 }
@@ -3679,6 +3814,7 @@ impl<'a> Statement<'a> {
                     self.position = position;
                     return self.parse_arithmetic();
                 }
+
                 _ => expect_eot!(token),
             }
         }
@@ -3736,11 +3872,14 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
                 }
 
                 TokenKind::Semicolon => {}
+
                 other if other.is_ternary_start() => {
                     expression = self.parse_ternary_node(expression, location);
                 }
@@ -3749,6 +3888,7 @@ impl<'a> Statement<'a> {
                     self.position = position;
                     return self.parse_arithmetic();
                 }
+
                 _ => {}
             }
         }
@@ -3799,6 +3939,8 @@ impl<'a> Statement<'a> {
                 TokenKind::Dot => {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
+
+                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -4237,6 +4379,11 @@ impl<'a> Statement<'a> {
                         self.parse_declare(Some(None))
                     } else if next.kind == TokenKind::Comma {
                         self.parse_tuple_declare(None)
+                    } else if next.kind == TokenKind::Not {
+                        self.parse_unwrap_shorthand(
+                            self.current_token().location,
+                            token_to_node!(&self.current_token(), self),
+                        )
                     } else if next.kind == TokenKind::Colon {
                         if self
                             .next_token_seek(2)
