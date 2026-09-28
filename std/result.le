@@ -101,6 +101,18 @@ fn Result::unwrap_or<T, E>(Result<T, E> self, T fallback) -> T {
     return self.__value;
 }
 
+fn Result::unwrap_or_else_with<T, E, U>(Result<T, E> self, fn(U) -> T fallback, U arg) -> T {
+    if !self.__is_ok {
+        return fallback(arg);
+    }
+
+    return self.__value;
+}
+
+fn Result::unwrap_or_else<T, E>(Result<T, E> self, fn() -> T fallback) -> T {
+    return self.unwrap_or_else_with(fn(cb) cb(), fallback);
+}
+
 /// Returns true if the result has a value inside
 fn Result::is_ok<T, E>(Result<T, E> self) {
     return self.__is_ok;
