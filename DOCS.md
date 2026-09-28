@@ -643,8 +643,17 @@ fn Result::map_err<T, E, Out>(Result<T, E> self, fn(E) -> Out cb) -> Out;
 fn Result::or_else<T, E, F>(Result<T, E> self, fn(E) -> Result<T, F> cb) -> Result<T, F>;
 fn Result::or_else_with<T, E, F, Arg>(Result<T, E> self, fn(E, Arg) -> Result<T, F> cb, Arg arg) -> Result<T, F>;
 
+fn Result::and<T, U, E>(Result<T, E> self, Result<U, E> other) -> Result<U, E>;
 fn Result::and_then<T, E, U>(Result<T, E> self, fn(T) -> Result<U, E> cb) -> Result<U, E>;
 fn Result::and_then_with<T, E, U, V>(Result<T, E> self, fn(T, V) -> Result<U, E> cb, V arg) -> Result<U, E>;
+
+fn Result::inspect_with<T, E, Arg, Out>(Result<T, E> self, fn(T, Arg) -> Out cb, Arg arg) -> Result<T, E>;
+fn Result::inspect<T, E, Out>(Result<T, E> self, fn(T) -> Out cb) -> Result<T, E>;
+fn Result::inspect_err_with<T, E, Arg, Out>(Result<T, E> self, fn(E, Arg) -> Out cb, Arg arg) -> Result<T, E>;
+fn Result::inspect_err<T, E, Out>(Result<T, E> self, fn(E) -> Out cb) -> Result<T, E>;
+
+fn Result::ok<T, E>(Result<T, E> self) -> Option<T>;
+fn Result::err<T, E>(Result<T, E> self) -> Option<E>;
 ```
 
 #
