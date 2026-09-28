@@ -564,6 +564,7 @@ fn Option::unwrap_or_else_with<T, U>(Option<T> self, fn(U) -> T fallback, U arg)
 fn Option::or_else<T>(Option<T> self, fn() -> Option<T> fallback) -> Option<T>;
 fn Option::or_else_with<T, U>(Option<T> self, fn(U) -> Option<T> fallback, U arg) -> Option<T>;
 fn Option::or<T>(Option<T> self, Option<T> fallback) -> Option<T>;
+fn Option::xor<T>(Option<T> self, Option<T> other) -> Option<T>;
 fn Option::and<T>(Option<T> self, Option<T> other) -> Option<T>;
 fn Option::and_then_with<T, U, Arg>(Option<T> self, fn(T, Arg) -> Option<U> cb, Arg arg) -> Option<U>;
 fn Option::and_then<T, U>(Option<T> self, fn(T) -> Option<U> cb) -> Option<U>;
@@ -590,7 +591,6 @@ fn Option::take_if_with<T, Arg>(Option<T> *self, fn(T, Arg) -> bool cb, Arg arg)
 fn Option::take_if<T>(Option<T> *self, fn(T) -> bool cb) -> Option<T>;
 fn Option::take<T>(Option<T> *self) -> Option<T>;
 
-fn Option::xor<T>(Option<T> self, Option<T> other) -> Option<T>;
 fn Option::reduce_with<T, U, V, Arg>(Option<T> self, Option<U> other, fn(T, U, Arg) -> V cb, Arg arg) -> Option<V>;
 fn Option::reduce<T, U, V>(Option<T> self, Option<U> other, fn(T, U) -> V cb) -> Option<V>;
 fn Option::zip<T, U>(Option<T> self, Option<U> other) -> Option<(T, U)>;

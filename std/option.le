@@ -119,6 +119,14 @@ fn Option::or<T>(Option<T> self, Option<T> fallback) -> Option<T> {
     return self;
 }
 
+fn Option::xor<T>(Option<T> self, Option<T> other) {
+    if self.is_some() && other.is_some() {
+        return None<T>();
+    }
+
+    return self.or(other);
+}
+
 fn Option::and<T>(Option<T> self, Option<T> other) -> Option<T> {
     if self.is_some() {
         return other;
@@ -233,14 +241,6 @@ fn Option::take_if<T>(Option<T> *self, fn(T) -> bool cb) {
 
 fn Option::take<T>(Option<T> *self) {         
     return self.take_if(fn: true);
-}
-
-fn Option::xor<T>(Option<T> self, Option<T> other) {
-    if self.is_some() && other.is_some() {
-        return None<T>();
-    }
-
-    return self.or(other);
 }
 
 fn Option::reduce_with<T, U, V, Arg>(Option<T> self, Option<U> other, fn(T, U, Arg) -> V cb, Arg arg) -> Option<V> {
