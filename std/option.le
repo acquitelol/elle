@@ -87,20 +87,16 @@ fn Option::unwrap_or<T>(Option<T> self, T fallback) -> T {
     return self.__value;
 }
 
-fn Option::unwrap_or_else<T>(Option<T> self, fn() -> T fallback) -> T {
+fn Option::unwrap_or_else_with<T, U>(Option<T> self, fn(U) -> T fallback, U arg) -> T {
     if !self.__is_some {
-        return fallback();
+        return fallback(arg);
     }
 
     return self.__value;
 }
 
-fn Option::or_else<T>(Option<T> self, fn() -> Option<T> fallback) -> Option<T> {
-    if !self.__is_some {
-        return fallback();
-    }
-
-    return self;
+fn Option::unwrap_or_else<T>(Option<T> self, fn() -> T fallback) -> T {
+    return self.unwrap_or_else_with(fn(cb) cb(), fallback);
 }
 
 fn Option::or_else_with<T, U>(Option<T> self, fn(U) -> Option<T> fallback, U arg) -> Option<T> {
@@ -111,12 +107,36 @@ fn Option::or_else_with<T, U>(Option<T> self, fn(U) -> Option<T> fallback, U arg
     return self;
 }
 
+fn Option::or_else<T>(Option<T> self, fn() -> Option<T> fallback) -> Option<T> {
+    return self.or_else_with(fn(cb) cb(), fallback);
+}
+
 fn Option::or<T>(Option<T> self, Option<T> fallback) -> Option<T> {
     if !self.__is_some {
         return fallback;
     }
 
     return self;
+}
+
+fn Option::and<T>(Option<T> self, Option<T> other) -> Option<T> {
+    if self.is_some() {
+        return other;
+    }
+
+    return self;
+}
+
+fn Option::and_then_with<T, U, Arg>(Option<T> self, fn(T, Arg) -> Option<U> cb, Arg arg) -> Option<U> {
+    if self.is_some() {
+        return cb(self.__value, arg);
+    }
+
+    return None<U>();
+}
+
+fn Option::and_then<T, U>(Option<T> self, fn(T) -> Option<U> cb) -> Option<U> {
+    return self.and_then_with(fn: x1(x0), cb);
 }
 
 // Returns true if the option has a value inside
@@ -138,14 +158,10 @@ fn Option::resolve_with<T, U, Out>(Option<T> self, fn(T, U) -> Out if_some, fn(U
 }
 
 fn Option::resolve<T, Out>(Option<T> self, fn(T) -> Out if_some, fn() -> Out if_none) {
-    if self.is_some() {
-        return if_some(self.__value);
-    } else {
-        return if_none();
-    }
+    return self.resolve_with(fn(cb) cb(), if_none, if_some);
 }
 
-fn Option::is_some_and_with<T, Arg>(Option<T> self, fn(T, Arg) -> bool cb, Arg arg) {
+fn Option::is_some_and_with<T, Arg>(Option<T> self, fn(T, Arg) -> bool cb, Arg arg) -> bool {
     if self.is_some() {
         return cb(self.__value, arg);
     } else {
@@ -169,6 +185,86 @@ fn Option::is_none_or<T>(Option<T> self, fn(T) -> bool cb) {
     return self.is_none_or_with(fn: x1(x0), cb);
 }
 
+fn Option::filter_with<T, Arg>(Option<T> self, fn(T, Arg) -> bool cb, Arg arg) -> Option<T> {
+    if self.is_some_and_with(cb, arg) {
+        return self;
+    } else {
+        return None<T>();
+    }
+}
+
+fn Option::filter<T>(Option<T> self, fn(T) -> bool cb) -> Option<T> {
+    return self.filter_with(fn(x, cb) cb(x), cb);
+}
+
+fn Option::inspect_with<T, Arg, Out>(Option<T> self, fn(T, Arg) -> Out cb, Arg arg) {
+    if self.is_some() {
+        cb(self.__value, arg);
+    }
+    
+    return self;
+}
+
+fn Option::inspect<T, Out>(Option<T> self, fn(T) -> Out cb) {
+    return self.inspect_with(fn: x1(x0), cb);
+}
+
+fn Option::replace<T>(Option<T> *self, T other) -> Option<T> {
+    value := Option { ..*self };
+    *self = Some(other);
+    return value;
+}
+
+fn Option::take_if_with<T, Arg>(Option<T> *self, fn(T, Arg) -> bool cb, Arg arg) {         
+    Option<T> value = Option { ..*self };
+    
+    if self.is_some() && cb(self.__value, arg) {
+        *self = None<T>();
+    } else {
+        return None<T>();
+    }
+    
+    return value;
+}
+
+fn Option::take_if<T>(Option<T> *self, fn(T) -> bool cb) {         
+    return self.take_if_with(fn: x1(x0), cb);
+}
+
+fn Option::take<T>(Option<T> *self) {         
+    return self.take_if(fn: true);
+}
+
+fn Option::xor<T>(Option<T> self, Option<T> other) {
+    if self.is_some() && other.is_some() {
+        return None<T>();
+    }
+
+    return self.or(other);
+}
+
+fn Option::reduce_with<T, U, V, Arg>(Option<T> self, Option<U> other, fn(T, U, Arg) -> V cb, Arg arg) -> Option<V> {
+    if self.is_none() && other.is_none() {
+        return None<V>();
+    }
+
+    if self.is_some() && other.is_none() { return self; }
+    if other.is_some() && self.is_none() { return other; }
+
+    return Some(cb(self.__value, other.__value, arg));
+}
+
+fn Option::reduce<T, U, V>(Option<T> self, Option<U> other, fn(T, U) -> V cb) {
+    return self.reduce_with(other, fn(a, b, cb) cb(a, b), cb);
+}
+
+fn Option::zip<T, U>(Option<T> self, Option<U> other) -> Option<(T, U)> {
+    if self.is_some() && other.is_some() {
+        return Some($(self.__value, other.__value));
+    }
+
+    return None();
+}
 
 fn Option::map_with<T, U, Out>(Option<T> self, fn(T, U) -> Out cb, U arg) {
     if self.is_some() {
