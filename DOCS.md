@@ -521,6 +521,134 @@ machine := #alloc(Machine);
 
 #
 
+### ♡ **`Option<T>` and `Result<T,E>`**
+
+- Elle offers the ergonomics of Rust's optional container types in the form of `Option<T>` and `Result<T, E>`. Note that, since Elle's type checker is not fully backwards-inferrable, for the None/Err variant you _must_ specify the type yourself in the generics.
+
+i.e:
+
+```rs
+Some(10) // works fine
+None() // will throw an error since this cannot infer its type later at its usage
+None<i32>() // works fine
+
+Ok(10) // will throw an error since it cannot determine the type of the Err generic
+Ok<i32, string>(10) // works fine
+Err("a") // will throw an error since it cannot determine the type of the Ok generic
+Err<i32, string>("a") // works fine
+Err<i32>("a") // also works fine because the Err generic is inferrable from its call
+```
+
+- Elle has various methods offered on each container type to suit your needs. Note, that since Elle does not have capturing lambdas, this does mean that you must use the `with` variant of your function.
+
+`Option<T>` offers these functions:
+
+```rs
+// dunder
+fn Option::__fmt__<T>(Option<T> self, u64 nesting) -> string;
+fn Option::__equals__<T>(Option<T> self, Option<T> other) -> bool;
+fn Option::__tuple__<T>(Option<T> self) -> (bool, T);
+
+// constructor
+fn Option::Some<T>(T value) -> Option<T>;
+fn Option::None<T>() -> Option<T>;
+
+// methods
+fn Option::expect<T>(ElleMeta meta, Option<T> self, string message) -> T;
+
+fn Option::unwrap<T>(ElleMeta meta, Option<T> self) -> T;
+fn Option::unwrap_or<T>(Option<T> self, T fallback) -> T;
+fn Option::unwrap_or_else<T>(Option<T> self, fn() -> T fallback) -> T;
+fn Option::unwrap_or_else_with<T, U>(Option<T> self, fn(U) -> T fallback, U arg) -> T;
+
+fn Option::or_else<T>(Option<T> self, fn() -> Option<T> fallback) -> Option<T>;
+fn Option::or_else_with<T, U>(Option<T> self, fn(U) -> Option<T> fallback, U arg) -> Option<T>;
+fn Option::or<T>(Option<T> self, Option<T> fallback) -> Option<T>;
+fn Option::and<T>(Option<T> self, Option<T> other) -> Option<T>;
+fn Option::and_then_with<T, U, Arg>(Option<T> self, fn(T, Arg) -> Option<U> cb, Arg arg) -> Option<U>;
+fn Option::and_then<T, U>(Option<T> self, fn(T) -> Option<U> cb) -> Option<U>;
+
+fn Option::is_some<T>(Option<T> self) -> bool;
+fn Option::is_none<T>(Option<T> self) -> bool;
+
+fn Option::resolve_with<T, U, Out>(Option<T> self, fn(T, U) -> Out if_some, fn(U) -> Out if_none, U arg) -> Out;
+fn Option::resolve<T, Out>(Option<T> self, fn(T) -> Out if_some, fn() -> Out if_none) -> Out;
+
+fn Option::is_some_and_with<T, Arg>(Option<T> self, fn(T, Arg) -> bool cb, Arg arg) -> bool;
+fn Option::is_some_and<T>(Option<T> self, fn(T) -> bool cb) -> bool;
+fn Option::is_none_or_with<T, Arg>(Option<T> self, fn(T, Arg) -> bool cb, Arg arg) -> bool;
+fn Option::is_none_or<T>(Option<T> self, fn(T) -> bool cb) -> bool;
+
+fn Option::filter_with<T, Arg>(Option<T> self, fn(T, Arg) -> bool cb, Arg arg) -> Option<T>;
+fn Option::filter<T>(Option<T> self, fn(T) -> bool cb) -> Option<T>;
+
+fn Option::inspect_with<T, Arg, Out>(Option<T> self, fn(T, Arg) -> Out cb, Arg arg) -> Option<T>;
+fn Option::inspect<T, Out>(Option<T> self, fn(T) -> Out cb) -> Option<T>;
+
+fn Option::replace<T>(Option<T> *self, T other) -> Option<T>;
+fn Option::take_if_with<T, Arg>(Option<T> *self, fn(T, Arg) -> bool cb, Arg arg) -> Option<T>;
+fn Option::take_if<T>(Option<T> *self, fn(T) -> bool cb) -> Option<T>;
+fn Option::take<T>(Option<T> *self) -> Option<T>;
+
+fn Option::xor<T>(Option<T> self, Option<T> other) -> Option<T>;
+fn Option::reduce_with<T, U, V, Arg>(Option<T> self, Option<U> other, fn(T, U, Arg) -> V cb, Arg arg) -> Option<V>;
+fn Option::reduce<T, U, V>(Option<T> self, Option<U> other, fn(T, U) -> V cb) -> Option<V>;
+fn Option::zip<T, U>(Option<T> self, Option<U> other) -> Option<(T, U)>;
+
+fn Option::map_with<T, U, Out>(Option<T> self, fn(T, U) -> Out cb, U arg) -> Out;
+fn Option::map<T, Out>(Option<T> self, fn(T) -> Out cb) -> Out;
+
+fn Option::ok_or_with<T, E, Arg>(Option<T> self, fn(Arg) -> E cb, Arg arg) -> Result<T, E>;
+fn Option::ok_or<T, E>(Option<T> self, E err) -> Result<T, E>;
+```
+
+`Result<T, E>` offers these functions:
+
+```rs
+// dunder
+fn Result::__fmt__<T, E>(Result<T, E> self, u64 nesting) -> string;
+fn Result::__equals__<T, E>(Result<T, E> self, Result<T, E> other) -> bool;
+fn Result::__tuple__<T, E>(Result<T, E> self) -> (bool, T);
+fn Result::__triple__<T, E>(Result<T, E> self) -> (bool, T, E);
+
+// constructors
+fn Result::Ok<T, E>(T value) -> Result<T, E>;
+fn Result::Err<T, E>(E error) -> Result<T, E>;
+
+// methods
+fn Result::expect<T, E>(ElleMeta meta, Result<T, E> self, string message) -> T;
+
+fn Result::unwrap<T, E>(ElleMeta meta, Result<T, E> self) -> T;
+fn Result::unwrap_err<T, E>(ElleMeta meta, Result<T, E> self) -> E;
+fn Result::unwrap_or<T, E>(Result<T, E> self, T fallback) -> T;
+fn Result::unwrap_or_else_with<T, E, U>(Result<T, E> self, fn(U) -> T fallback, U arg) -> T;
+fn Result::unwrap_or_else<T, E>(Result<T, E> self, fn() -> T fallback) -> T;
+
+fn Result::is_ok<T, E>(Result<T, E> self) -> bool;
+fn Result::is_err<T, E>(Result<T, E> self) -> bool;
+
+fn Result::resolve_with<T, E, Arg, Out>(Result<T, E> self, fn(T, Arg) -> Out if_ok, fn(E, Arg) -> Out if_err, Arg arg) -> Out;
+fn Result::resolve<T, E, Out>(Result<T, E> self, fn(T) -> Out if_ok, fn(E) -> Out if_err) -> Out;
+
+fn Result::is_ok_and<T, E>(Result<T, E> self, fn(T) -> bool cb) -> bool;
+fn Result::is_ok_or<T, E>(Result<T, E> self, fn(E) -> bool cb) -> bool;
+fn Result::is_err_and<T, E>(Result<T, E> self, fn(E) -> bool cb) -> bool;
+fn Result::is_err_or<T, E>(Result<T, E> self, fn(T) -> bool cb) -> bool;
+
+fn Result::map_with<T, E, Arg, Out>(Result<T, E> self, fn(T, Arg) -> Out cb, Arg arg) -> Out;
+fn Result::map<T, E, Out>(Result<T, E> self, fn(T) -> Out cb) -> Out;
+fn Result::map_err_with<T, E, U, Out>(Result<T, E> self, fn(E, U) -> Out cb, U arg) -> Out;
+fn Result::map_err<T, E, Out>(Result<T, E> self, fn(E) -> Out cb) -> Out;
+
+fn Result::or_else<T, E, F>(Result<T, E> self, fn(E) -> Result<T, F> cb) -> Result<T, F>;
+fn Result::or_else_with<T, E, F, Arg>(Result<T, E> self, fn(E, Arg) -> Result<T, F> cb, Arg arg) -> Result<T, F>;
+
+fn Result::and_then<T, E, U>(Result<T, E> self, fn(T) -> Result<U, E> cb) -> Result<U, E>;
+fn Result::and_then_with<T, E, U, V>(Result<T, E> self, fn(T, V) -> Result<U, E> cb, V arg) -> Result<U, E>;
+```
+
+#
+
 ### ♡ **Variadic Functions**
 
 - A variadic function is a function that can take in a variable amount of arguments. This works similar to C except that Elle provides you with mechanisms to make this much nicer to use, both as the producer and consumer of the function.
