@@ -11,7 +11,7 @@ fn bool::parse(string str) {
 }
 
 fn bool::try_parse(string str, bool *res) {
-    bool valid = str == "true" || str == "false";
+    valid := str == "true" || str == "false";
 
     if valid {
         *res = bool::parse(str);
@@ -22,11 +22,11 @@ fn bool::try_parse(string str, bool *res) {
 }
 
 !pub fn __internal_is_valid(string str, string ty) -> bool {
-    let valid_strspn = #["-0123456789", "-0123456789", "-0123456789."];
-    let valid_types = #["i32", "i64", "f64"];
-    let type_index = -1;
+    valid_strspn := #["-0123456789", "-0123456789", "-0123456789."];
+    valid_types := #["i32", "i64", "f64"];
+    type_index := -1;
 
-    for let i = 0; i < #len(valid_types); i += 1 {
+    for i: u64 = 0; i < #len(valid_types); i += 1 {
         if valid_types[i] == ty {
             type_index = i;
         }
@@ -36,7 +36,7 @@ fn bool::try_parse(string str, bool *res) {
         io::eprintln(ty, " is not a valid type for casting. Falling back to 0");
         io::eprintln("Valid types:");
 
-        for let i = 0; i < #len(valid_types); i += 1 {
+        for i: u64 = 0; i < #len(valid_types); i += 1 {
             io::eprintln("-\t", valid_types[i]);
         }
 
@@ -51,7 +51,7 @@ fn bool::try_parse(string str, bool *res) {
 }
 
 !pub fn __internal_is_valid_with_err(string str, string ty) -> bool {
-    let res = __internal_is_valid(str, ty);
+    res := __internal_is_valid(str, ty);
 
     if !res {
         io::eprintln("Invalid input: '", str, "'. Falling back to 0.");
@@ -65,7 +65,7 @@ fn i32::parse(string str) -> i32 {
 }
 
 fn i32::try_parse(string str, i32 *res) -> bool {
-    let valid = __internal_is_valid(str, "i32");
+    valid := __internal_is_valid(str, "i32");
 
     if valid {
         *res = str.atoi();
@@ -80,7 +80,7 @@ fn i64::parse(string str) -> i64 {
 }
 
 fn i64::try_parse(string str, i64 *res) -> bool {
-    let valid = __internal_is_valid(str, "i64");
+    valid := __internal_is_valid(str, "i64");
 
     if valid {
         *res = str.atol();
@@ -91,7 +91,7 @@ fn i64::try_parse(string str, i64 *res) -> bool {
 }
 
 fn f32::parse(string str) -> f32 {
-    let valid = __internal_is_valid_with_err(str, "f64");
+    valid := __internal_is_valid_with_err(str, "f64");
 
     if valid {
         return #cast(f32, str.atof());
@@ -101,7 +101,7 @@ fn f32::parse(string str) -> f32 {
 }
 
 fn f32::try_parse(string str, f32 *res) -> bool {
-    let valid = __internal_is_valid(str, "f64");
+    valid := __internal_is_valid(str, "f64");
 
     if valid {
         *res = #cast(f32, str.atof());
@@ -112,7 +112,7 @@ fn f32::try_parse(string str, f32 *res) -> bool {
 }
 
 fn f64::parse(string str) -> f64 {
-    let valid = __internal_is_valid_with_err(str, "f64");
+    valid := __internal_is_valid_with_err(str, "f64");
 
     if valid {
         return str.atof();
@@ -122,7 +122,7 @@ fn f64::parse(string str) -> f64 {
 }
 
 fn f64::try_parse(string str, f64 *res) -> bool {
-    let valid = __internal_is_valid(str, "f64");
+    valid := __internal_is_valid(str, "f64");
 
     if valid {
         *res = str.atof();

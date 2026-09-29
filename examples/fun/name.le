@@ -1,7 +1,7 @@
 use std/io;
 
 fn main() {
-    let name = io::input("Enter your first name -> ");
+    name := io::input("Enter your first name -> ");
 
     if name {
         io::printf("Hello, {}!", name);

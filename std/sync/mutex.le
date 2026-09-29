@@ -7,7 +7,7 @@ struct Mutex<T> {
 }
 
 fn Mutex::new<T>(T value) -> Mutex<T> {
-    Mutex<T> mutex = Mutex { 
+    mutex: Mutex<T> = Mutex { 
         value = Box::new(value),
         store = #alloc(u8, 64)
     };

@@ -1,27 +1,28 @@
 // This code was intended to draw snowflakes however
 // it was repurposed to draw the Sierpinski Triangle
+use std/prelude;
 use std/raylib;
 
-const SCREEN_FACTOR = 80;
-const SCREEN_WIDTH = 8 * SCREEN_FACTOR;
-const SCREEN_HEIGHT = 8 * SCREEN_FACTOR;
+let SCREEN_FACTOR = 80;
+let SCREEN_WIDTH = 8 * SCREEN_FACTOR;
+let SCREEN_HEIGHT = 8 * SCREEN_FACTOR;
 
-const BRANCHES = 3;
-const DEPTH = 10;
-const ANGLE = 2.0 * PI / BRANCHES;
-const ROTATION_OFFSET = PI / 6.0;
-const LENGTH = SCREEN_FACTOR * 2.0;
-const THICKNESS = 8.0;
+let BRANCHES = 3;
+let DEPTH = 10;
+let ANGLE = 2.0 * PI / BRANCHES;
+let ROTATION_OFFSET = PI / 6.0;
+let LENGTH = SCREEN_FACTOR * 2.0;
+let THICKNESS = 8.0;
 
 fn render_sierpinski(Vector2 center, f32 length, f32 thickness, i32 depth) {
     if depth <= 0 {
         return;
     }
 
-    for let i = 0; i < BRANCHES; i += 1 {
-        let angle = ROTATION_OFFSET + ANGLE * i;
+    for i := 0; i < BRANCHES; i += 1 {
+        angle := ROTATION_OFFSET + ANGLE * i;
 
-        let branch = Vector2 {
+        branch := Vector2 {
             x = center.x + math::cos(angle) * length,
             y = center.y + math::sin(angle) * length
         };
@@ -37,7 +38,7 @@ fn main() {
 
     rl::set_target_fps(60);
 
-    let center = Vector2 {
+    center := Vector2 {
         x = SCREEN_WIDTH / 2,
         y = SCREEN_HEIGHT / 2,
     };

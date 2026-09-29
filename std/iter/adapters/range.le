@@ -8,17 +8,13 @@ struct Range<T> {
 }
 
 fn Iterator::range<T>(T from, T to, bool inclusive) -> Iterator<T, DoubleEnded> {
-    Range<T> range = Range {
-        from = from,
-        to = to,
-        inclusive = inclusive
-    };
+    range: Range<T> = Range { from, to, inclusive };
 
     return Iterator {
         env = Box::new(range).to_ptr(),
         next = fn(Range<T> *env) {
             if env.from < env.to + env.inclusive {
-                let current = env.from;
+                current := env.from;
                 env.from += 1;
                 return Some(current);
             } else {

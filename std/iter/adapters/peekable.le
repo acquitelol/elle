@@ -7,13 +7,13 @@ struct Peekable<T, AnyEnded> {
 }
 
 fn Iterator::peekable<T, AnyEnded>(Iterator<T, AnyEnded> self) -> Iterator<T, AnyEnded> {
-    Peekable<T, AnyEnded> peek = Peekable {
+    env: Peekable<T, AnyEnded> = Peekable {
         base = self,
         peeked = Box::new(None<T>())
     };
 
     return Iterator {
-        env = Box::new(peek).to_ptr(),
+        env = Box::new(env).to_ptr(),
         next = fn(Peekable<T, AnyEnded> *env) {
             if (*env.peeked).is_some() {
                 val := *env.peeked;

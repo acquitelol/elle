@@ -2,7 +2,7 @@ use std/bigint;
 use std/io;
 
 fn main() {
-    let a = BigInt::new("1111111111111111111111111111111111111111111111");
+    a := BigInt::new("1111111111111111111111111111111111111111111111");
 
     $assert(a
         .mul(BigInt::new("2"))
@@ -11,7 +11,7 @@ fn main() {
         nil
     );
 
-    let b = BigInt::new("1000000000000000000000000");
+    b := BigInt::new("1000000000000000000000000");
 
     $assert(b
         .mul(BigInt::new("16"))
@@ -20,7 +20,7 @@ fn main() {
         nil
     );
 
-    let c = BigInt::new("123456");
+    c := BigInt::new("123456");
 
     $assert(c.to<i32>() == 123456, nil);
     $assert(c.to<i32>() == c.to<i64>(), nil);

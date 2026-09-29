@@ -7,13 +7,10 @@ struct Take<T, AnyEnded> {
 }
 
 fn Iterator::take<T, AnyEnded>(Iterator<T, AnyEnded> self, u64 n) -> Iterator<T, AnyEnded> {
-    Take<T, AnyEnded> take = Take {
-        base = self,
-        n = n
-    };
+    env: Take<T, AnyEnded> = Take { base = self, n };
 
     return Iterator {
-        env = Box::new(take).to_ptr(),
+        env = Box::new(env).to_ptr(),
         next = fn(Take<T, AnyEnded> *env) {
             if env.n == 0 {
                 return None<T>();

@@ -82,13 +82,13 @@ fn Vector2::scale(Vector2 self, f32 scalar) {
 }
 
 fn Vector2::normalize(Vector2 self) {
-    f32 length = self.length();
+    length: f32 = self.length();
     return self.scale(1.0 / length);
 }
 
 fn Vector2::rotate(Vector2 self, f32 angle) {
-    f32 s = math::sinf(angle);
-    f32 c = math::cosf(angle);
+    s: f32 = math::sinf(angle);
+    c: f32 = math::cosf(angle);
 
     return Vector2 {
         x = self.x * c - self.y * s,
@@ -199,7 +199,7 @@ fn Vector3::scale(Vector3 self, f32 scalar) {
 }
 
 fn Vector3::normalize(Vector3 self) {
-    f32 length = self.length();
+    length: f32 = self.length();
     return self.scale(1.0 / length);
 }
 
@@ -220,9 +220,9 @@ fn Vector3::rotate(Vector3 self, Vector3 axis, f32 angle) {
     sin_theta := math::sinf(angle);
     cos_theta := math::cosf(angle);
 
-    let term1 = self.scale(cos_theta);
-    let term2 = u.cross(self).scale(sin_theta);
-    let term3 = u.scale(u.dot(self) * (1.0 - cos_theta));
+    term1 := self.scale(cos_theta);
+    term2 := u.cross(self).scale(sin_theta);
+    term3 := u.scale(u.dot(self) * (1.0 - cos_theta));
 
     return term1.add(term2).add(term3);
 }

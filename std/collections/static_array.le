@@ -23,7 +23,7 @@ fn __arr__::__equals__<T, N>(T[N] self, T[N] other) {
 fn __arr__::__fmt__<T, N>(T[N] self, u64 nesting) {
     res := "[";
 
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         res <>= self[i].__fmt__(nesting);
 
         if i != self.len() - 1 {
@@ -42,7 +42,7 @@ fn __arr__::__iter__<T, N>(T[N] self) {
 external fn __arr__::__iter__<T, N>(T[N] self) @alias(__arr__::iter) -> Iterator<T, DoubleEnded>;
 
 fn __arr__::transpose<T, A, B>(T[A][B] xs) -> T[B][A] {
-    T[B][A] res;
+    res: T[B][A];
 
     for i in 0..xs.len() {
         for j in 0..xs[0].len() {
@@ -55,7 +55,7 @@ fn __arr__::transpose<T, A, B>(T[A][B] xs) -> T[B][A] {
 
 
 fn __arr__::mul<T, A, B, C>(T[A][B] a, T[B][C] b) {
-    T[A][C] res;
+    res: T[A][C];
 
     for i in 0..a.len() {
         for j in 0..b[0].len() {
@@ -81,9 +81,9 @@ fn __arr__::__triple__<T>(T[3] self) {
 }
 
 fn __arr__::__hash__<T, N>(T[N] self, u64 cap) {
-    u64 total = 0;
+    total: u64 = 0;
 
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         a := self[i];
         b := self[(i + 1) % self.len()];
 

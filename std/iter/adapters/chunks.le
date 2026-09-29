@@ -10,13 +10,10 @@ fn Iterator::chunks<T, AnyEnded>(
     Iterator<T, AnyEnded> self,
     u64 n
 ) -> Iterator<T[], AnyEnded> {
-    Chunks<T, AnyEnded> chunks = Chunks {
-        base = self,
-        n = n
-    };
+    env: Chunks<T, AnyEnded> = Chunks { base = self, n };
 
     return Iterator {
-        env = Box::new(chunks).to_ptr(),
+        env = Box::new(env).to_ptr(),
         next = fn(Chunks<T, AnyEnded> *env) {
             res := env.base.take(env.n).collect();
             return res.is_empty() ? None<T[]>() : Some(res);

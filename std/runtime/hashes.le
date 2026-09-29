@@ -8,10 +8,10 @@ global pub;
 }
 
 fn string::__hash__(string self, u64 capacity) {
-    u64 hash = 5381;
+    hash: u64 = 5381;
 
-    for u64 i = 0; i < self.len(); i += 1 {
-        char c = self[i];
+    for i: u64 = 0; i < self.len(); i += 1 {
+        c := self[i];
         hash = (hash * 33 + c) % capacity;
     }
 

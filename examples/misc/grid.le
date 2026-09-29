@@ -17,6 +17,6 @@ fn Grid::__load__<T>(Grid<T> self, (i32, i32) coord) {
 }
 
 fn main() {
-    let grid = Grid::from_str("A159\nB260\nC371\nD482");
+    grid := Grid::from_str("A159\nB260\nC371\nD482");
     $dbg(grid[$(0, 0)], grid[$(2, 1)]);
 }

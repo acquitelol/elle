@@ -2,22 +2,20 @@
 
 - Variables can be declared in 3 ways:
   - Using their type (useful for inference of information based on the left-hand side like generics)
-  - Using let (useful for inferring based on the right-hand side)
-  - Using the walrus operator `:=` (cannot be used with a type, equivalent to `let`)
+  - Using the walrus operator `:=` (useful for inferring type based on the right-hand side)
 
 - Example:
 
 ```rs
-let a = 0; // a is inferred to be i32 because 0 is i32
-i64 a = 5; // 5 is inferred to be i64 because a is i64
-a := 0;    // acts the same as `let a = 0;`
+a: i64 = 5; // 5 is inferred to be i64 because a is i64
+a := 0;     // a is inferred to be i32 because 0 is i32
 ```
 
 This is especially useful for dynamic array declarations:
 
 ```rs
 arr := []i64;
-i64[] arr = [];
+arr: i64[] = [];
 ```
 
 #
@@ -72,7 +70,7 @@ while expression {
 - You also have access to block scoped variables inside of this loop. This means you can create a pseudo `for loop` with the following code:
 
 ```rs
-let i = 0;
+i := 0;
 
 while i < 10 {
     io::println(i);
@@ -98,7 +96,7 @@ Essentially, the loop creates the variable defined in (1), and evaluates the blo
 - Basic example of a for loop that prints the digits 0-9 to the stdout:
 
 ```rs
-for i32 i = 0; i < 10; i += 1 {
+for i := 0; i < 10; i += 1 {
     io::println(i);
 }
 ```
@@ -117,9 +115,9 @@ fn fact(i64 n) -> i64 {
 }
 
 fn get_e() {
-    f64 res = 0.0;
+    res: f64 = 0.0;
 
-    for i64 i = 0; i < 50; i += 1 {
+    for i := 0; i < 50; i += 1 {
         res += 1.0 / fact(i);
     }
 
@@ -127,7 +125,7 @@ fn get_e() {
 }
 
 fn main() {
-    f64 e = get_e();
+    e: f64 = get_e();
     $dbg(e);
 }
 ```
@@ -183,7 +181,7 @@ Here's a simple example:
 
 ```rs
 fn main() {
-    let a = 0;
+    a := 0;
 
     {
         a += 1;
@@ -199,7 +197,7 @@ And it is relatively clear how this code is essentially equal to:
 
 ```rs
 fn main() {
-    let a = 0;
+    a := 0;
 
     if true {
         a += 1;
@@ -306,7 +304,7 @@ fn square(i32 a) {
 }
 
 fn main() {
-    i32 res = square(5);
+    res: i32 = square(5);
 }
 ```
 
@@ -320,7 +318,7 @@ fn square(ElleMeta meta, i32 a) {
 }
 
 fn main() {
-    i32 res = square(5);
+    res: i32 = square(5);
 }
 ```
 
@@ -454,7 +452,7 @@ fn Foo::new(i32 a) {
 }
 
 fn main() {
-    let foo = Foo::new(10);
+    foo := Foo::new(10);
     $dbg(foo);
 }
 ```
@@ -464,7 +462,7 @@ Another example:
 ```rs
 fn main() {
     // allocate space for 10 integers
-    i32 *numbers = #alloc(i32, 10);
+    numbers: i32* = #alloc(i32, 10);
     numbers[1] = 39;
 
     $dbg(numbers[1]); // 39
@@ -477,7 +475,7 @@ Keep in mind that you can also use the libc standard manual memory management fu
 The compiler also provides you handy builtins for easy and quick allocation: `#alloc` and `#realloc`. As these builtins take a _type_ and not the _size of a type_ they can actually evaluate to exactly `T *` instead of `void *` when called. This means you can write this:
 
 ```rs
-let x = #alloc(i32, 5); // x -> i32 *
+x := #alloc(i32, 5); // x -> i32 *
 ```
 
 without needing to explicitly convert anywhere.
@@ -496,13 +494,13 @@ struct Foo {
 }
 
 fn Foo::new(i32 a) {
-    let foo = #alloc(Foo);
+    foo := #alloc(Foo);
     foo.a = a;
     return foo;
 }
 
 fn main() {
-    let foo = Foo::new(6);
+    foo := Foo::new(6);
     $dbg(foo);
 }
 ```
@@ -510,7 +508,7 @@ fn main() {
 Using these directives, you can turn a verbose expression such as:
 
 ```rs
-Machine *machine = #env.allocator.alloc(#size(Machine));
+machine: Machine* = #env.allocator.alloc(#size(Machine));
 ```
 
 into the (much) cleaner:
@@ -755,11 +753,11 @@ for x in #[1, 2, 3] {
 Dynamic arrays have special sugar when being typed:
 
 ```rs
-i64[] x = [];
+x: i64[] = [];
 
 // OR
 
-let x = Array::new<i64>();
+x := Array::new<i64>();
 
 // ... equivalent to ...
 
@@ -770,18 +768,17 @@ Array<i64> *x = Array::new();
 x := []i64;
 ```
 
-Static arrays do not, but you can still use `let`/`:=`:
+Static arrays do not, but you can still use `:=`:
 
 ```rs
-let x = #[1, 2, 3]; // x's type is `i32[3]`
 x := #[1, 2, 3]; // x's type is `i32[3]`
 
 // ... OR if you need the inference ...
 
-f32[3] x = #[1, 2, 3];
+x: f32[3] = #[1, 2, 3];
 ```
 
-You can also use `let`/`:=` when declaring dynamic arrays which have values:
+You can also use `:=` when declaring dynamic arrays which have values:
 
 ```rs
 x := [1, 2, 3]; // x's type is i32[]
@@ -801,7 +798,7 @@ grid[1][0]; // 3
 
 // ... or if you prefer explicit typing ...
 
-char[][] x = [
+x: char[][] = [
     ['a', 'b'],
     ['c', 'd']
 ]; // char[][]
@@ -823,7 +820,7 @@ grid[1][0]; // 3
 
 // ... or if you prefer explicit typing ...
 
-char[2][2] x = #[
+x: char[2][2] = #[
     #['a', 'b'],
     #['c', 'd']
 ]; // char[2][2]
@@ -846,7 +843,7 @@ Keep in mind that you cannot perform mathematical operations on these types valu
 
 ```rs
 fn __arr__::mul<T, A, B, C>(T[A][B] a, T[B][C] b) {
-    T[A][C] res;
+    res: T[A][C];
 
     for i in 0..a.len() {
         for j in 0..b[0].len() {
@@ -868,7 +865,7 @@ And the size can be transformed, allowing for compile time operations to the dim
 
 ```rs
 fn __arr__::transpose<T, A, B>(T[A][B] xs) -> T[B][A] {
-    T[B][A] res;
+    res: T[B][A];
 
     for i in 0..xs.len() {
         for j in 0..xs[0].len() {
@@ -924,15 +921,15 @@ To define a triple, use `$$(x, y, z)` or `Triple::new(x, y, z)`.
 You can put tuples inside of arrays:
 
 ```rs
-let foo = [$(1, "a"), $(2, "b")];
+foo := [$(1, "a"), $(2, "b")];
 
 // ... or if you prefer explicit typing ...
 
-(i32, string)[] foo = [$(1, "a"), $(2, "b")];
+foo: (i32, string)[] = [$(1, "a"), $(2, "b")];
 
-// if you don't wanna put values inside but wanna use the `let` keyowrd you can do this
+// if you don't wanna put values inside but wanna use the `:=` you can do this
 
-let foo = [](i32, string);
+foo := [](i32, string);
 
 // ... nothing new here
 ```
@@ -957,14 +954,12 @@ The syntax is as follows:
 
 ```rs
 x, y := <tuple_expr>;
-let x, y = <tuple_expr>;
-T x, y = <tuple_expr>;
+x, y: T = <tuple_expr>;
 ```
 
 ```rs
 x, y, z := <triple_expr>;
-let x, y, z = <triple_expr>;
-T x, y, z = <triple_expr>;
+x, y, z: T = <triple_expr>;
 ```
 
 This is simply sugar for accessing the `x`, `y` (and optionally `z`) fields on the `<???_expr>`.
@@ -1043,7 +1038,7 @@ This is especially useful for traversal algorithms like BFS:
 
 ```rs
 fn Node::print_on_lines(Node *self) {
-    i32[][] levels = [];
+    levels := []i32[];
     queue := [$(self, 0)];
 
     while !queue.is_empty() {
@@ -1121,7 +1116,7 @@ Here are basic examples of how you can use them:
 use std/prelude;
 
 fn main() {
-    let arr = [1, 2, 3].iter().map(fn(x) x * 2);
+    arr := [1, 2, 3].iter().map(fn(x) x * 2);
     io::println(arr); // <[2, 4, 6] at 0xdeadbeef>
 }
 ```
@@ -1130,8 +1125,8 @@ fn main() {
 use std/prelude;
 
 fn main() {
-    let x = fn(i32 x) {
-        let foo = x * 100;
+    x := fn(i32 x) {
+        foo := x * 100;
         return (foo - 10) / 2;
     };
 
@@ -1173,15 +1168,15 @@ This means that these examples won't work:
 use std/prelude;
 
 fn main() {
-    let arr = [1, 2, 3];
-    let a = 5;
+    arr := [1, 2, 3];
+    a := 5;
 
     // The compiler will throw an error here
-    let arr_doubled = arr.iter().map(fn(x) x * a);
+    arr_doubled := arr.iter().map(fn(x) x * a);
     io::println(arr_doubled);
 
     // Settle for this instead
-    let arr_doubled = arr.map_with(fn(x, a) x * a, a);
+    arr_doubled := arr.map_with(fn(x, a) x * a, a);
     io::println(arr_doubled);
 }
 ```
@@ -1295,7 +1290,7 @@ A very simple example of this is declaring a variable and deferring printing its
 use std/io;
 
 fn main() {
-    let i = 0;
+    i := 0;
 
     // If this were not in a defer statement, then this would print 0
     // However, it will print 25 instead.
@@ -1315,7 +1310,7 @@ This also means that if you, hypothetically, design a program like this
 use std/io;
 
 fn main() {
-    let i = 0;
+    i := 0;
     defer io::print(i);
 
     {
@@ -1334,7 +1329,7 @@ You can also write something like this:
 
 ```rs
 fn main() {
-    let i = 0;
+    i := 0;
     defer io::print(i);
 
     {
@@ -1360,13 +1355,13 @@ Consider this code:
 use std/io
 
 fn main() {
-    let size = 10;
-    i64 *numbers = mem::malloc(size * #size(i64));
+    size := 10;
+    numbers: i64* = mem::malloc(size * #size(i64));
     defer mem::free(numbers);
 
-    for let i = 0; i < size - 1; i += 1 {
+    for i := 0; i < size - 1; i += 1 {
         numbers[i] = i * 2;
-        let res = numbers[i];
+        res := numbers[i];
         io::printf("numbers[{}] = {}", i, res);
     }
 
@@ -1420,8 +1415,8 @@ Here is an example that casts a float to an integer to add it to another integer
 
 ```rs
 fn main() {
-    f32 a = 1.5;
-    i32 b = #cast(i32, a) + 2;
+    a := 1.5;
+    b := #cast(i32, a) + 2;
 }
 ```
 
@@ -1435,7 +1430,7 @@ This means you can write:
 
 ```rs
 fn main() {
-    f64 *a = mem::malloc(1024 * #size(f64));
+    a: f64* = mem::malloc(1024 * #size(f64));
 }
 ```
 
@@ -1468,7 +1463,7 @@ Example of using logical `NOT`:
 use std/io;
 
 fn main() {
-    let myBool = false;
+    myBool := false;
 
     if !myBool {
         io::println("Hello world!");
@@ -1482,7 +1477,7 @@ Example of using bitwise `NOT`:
 use std/io;
 
 fn main() {
-    let a = 1;
+    a := 1;
 
     if ~a == -2 {
         io::println("Hello world!");
@@ -1509,7 +1504,7 @@ fn other(i32 *something) {
 }
 
 pub fn main() {
-    let a = 39;
+    a := 39;
     other(&a);
     return 0;
 }
@@ -1530,7 +1525,7 @@ fn other(i32 *a, string *str) {
 }
 
 fn main() {
-    let a = 39;
+    a := 39;
     string str = "Hello world!";
 
     other(&a, &str);
@@ -1596,7 +1591,7 @@ This means the following code is valid:
 use std/io;
 
 fn main() {
-    let a = 1;
+    a := 1;
     a ^= 1; // a is now 0
     io::println(a);
 }
@@ -1612,7 +1607,7 @@ Example of a program that calculates the xor (`^`) and sum (`+`) of some values:
 use std/io;
 
 fn main() {
-    i32 a = 1 + (5 ^ 2); // Xor has a lower precedence than addition
+    a := 1 + (5 ^ 2); // Xor has a lower precedence than addition
 
     // We're expecting this to be 8 because
     //  5 ^ 2 = 7 and 7 + 1 = 8, however
@@ -1628,7 +1623,7 @@ Here's another example, using the string concatenation operator:
 use std/io; // std/io contains std/string so we don't need to import it
 
 fn main() {
-    string a = "a" <> "b";
+    a := "a" <> "b";
     a <>= "c"; // Concatenation can be done declaratively
     $dbg(a); // Expected: (string) a = "abc"
 }
@@ -1653,11 +1648,11 @@ Basic example:
 use std/io;
 
 fn main() {
-    i64 a = 0xDEADBEEF;
-    i32 b = 0o273451456;
-    i32 c = 0b111010011011111010010100101;
-    i64 d = 1.2e9;
-    f64 e = 2.7182818e2;
+    a: void * = 0xDEADBEEF;
+    b: i32= 0o273451456;
+    c: i32 = 0b111010011011111010010100101;
+    d: i64 = 1.2e9;
+    e: f64 = 2.7182818e2;
 
     $dbg(a, b, c, d, e);
 }
@@ -1839,7 +1834,7 @@ fn other(Foo *foo) {
 }
 
 fn main() {
-    Foo foo = Foo { a = 100 };
+    foo := Foo { a = 100 };
     other(&foo);
     io::println(foo.a); // foo.a is now 5 not 100
 }
@@ -1859,11 +1854,11 @@ fn Foo::add(Foo self, Foo other) {
 }
 
 fn main() {
-    Foo foo1 = Foo { a = 10 };
-    Foo foo2 = Foo { a = 30 };
+    foo1 := Foo { a = 10 };
+    foo2 := Foo { a = 30 };
 
-    Foo res1 = foo1.add(foo2);
-    Foo res2 = Foo::add(foo1, foo2);
+    res1 := foo1.add(foo2);
+    res2 := Foo::add(foo1, foo2);
 
     $dbg(res1.a, res2.a);
 }
@@ -1880,14 +1875,14 @@ arg = type name ;
 You can then either call them like this:
 
 ```rs
-let foo = Foo::new();
+foo := Foo::new();
 foo.bar();
 ```
 
 or like this:
 
 ```rs
-let foo = Foo::new();
+foo := Foo::new();
 Foo::bar(foo);
 ```
 
@@ -1910,7 +1905,7 @@ fn Foo::divideBy(Foo *self, i32 num) {
 }
 
 fn main() {
-    Foo foo = Foo { a = 10 };
+    foo := Foo { a = 10 };
     foo.divideBy(2);
 
     $dbg(foo.a); // foo.a = 5
@@ -2196,8 +2191,8 @@ struct Foo<T> {
 }
 
 fn main() {
-    Foo<i32> x = Foo { a = 1 };
-    Foo<string> y = Foo { a = "hello world!" };
+    x: Foo<i32> = Foo { a = 1 };
+    y: Foo<string> = Foo { a = "hello world!" };
 }
 ```
 
@@ -2231,7 +2226,7 @@ fn Foo::get_b<T, U>(Foo<T, U> self) -> U {
 }
 
 fn main() {
-    Foo<i32, f32> foo = Foo::new(10, 1.2);
+    foo: Foo<i32, f32> = Foo::new(10, 1.2);
     foo.double_all();
     $dbg(foo.get_a());
     $dbg(foo.get_b(), foo.b);
@@ -2252,7 +2247,7 @@ Here is an example of how you can use it:
 
 ```rs
 fn main(string[] args) {
-    let program = args.remove(0);
+    program := args.remove(0);
 
     for arg in args {
         if arg == "foo" {
@@ -2404,8 +2399,8 @@ To create functions that use these formattings, you can specify the @fmt attribu
 use std/io;
 
 fn foo(ElleMeta meta, ...args) @fmt {
-    for i32 i = 0; i < meta.arity; i += 1 {
-        string arg = args.yield(string); // The formatter will return a string
+    for i := 0; i < meta.arity; i += 1 {
+        arg := args.yield(string); // The formatter will return a string
         // Do something with it like printing it
         io::println(arg);
     }
@@ -2422,8 +2417,8 @@ To the compiler, this signals that every argument should be ran through its form
 use std/io;
 
 fn foo(ElleMeta meta, ...args) {
-    for i32 i = 0; i < meta.arity; i += 1 {
-        string arg = args.yield(string);
+    for i := 0; i < meta.arity; i += 1 {
+        arg := args.yield(string);
         io::println(arg);
     }
 }

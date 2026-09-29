@@ -19,7 +19,7 @@ fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
     total_length := (self.len() ?: 1 - 1) * 2;
     inline_parts := []string;
 
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         s := self[i].__fmt__(nesting);
         inline_parts.push(s);
         total_length += s.len();
@@ -40,7 +40,7 @@ fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
     result := ['[', '\n'];
     result.extend(base_indent_arr);
 
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         if i > 0 {
             result.push(',');
             result.push('\n');
@@ -56,7 +56,7 @@ fn Array::__fmt__<T>(Array<T> self, i32 nesting) -> string {
             .map_with(fn: "{}{}".format(x1, x0), child_indent)
             .join("\n");
 
-        for u64 j = 0; j < indented.len(); j += 1 {
+        for j: u64 = 0; j < indented.len(); j += 1 {
             result.push(indented[j]);
         }
     }
@@ -129,7 +129,7 @@ fn Array::__equals__<T, U>(T[] self, U[] other) -> bool {
         }
     }
 
-    for let i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         if self[i] != other[i] {
             return false; // Deep equality
         }
@@ -151,7 +151,7 @@ fn Array::is_empty<T>(T[] self) -> bool {
 }
 
 fn Array::with_capacity<T>(u64 initialCapacity) -> T[] {
-    T[] array = #alloc(Array<T>);
+    array: T[] = #alloc(Array<T>);
 
     array.elements = #alloc(T, initialCapacity);
     array.size = 0;
@@ -161,9 +161,9 @@ fn Array::with_capacity<T>(u64 initialCapacity) -> T[] {
 }
 
 fn Array::new<T>(ElleMeta meta, ...args) -> T[] {
-    T[] array = Array::with_capacity(2);
+    array: T[] = Array::with_capacity(2);
 
-    for i32 i = 0; i < meta.arity; i += 1 {
+    for i: u64 = 0; i < meta.arity; i += 1 {
         array.push(args.yield(T));
     }
 
@@ -219,10 +219,10 @@ fn Array::sort<T>(T[] self) {
         return;
     }
 
-    T pivot = array[high];
-    i64 i = low;
+    pivot: T = array[high];
+    i: i64 = low;
 
-    for i64 j = low; j < high; j += 1 {
+    for j: i64 = low; j < high; j += 1 {
         if cmp(array[j], pivot) < 0 {
             temp := array[i];
             array[i] = array[j];
@@ -231,7 +231,7 @@ fn Array::sort<T>(T[] self) {
         }
     }
 
-    T temp = array[i];
+    temp: T = array[i];
     array[i] = array[high];
     array[high] = temp;
 
@@ -240,11 +240,11 @@ fn Array::sort<T>(T[] self) {
 }
 
 fn Array::cartesian_product<T>(T[] self, i32 n) {
-    T[][] results = [];
-    T[] current = [];
+    results: T[][] = [];
+    current: T[] = [];
 
     if n == 0 {
-        T[] combination = [];
+        combination: T[] = [];
         results.push(combination);
         return results;
     }
@@ -255,12 +255,12 @@ fn Array::cartesian_product<T>(T[] self, i32 n) {
 
 !pub fn __internal_cartesian_product_generate<T>(T[] self, T[] current, i32 n, T[][] results) {
     if current.len() == n {
-        T[] combination = current.clone();
+        combination = current.clone();
         results.push(combination);
         return;
     }
 
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         current.push(self[i]);
         __internal_cartesian_product_generate(self, current, n, results);
         current.pop();
@@ -268,11 +268,11 @@ fn Array::cartesian_product<T>(T[] self, i32 n) {
 }
 
 fn Array::combinations<T>(T[] self, i64 k) {
-    T[][] results = [];
-    T[] current = [];
+    results: T[][] = [];
+    current: T[] = [];
 
     if k == 0 {
-        T[] combo = [];
+        combo: T[] = [];
         results.push(combo);
         return results;
     }
@@ -283,15 +283,15 @@ fn Array::combinations<T>(T[] self, i64 k) {
 
 !pub fn __internal_combinations_generate<T>(T[] self, u64 start, T[] current, i64 k, T[][] results) {
     if current.len() == k {
-        T[] combo = current.clone();
+        combo := current.clone();
         results.push(combo);
         return;
     }
 
-    u64 need = #cast(u64, k - #cast(i64, current.len()));
+    need := #cast(u64, k - #cast(i64, current.len()));
     if start + need > self.len() { return; }
 
-    for u64 i = start; i < self.len(); i += 1 {
+    for i: u64 = start; i < self.len(); i += 1 {
         current.push(self[i]);
         __internal_combinations_generate(self, i + 1, current, k, results);
         current.pop();
@@ -299,8 +299,8 @@ fn Array::combinations<T>(T[] self, i64 k) {
 }
 
 fn Array::permutations<T>(T[] self) {
-    T[][] out = [];
-    T[] work = [];
+    out: T[][] = [];
+    work: T[] = [];
 
     __internal_permutations_generate(self, work, out);
     return out;
@@ -308,18 +308,18 @@ fn Array::permutations<T>(T[] self) {
 
 !pub fn __internal_permutations_generate<T>(T[] left, T[] work, T[][] out) {
     if left.len() == 0 {
-        T[] p = work.clone();
+        p := work.clone();
         out.push(p);
         return;
     }
 
-    for u64 i = 0; i < left.len(); i += 1 {
-        T item = left[i];
+    for i: u64 = 0; i < left.len(); i += 1 {
+        item: T = left[i];
         work.push(item);
 
-        T[] next_left = [];
+        next_left: T[] = [];
         next_left.resize(left.len() - 1);
-        for u64 j = 0; j < left.len(); j += 1 {
+        for j: u64 = 0; j < left.len(); j += 1 {
             if j != i {
                 next_left.push(left[j]);
             }
@@ -331,9 +331,9 @@ fn Array::permutations<T>(T[] self) {
 }
 
 fn Array::clone<T>(T[] self) -> T[] {
-    T[] clone = Array::with_capacity(self.len());
+    clone: T[] = Array::with_capacity(self.len());
 
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         clone.push(self[i]);
     }
 
@@ -347,9 +347,9 @@ fn Array::to_string<T>(T[] self) -> string {
 
 // Join an array's elements by a separator
 fn Array::join<T>(T[] self, string separator) {
-    let res = "";
+    res := "";
 
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         res.extend("{}".format(self[i]));
 
         if i < self.len() - 1 {
@@ -363,7 +363,7 @@ fn Array::join<T>(T[] self, string separator) {
 external fn Array::join<T>(T[] self, string separator) @alias(Array::implode) -> string;
 
 fn Array::contains<T>(T[] self, T element) {
-    for i := 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         if self[i] == element {
             return true;
         }
@@ -374,7 +374,7 @@ fn Array::contains<T>(T[] self, T element) {
 
 // Take all the elements of another Array<T> and push them into this Array<T>
 fn Array::extend<T>(T[] self, T[] other) {
-    for i := 0; i < other.len(); i += 1 {
+    for i: u64 = 0; i < other.len(); i += 1 {
         self.push(other[i]);
     }
 }
@@ -386,7 +386,7 @@ fn Array::remove<T>(T[] self, u64 index) -> Option<T> {
 
     removedElement := self[index];
 
-    for let i = index; i < self.size - 1; i += 1 {
+    for i := index; i < self.size - 1; i += 1 {
         self[i] = self[i + 1];
     }
 
@@ -411,7 +411,7 @@ fn Array::insert<T>(T[] self, u64 index, T element) {
         self.resize((self.capacity || 1) * 2);
     }
 
-    for u64 i = self.size; i > index; i -= 1 {
+    for i: u64 = self.size; i > index; i -= 1 {
         self.elements[i] = self.elements[i - 1];
     }
 
@@ -420,9 +420,9 @@ fn Array::insert<T>(T[] self, u64 index, T element) {
 }
 
 fn Array::map_with<T, U, V>(T[] self, fn(T, V, u64, T[]) -> U mapping, V arg) -> U[] {
-    let new_self = Array::with_capacity<U>(self.len());
+    new_self := Array::with_capacity<U>(self.len());
 
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         new_self.push(mapping(self[i], arg, i, self));
     }
 
@@ -430,9 +430,9 @@ fn Array::map_with<T, U, V>(T[] self, fn(T, V, u64, T[]) -> U mapping, V arg) ->
 }
 
 fn Array::map<T, U>(T[] self, fn(T, u64, T[]) -> U mapping) -> U[] {
-    let new_self = Array::with_capacity<U>(self.len());
+    new_self := Array::with_capacity<U>(self.len());
 
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         new_self.push(mapping(self[i], i, self));
     }
 
@@ -440,9 +440,9 @@ fn Array::map<T, U>(T[] self, fn(T, u64, T[]) -> U mapping) -> U[] {
 }
 
 fn Array::filter_with<T, U>(T[] self, fn(T, U, u64, T[]) -> bool mapping, U arg) -> T[] {
-    let new_self = Array::with_capacity<T>(self.len());
+    new_self := Array::with_capacity<T>(self.len());
 
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         if mapping(self[i], arg, i, self) {
             new_self.push(self[i]);
         }
@@ -456,7 +456,7 @@ fn Array::filter<T>(T[] self, fn(T, u64, T[]) -> bool mapping) -> T[] {
 }
 
 fn Array::every<T>(T[] self, fn(T, u64, T[]) -> bool cb) {
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         if !cb(self[i], i, self) {
             return false;
         }
@@ -466,7 +466,7 @@ fn Array::every<T>(T[] self, fn(T, u64, T[]) -> bool cb) {
 }
 
 fn Array::any<T>(T[] self, fn(T, u64, T[]) -> bool cb) {
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         if cb(self[i], i, self) {
             return true;
         }
@@ -476,7 +476,7 @@ fn Array::any<T>(T[] self, fn(T, u64, T[]) -> bool cb) {
 }
 
 fn Array::find_with<T, U>(T[] self, fn(T, U, u64, T[]) -> bool cb, U arg) -> Option<T> {
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         if cb(self[i], arg, i, self) {
             return Option::Some(self[i]);
         }
@@ -486,7 +486,7 @@ fn Array::find_with<T, U>(T[] self, fn(T, U, u64, T[]) -> bool cb, U arg) -> Opt
 }
 
 fn Array::find<T>(T[] self, fn(T, u64, T[]) -> bool cb) -> Option<T> {
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         if cb(self[i], i, self) {
             return Option::Some(self[i]);
         }
@@ -496,7 +496,7 @@ fn Array::find<T>(T[] self, fn(T, u64, T[]) -> bool cb) -> Option<T> {
 }
 
 fn Array::includes<T>(T[] self, T element) {
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         if self[i] == element {
             return true;
         }
@@ -506,7 +506,7 @@ fn Array::includes<T>(T[] self, T element) {
 }
 
 fn Array::index<T>(T[] self, T element) -> Option<u64> {
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         if self[i] == element {
             return Option::Some(i);
         }
@@ -516,9 +516,9 @@ fn Array::index<T>(T[] self, T element) -> Option<u64> {
 }
 
 fn Array::sum<T>(T[] self) {
-    T sum = 0;
+    sum: T = 0;
 
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         sum += self.elements[i];
     }
 
@@ -550,9 +550,9 @@ fn Array::max<T>(T[] self) -> Option<T> {
         return Option::None();
     }
 
-    T max = self[0];
+    max := self[0];
 
-    for u64 i = 1; i < self.len(); i += 1 {
+    for i: u64 = 1; i < self.len(); i += 1 {
         if self[i] > max {
             max = self[i];
         }
@@ -566,9 +566,9 @@ fn Array::min<T>(T[] self) -> Option<T> {
         return Option::None();
     }
 
-    T min = self[0];
+    min := self[0];
 
-    for i32 i = 1; i < self.len(); i += 1 {
+    for i: u64 = 1; i < self.len(); i += 1 {
         if self[i] < min {
             min = self[i];
         }
@@ -616,7 +616,7 @@ fn Array::slice<T>(T[] self, i64 start, i64 end) -> T[] {
 fn Array::fill<T>(T[] self, T element) {
     self.size = self.capacity;
 
-    for i := 0; i < self.capacity; i += 1 {
+    for i: u64 = 0; i < self.capacity; i += 1 {
         self[i] = element;
     }
 

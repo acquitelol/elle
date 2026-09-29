@@ -53,7 +53,7 @@ fn Iterator::empty<T, AnyEnded>() -> Iterator<T, AnyEnded> {
 }
 
 fn Iterator::count<T, AnyEnded>(Iterator<T, AnyEnded> self) -> u64 {
-    u64 n = 0;
+    n: u64 = 0;
 
     while self.next().is_some() {
         n += 1;
@@ -191,7 +191,7 @@ fn Iterator::all<T, AnyEnded>(Iterator<T, AnyEnded> self, fn(T) -> bool predicat
 }
 
 fn Iterator::position_with<T, U, AnyEnded>(Iterator<T, AnyEnded> self, fn(T, U) -> bool predicate, U arg) {
-    u64 i = 0;
+    i: u64 = 0;
 
     while _, val := self.next() {
         if predicate(val, arg) {

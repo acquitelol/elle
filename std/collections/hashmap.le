@@ -61,7 +61,7 @@ fn HashMap::__fmt__<T, U>(HashMap<T, U> self, i32 nesting) {
     res := "{";
     if !self.is_empty() { res.push('\n'); }
 
-    for u64 i = 0; i < self.table.len(); i += 1 {
+    for i: u64 = 0; i < self.table.len(); i += 1 {
         key := self.table[i].key;
         value := self.table[i].value;
 
@@ -95,7 +95,7 @@ fn HashMap::with_capacity<T, U>(u64 initial_capacity) -> HashMap<T, U> * {
     self.table = Array::with_capacity(initial_capacity);
     self.size = 0;
 
-    for u64 i = 0; i < initial_capacity; i += 1 {
+    for i: u64 = 0; i < initial_capacity; i += 1 {
         self.table.push(HashMapBucket::new<T, U>());
     }
 
@@ -110,7 +110,7 @@ fn HashMap::new<T, U>() -> HashMap<T, U> * {
 fn HashMap::with_entries<T, U, N>((T, U)[N] elements) -> HashMap<T, U> * {
     self := HashMap::with_capacity<T, U>(elements.len());
 
-    for u64 i = 0; i < elements.len(); i += 1 {
+    for i: u64 = 0; i < elements.len(); i += 1 {
         key, value := elements[i];
         self[key] = value;
     }
@@ -129,7 +129,7 @@ fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value) -> bool {
         self.resize(self.table.capacity * 2);
     }
 
-    u64 idx = key.__hash__(self.table.capacity) % self.table.capacity;
+    idx := key.__hash__(self.table.capacity) % self.table.capacity;
     start_idx := idx;
 
     while true {
@@ -158,7 +158,7 @@ external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value)
     @alias(HashMap::set) -> bool;
 
 !pub fn __internal_hashmap_get<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
-    u64 idx = key.__hash__(self.table.capacity) % self.table.capacity;
+    idx := key.__hash__(self.table.capacity) % self.table.capacity;
     start_idx := idx;
 
     while self.table[idx].full {
@@ -197,7 +197,7 @@ fn HashMap::get<T, U>(HashMap<T, U> *self, T key) {
 }
 
 fn HashMap::remove<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
-    u64 idx = key.__hash__(self.table.capacity) % self.table.capacity;
+    idx := key.__hash__(self.table.capacity) % self.table.capacity;
     start_idx := idx;
 
     while self.table[idx].full {
@@ -219,7 +219,7 @@ fn HashMap::remove<T, U>(HashMap<T, U> *self, T key) -> Option<U> {
 }
 
 fn HashMap::contains_key<T, U>(HashMap<T, U> *self, T key) -> bool {
-    u64 idx = key.__hash__(self.table.capacity) % self.table.capacity;
+    idx := key.__hash__(self.table.capacity) % self.table.capacity;
     start_idx := idx;
 
     while self.table[idx].full {
@@ -243,11 +243,11 @@ fn HashMap::resize<T, U>(HashMap<T, U> *self, u64 new_capacity) {
     self.table = Array::with_capacity(new_capacity);
     self.size = 0;
 
-    for u64 i = 0; i < new_capacity; i += 1 {
+    for i: u64 = 0; i < new_capacity; i += 1 {
         self.table.push(HashMapBucket::new<T, U>());
     }
 
-    for u64 i = 0; i < old_table.len(); i += 1 {
+    for i: u64 = 0; i < old_table.len(); i += 1 {
         if old_table[i].full {
             self.put(
                 old_table[i].key,
@@ -270,7 +270,7 @@ fn HashMap::is_empty<T, U>(HashMap<T, U> *self) -> bool {
 fn HashMap::clear<T, U>(HashMap<T, U> *self) {
     self.size = 0;
 
-    for u64 i = 0; i < self.table.capacity; i += 1 {
+    for i: u64 = 0; i < self.table.capacity; i += 1 {
         self.table[i].full = false;
     }
 }
@@ -281,7 +281,7 @@ struct HashMapEnv<T, U> {
 }
 
 fn HashMap::keys<T, U>(HashMap<T, U> *self) -> Iterator<T, SingleEnded> {
-    HashMapEnv<T, U> env = HashMapEnv { base = self, i = 0 };
+    env: HashMapEnv<T, U> = HashMapEnv { base = self, i = 0 };
 
     return Iterator {
         env = Box::new(env).to_ptr(),
@@ -301,7 +301,7 @@ fn HashMap::keys<T, U>(HashMap<T, U> *self) -> Iterator<T, SingleEnded> {
 }
 
 fn HashMap::values<T, U>(HashMap<T, U> *self) -> Iterator<U, SingleEnded> {
-    HashMapEnv<T, U> env = HashMapEnv { base = self, i = 0 };
+    env: HashMapEnv<T, U> = HashMapEnv { base = self, i = 0 };
 
     return Iterator {
         env = Box::new(env).to_ptr(),
@@ -321,7 +321,7 @@ fn HashMap::values<T, U>(HashMap<T, U> *self) -> Iterator<U, SingleEnded> {
 }
 
 fn HashMap::__iter__<T, U>(HashMap<T, U> *self) -> Iterator<(T, U), SingleEnded> {
-    HashMapEnv<T, U> env = HashMapEnv { base = self, i = 0 };
+    env: HashMapEnv<T, U> = HashMapEnv { base = self, i = 0 };
 
     return Iterator {
         env = Box::new(env).to_ptr(),

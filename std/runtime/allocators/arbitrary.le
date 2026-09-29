@@ -3,7 +3,7 @@ use std/libc/mem;
 global pub;
 
 fn ArbitraryAllocator::new() {
-    ArbitraryAllocator *self = mem::malloc(#size(ArbitraryAllocator));
+    self: ArbitraryAllocator* = mem::malloc(#size(ArbitraryAllocator));
     return self;
 }
 

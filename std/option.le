@@ -224,7 +224,7 @@ fn Option::replace<T>(Option<T> *self, T other) -> Option<T> {
 }
 
 fn Option::take_if_with<T, Arg>(Option<T> *self, fn(T, Arg) -> bool cb, Arg arg) {         
-    Option<T> value = Option { ..*self };
+    value := Option { ..*self };
     
     if self.is_some() && cb(self.__value, arg) {
         *self = None<T>();

@@ -20,7 +20,7 @@ struct Map<T, U, AnyEnded> {
     fn(T, Arg) -> U cb,
     Arg arg
 ) -> Iterator<U, AnyEnded> {
-    Map<T, U, AnyEnded> map = Map {
+    map: Map<T, U, AnyEnded> = Map {
         base = self,
         cb = #cast(fn(T, Unit) -> U, cb),
         arg = Box::new(arg).to_ptr()

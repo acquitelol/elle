@@ -1,22 +1,23 @@
+use std/prelude;
 use std/raylib;
 
-const SCREEN_WIDTH = 600;
-const SCREEN_HEIGHT = 600;
-const FONT_SIZE = 40;
-const UPDATE_FACTOR = 4;
+let SCREEN_WIDTH = 600;
+let SCREEN_HEIGHT = 600;
+let FONT_SIZE = 40;
+let UPDATE_FACTOR = 4;
 
-const VELOCITY_FACTOR = 2.0;
-const CIRCLE_RADIUS = 50.0;
-const GRAVITY = 1000.0;
-const DAMPING = -0.8;
-const EPSILON = 5.0;
+let VELOCITY_FACTOR = 2.0;
+let CIRCLE_RADIUS = 50.0;
+let GRAVITY = 1000.0;
+let DAMPING = -0.8;
+let EPSILON = 5.0;
 
-const PINK = rl::get_color(0xFF7DFBFF);
-const BERRY = rl::get_color(0x2E172DFF);
+let PINK = rl::get_color(0xFF7DFBFF);
+let BERRY = rl::get_color(0x2E172DFF);
 
 fn main() {
-    let title = "Using raylib in Elle! <3";
-    let subtitle = "Try controlling the ball with W, A, S, D!";
+    title := "Using raylib in Elle! <3";
+    subtitle := "Try controlling the ball with W, A, S, D!";
 
     rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, title);
     defer rl::close_window();
@@ -24,27 +25,27 @@ fn main() {
     rl::init_audio_device();
     defer rl::close_audio_device();
 
-    let sound = rl::load_sound("examples/resources/hit.wav");
+    sound := rl::load_sound("examples/resources/hit.wav");
     defer rl::unload_sound(sound);
 
     rl::set_target_fps(60);
 
-    let padding = SCREEN_WIDTH >= 100 ? 100 : 0;
-    let position = Vector2 {
+    padding := SCREEN_WIDTH >= 100 ? 100 : 0;
+    position := Vector2 {
         x = SCREEN_WIDTH - CIRCLE_RADIUS - padding,
         y = 100
     };
 
-    let velocity = Vector2 {
+    velocity := Vector2 {
         x = -120 * VELOCITY_FACTOR,
         y = 100 * VELOCITY_FACTOR
     };
 
-    let finished = false;
-    let bounces = 0;
+    finished := false;
+    bounces := 0;
 
     while !rl::window_should_close() {
-        let deltaTime = rl::get_frame_time();
+        deltaTime := rl::get_frame_time();
 
         if finished {
             finished = false;
@@ -72,7 +73,7 @@ fn main() {
             velocity.x = 200;
         }
 
-        let newX = position.x + velocity.x * deltaTime;
+        newX := position.x + velocity.x * deltaTime;
 
         if newX < CIRCLE_RADIUS || newX + CIRCLE_RADIUS > rl::get_screen_width() {
             bounces += 1;
@@ -82,7 +83,7 @@ fn main() {
             position.x = newX;
         }
 
-        let newY = position.y + velocity.y * deltaTime;
+        newY := position.y + velocity.y * deltaTime;
 
         if newY < CIRCLE_RADIUS || newY + CIRCLE_RADIUS > rl::get_screen_height() {
             bounces += 1;
@@ -105,7 +106,7 @@ fn main() {
         rl::draw_text(title, (SCREEN_WIDTH - rl::measure_text(title, FONT_SIZE)) / 2, 40, FONT_SIZE, BLUE);
 
         // Bounces
-        string bouncesString = "Bounces: {}".format(bounces);
+        bouncesString := "Bounces: {}".format(bounces);
         rl::draw_text(bouncesString, (SCREEN_WIDTH - rl::measure_text(bouncesString, FONT_SIZE)) / 2, 100, FONT_SIZE, YELLOW);
 
         // Subtitle

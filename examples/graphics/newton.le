@@ -1,5 +1,5 @@
-use std/raylib;
 use std/prelude;
+use std/raylib;
 
 let SCREEN_FACTOR = 80;
 let SCREEN_WIDTH = 12 * SCREEN_FACTOR;

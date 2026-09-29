@@ -62,32 +62,14 @@ fn `Vector3.triple`() {
     $assert(c, nil);
 }
 
-fn `let.tuple`() {
-    let x, y = Vector2::from(3.9);
-    a := x == 3.9;
-    b := y == 3.9;
-    $assert(a, nil);
-    $assert(b, nil);
-}
-
-fn `let.triple`() {
-    let x, y, z = Vector3::from(3.9);
-    a := x == 3.9;
-    b := y == 3.9;
-    c := z == 3.9;
-    $assert(a, nil);
-    $assert(b, nil);
-    $assert(c, nil);
-}
-
 fn `casted.tuple`() {
-    i32 x, y = Vector2::from(3.9);
+    x, y: i32 = Vector2::from(3.9);
     $assert(x == 3, nil); // casted down
     $assert(y == 3, nil);
 }
 
 fn `casted.triple`() {
-    i32 x, y, z = Vector3::from(3.9);
+    x, y, z: i32 = Vector3::from(3.9);
     $assert(x == 3, nil); // casted down
     $assert(y == 3, nil);
     $assert(z == 3, nil);
@@ -161,8 +143,6 @@ fn main() {
     `Vector2.tuple`();
     `Vector3.tuple`();
     `Vector3.triple`();
-    `let.tuple`();
-    `let.triple`();
     `casted.tuple`();
     `casted.triple`();
     `Option.some.tuple`();

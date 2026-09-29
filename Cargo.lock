@@ -175,7 +175,7 @@ dependencies = [
 
 [[package]]
 name = "ellec"
-version = "0.93.2"
+version = "0.94.2"
 dependencies = [
  "anyhow",
  "chrono",

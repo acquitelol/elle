@@ -1,7 +1,7 @@
 use std/prelude;
 
 fn main() {
-    let ops = #[
+    ops := #[
         fn(i32 x) #cast(f32, x),
         fn(i32 x) math::logf(x),
         fn(i32 x) #cast(f32, x * x),

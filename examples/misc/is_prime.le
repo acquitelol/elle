@@ -1,8 +1,8 @@
 use std/prelude;
 
 let is_prime = fn(i32 x) 
-    x > 1 && (2..#cast(i32, math::sqrtf(x)))
-       .all_with(fn(y, x) x % y != 0, x);
+    x > 1 && (2..math::sqrtf(x))
+       .all_with(fn: x1 % x0, x);
 
 fn main() {
     $dbg(is_prime(2));

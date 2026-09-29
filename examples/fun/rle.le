@@ -5,10 +5,10 @@ use std/prelude;
 namespace RLE;
 
 fn RLE::to(string input) {
-    let result = "";
+    result := "";
 
-    for let i = 0; i < input.len(); i += 1 {
-        let count = 1;
+    for i: u64 = 0; i < input.len(); i += 1 {
+        count := 1;
 
         while i + 1 < input.len() && input[i] == input[i + 1] {
             i += 1;
@@ -26,17 +26,17 @@ fn RLE::to(string input) {
 }
 
 fn RLE::from(string input) {
-    let result = "";
+    result := "";
 
     for i in 0..input.len() {
-        let length = "";
+        length := "";
 
         while input[i].is_digit() {
             length <>= "{}".format(input[i]);
             i += 1;
         }
 
-        let repeat = i32::parse(length) || 1;
+        repeat := i32::parse(length) || 1;
 
         io::assert(
             !input[i].is_digit(),
@@ -50,7 +50,7 @@ fn RLE::from(string input) {
 }
 
 fn main() {
-    let input = "once upon a time... in a land faaar faaaaaar away.....";
+    input := "once upon a time... in a land faaar faaaaaar away.....";
 
     io::printf("To RLE: {}", RLE::to(input));
     io::printf("From RLE: {}", RLE::from(RLE::to(input)));

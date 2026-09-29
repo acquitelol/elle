@@ -6,8 +6,8 @@ fn other(i32 *a, string *str) {
 }
 
 fn main() {
-    let a = 39;
-    let str = "Hello world!";
+    a := 39;
+    str := "Hello world!";
 
     other(&a, &str);
     io::printf("(fn main)\n\ta = {}", a);

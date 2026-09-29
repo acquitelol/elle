@@ -1,9 +1,9 @@
 use std/io;
 
-const i64 MEMORY_SIZE = 30_000;
+let MEMORY_SIZE = 30_000;
 
 fn skip(string *pc, i32 dir) -> string {
-    let loop = 1;
+    loop := 1;
 
     while loop > 0 {
         *pc += #cast(string, dir);
@@ -19,9 +19,9 @@ fn skip(string *pc, i32 dir) -> string {
 }
 
 fn interpret(string program) {
-    let memory = #alloc(char, MEMORY_SIZE);
-    let ptr = memory;
-    let pc = program;
+    memory := #alloc(char, MEMORY_SIZE);
+    ptr := memory;
+    pc := program;
 
     while *pc {
         if *pc == '>' {

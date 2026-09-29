@@ -5,7 +5,7 @@ fn other(i32 *buf) {
 }
 
 fn main() {
-    i32 buf[100];
+    buf: i32[100];
     buf[0] = 123;
 
     io::printf(

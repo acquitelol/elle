@@ -104,11 +104,11 @@ struct SplitStringEnv @nofmt {
 }
 
 !external fn string::nums<T>(string self) {
-    T[] numbers = [];
-    string current = "";
-    bool hit = false;
+    numbers := []T;
+    current := "";
+    hit := false;
 
-    for i32 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         if (i < self.len() - 1) && (self[i] == '-') && (self[i + 1].is_digit()) {
             current.push(self[i]);
             hit = true;

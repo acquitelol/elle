@@ -6,8 +6,8 @@ use std/io;
 fn main() {
     rand::seed(time(nil));
 
-    let lower = i32::parse(io::input("Enter the lower bound: "));
-    let upper = i32::parse(io::input("Enter the upper bound: "));
+    lower := i32::parse(io::input("Enter the lower bound: "));
+    upper := i32::parse(io::input("Enter the upper bound: "));
 
     io::printf("Rolled {}", rand::random(lower, upper));
 }

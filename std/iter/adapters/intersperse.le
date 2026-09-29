@@ -12,15 +12,15 @@ fn Iterator::intersperse<T, AnyEnded>(
     Iterator<T, AnyEnded> self,
     T separator
 ) -> Iterator<T, SingleEnded> {
-    Intersperse<T, AnyEnded> intersperse = Intersperse {
-        base = self,
+    env: Intersperse<T, AnyEnded> = Intersperse {
         next = Option::None(),
-        separator = separator,
-        emit = false
+        emit = false,
+        base = self,
+        separator
     };
 
     return Iterator {
-        env = Box::new(intersperse).to_ptr(),
+        env = Box::new(env).to_ptr(),
         next = fn(Intersperse<T, AnyEnded> *env) {
             if env.emit {
                 env.emit = !env.emit;

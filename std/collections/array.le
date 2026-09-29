@@ -18,10 +18,10 @@ fn Array::promote(i32[] self) {
 
 // Creates a new sized array from a null terminated string
 fn Array::from_string(string str) -> char[] {
-    i32 length = str.len();
-    char[] array = Array::with_capacity(length);
+    length := str.len();
+    array: char[] = Array::with_capacity(length);
 
-    for i32 i = 0; i < length; i += 1 {
+    for i: u64 = 0; i < length; i += 1 {
         array.push(str[i]);
     }
 
@@ -68,9 +68,9 @@ fn Array::to_vec3<T>(T[] self) {
 }
 
 fn Array::__hash__<T>(T[] self, u64 cap) {
-    u64 total = 0;
+    total: u64 = 0;
 
-    for u64 i = 0; i < self.len(); i += 1 {
+    for i: u64 = 0; i < self.len(); i += 1 {
         a := self[i];
         b := self[(i + 1) % self.len()];
 
@@ -88,7 +88,7 @@ struct ArrayEnv<T> {
 }
 
 fn Array::__iter__<T>(T[] self) -> Iterator<T, DoubleEnded> {
-    ArrayEnv<T> env = ArrayEnv {
+    env: ArrayEnv<T> = ArrayEnv {
         base = self,
         start = 0,
         end = self.len(),
@@ -129,7 +129,7 @@ fn Array::__iter__<T>(T[] self) -> Iterator<T, DoubleEnded> {
 external fn Array::__iter__<T>(T[] self) @alias(Array::iter) -> Iterator<T, DoubleEnded>;
 
 fn Array::iter_ref<T>(T[] self) -> Iterator<T *, DoubleEnded> {
-    ArrayEnv<T> env = ArrayEnv {
+    env: ArrayEnv<T> = ArrayEnv {
         base = self,
         start = 0,
         end = self.len(),

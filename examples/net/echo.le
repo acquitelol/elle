@@ -1,7 +1,7 @@
 use std/prelude;
 use std/net/tcp;
 
-const BUF_SIZE = 1024;
+let BUF_SIZE = 1024;
 
 fn main() {
     server := TcpServer::bind(port := 8080);

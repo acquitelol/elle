@@ -9,7 +9,7 @@ struct BigInt {
 }
 
 fn BigInt::empty(bool is_negative) {
-    let bigint = #alloc(BigInt);
+    bigint := #alloc(BigInt);
 
     bigint.is_negative = is_negative;
     bigint.digits = [];
@@ -18,20 +18,20 @@ fn BigInt::empty(bool is_negative) {
 }
 
 fn BigInt::new(string value) -> BigInt * {
-    let bigint = BigInt::empty(false);
+    bigint := BigInt::empty(false);
 
     if value.is_empty() {
         bigint.digits.push(0);
         return bigint;
     }
 
-    let start_index = 0;
+    start_index := 0;
     if value[0] == '-' {
         bigint.is_negative = true;
         start_index = 1;
     }
 
-    for let i = #cast(i64, value.len() - 1); i >= start_index; i -= 1 {
+    for i := #cast(i64, value.len() - 1); i >= start_index; i -= 1 {
         bigint.digits.push(value[i] - '0');
     }
 
@@ -39,30 +39,27 @@ fn BigInt::new(string value) -> BigInt * {
 }
 
 fn BigInt::to_string(BigInt *self) -> string {
-    let result = self.is_negative ? "-" : "";
+    result := self.is_negative ? "-" : "";
 
-    for i32 i = self.digits.len() - 1; i >= 0; i -= 1 {
+    for i := self.digits.len() - 1; i >= 0; i -= 1 {
         result.push(self.digits[i] + '0');
     }
 
     return result;
 }
 
-fn BigInt::to<T>(BigInt *self) -> T {
-    T result = 0;
-    T multiplier = 1;
+external fn BigInt::to_string(BigInt *self) @alias(BigInt::__fmt__) -> string;
 
-    for let i = 0; i < self.digits.len(); i += 1 {
+fn BigInt::to<T>(BigInt *self) -> T {
+    result: T = 0;
+    multiplier: T = 1;
+
+    for i: u64 = 0; i < self.digits.len(); i += 1 {
         result += self.digits[i] * multiplier;
         multiplier *= 10;
     }
 
     return self.is_negative ? -result : result;
-}
-
-fn BigInt::__fmt__(BigInt self, i32 nesting) {
-    BigInt tmp = self;
-    return tmp.to_string();
 }
 
 // Forward declare
@@ -72,27 +69,27 @@ fn BigInt::add(BigInt *self, BigInt *other) -> BigInt * {
     if self.is_negative != other.is_negative {
         if self.is_negative {
             self.is_negative = false;
-            let a = other.sub(self);
+            a := other.sub(self);
             self.is_negative = true;
             return a;
         } else {
             other.is_negative = false;
-            let b = self.sub(other);
+            b := self.sub(other);
             other.is_negative = true;
             return b;
         }
     }
 
-    let result = BigInt::empty(self.is_negative);
-    let carry = 0;
-    let max_len = self.digits.len() > other.digits.len()
+    result := BigInt::empty(self.is_negative);
+    carry := 0;
+    max_len := self.digits.len() > other.digits.len()
         ? self.digits.len()
         : other.digits.len();
 
-    for let i = 0; (i < max_len) || (carry != 0); i += 1 {
-        let a = i < self.digits.len() ? self.digits[i] : 0;
-        let b = i < other.digits.len() ? other.digits[i] : 0;
-        let sum = a + b + carry;
+    for i := 0; (i < max_len) || (carry != 0); i += 1 {
+        a := i < self.digits.len() ? self.digits[i] : 0;
+        b := i < other.digits.len() ? other.digits[i] : 0;
+        sum := a + b + carry;
 
         result.digits.push(sum % 10);
         carry = sum / 10;
@@ -110,7 +107,7 @@ fn BigInt::compare(BigInt *self, BigInt *other) -> i32 {
         return self.digits.len() < other.digits.len() == self.is_negative ? 1 : -1;
     }
 
-    for let i = #cast(i64, self.digits.len() - 1); i >= 0; i -= 1 {
+    for i := #cast(i64, self.digits.len() - 1); i >= 0; i -= 1 {
         if self.digits[i] != other.digits[i] {
             return self.digits[i] < other.digits[i] == self.is_negative ? 1 : -1;
         }
@@ -122,7 +119,7 @@ fn BigInt::compare(BigInt *self, BigInt *other) -> i32 {
 fn BigInt::sub(BigInt *self, BigInt *other) -> BigInt * {
     if self.is_negative != other.is_negative {
         other.is_negative = !other.is_negative;
-        let a = self.add(other);
+        a := self.add(other);
         other.is_negative = !other.is_negative;
         return a;
     }
@@ -130,25 +127,25 @@ fn BigInt::sub(BigInt *self, BigInt *other) -> BigInt * {
     if self.is_negative {
         other.is_negative = false;
         self.is_negative = false;
-        let b = other.sub(self);
+        b := other.sub(self);
         self.is_negative = true;
         other.is_negative = true;
         return b;
     }
 
     if self.compare(other) < 0 {
-        let c = other.sub(self);
+        c := other.sub(self);
         c.is_negative = true;
         return c;
     }
 
-    let result = BigInt::empty(false);
-    let borrow = 0;
+    result := BigInt::empty(false);
+    borrow := 0;
 
-    for let i = 0; i < self.digits.len(); i += 1 {
-        let a = self.digits[i];
-        let b = i < other.digits.len() ? other.digits[i] : 0;
-        let diff = a - b - borrow;
+    for i := 0; i < self.digits.len(); i += 1 {
+        a := self.digits[i];
+        b := i < other.digits.len() ? other.digits[i] : 0;
+        diff := a - b - borrow;
 
         if diff < 0 {
             diff += 10;
@@ -174,21 +171,21 @@ fn BigInt::equals(BigInt *self, BigInt *other) {
 external fn BigInt::equals(BigInt *self, BigInt *other) @alias(BigInt::__equals__) -> bool;
 
 fn BigInt::mul(BigInt *self, BigInt *other) -> BigInt * {
-    let result = BigInt::empty(false);
+    result := BigInt::empty(false);
     result.digits = Array::with_capacity(self.digits.len() + other.digits.len());
 
-    for let i = 0; i < result.digits.capacity; i += 1 {
+    for i := 0; i < result.digits.capacity; i += 1 {
         result.digits.push(0);
     }
 
     result.is_negative = self.is_negative != other.is_negative;
 
-    for let i = 0; i < self.digits.len(); i += 1 {
-        let carry = 0;
+    for i := 0; i < self.digits.len(); i += 1 {
+        carry := 0;
 
-        for let j = 0; j < other.digits.len() || carry != 0; j += 1 {
-            let b = j < other.digits.len() ? other.digits[j] : 0;
-            let prod = result.digits[i + j] + self.digits[i] * b + carry;
+        for j: u64 = 0; j < other.digits.len() || carry != 0; j += 1 {
+            b := j < other.digits.len() ? other.digits[j] : 0;
+            prod := result.digits[i + j] + self.digits[i] * b + carry;
             result.digits[i + j] = prod % 10;
             carry = prod / 10;
         }

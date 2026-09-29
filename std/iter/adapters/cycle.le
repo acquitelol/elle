@@ -10,13 +10,10 @@ fn Iterator::cycle<T, AnyEnded>(
     Iterator<T, AnyEnded> self,
     fn() -> Iterator<T, AnyEnded> gen
 ) -> Iterator<T, SingleEnded> {
-    Cycle<T, AnyEnded> cycle = Cycle {
-        current = self,
-        gen = gen,
-    };
+    env: Cycle<T, AnyEnded> = Cycle { current = self, gen };
 
     return Iterator {
-        env = Box::new(cycle).to_ptr(),
+        env = Box::new(env).to_ptr(),
         next = fn(Cycle<T, AnyEnded> *env) {
             if _, val := env.current.next() {
                 return Some(val);

@@ -12,7 +12,7 @@ fn Iterator::cartesian_product<T, U, AnyEnded>(
     Iterator<T, AnyEnded> self, 
     Iterator<U, AnyEnded> other
 ) -> Iterator<(T, U), SingleEnded> {
-    CartesianPEnv<T, U, AnyEnded> env = CartesianPEnv { 
+    env: CartesianPEnv<T, U, AnyEnded> = CartesianPEnv { 
         self, self_value = None(), i = 0,
         other = other.collect(),
     };

@@ -12,7 +12,7 @@ struct Info {
 }
 
 fn Info::to_space_name(Info self) {
-    let name = $(
+    name := $(
         self.name.y.slice(0, 3) <> self.name.x.slice(0, 2),
         self.data.y.slice(0, 3) <> self.data.x.slice(0, 2)
     );
@@ -21,7 +21,7 @@ fn Info::to_space_name(Info self) {
 }
 
 fn main() {
-    let info = Info {
+    info := Info {
         name = $(
             io::input("What is your first name? -> "),
             io::input("What is your last name? -> ")
@@ -32,6 +32,6 @@ fn main() {
         )
     };
 
-    let space_name = info.to_space_name();
+    space_name := info.to_space_name();
     io::printf("Your space name is {} {}", space_name.x, space_name.y);
 }

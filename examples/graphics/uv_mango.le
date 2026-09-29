@@ -1,8 +1,9 @@
+use std/prelude;
 use std/raylib;
 
-const SCREEN_FACTOR = 80;
-const SCREEN_WIDTH = 8 * SCREEN_FACTOR;
-const SCREEN_HEIGHT = 8 * SCREEN_FACTOR;
+let SCREEN_FACTOR = 80;
+let SCREEN_WIDTH = 8 * SCREEN_FACTOR;
+let SCREEN_HEIGHT = 8 * SCREEN_FACTOR;
 
 fn main() {
     rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "UV Mango");

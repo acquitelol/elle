@@ -1,17 +1,17 @@
 use std/prelude;
 use std/raylib;
 
-const SCREEN_FACTOR = 80;
-const SCREEN_WIDTH = 8 * SCREEN_FACTOR;
-const SCREEN_HEIGHT = 8 * SCREEN_FACTOR;
+let SCREEN_FACTOR = 80;
+let SCREEN_WIDTH = 8 * SCREEN_FACTOR;
+let SCREEN_HEIGHT = 8 * SCREEN_FACTOR;
 
-const TITLE_FONT_SIZE = 30;
-const ENTRY_FONT_SIZE = 15;
-const RECT_HEIGHT = 40;
-const PADDING = 40;
+let TITLE_FONT_SIZE = 30;
+let ENTRY_FONT_SIZE = 15;
+let RECT_HEIGHT = 40;
+let PADDING = 40;
 
-const TOP_OFFSET = PADDING * 2 + TITLE_FONT_SIZE;        // Offset from the top with enough padding to render nicely
-const TEXT_OFFSET = (RECT_HEIGHT - ENTRY_FONT_SIZE) / 2; // Offset to center text vertically in the rectangle
+let TOP_OFFSET = PADDING * 2 + TITLE_FONT_SIZE;        // Offset from the top with enough padding to render nicely
+let TEXT_OFFSET = (RECT_HEIGHT - ENTRY_FONT_SIZE) / 2; // Offset to center text vertically in the rectangle
 
 fn main() {
     rl::init_window(SCREEN_HEIGHT, SCREEN_HEIGHT, "Drag & Drop");

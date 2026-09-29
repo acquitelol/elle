@@ -14,10 +14,10 @@ enum Screen {
     Height = 800
 }
 
-const EARTH_MASS = 5.97e24;
-const EARTH_RADIUS = 6.37e6;
-const ALTITUDE = 300e3;
-const G = 6.67e-11;
+let EARTH_MASS = 5.97e24;
+let EARTH_RADIUS = 6.37e6;
+let ALTITUDE = 300e3;
+let G = 6.67e-11;
 
 fn draw_planet(f32 radius) {
     rl::draw_ellipse(

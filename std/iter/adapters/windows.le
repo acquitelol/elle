@@ -11,14 +11,10 @@ fn Iterator::windows<T, AnyEnded>(
     Iterator<T, AnyEnded> self,
     u64 n
 ) -> Iterator<T[], SingleEnded> {
-    Windows<T, AnyEnded> windows = Windows {
-        base = self,
-        n = n,
-        buf = []T
-    };
+    env: Windows<T, AnyEnded> = Windows { base = self, n, buf = []T };
 
     return Iterator {
-        env = Box::new(windows).to_ptr(),
+        env = Box::new(env).to_ptr(),
         next = fn(Windows<T, AnyEnded> *env) {
             while env.buf.len() < env.n {
                 if _, item := env.base.next() {

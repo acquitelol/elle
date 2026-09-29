@@ -1,14 +1,15 @@
+use std/prelude;
 use std/raylib;
 
-const SCREEN_WIDTH = 800;
-const SCREEN_HEIGHT = 450;
+let SCREEN_WIDTH = 800;
+let SCREEN_HEIGHT = 450;
 
-const PADDLE_WIDTH = 20;
-const PADDLE_HEIGHT = 100;
-const PADDLE_SPEED = 5.0;
+let PADDLE_WIDTH = 20;
+let PADDLE_HEIGHT = 100;
+let PADDLE_SPEED = 5.0;
 
-const BALL_SIZE = 10;
-const BALL_SPEED = 5.0;
+let BALL_SIZE = 10;
+let BALL_SPEED = 5.0;
 
 fn main() {
     rl::init_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Pong :3");

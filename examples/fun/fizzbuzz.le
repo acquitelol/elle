@@ -1,7 +1,7 @@
 use std/prelude;
 
 fn main() {
-    let input = i32::parse(io::input("Enter a number -> "));
+    input := i32::parse(io::input("Enter a number -> "));
 
     if input < 1 {
         io::eprintf("Invalid input: {}", input);

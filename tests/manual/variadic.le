@@ -11,6 +11,6 @@ fn add(ElleMeta meta, ...args) {
 }
 
 fn main() {
-    let sum = add(1, 2, 3, 4, 5);
+    sum := add(1, 2, 3, 4, 5);
     $dbg(sum);
 }

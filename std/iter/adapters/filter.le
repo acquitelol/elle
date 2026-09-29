@@ -10,13 +10,10 @@ fn Iterator::filter<T, AnyEnded>
     (Iterator<T, AnyEnded> self,
     fn(T) -> bool predicate
 ) -> Iterator<T, AnyEnded> {
-    Filter<T, AnyEnded> filter = Filter {
-        base = self,
-        predicate = predicate,
-    };
+    env: Filter<T, AnyEnded> = Filter { base = self, predicate };
 
     return Iterator {
-        env = Box::new(filter).to_ptr(),
+        env = Box::new(env).to_ptr(),
         next = fn(Filter<T, AnyEnded> *env) {
             for ;; {
                 val := env.base.next();

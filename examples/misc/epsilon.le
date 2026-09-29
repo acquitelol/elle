@@ -1,9 +1,9 @@
 use std/prelude;
 
-const ITERATIONS = 1e5;
-const ACCURACY = 1e6;
-const EPSILON = 0.1305;
-const CHANCE = EPSILON * (ACCURACY / 100);
+let ITERATIONS = 1e5;
+let ACCURACY = 1e6;
+let EPSILON = 0.1305;
+let CHANCE = EPSILON * (ACCURACY / 100);
 
 fn roll() {
     attempts := 0;

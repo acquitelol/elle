@@ -5,11 +5,11 @@ struct Foo {
 }
 
 fn main() {
-    let foo = "this is a string";
-    let a = 16;
-    let b = 1.2;
-    let c = false;
-    let arr = #[1, 2, 3];
+    foo := "this is a string";
+    a := 16;
+    b := 1.2;
+    c := false;
+    arr := #[1, 2, 3];
 
     $dbg(foo, a, b, c, &a, 'z', 1e5, true, arr, #["a", "meow"]);
     $dbg(Foo { a = 5 });

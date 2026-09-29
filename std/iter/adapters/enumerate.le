@@ -9,13 +9,10 @@ struct Enumerate<T, AnyEnded> {
 fn Iterator::enumerate<T, AnyEnded>(
     Iterator<T, AnyEnded> self
 ) -> Iterator<(u64, T), SingleEnded> {
-    Enumerate<T, AnyEnded> enumerate_iter = Enumerate {
-        base = self,
-        count = 0,
-    };
+    env: Enumerate<T, AnyEnded> = Enumerate { base = self, count = 0 };
 
     return Iterator {
-        env = Box::new(enumerate_iter).to_ptr(),
+        env = Box::new(env).to_ptr(),
         next = fn(Enumerate<T, AnyEnded> *env) {
             val := env.base.next();
 

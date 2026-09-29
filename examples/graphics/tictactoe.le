@@ -2,17 +2,17 @@ use std/collections/hashmap;
 use std/prelude;
 use std/raylib;
 
-const SCALING_FACTOR = 2;
-const SCREEN_WIDTH = 150 * SCALING_FACTOR;
-const SCREEN_HEIGHT = 185 * SCALING_FACTOR;
-const PADDING = 6 * SCALING_FACTOR;
+let SCALING_FACTOR = 2;
+let SCREEN_WIDTH = 150 * SCALING_FACTOR;
+let SCREEN_HEIGHT = 185 * SCALING_FACTOR;
+let PADDING = 6 * SCALING_FACTOR;
 
-const TEXT_SIZE = 20 * SCALING_FACTOR;
-const LINE_THICKNESS = 2 * SCALING_FACTOR;
+let TEXT_SIZE = 20 * SCALING_FACTOR;
+let LINE_THICKNESS = 2 * SCALING_FACTOR;
 
-const BUTTON_UNHOVER = rl::get_color(0x777777FF);
-const BUTTON_HOVER = rl::get_color(0x555555FF);
-const BACKGROUND = rl::get_color(0x181818FF);
+let BUTTON_UNHOVER = rl::get_color(0x777777FF);
+let BUTTON_HOVER = rl::get_color(0x555555FF);
+let BACKGROUND = rl::get_color(0x181818FF);
 
 enum StateKind {
     Empty,

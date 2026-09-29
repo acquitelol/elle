@@ -7,7 +7,7 @@ struct Once<T> {
 }
 
 fn Iterator::once<T>(T value) -> Iterator<T, SingleEnded> {
-    Once<T> once = Once {
+    once: Once<T> = Once {
         value = value,
         consumed = false
     };

@@ -1,5 +1,4 @@
 // Displays a different color for each intersecting line
-
 use std/prelude;
 use std/raylib;
 

@@ -3,16 +3,16 @@ use std/rand;
 use std/time;
 
 fn get_card() {
-    let ranks = #["Ace", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King"];
-    let suits = #["Clubs", "Diamonds", "Hearts", "Spades"];
+    ranks := #["Ace", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King"];
+    suits := #["Clubs", "Diamonds", "Hearts", "Spades"];
 
-    let selection = rand::random(0, 51);
+    selection := rand::random(0, 51);
     return ranks[selection % 13] <> " of " <> suits[selection / 13];
 }
 
 fn main() {
     rand::seed(time(nil));
 
-    let card = get_card();
+    card := get_card();
     io::printf("Your card is the {}", card);
 }

@@ -1,18 +1,18 @@
 use std/prelude;
 
 fn main() {
-    let highestScore = 0;
-    let winner = "";
-    let stop = false;
+    highestScore := 0;
+    winner := "";
+    stop := false;
 
     while true {
-        string person = io::input("Enter a person's name (or 'stop'): ");
+        person := io::input("Enter a person's name (or 'stop'): ");
 
         if person == "stop" {
             break;
         }
 
-        i32 score = i32::parse(io::input(string::format("Enter {}'s score: ", person)));
+        score := i32::parse(io::input(string::format("Enter {}'s score: ", person)));
 
         if score > highestScore {
             highestScore = score;

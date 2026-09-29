@@ -11,7 +11,7 @@ fn formattedPrint(char character) {
 }
 
 fn main() {
-    let test = "Hello World!";
+    test := "Hello World!";
 
     // Expected result: "H e l l o   W o r l d !"
     loop(test, fn(c) io::print(c, " "));

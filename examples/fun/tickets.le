@@ -1,11 +1,11 @@
 use std/prelude;
 
 fn main() {
-    let price = 11.50;
-    string[] extras = [];
+    price := 11.50;
+    extras := []string;
 
-    let ticket_type = io::input("Enter the ticket type -> ").default("Adult");
-    let member = bool::parse(io::input("Is the ticket holder a member? (true or false) -> "));
+    ticket_type := io::input("Enter the ticket type -> ").default("Adult");
+    member := bool::parse(io::input("Is the ticket holder a member? (true or false) -> "));
 
     if member {
         price *= 0.9;

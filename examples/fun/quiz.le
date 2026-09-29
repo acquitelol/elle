@@ -1,7 +1,7 @@
 use std/prelude;
 
-const QUESTION_COUNT = 10;
-const LARGEST_INT = 12;
+let QUESTION_COUNT = 10;
+let LARGEST_INT = 12;
 
 struct Question {
     string display,

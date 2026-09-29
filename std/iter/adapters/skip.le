@@ -7,13 +7,10 @@ struct Skip<T, AnyEnded> {
 }
 
 fn Iterator::skip<T, AnyEnded>(Iterator<T, AnyEnded> self, u64 n) -> Iterator<T, AnyEnded> {
-    Skip<T, AnyEnded> state = Skip {
-        base = self,
-        n = n
-    };
+    env: Skip<T, AnyEnded> = Skip { base = self, n };
 
     return Iterator {
-        env = Box::new(state).to_ptr(),
+        env = Box::new(env).to_ptr(),
         next = fn(Skip<T, AnyEnded> *env) {
             while env.n > 0 {
                 if env.base.next().is_none() {

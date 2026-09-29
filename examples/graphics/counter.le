@@ -1,11 +1,12 @@
+use std/prelude;
 use std/raylib;
 
-const SCREEN_WIDTH = 800;
-const SCREEN_HEIGHT = 450;
+let SCREEN_WIDTH = 800;
+let SCREEN_HEIGHT = 450;
 
-const BUTTON_UNHOVER = rl::get_color(0x777777FF);
-const BUTTON_HOVER = rl::get_color(0x555555FF);
-const BACKGROUND = rl::get_color(0x333333FF);
+let BUTTON_UNHOVER = rl::get_color(0x777777FF);
+let BUTTON_HOVER = rl::get_color(0x555555FF);
+let BACKGROUND = rl::get_color(0x333333FF);
 
 fn render_button<T, U>(string text, f32 y_offset, Vector2 mouse_pos, U counter, fn(U) -> T action) {
     button := Rectangle {

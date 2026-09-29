@@ -1,7 +1,7 @@
 use std/prelude;
 
 fn main() {
-    let a = string::ascii_lower();
+    a := string::ascii_lower();
 
     $assert(
         a.to_upper() == "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
@@ -15,38 +15,38 @@ fn main() {
         string::format("result = \"{}\"", a)
     );
 
-    let b = "";
+    b := "";
     $assert(b.is_empty(), "b should be empty");
     $assert(string::is_empty(b), "b should be empty");
 
-    let c = "test";
+    c := "test";
 
     $assert(
         c.len() == 4,
         string::format("result = \"{}\" & c.len() = {}", c, c.len())
     );
 
-    let d = "meow";
+    d := "meow";
 
     $assert(d.ends_with("ow"), d <> " should end with \"ow\"");
     $assert(!d.starts_with("ow"), d <> " should not start with \"ow\"");
     $assert(d.contains("eo"), d <> " should contain \"eo\"");
 
-    let e = "ewew";
+    e := "ewew";
 
     $assert(
         e.concat(e) == "ewewewew" && e <> e == "ewewewew" && e <> e == e.concat(e),
         string::format("result = \"{}\"", e.concat(e))
     );
 
-    let f = "awa";
+    f := "awa";
 
     $assert(
         f.repeat(4) == "awaawaawaawa",
         string::format("result = \"{}\"", f.repeat(4))
     );
 
-    let g = "test123AWA";
+    g := "test123AWA";
 
     $assert(
         g.to_upper() == "TEST123AWA",
@@ -58,13 +58,13 @@ fn main() {
         string::format("result = \"{}\"", g.to_lower())
     );
 
-    let h = string::ascii_upper();
+    h := string::ascii_upper();
     $assert(
         h.slice(0, 3) == "ABC",
         string::format("result = \"{}\"", h.slice(0, 3))
     );
 
-    let i = "me";
+    i := "me";
     i.extend("wo");
 
     $assert(
@@ -72,7 +72,7 @@ fn main() {
         string::format("result = \"{}\"", i)
     );
 
-    let ch = i.pop();
+    ch := i.pop();
 
     $assert(ch == 'o', string::format("ch = {}", ch));
     $assert(i == "mew", string::format("result = \"{}\"", i));
@@ -82,7 +82,7 @@ fn main() {
 
     $assert(i == "mewew", string::format("result = \"{}\"", i));
 
-    let j = string::format(
+    j := string::format(
         "abc {}, {}, escaped {{}, mrow {} and a char but i32: {}",
         1, true, ":3", #cast(i32, 'a')
     );

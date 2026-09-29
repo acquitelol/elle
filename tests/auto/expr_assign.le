@@ -23,7 +23,7 @@ fn main() {
     // Fixed since: 0.2.0
 
     // First, let's ensure ternaries themselves work:
-    let x = true ? 1 : 2;
+    x := true ? 1 : 2;
 
     // And in an if-statement?
     if 2 > 1 ? "foo" : nil {}

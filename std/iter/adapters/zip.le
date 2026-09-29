@@ -10,13 +10,10 @@ fn Iterator::zip_internal<T, U, AnyEnded>(
     Iterator<T, AnyEnded> a,
     Iterator<U, AnyEnded> b
 ) -> Iterator<(T, U), AnyEnded> {
-    Zip<T, U, AnyEnded> zip = Zip {
-        a = a,
-        b = b,
-    };
+    env: Zip<T, U, AnyEnded> = Zip { a, b };
 
     return Iterator {
-        env = Box::new(zip).to_ptr(),
+        env = Box::new(env).to_ptr(),
         next = fn(Zip<T, U, AnyEnded> *env) {
             val_a, val_b := $(env.a.next(), env.b.next());
 

@@ -8,7 +8,7 @@ fn `basic.inline`() {
     $assert(whisper("Hello, world") == "hello, world");
 
     multiline := fn(f32 x) {
-        let foo = math::sqrt(x) * E;
+        foo := math::sqrt(x) * E;
         return #cast(i32, foo / 4);
     };
 
@@ -91,8 +91,8 @@ fn `in.struct.works`() {
     cb := testing.cb;
     $assert(cb(14) == 28);
 
-    GenericTesting<string> testing = GenericTesting {
-        cb = fn(x) x.to_lower()
+    testing: GenericTesting<string> = GenericTesting {
+        cb = fn: it.to_lower()
     };
 
     cb := testing.cb;

@@ -22,7 +22,7 @@ fn other(Foo *a) {
 }
 
 fn main() {
-    let foo = Foo {
+    foo := Foo {
         a = 752,
         c = 12,
         b = #[1.2, 512.6],

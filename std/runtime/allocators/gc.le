@@ -28,7 +28,7 @@ struct GCAllocator @nofmt {
 }
 
 fn __internal_ElleGC_Header::new(i64 size) {
-    __internal_ElleGC_Header *self = mem::malloc(#size(__internal_ElleGC_Header));
+    self: __internal_ElleGC_Header* = mem::malloc(#size(__internal_ElleGC_Header));
 
     self.marked = false;
     self.size = size;
@@ -38,7 +38,7 @@ fn __internal_ElleGC_Header::new(i64 size) {
 }
 
 fn GCAllocator::new() {
-    GCAllocator *self = mem::malloc(#size(GCAllocator));
+    self: GCAllocator* = mem::malloc(#size(GCAllocator));
 
     self.total_size = 0;
     self.min_threshold = 4 * 1024;
@@ -113,8 +113,8 @@ fn GCAllocator::mark(GCAllocator *self) {
 }
 
 fn GCAllocator::sweep(GCAllocator *self) {
-    __internal_ElleGC_HeaderNode *prev = nil;
-    __internal_ElleGC_HeaderNode *node = self.head;
+    prev: __internal_ElleGC_HeaderNode* = nil;
+    node: __internal_ElleGC_HeaderNode* = self.head;
 
     while node {
         if !node.header.marked {
@@ -129,7 +129,7 @@ fn GCAllocator::sweep(GCAllocator *self) {
             mem::free(node.header.data);
             mem::free(node.header);
 
-            __internal_ElleGC_HeaderNode *next = node.next;
+            next: __internal_ElleGC_HeaderNode* = node.next;
             mem::free(node);
             node = next;
         } else {
@@ -181,7 +181,7 @@ fn GCAllocator::alloc(GCAllocator *self, i64 size) {
     }
 
     header := __internal_ElleGC_Header::new(size);
-    __internal_ElleGC_HeaderNode *node = mem::malloc(#size(__internal_ElleGC_HeaderNode));
+    node: __internal_ElleGC_HeaderNode* = mem::malloc(#size(__internal_ElleGC_HeaderNode));
 
     node.header = header;
     node.next = self.head;

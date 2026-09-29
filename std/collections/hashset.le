@@ -105,9 +105,9 @@ fn HashSet::difference<T>(HashSet<T> *self, HashSet<T> *other) -> HashSet<T> * {
 }
 
 fn HashSet::from<T>(T[] array) -> HashSet<T> * {
-    let set = HashSet::new<T>();
+    set := HashSet::new<T>();
 
-    for u64 i = 0; i < array.len(); i += 1 {
+    for i: u64 = 0; i < array.len(); i += 1 {
         set.add(array[i]);
     }
 

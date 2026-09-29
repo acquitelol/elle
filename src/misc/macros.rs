@@ -460,10 +460,12 @@ macro_rules! cfg_attr {
             let result = match directive.as_str() {
                 "target" => (unsafe { $crate::misc::constants::TARGET.unwrap() }) == &value,
                 "arch" => (unsafe { $crate::misc::constants::ARCH.unwrap() }) == &value,
-                _ => elle_error!(directive_token
-                    .location
-                    .borrow()
-                    .error(format!("Unknown conditional directive `{directive}`"))),
+                _ => elle_error!(
+                    directive_token
+                        .location
+                        .borrow()
+                        .error(format!("Unknown conditional directive `{directive}`"))
+                ),
             };
 
             // only disable it if not already disabled
@@ -500,5 +502,27 @@ macro_rules! os_arch_to_qbe_target {
             "riscv64" => "rv64",
             other => panic!("Invalid arch {other}"),
         }
+    };
+}
+
+#[macro_export]
+macro_rules! type_declare_error {
+    ($location:expr) => {
+        elle_error!(
+            $location
+                .borrow()
+                .error("As of Elle 0.94.2, declaring types using `T x = y` is no longer supported.\nPlease use `x: T = y` instead, as a uniformity of `x := y`.")
+        )
+    };
+}
+
+#[macro_export]
+macro_rules! let_declare_error {
+    ($location:expr) => {
+        elle_error!(
+            $location
+                .borrow()
+                .error("As of Elle 0.94.2, declaring types using `let x = y` is no longer supported.\nPlease use `x := y` instead.")
+        )
     };
 }

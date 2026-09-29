@@ -21,7 +21,7 @@ struct Node {
 }
 
 fn Node::print_on_lines(Node *self) {
-    i32[][] levels = [];
+    levels := []i32[];
     queue := [$(self, 0)];
 
     while !queue.is_empty() {

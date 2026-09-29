@@ -14,7 +14,7 @@ external fn math::fact(i64 n) -> i64;
 external fn math::fclamp(f64 value, f64 min_value, f64 max_value) -> f64;
 
 fn math::pow<T>(T base, u32 exp) -> T {
-    T out = 1;
+    out: T = 1;
 
     while exp > 0 {
         if exp % 2 == 1 { out *= base; }
@@ -26,7 +26,7 @@ fn math::pow<T>(T base, u32 exp) -> T {
 }
 
 fn math::next_power_of_2<T>(T x) {
-	T y = 1;
+    y: T = 1;
 
 	while y < x {
 	    y += y;

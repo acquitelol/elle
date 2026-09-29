@@ -10,13 +10,10 @@ fn Iterator::chain<T, AnyEnded>(
     Iterator<T, AnyEnded> a,
     Iterator<T, AnyEnded> b
 ) -> Iterator<T, AnyEnded> {
-    Chain<T, AnyEnded> chain = Chain {
-        a = a,
-        b = b
-    };
+    env: Chain<T, AnyEnded> = Chain { a, b };
 
     return Iterator {
-        env = Box::new(chain).to_ptr(),
+        env = Box::new(env).to_ptr(),
         next = fn(Chain<T, AnyEnded> *env) {
             val := env.a.next();
 

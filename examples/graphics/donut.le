@@ -2,58 +2,58 @@ use std/vectors;
 use std/math;
 use std/io;
 
-const f32 THETA_SPACING = 0.07;
-const f32 PHI_SPACING = 0.02;
-const LIGHTING = ".,-~:;=!*#$@";
+let THETA_SPACING = 0.07;
+let PHI_SPACING = 0.02;
+let LIGHTING = ".,-~:;=!*#$@";
 
-const WIDTH = 60;
-const HEIGHT = 24;
-const SIZE = WIDTH * HEIGHT;
+let WIDTH = 60;
+let HEIGHT = 24;
+let SIZE = WIDTH * HEIGHT;
 
 fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 *lightDirection) {
     memset(zBuffer, 0, SIZE * #size(f32));
     memset(output, 32, SIZE * #size(char));
 
-    f32 sinRotX = math::sin(rotX);
-    f32 cosRotX = math::cos(rotX);
+    sinRotX := math::sinf(rotX);
+    cosRotX := math::cosf(rotX);
 
-    f32 sinRotZ = math::sin(rotZ);
-    f32 cosRotZ = math::cos(rotZ);
+    sinRotZ := math::sinf(rotZ);
+    cosRotZ := math::cosf(rotZ);
 
-    for let theta = 0.0; theta < 2 * PI; theta += THETA_SPACING {
-        f32 sinTheta = math::sin(theta);
-        f32 cosTheta = math::cos(theta);
+    for theta := 0.0; theta < 2 * PI; theta += THETA_SPACING {
+        sinTheta := math::sinf(theta);
+        cosTheta := math::cosf(theta);
 
-        for let phi = 0.0; phi < 2 * PI; phi += PHI_SPACING {
-            f32 sinPhi = math::sin(phi);
-            f32 cosPhi = math::cos(phi);
+        for phi := 0.0; phi < 2 * PI; phi += PHI_SPACING {
+            sinPhi := math::sinf(phi);
+            cosPhi := math::cosf(phi);
 
-            let surfacePos = Vector3 {
+            surfacePos := Vector3 {
                 x = cosPhi * (cosTheta + 2),
                 y = sinPhi * (cosTheta + 2),
                 z = sinTheta,
             };
 
-            let depth = 1 / (surfacePos.y * sinRotX + surfacePos.z * cosRotX + 5);
-            let projectionOffset = surfacePos.y * cosRotX - surfacePos.z * sinRotX;
+            depth := 1 / (surfacePos.y * sinRotX + surfacePos.z * cosRotX + 5);
+            projectionOffset := surfacePos.y * cosRotX - surfacePos.z * sinRotX;
 
-            i32 x = 30 + 36 * depth * (surfacePos.x * cosRotZ - projectionOffset * sinRotZ);
-            i32 y = 12 + 12 * depth * (surfacePos.x * sinRotZ + projectionOffset * cosRotZ);
-            i32 offset = x + WIDTH * y;
+            x: i32 = 30 + 36 * depth * (surfacePos.x * cosRotZ - projectionOffset * sinRotZ);
+            y: i32 = 12 + 12 * depth * (surfacePos.x * sinRotZ + projectionOffset * cosRotZ);
+            offset := x + WIDTH * y;
 
-            let normal = surfacePos.clone();
-            let normalLengthSquared = normal.length_sq();
+            normal := surfacePos.clone();
+            normalLengthSquared := normal.length_sq();
 
             if normalLengthSquared > 0 {
                 normal = normal.scale(1.0 / normalLengthSquared);
             }
 
-            let illumination = normal.dot(*lightDirection);
-            let lightingIndex = #cast(i32, math::abs(illumination) * (LIGHTING.len() - 1));
+            illumination := normal.dot(*lightDirection);
+            lightingIndex := #cast(i32, math::abs(illumination) * (LIGHTING.len() - 1));
 
             if HEIGHT > y && y > 0 && x > 0 && WIDTH > x && depth > zBuffer[offset] {
                 zBuffer[offset] = depth;
-                let lightingMapping = #cast(i32, lightingIndex) % (LIGHTING.len() - 1);
+                lightingMapping := #cast(i32, lightingIndex) % (LIGHTING.len() - 1);
                 output[offset] = LIGHTING[lightingMapping < 0 ? 0 : lightingMapping];
             }
         }
@@ -61,7 +61,7 @@ fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 *lightDirecti
 
     io::print("\x1b[H");
 
-    for let character = 0; character < SIZE; character += 1 {
+    for character := 0; character < SIZE; character += 1 {
         if character % WIDTH {
             io::putchar(output[character]);
         } else {
@@ -71,12 +71,12 @@ fn update(f32 rotX, f32 rotZ, f32 *zBuffer, string output, Vector3 *lightDirecti
 }
 
 fn main() {
-    let rotX = 0.0;
-    let rotZ = 0.0;
+    rotX := 0.0;
+    rotZ := 0.0;
 
-    let zBuffer = #alloc(f32, SIZE);
-    let output = #alloc(char, SIZE);
-    let lightDirection = Vector3 { x = 0, y = 1, z = -1 };
+    zBuffer := #alloc(f32, SIZE);
+    output := #alloc(char, SIZE);
+    lightDirection := Vector3 { x = 0, y = 1, z = -1 };
     io::print("\x1b[2J");
 
     while true {

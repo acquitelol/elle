@@ -23,7 +23,7 @@ fn Foo::get_b<T, U>(Foo<T, U> self) -> U {
 }
 
 fn main() {
-    let foo = Foo::new(100, 1.2);
+    foo := Foo::new(100, 1.2);
     foo.double_all();
 
     $dbg(foo, foo.get_a(), foo.get_b());

@@ -23,7 +23,7 @@ use crate::{
 };
 use crate::{
     INTERNAL_ITERATOR_FORMAT, INTERNAL_VALUE_FORMAT, elle_error, enum_hover, expect_eot, get_type,
-    is_type, set_end,
+    is_type, let_declare_error, set_end, type_declare_error,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -174,7 +174,7 @@ impl<'a> Statement<'a> {
     fn parse_declare(&mut self, ty: Option<Option<Type>>) -> AstNode {
         let location = self.current_token().location;
 
-        let r#type = if let Some(ty) = ty {
+        let mut r#type = if let Some(ty) = ty {
             ty
         } else {
             let tmp = self.get_type(Some(self.shared.generics));
@@ -198,7 +198,7 @@ impl<'a> Statement<'a> {
         if let Some(next) = self.next_token()
             && next.kind == TokenKind::Comma
         {
-            return self.parse_tuple_declare(Some(r#type));
+            return self.parse_tuple_declare();
         }
 
         self.advance();
@@ -265,6 +265,21 @@ impl<'a> Statement<'a> {
             self.advance();
         }
 
+        if self.current_token().kind != TokenKind::Equal {
+            r#type = Some(self.get_type(Some(self.shared.generics)));
+            self.advance();
+        }
+
+        if self.current_token().kind == TokenKind::Semicolon || self.is_eof() {
+            return AstNode::Declare(Declare {
+                name,
+                r#type,
+                value: None,
+                location,
+                value_location: self.current_token().location,
+            });
+        }
+
         self.expect_tokens(&[TokenKind::Equal]);
         self.advance();
 
@@ -324,7 +339,7 @@ impl<'a> Statement<'a> {
         })
     }
 
-    fn parse_tuple_declare(&mut self, existing_ty: Option<Option<Type>>) -> AstNode {
+    fn parse_tuple_declare(&mut self) -> AstNode {
         let location = self.current_token().location;
         self.expect_identifier();
         let first = self.current_token();
@@ -349,11 +364,18 @@ impl<'a> Statement<'a> {
             None
         };
 
-        let ty = if self.current_token().kind == TokenKind::Colon && existing_ty.is_none() {
+        let ty = if self.current_token().kind == TokenKind::Colon {
             self.advance();
-            Some(Type::Infer)
+
+            Some(if self.current_token().kind == TokenKind::Equal {
+                Type::Infer
+            } else {
+                let ty = self.get_type(Some(self.shared.generics));
+                self.advance();
+                ty
+            })
         } else {
-            existing_ty.unwrap_or(None)
+            None
         };
 
         self.expect_tokens(&[TokenKind::Equal]);
@@ -4307,10 +4329,7 @@ impl<'a> Statement<'a> {
             TokenKind::SetAllocator => self.parse_set_allocator(),
             TokenKind::ResetAllocator => self.parse_reset_allocator(),
             TokenKind::Cast => self.parse_type_conversion(),
-            TokenKind::Let => {
-                self.advance();
-                self.parse_declare(Some(Some(Type::Infer)))
-            }
+            TokenKind::Let => let_declare_error!(self.current_token().location),
             TokenKind::LeftParenthesis => {
                 if self.is_type_contextually(0) {
                     self.parse_declare(None)
@@ -4378,23 +4397,14 @@ impl<'a> Statement<'a> {
                     } else if next.kind == TokenKind::Equal {
                         self.parse_declare(Some(None))
                     } else if next.kind == TokenKind::Comma {
-                        self.parse_tuple_declare(None)
+                        self.parse_tuple_declare()
                     } else if next.kind == TokenKind::Not {
                         self.parse_unwrap_shorthand(
                             self.current_token().location,
                             token_to_node!(&self.current_token(), self),
                         )
                     } else if next.kind == TokenKind::Colon {
-                        if self
-                            .next_token_seek(2)
-                            .is_some_and(|token| token.kind == TokenKind::Equal)
-                        {
-                            self.parse_declare(Some(Some(Type::Infer)))
-                        } else {
-                            elle_error!(next.location.borrow().error(
-                                "Cannot use a colon in this context. What were you trying to do?"
-                            ))
-                        }
+                        self.parse_declare(Some(Some(Type::Infer)))
                     } else if next.kind.is_declarative() {
                         self.parse_declarative_like()
                     } else if next.kind == TokenKind::LessThan {
@@ -4460,8 +4470,7 @@ impl<'a> Statement<'a> {
             TokenKind::For => self.parse_for_statement(),
             TokenKind::Defer => self.parse_defer(),
             TokenKind::Let => {
-                self.advance();
-                self.parse_declare(Some(Some(Type::Infer)))
+                let_declare_error!(location)
             }
             // Lambda expression `fn(i32 a, i32 b) -> val`
             TokenKind::Function
@@ -4549,10 +4558,10 @@ impl<'a> Statement<'a> {
                             )
                         }
                     } else {
-                        self.parse_declare(None)
+                        type_declare_error!(location)
                     }
                 } else {
-                    self.parse_declare(None)
+                    type_declare_error!(location)
                 }
             }
             _ => self.parse_expression(),

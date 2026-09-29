@@ -4,8 +4,8 @@ use std/core;
 global pub;
 
 fn Tuple::__hash__<T, U>((T, U) self, u64 capacity) {
-    u64 hash_x = self.x.__hash__(capacity);
-    u64 hash_y = self.y.__hash__(capacity);
-    u64 combined = hash_x * 31 + hash_y;
+    hash_x := self.x.__hash__(capacity);
+    hash_y := self.y.__hash__(capacity);
+    combined := hash_x * 31 + hash_y;
     return hash::mod(combined, capacity);
 }

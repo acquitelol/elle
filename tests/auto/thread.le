@@ -3,18 +3,18 @@ use std/prelude;
 fn main() {
     counter := Mutex::new(0);
     threads := (0..5)
-        .map_with(fn(_, arg) 
-            Thread::spawn_with(fn(counter) {
-                value := counter.lock();
-                defer counter.unlock();
+        .map_with(fn:
+            Thread::spawn_with(fn: {
+                value := it.lock();
+                defer it.unlock();
                 return *value += 1;
-            }, arg), counter)
+            }, x1), counter)
         .collect();
     
     res := threads
         .iter()
-        .map(fn(thread) thread.join())
-        .map(fn(x) (*x))
+        .map(fn: it.join())
+        .map(fn: *it)
         .collect();
     
     $assert(*counter.lock() == 5);
