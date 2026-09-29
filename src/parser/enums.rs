@@ -643,19 +643,6 @@ pub struct FunctionSource {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ConstantSource {
-    pub namespace_token: Token,
-    pub name_token: Token,
-    pub name: String,
-    pub public: bool,
-    pub usable: bool,
-    pub imported: bool,
-    pub r#type: Option<Type>,
-    pub value: Box<AstNode>,
-    pub location: MutRc<Location>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GlobalSource {
     pub namespace_token: Token,
     pub name_token: Token,
@@ -687,7 +674,6 @@ pub enum Primitive {
     Use(UseSource),
     Struct(StructSource),
     Function(FunctionSource),
-    Constant(ConstantSource),
     Global(GlobalSource),
     Enum(EnumSource),
 }

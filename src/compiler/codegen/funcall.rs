@@ -1,6 +1,8 @@
 use std::fmt::Write;
 
 use crate::{
+    DUNDER_CONSTANTS, FORMAT_CONSTANT, GREEN, META_STRUCT_NAME, POINTER_ID, PTR_PRIORITY_CONSTANTS,
+    RESET, STATIC_ARRAY_ID, VOID_POINTER_ID,
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler, VariableInfo},
         lib::{
@@ -15,8 +17,7 @@ use crate::{
     elle_error, get_GREEN, get_POINTER_ID, get_RESET, get_STATIC_ARRAY_ID, hashmap, is_generic,
     lexer::enums::{TokenKind, ValueKind},
     parser::enums::{Address, AstNode, FunctionCall, Literal},
-    struct_hover, unknown_function, DUNDER_CONSTANTS, FORMAT_CONSTANT, GREEN, META_STRUCT_NAME,
-    POINTER_ID, PTR_PRIORITY_CONSTANTS, RESET, STATIC_ARRAY_ID, VOID_POINTER_ID,
+    struct_hover, unknown_function,
 };
 
 impl Codegen<'_> for FunctionCall {
@@ -42,9 +43,11 @@ impl Codegen<'_> for FunctionCall {
 
         if type_method {
             let parameter = parameters.first().unwrap_or_else(|| {
-                elle_error!(call_location
-                    .borrow()
-                    .error("Tried to get the 0th parameter to parse struct call but failed"))
+                elle_error!(
+                    call_location
+                        .borrow()
+                        .error("Tried to get the 0th parameter to parse struct call but failed")
+                )
             });
 
             let (mut ty, val) = parameter.1.clone().compile(compiler, &ctx.to_nnf())
@@ -120,13 +123,7 @@ impl Codegen<'_> for FunctionCall {
             }
         }
 
-        let tmp_function_option = ctx
-            .module
-            .borrow()
-            .functions
-            .get(&name)
-            .filter(|function| !function.constant)
-            .cloned();
+        let tmp_function_option = ctx.module.borrow().functions.get(&name).cloned();
         let mut is_callback = false;
 
         let mut tmp_function = if let Some(func) = tmp_function_option {
@@ -156,7 +153,6 @@ impl Codegen<'_> for FunctionCall {
             let fallback = Function {
                 linkage: Linkage::public(),
                 name: name.clone(),
-                constant: false,
                 variadic: false,
                 external: false,
                 builtin: false,
@@ -210,13 +206,14 @@ impl Codegen<'_> for FunctionCall {
         let mut add_meta = false;
 
         if let Some(inner) = tmp_function.arguments.first()
-            && inner.0 .0.is_struct() {
-                let name = inner.0 .0.get_struct_inner().unwrap();
+            && inner.0.0.is_struct()
+        {
+            let name = inner.0.0.get_struct_inner().unwrap();
 
-                if name == META_STRUCT_NAME {
-                    add_meta = true;
-                }
+            if name == META_STRUCT_NAME {
+                add_meta = true;
             }
+        }
 
         if compiler.generic_functions.contains_key(&name) {
             create_monomorphized_function(
@@ -250,27 +247,26 @@ impl Codegen<'_> for FunctionCall {
             ));
         }
 
-        if type_method
-            && let Some((ty, _)) = first_param.clone() {
-                let parsed_ty = if ty.is_struct() && is_generic!(ty.get_struct_inner().unwrap()) {
-                    Type::Struct(Type::from_internal_id(&ty.get_struct_inner().unwrap()).0)
-                } else {
-                    ty
-                };
+        if type_method && let Some((ty, _)) = first_param.clone() {
+            let parsed_ty = if ty.is_struct() && is_generic!(ty.get_struct_inner().unwrap()) {
+                Type::Struct(Type::from_internal_id(&ty.get_struct_inner().unwrap()).0)
+            } else {
+                ty
+            };
 
-                // struct access
-                if parsed_ty.is_struct() {
-                    should_get_address = true;
-                // string access
-                } else if parsed_ty.is_string() {
-                    should_get_address = true;
-                }
+            // struct access
+            if parsed_ty.is_struct() {
+                should_get_address = true;
+            // string access
+            } else if parsed_ty.is_string() {
+                should_get_address = true;
             }
+        }
 
         for (i, mut parameter) in parameters.iter().cloned().enumerate() {
             let param_ty = {
                 let tmp = tmp_function.arguments.get(i + usize::from(add_meta));
-                tmp.map(|item| item.0 .0.clone())
+                tmp.map(|item| item.0.0.clone())
             };
 
             let first_arg = tmp_function.arguments.get(usize::from(add_meta));
@@ -278,20 +274,19 @@ impl Codegen<'_> for FunctionCall {
 
             if let Some(first_arg) = first_arg
                 && i == 0
-                    && type_method
-                    && should_get_address
-                    && first_param.is_some()
-                    && first_arg.0 .0.is_pointer()
-                    && (first_arg.0 .0.get_pointer_inner().unwrap()
-                        == first_param.clone().unwrap().0)
-                {
-                    got_address = true;
+                && type_method
+                && should_get_address
+                && first_param.is_some()
+                && first_arg.0.0.is_pointer()
+                && (first_arg.0.0.get_pointer_inner().unwrap() == first_param.clone().unwrap().0)
+            {
+                got_address = true;
 
-                    parameter.1 = AstNode::Address(Address {
-                        value: Box::new(parameter.1),
-                        location: call_location.clone(),
-                    });
-                }
+                parameter.1 = AstNode::Address(Address {
+                    value: Box::new(parameter.1),
+                    location: call_location.clone(),
+                });
+            }
 
             let (ty, val) = if i == 0 && first_param.is_some() && !got_address {
                 first_param.clone().unwrap()
@@ -365,7 +360,8 @@ impl Codegen<'_> for FunctionCall {
                         .borrow()
                         .functions
                         .get(&func_name)
-                        .cloned().map_or_else(Function::default, |mut function| {
+                        .cloned()
+                        .map_or_else(Function::default, |mut function| {
                             if let Some(name) = function.unaliased.clone() {
                                 function.name = name;
                             }
@@ -470,7 +466,8 @@ impl Codegen<'_> for FunctionCall {
                 }
 
                 if tmp_function
-                    .arguments.first()
+                    .arguments
+                    .first()
                     .is_some_and(|((ty, _), _)| *ty == Type::Struct(META_STRUCT_NAME.into()))
                 {
                     elle_error!(call_location.borrow().error(
@@ -503,21 +500,22 @@ impl Codegen<'_> for FunctionCall {
         let ty = tmp_function.return_type.clone().unwrap_or(declarative_ty);
 
         if add_meta {
-            let res = meta_struct
-                .compile(
-                    compiler,
-                    &CodegenContext {
-                        ty: Some(ty.clone()),
-                        value: None,
-                        is_return: false,
-                        ..ctx.clone()
-                    },
-                )
-                .unwrap_or_else(|| {
-                    elle_error!(call_location
-                        .borrow()
-                        .error("Unexpected error when trying to compile the Elle metadata struct"))
-                });
+            let res =
+                meta_struct
+                    .compile(
+                        compiler,
+                        &CodegenContext {
+                            ty: Some(ty.clone()),
+                            value: None,
+                            is_return: false,
+                            ..ctx.clone()
+                        },
+                    )
+                    .unwrap_or_else(|| {
+                        elle_error!(call_location.borrow().error(
+                            "Unexpected error when trying to compile the Elle metadata struct"
+                        ))
+                    });
 
             params.insert(0, (res, false));
         }
@@ -565,64 +563,66 @@ impl Codegen<'_> for FunctionCall {
                 .saturating_sub(usize::from(add_meta))
                 .saturating_sub(usize::from(type_method));
 
-            elle_error!(call_location
-                .borrow()
-                .with_extra_info(if tmp_function.arguments.is_empty() && type_method {
-                    format!(
-                        "Use `{}({})` instead here",
-                        name.replace('.', "::"),
-                        if arg_len > 0 { "..." } else { "" }
-                    )
-                } else if tmp_function.variadic {
-                    format!(
-                        "This function is variadic and requires {} argument{}",
-                        arg_len,
-                        if arg_len == 1 { "" } else { "s" }
-                    )
-                } else {
-                    String::new()
-                })
-                .error(format!(
-                    "Function named `{}({})` takes {}{} argument{}, but you {}passed {}\n{}",
-                    name.replace('.', "::"),
-                    if arg_len > 0 { "..." } else { "" },
-                    if tmp_function.variadic {
-                        "at least "
-                    } else {
-                        ""
-                    },
-                    arg_len,
-                    if arg_len == 1 { "" } else { "s" },
-                    only,
-                    param_len,
-                    if tmp_function.arguments.is_empty() && type_method {
+            elle_error!(
+                call_location
+                    .borrow()
+                    .with_extra_info(if tmp_function.arguments.is_empty() && type_method {
                         format!(
-                            "This function doesn't accept a `{} self` parameter.",
-                            first_param
-                                .expect("This function is a type method")
-                                .0
-                                .display()
+                            "Use `{}({})` instead here",
+                            name.replace('.', "::"),
+                            if arg_len > 0 { "..." } else { "" }
+                        )
+                    } else if tmp_function.variadic {
+                        format!(
+                            "This function is variadic and requires {} argument{}",
+                            arg_len,
+                            if arg_len == 1 { "" } else { "s" }
                         )
                     } else {
-                        tmp_function
-                            .arguments
-                            .iter()
-                            .skip(params.len())
-                            .map(|((ty, val), _)| {
-                                format!(
-                                    "Missing argument named \"{}\" (of type \"{}\")",
-                                    val.get_string_inner()
-                                        .replace('%', "")
-                                        .split('.')
-                                        .nth(0)
-                                        .unwrap(),
-                                    ty.display()
-                                )
-                            })
-                            .collect::<Vec<String>>()
-                            .join("\n")
-                    }
-                )))
+                        String::new()
+                    })
+                    .error(format!(
+                        "Function named `{}({})` takes {}{} argument{}, but you {}passed {}\n{}",
+                        name.replace('.', "::"),
+                        if arg_len > 0 { "..." } else { "" },
+                        if tmp_function.variadic {
+                            "at least "
+                        } else {
+                            ""
+                        },
+                        arg_len,
+                        if arg_len == 1 { "" } else { "s" },
+                        only,
+                        param_len,
+                        if tmp_function.arguments.is_empty() && type_method {
+                            format!(
+                                "This function doesn't accept a `{} self` parameter.",
+                                first_param
+                                    .expect("This function is a type method")
+                                    .0
+                                    .display()
+                            )
+                        } else {
+                            tmp_function
+                                .arguments
+                                .iter()
+                                .skip(params.len())
+                                .map(|((ty, val), _)| {
+                                    format!(
+                                        "Missing argument named \"{}\" (of type \"{}\")",
+                                        val.get_string_inner()
+                                            .replace('%', "")
+                                            .split('.')
+                                            .nth(0)
+                                            .unwrap(),
+                                        ty.display()
+                                    )
+                                })
+                                .collect::<Vec<String>>()
+                                .join("\n")
+                        }
+                    ))
+            )
         }
 
         if tmp_function.variadic {
@@ -634,7 +634,7 @@ impl Codegen<'_> for FunctionCall {
             // ensure structs are not passed as abi structs but rather just the pure
             // address so that it can be reconstructed accordingly with vaarg
             for arg in &mut params[tmp_function.arguments.len()..] {
-                arg.0 .0 = arg.0 .0.clone().into_base();
+                arg.0.0 = arg.0.0.clone().into_base();
             }
         }
 

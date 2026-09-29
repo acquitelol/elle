@@ -4,13 +4,13 @@ use crate::{
     MAIN_ID, Warnings,
     compiler::primitive::global::generate_global,
     elle_error, get_MAIN_ID, hashmap,
-    lexer::enums::{Location, MutRc, Token, ValueKind},
+    lexer::enums::{Location, MutRc, ValueKind},
     misc::{
         colors::*,
         constants::{RAW_ERRORS, get_RAW_ERRORS},
     },
     parser::{
-        enums::{AstNode, FunctionSource, Primitive, Return},
+        enums::{FunctionSource, Primitive},
         parser::StructPool,
     },
     struct_hover,
@@ -308,88 +308,13 @@ impl Compiler {
 
         for primitive in compiler.tree.clone() {
             match primitive.clone() {
-                Primitive::Constant(this) => {
-                    let function = generate_function(
-                        FunctionSource {
-                            namespace_token: Token::from_ident(""),
-                            name_token: this.name_token.clone(),
-                            name: this.name.clone(),
-                            public: this.public,
-                            variadic: false,
-                            external: false,
-                            builtin: false,
-                            volatile: false,
-                            format: false,
-                            unaliased: None,
-                            usable: this.usable,
-                            imported: this.imported,
-                            generics: vec![],
-                            arguments: vec![],
-                            r#return: this.r#type,
-                            body: vec![AstNode::Return(Return {
-                                value: this.value,
-                                location: this.location.clone(),
-                            })],
-                            location: this.location.clone(),
-                            return_location: this.location,
-                        },
-                        &mut compiler,
-                        false,
-                        true,
-                        hashmap![],
-                        &module_ref,
-                    );
-
-                    if this.namespace_token.tagged {
-                        let plain_name = this.namespace_token.value.get_string_inner().unwrap();
-                        if let Some((generics, members, _)) = compiler.struct_pool.get(&plain_name)
-                        {
-                            struct_hover!(
-                                this.namespace_token,
-                                members.is_empty(),
-                                generics,
-                                members
-                            );
-                        } else {
-                            let ty = ValueKind::String(plain_name)
-                                .to_type_string(false, false, None)
-                                .unwrap();
-
-                            elle_error!(format!(
-                                "hover\n{}\n{}\ntype {}; // size = {}",
-                                this.namespace_token.location.borrow().display_plain(false),
-                                this.namespace_token.location.borrow().display_plain(true),
-                                ty.display(),
-                                ty.size_base()
-                            ));
-                        }
-                    }
-
-                    if this.name_token.tagged {
-                        elle_error!(format!(
-                            "hover\n{}\n{}\nconst {}: {}",
-                            this.name_token.location.borrow().display_plain(false),
-                            this.name_token.location.borrow().display_plain(true),
-                            this.name_token.value.get_string_inner().unwrap(),
-                            function.return_type.unwrap_or(Type::Word).display()
-                        ));
-                    }
-
-                    module_ref.borrow_mut().add_function(function);
-                }
                 Primitive::Function(this) => {
                     if this.generics.is_empty() {
                         let name_token = this.name_token.clone();
                         let namespace_token = this.namespace_token.clone();
 
-                        let function = generate_function(
-                            this,
-                            &mut compiler,
-                            false,
-                            false,
-                            hashmap![],
-                            &module_ref,
-                        );
+                        let function =
+                            generate_function(this, &mut compiler, false, hashmap![], &module_ref);
 
                         if namespace_token.tagged {
                             let plain_name = namespace_token.value.get_string_inner().unwrap();

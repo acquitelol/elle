@@ -35,18 +35,10 @@ impl Codegen<'_> for Literal {
                             ));
                         }
 
-                        let is_constant = ctx
-                            .module
-                            .borrow()
-                            .functions
-                            .get(&name)
-                            .is_some_and(|function| function.constant);
-
                         elle_error!(format!(
-                            "hover\n{}\n{}\n{} {}: {}",
+                            "hover\n{}\n{}\nlet {}: {}",
                             self.location.borrow().display_plain(false),
                             self.location.borrow().display_plain(true),
-                            if is_constant { "const" } else { "let" },
                             name.replace('.', "::"),
                             res.0.display()
                         ));

@@ -1,19 +1,18 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
+    GENERIC_END, GENERIC_IDENTIFIER, Warnings,
     compiler::qbe::r#type::Type,
     elle_error,
     lexer::enums::{Location, MutRc, Token, TokenKind, ValueKind},
     misc::colors::*,
     parser::{
-        constant::Constant,
+        r#enum::Enum,
         enums::{AstNode, Declare, FunctionSource, GlobalSource},
         function::Function,
         global::Global,
-        r#enum::Enum,
         r#struct::Struct,
     },
-    Warnings, GENERIC_END, GENERIC_IDENTIFIER,
 };
 
 use super::{
@@ -760,19 +759,21 @@ impl Parser {
                 }
                 TokenKind::Function => {
                     if local && public {
-                        elle_error!(self
-                            .current_token()
-                            .location
-                            .borrow()
-                            .error("Cannot specify a function as both private and public"));
+                        elle_error!(
+                            self.current_token()
+                                .location
+                                .borrow()
+                                .error("Cannot specify a function as both private and public")
+                        );
                     }
 
                     // function pointer
                     if let Some(next) = self.next_token()
-                        && next.kind == TokenKind::Multiply {
-                            self.advance();
-                            continue;
-                        }
+                        && next.kind == TokenKind::Multiply
+                    {
+                        self.advance();
+                        continue;
+                    }
 
                     let mut function = Function::new(self);
 
@@ -800,44 +801,14 @@ impl Parser {
 
                     clean!();
                 }
-                TokenKind::Constant => {
-                    if external {
-                        elle_error!(self.current_token().location.borrow().error("Cannot have an external constant. Please remove the `external` keyword."))
-                    }
-
-                    if local && public {
-                        elle_error!(self
-                            .current_token()
-                            .location
-                            .borrow()
-                            .error("Cannot specify a constant as both private and public"));
-                    }
-
-                    let mut constant = Constant::new(self);
-
-                    let statement = constant.parse(
-                        if local {
-                            false
-                        } else {
-                            global_public || public
-                        },
-                        do_only == &DoOnly::FunctionsAndConstants,
-                        location.clone(),
-                    );
-
-                    if let Some(statement) = statement {
-                        self.tree.borrow_mut().push(statement);
-                    }
-
-                    clean!();
-                }
                 TokenKind::Let => {
                     if local && public {
-                        elle_error!(self
-                            .current_token()
-                            .location
-                            .borrow()
-                            .error("Cannot specify a global as both private and public"));
+                        elle_error!(
+                            self.current_token()
+                                .location
+                                .borrow()
+                                .error("Cannot specify a global as both private and public")
+                        );
                     }
 
                     let mut global = Global::new(self);
@@ -914,11 +885,12 @@ impl Parser {
                     }
 
                     if local && public {
-                        elle_error!(self
-                            .current_token()
-                            .location
-                            .borrow()
-                            .error("Cannot specify a struct as both private and public"));
+                        elle_error!(
+                            self.current_token()
+                                .location
+                                .borrow()
+                                .error("Cannot specify a struct as both private and public")
+                        );
                     }
 
                     let mut r#struct = Struct::new(self);

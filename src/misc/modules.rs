@@ -6,17 +6,19 @@ use std::process::exit;
 use std::time::Instant;
 use std::{cell::RefCell, rc::Rc};
 
+use string_interner::StringInterner;
 use string_interner::backend::BufferBackend;
 use string_interner::symbol::SymbolU32;
-use string_interner::StringInterner;
 
 use crate::compiler::qbe::r#type::Type;
 use crate::lexer::enums::{MutRc, Token};
 use crate::parser::enums::{
-    ConstantSource, EnumSource, FunctionSource, GlobalSource, Literal, StructSource, UseSource,
+    EnumSource, FunctionSource, GlobalSource, Literal, StructSource, UseSource,
 };
 use crate::parser::parser::{EnumPool, GlobalInit};
+use crate::{ARBITRARY_ALLOCATOR_MODULE, BACKUP_ALLOCATOR_MODULE, elle_error, get_STD_LIB_PATH};
 use crate::{
+    INTERNAL_GLOBAL_INIT_FORMAT, PRIMARY_ALLOCATOR_MODULE, SHORT_EXTENSION, STD_LIB_PATH, Warnings,
     elapsed_with_color,
     lexer::{
         enums::{Location, TokenKind, ValueKind},
@@ -28,9 +30,7 @@ use crate::{
         enums::{AstNode, Primitive},
         parser::{DoOnly, Parser, StructPool},
     },
-    Warnings, INTERNAL_GLOBAL_INIT_FORMAT, PRIMARY_ALLOCATOR_MODULE, SHORT_EXTENSION, STD_LIB_PATH,
 };
-use crate::{elle_error, get_STD_LIB_PATH, ARBITRARY_ALLOCATOR_MODULE, BACKUP_ALLOCATOR_MODULE};
 
 pub type Interner = StringInterner<BufferBackend>;
 
@@ -75,8 +75,6 @@ pub fn lex_and_parse(
         } else {
             relative_path.to_path_buf()
         };
-
-        
 
         match fs::read_to_string(&final_path) {
             Ok(content) => content,
@@ -316,15 +314,6 @@ pub fn lex_and_parse(
                 for symbol in nodes.iter().rev() {
                     match symbol.clone() {
                         Primitive::Use { .. } => {}
-                        Primitive::Constant(ConstantSource { name, public, .. }) => {
-                            override_and_add_node!(
-                                Primitive::Constant,
-                                &mut tree,
-                                &name,
-                                symbol,
-                                public
-                            );
-                        }
                         Primitive::Global(GlobalSource { name, public, .. }) => {
                             override_and_add_node!(
                                 Primitive::Global,
@@ -465,8 +454,7 @@ pub fn lex_and_parse(
 pub fn existing_definition(tree: &[Primitive], node_name: &str) -> Option<usize> {
     tree.iter().position(|item| match item {
         Primitive::Use { .. } => false,
-        Primitive::Constant(ConstantSource { name, .. })
-        | Primitive::Global(GlobalSource { name, .. })
+        Primitive::Global(GlobalSource { name, .. })
         | Primitive::Function(FunctionSource { name, .. })
         | Primitive::Struct(StructSource { name, .. })
         | Primitive::Enum(EnumSource { name, .. }) => *name == node_name,

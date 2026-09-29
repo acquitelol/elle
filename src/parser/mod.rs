@@ -1,5 +1,4 @@
 #![allow(clippy::cognitive_complexity)]
-pub mod constant;
 pub mod r#enum;
 pub mod enums;
 pub mod function;

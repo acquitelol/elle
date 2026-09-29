@@ -485,7 +485,6 @@ pub fn create_monomorphized_function(
                     },
                     compiler,
                     false,
-                    false,
                     known_generics.clone(),
                     module,
                 );

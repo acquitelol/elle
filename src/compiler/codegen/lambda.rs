@@ -1,4 +1,5 @@
 use crate::{
+    LAMBDA_SHORTHAND_SCHEME,
     compiler::{
         compiler::{Codegen, CodegenContext, Compiler},
         primitive::function::generate_function,
@@ -6,9 +7,8 @@ use crate::{
     },
     elle_error, hashmap,
     lexer::enums::{Token, TokenKind, ValueKind},
-    misc::colors::{get_GREEN, get_RESET, GREEN, RESET},
+    misc::colors::{GREEN, RESET, get_GREEN, get_RESET},
     parser::enums::{Argument, AstNode, Conversion, Declare, FunctionSource, Lambda, Literal},
-    LAMBDA_SHORTHAND_SCHEME,
 };
 
 impl Codegen<'_> for Lambda {
@@ -153,7 +153,6 @@ impl Codegen<'_> for Lambda {
             },
             compiler,
             true,
-            false,
             hashmap![],
             ctx.module,
         );

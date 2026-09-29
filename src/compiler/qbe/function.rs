@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt};
 use crate::{elle_error, ensure_ascii, lexer::enums::Location};
 
 use super::{
-    block::Block, instruction::Instruction, linkage::Linkage, r#type::Type, statement::Statement,
+    block::Block, instruction::Instruction, linkage::Linkage, statement::Statement, r#type::Type,
     value::Value,
 };
 
@@ -11,7 +11,6 @@ use super::{
 pub struct Function {
     pub linkage: Linkage,
     pub name: String,
-    pub constant: bool, // used to differentate functions and constants when the constant is callable
     pub variadic: bool,
     pub external: bool,
     pub builtin: bool,
