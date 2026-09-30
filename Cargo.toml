@@ -1,6 +1,6 @@
 [package]
 name = "ellec"
-version = "0.94.2"
+version = "0.95.2"
 edition = "2024"
 license = "GPL-3.0+"
 repository = "https://github.com/acquitelol/elle"

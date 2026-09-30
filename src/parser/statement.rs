@@ -3212,6 +3212,9 @@ impl<'a> Statement<'a> {
 
                     self.consumed_addr = true;
                 }
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
                 // foo.a.meow() = meow(foo.a)
                 TokenKind::LeftParenthesis => {
                     expression = self.parse_function(
