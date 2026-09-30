@@ -464,9 +464,11 @@ impl<'a> Statement<'a> {
                         token_to_node!(&current, self)
                     }
 
-                    TokenKind::Not => {
-                        self.parse_unwrap_shorthand(location, token_to_node!(&current, self))
-                    }
+                    TokenKind::Not => self.parse_unwrap_shorthand(
+                        location,
+                        Some(position),
+                        token_to_node!(&current, self),
+                    ),
 
                     TokenKind::LeftBlockBrace => self.parse_offset_store(Some((
                         position,
@@ -604,7 +606,8 @@ impl<'a> Statement<'a> {
                             self.parse_field_access(Some((position, expression, location)));
                     }
                     TokenKind::Not => {
-                        expression = self.parse_unwrap_shorthand(location, expression);
+                        expression =
+                            self.parse_unwrap_shorthand(location, Some(position), expression);
                     }
                     TokenKind::LeftBlockBrace => {
                         expression =
@@ -756,7 +759,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -1021,7 +1026,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -1205,7 +1212,11 @@ impl<'a> Statement<'a> {
                 }
 
                 TokenKind::Not => {
-                    return self.parse_unwrap_shorthand(location.clone(), expression!());
+                    return self.parse_unwrap_shorthand(
+                        location.clone(),
+                        Some(position),
+                        expression!(),
+                    );
                 }
 
                 TokenKind::LeftBlockBrace => {
@@ -1683,7 +1694,6 @@ impl<'a> Statement<'a> {
             }
         }
 
-        // dbg!(&self.shared);
         let mut expression = Statement::new(
             tokens,
             0,
@@ -1705,7 +1715,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -1729,7 +1741,14 @@ impl<'a> Statement<'a> {
         expression
     }
 
-    fn parse_unwrap_shorthand(&mut self, location: MutRc<Location>, node: AstNode) -> AstNode {
+    fn parse_unwrap_shorthand(
+        &mut self,
+        location: MutRc<Location>,
+        prev_position: Option<usize>,
+        node: AstNode,
+    ) -> AstNode {
+        let position = prev_position.unwrap_or(self.position);
+
         let mut expression = AstNode::FunctionCall(FunctionCall {
             namespace_token: Token::from_ident(""),
             name_token: Token::from_ident(""),
@@ -1744,15 +1763,15 @@ impl<'a> Statement<'a> {
         if let Some(token) = self.advance_opt() {
             match token.kind {
                 TokenKind::Dot => {
-                    expression =
-                        self.parse_field_access(Some((self.position, expression, location)));
+                    expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
-                    expression =
-                        self.parse_offset_store(Some((self.position, expression, location)));
+                    expression = self.parse_offset_store(Some((position, expression, location)));
                 }
 
                 TokenKind::Semicolon => {}
@@ -1762,6 +1781,7 @@ impl<'a> Statement<'a> {
                 }
 
                 other if other.is_arithmetic() => {
+                    self.position = position;
                     return self.parse_arithmetic();
                 }
 
@@ -1935,7 +1955,9 @@ impl<'a> Statement<'a> {
                     )));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::Semicolon => {}
 
@@ -2000,7 +2022,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -2356,7 +2380,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -2476,7 +2502,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -2577,7 +2605,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -2964,7 +2994,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -3345,7 +3377,9 @@ impl<'a> Statement<'a> {
                     });
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::Dot => {
                     expression = self.parse_field_access(Some((position, expression, location)));
@@ -3487,7 +3521,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -3623,7 +3659,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -3721,7 +3759,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -3820,7 +3860,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -3894,7 +3936,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -3962,7 +4006,9 @@ impl<'a> Statement<'a> {
                     expression = self.parse_field_access(Some((position, expression, location)));
                 }
 
-                TokenKind::Not => expression = self.parse_unwrap_shorthand(location, expression),
+                TokenKind::Not => {
+                    expression = self.parse_unwrap_shorthand(location, Some(position), expression)
+                }
 
                 TokenKind::LeftBlockBrace => {
                     expression = self.parse_offset_store(Some((position, expression, location)));
@@ -4399,10 +4445,12 @@ impl<'a> Statement<'a> {
                     } else if next.kind == TokenKind::Comma {
                         self.parse_tuple_declare()
                     } else if next.kind == TokenKind::Not {
-                        self.parse_unwrap_shorthand(
-                            self.current_token().location,
-                            token_to_node!(&self.current_token(), self),
-                        )
+                        let location = self.current_token().location;
+                        let position = self.position;
+                        let node = token_to_node!(&self.current_token(), self);
+
+                        self.advance();
+                        self.parse_unwrap_shorthand(location, Some(position), node)
                     } else if next.kind == TokenKind::Colon {
                         self.parse_declare(Some(Some(Type::Infer)))
                     } else if next.kind.is_declarative() {
