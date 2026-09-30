@@ -13,7 +13,7 @@ fn bucket_sort<T>(T[] arr, u8 digit) {
 
 fn radix_sort<T>(T[] arr) {
     // better than T::MAX, does less iterations overall
-    largest := arr.iter().max().unwrap();
+    largest := arr.iter().max()!;
 
     for i in 0..math::log10f(largest) + 1 {
         arr = bucket_sort(arr, i);

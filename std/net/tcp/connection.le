@@ -24,7 +24,7 @@ fn TcpConnection::read<T>(TcpConnection self, T[] buffer) -> Result<i64, Errno> 
 
     /// Automatically set length when read
     if res.is_ok() {
-        buffer.size = res.unwrap() / #size(T);
+        buffer.size = res! / #size(T);
     }
 
     return res;

@@ -15,13 +15,13 @@ fn Iterator::zip_internal<T, U, AnyEnded>(
     return Iterator {
         env = Box::new(env).to_ptr(),
         next = fn(Zip<T, U, AnyEnded> *env) {
-            val_a, val_b := $(env.a.next(), env.b.next());
+            a, b := $(env.a.next(), env.b.next());
 
-            if val_a.is_none() || val_b.is_none() {
+            if a.is_none() || b.is_none() {
                 return None<(T, U)>();
             }
 
-            return Option::Some($(val_a.unwrap(), val_b.unwrap()));
+            return Option::Some($(a!, b!));
         },
         next_back = a.next_back && b.next_back ? fn(Zip<T, U, AnyEnded> *env) {
             a := *#cast(Iterator<T, DoubleEnded> *, &env.a);
@@ -32,7 +32,7 @@ fn Iterator::zip_internal<T, U, AnyEnded>(
                 return None<(T, U)>();
             }
 
-            return Option::Some($(a.unwrap(), b.unwrap()));
+            return Option::Some($(a!, b!));
         } : nil
     };
 }

@@ -2,55 +2,55 @@ use std/prelude;
 
 fn `parse.null.works`() {
     $assert("null".parse_json().is_ok_and(fn(value) value.tag == JsonValueKind::Null));
-    $assert("null".parse_json().unwrap().as_null() == nil);
+    $assert("null".parse_json()!.as_null() == nil);
 }
 
 fn `parse.number.works`() {
     a := "123".parse_json();
     $assert(a.is_ok_and(fn(value) value.tag == JsonValueKind::Number));
-    $assert(a.unwrap().as_number() - 123.0 < 1.0e-6);
+    $assert(a!.as_number() - 123.0 < 1.0e-6);
     
     b := "3.93939".parse_json();
     $assert(b.is_ok_and(fn(value) value.tag == JsonValueKind::Number));
-    $assert(b.unwrap().as_number() - 3.93939 < 1.0e-6);
+    $assert(b!.as_number() - 3.93939 < 1.0e-6);
     
     c := "-6.742".parse_json();
     $assert(c.is_ok_and(fn(value) value.tag == JsonValueKind::Number));
-    $assert(c.unwrap().as_number() - -6.742 < 1.0e-6);
+    $assert(c!.as_number() - -6.742 < 1.0e-6);
 }
 
 fn `parse.string.works`() {
     a := "\"\"".parse_json();
     $assert(a.is_ok_and(fn(value) value.tag == JsonValueKind::String));
-    $assert(a.unwrap().as_string() == "");
+    $assert(a!.as_string() == "");
     
     b := "\"hello world!\"".parse_json();
     $assert(b.is_ok_and(fn(value) value.tag == JsonValueKind::String));
-    $assert(b.unwrap().as_string() == "hello world!");
+    $assert(b!.as_string() == "hello world!");
     
     c := "\"foo \\\"bar\\\" \nhello!\tawrf!!!\"".parse_json();
     $assert(c.is_ok_and(fn(value) value.tag == JsonValueKind::String));
-    $assert(c.unwrap().as_string() == "foo \"bar\" \nhello!\tawrf!!!");
+    $assert(c!.as_string() == "foo \"bar\" \nhello!\tawrf!!!");
 }
 
 fn `parse.bool.works`() {
     a := "true".parse_json();
     $assert(a.is_ok_and(fn(value) value.tag == JsonValueKind::Bool));
-    $assert(a.unwrap().as_bool() == true);
+    $assert(a!.as_bool() == true);
     
     b := "false".parse_json();
     $assert(b.is_ok_and(fn(value) value.tag == JsonValueKind::Bool));
-    $assert(b.unwrap().as_bool() == false);
+    $assert(b!.as_bool() == false);
 }
 
 fn `parse.array.works`() {
     a := "[]".parse_json();
     $assert(a.is_ok_and(fn(value) value.tag == JsonValueKind::Array));
-    $assert(a.unwrap().as_array() == []JsonValue);
+    $assert(a!.as_array() == []JsonValue);
     
     b := "[true, 1, {}, { \"a\": [], \"b\": [13.81] }, [], \"a\", null, [1, 2, []]]".parse_json();
     $assert(b.is_ok_and(fn(value) value.tag == JsonValueKind::Array));
-    $assert(b.unwrap() == JsonValue::Array([
+    $assert(b! == JsonValue::Array([
         JsonValue::Bool(true), 
         JsonValue::Number(1),
         JsonValue::Object(HashMap::new()),
@@ -72,7 +72,7 @@ fn `parse.array.works`() {
 fn `parse.object.works`() {
     a := "{}".parse_json();
     $assert(a.is_ok_and(fn(value) value.tag == JsonValueKind::Object));
-    $assert(a.unwrap().as_object() == HashMap::new<string, JsonValue>());
+    $assert(a!.as_object() == HashMap::new<string, JsonValue>());
     
     b := "{ 
         \"a\": 1, 
@@ -87,7 +87,7 @@ fn `parse.object.works`() {
     }".parse_json();
     
     $assert(b.is_ok_and(fn(value) value.tag == JsonValueKind::Object));
-    $assert(b.unwrap() == JsonValue::Object($map(#[
+    $assert(b! == JsonValue::Object($map(#[
         $("a", JsonValue::Number(1)),
         $("b", JsonValue::String("hello world!")),
         $("foo", JsonValue::Array([

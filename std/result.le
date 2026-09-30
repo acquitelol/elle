@@ -11,7 +11,7 @@ struct Result<T, E> @nofmt {
 
 fn Result::__fmt__<T, E>(Result<T, E> self, u64 nesting) {
     if self.is_ok() {
-        return "Ok({})".format(self.unwrap().__fmt__(nesting));
+        return "Ok({})".format(self!.__fmt__(nesting));
     }
 
     return "Err({})".format(self.__error.__fmt__(nesting));

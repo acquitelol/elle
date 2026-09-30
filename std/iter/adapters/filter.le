@@ -22,8 +22,7 @@ fn Iterator::filter<T, AnyEnded>
                     return None<T>();
                 }
 
-                cb := env.predicate;
-                if cb(val.unwrap()) {
+                if (cb := env.predicate) && cb(val!) {
                     return val;
                 }
             }
@@ -37,8 +36,7 @@ fn Iterator::filter<T, AnyEnded>
                     return None<T>();
                 }
 
-                cb := env.predicate;
-                if cb(val.unwrap()) {
+                if (cb := env.predicate) && cb(val!) {
                     return val;
                 }
             }

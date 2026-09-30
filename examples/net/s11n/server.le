@@ -9,13 +9,13 @@ fn main() {
         server = TcpServer::bind(port += 1);
     }
 
-    server := server.unwrap();
-    defer server.close().unwrap();
+    server := server!;
+    defer server.close()!;
 
-    connection := server.accept().unwrap();
-    defer connection.close().unwrap();
+    connection := server.accept()!;
+    defer connection.close()!;
 
     foo := Foo { x = 39, y = "Hello from the server", z = 4.2 };
     $printf("Sending {}", foo);
-    connection.write(foo.to_bytes()).unwrap();
+    connection.write(foo.to_bytes())!;
 }

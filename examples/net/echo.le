@@ -1,8 +1,6 @@
 use std/prelude;
 use std/net/tcp;
 
-let BUF_SIZE = 1024;
-
 fn main() {
     server := TcpServer::bind(port := 8080);
 
@@ -10,13 +8,13 @@ fn main() {
         server = TcpServer::bind(port += 1);
     }
 
-    server := server.unwrap();
-    defer server.close().unwrap();
+    server := server!;
+    defer server.close()!;
     $printf("Server is listening on port {}", port);
 
-    connection := server.accept().unwrap();
-    defer connection.close().unwrap();
-    buf := Array::bytes(BUF_SIZE);
+    connection := server.accept()!;
+    defer connection.close()!;
+    buf := Array::bytes(1024);
 
     while (_, received := connection.read(buf)) && received != 0 {
         $printf("Received {} bytes: {}", received, buf.join("").replace("\n", ""));

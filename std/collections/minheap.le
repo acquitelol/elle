@@ -22,7 +22,7 @@ fn MinHeap::new<T>(fn(T, T) -> i64 cmp) -> MinHeap<T> {
 fn MinHeap::pop<T>(MinHeap<T> self) -> Option<T> {
     if self.inner.is_empty() { return None(); }
     result := self.inner.first();
-    self.inner[0] = self.inner.pop().unwrap();
+    self.inner[0] = self.inner.pop()!;
     if self.inner.is_empty() { return result; }
 
     i := 0;

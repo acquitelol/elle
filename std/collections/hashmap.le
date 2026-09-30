@@ -179,7 +179,7 @@ external fn HashMap::put<T, U>(HashMap<T, U> *self, T key, U value)
 // Panics if the key does not exist
 fn HashMap::unsafe_get<T, U>(ElleMeta meta, HashMap<T, U> *self, T key) {
     __internal_key_exists_check(self, key, meta);
-    return __internal_hashmap_get(self, key).unwrap();
+    return __internal_hashmap_get(self, key)!;
 }
 
 fn HashMap::get_or_insert<T, U>(HashMap<T, U> *self, T key, U value) {

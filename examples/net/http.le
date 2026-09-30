@@ -8,21 +8,21 @@ fn main(string[] args) {
         server = TcpServer::bind(port += 1);
     }
 
-    server := server.unwrap();
-    defer server.close().unwrap();
+    server := server!;
+    defer server.close()!;
 
     $printf("Server is listening on port {}", port);
     buf := Array::bytes(4096);
 
     for ;; {
-        connection := server.accept().unwrap();
-        defer connection.close().unwrap();
+        connection := server.accept()!;
+        defer connection.close()!;
 
         is_ok, received := connection.read(buf);
         if !is_ok || !received { continue; }
 
         parts := buf.to_repr<char>().join("").split_iter(" ").take(2).collect();
-        $assert(parts.remove(0).unwrap() == "GET");
+        $assert(parts.remove(0)! == "GET");
 
         path := ".{}".format(parts[0]);
         status, body := io::file_exists(path)
@@ -34,6 +34,6 @@ fn main(string[] args) {
         res.extend("Content-Length: {}\r\n\r\n".format(body.len()));
         res.extend(body);
 
-        connection.write(Array::from_string(res)).unwrap();
+        connection.write(Array::from_string(res))!;
     }
 }

@@ -2,8 +2,6 @@ use std/prelude;
 use std/net/tcp;
 use shared;
 
-let BUF_SIZE = 1024;
-
 fn main() {
     client := TcpClient::connect("127.0.0.1", port := 8080);
 
@@ -11,11 +9,10 @@ fn main() {
         client = TcpClient::connect("127.0.0.1", port += 1);
     }
 
-    client := client.unwrap();
-    defer client.close().unwrap();
+    client := client!;
+    defer client.close()!;
 
-    buf := Array::bytes(BUF_SIZE);
-    client.read(buf).unwrap();
-    foo := Foo::from_bytes(buf);
-    $printf("Received {}", foo);
+    buf := Array::bytes(1024);
+    client.read(buf)!;
+    $printf("Received {}", Foo::from_bytes(buf));
 }

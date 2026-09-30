@@ -20,7 +20,7 @@ fn Iterator::enumerate<T, AnyEnded>(
                 return None<(u64, T)>();
             }
 
-            result := $(env.count, val.unwrap());
+            result := $(env.count, val!);
             env.count += 1;
             return Some(result);
         },

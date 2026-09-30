@@ -33,7 +33,7 @@ fn Iterator::cartesian_product<T, U, AnyEnded>(
             env.self_value = next_self;
             
             env.i = 0;
-            self_value := next_self.unwrap();
+            self_value := next_self!;
             other_value := env.other[0];
             env.i = 1;
             return Some($(self_value, other_value));

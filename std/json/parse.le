@@ -91,7 +91,7 @@ fn Array::parse_json_at(char[] self, i32 *i) -> Option<JsonValue> {
                 return None(); 
             }
             
-            key := key.unwrap().as_string();
+            key := key!.as_string();
             skip_whitespace(self, i);
 
             if *i >= self.len() || self[*i] != ':' { return None(); }
