@@ -1,0 +1,22 @@
+use std/prelude;
+
+fn main() {
+    for ;; {
+        input := io::input("Enter a denary string: ");
+        number := 0;
+        
+        if !i32::try_parse(input, &number) {
+            $eprintf("Invalid string: {}", input);
+            continue;
+        }
+
+        res := []u8;
+
+        while number > 0 {
+            res.push(number & 0b1);
+            number /= 2;
+        }
+
+        $dbg(res.iter().rev().collect());
+    }
+}
