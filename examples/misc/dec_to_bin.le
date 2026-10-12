@@ -17,6 +17,6 @@ fn main() {
             number /= 2;
         }
 
-        $dbg(res.iter().rev().collect());
+        $dbg(res.iter().rev().collect().join(""));
     }
 }
