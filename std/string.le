@@ -103,14 +103,14 @@ struct SplitStringEnv @nofmt {
     u64 back
 }
 
-!external fn string::nums<T>(string self) {
+!external fn string::nums_by<T>(string self, char[] allowed) {
     numbers := []T;
     current := "";
     hit := false;
 
     for i: u64 = 0; i < self.len(); i += 1 {
         if (i < self.len() - 1) 
-            && (self[i] == '-' || self[i] == '.') 
+            && (allowed.contains(self[i]))
             && (self[i + 1].is_digit()) 
         {
             current.push(self[i]);
@@ -136,6 +136,10 @@ struct SplitStringEnv @nofmt {
     }
 
     return numbers;
+}
+
+!external fn string::nums<T>(string self) {
+    return self.nums_by(['-', '.']);
 }
 
 external fn `Box.0.StringEnv.1`(StringEnv env) -> Box<StringEnv>;
