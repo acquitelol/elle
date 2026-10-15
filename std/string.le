@@ -109,7 +109,10 @@ struct SplitStringEnv @nofmt {
     hit := false;
 
     for i: u64 = 0; i < self.len(); i += 1 {
-        if (i < self.len() - 1) && (self[i] == '-') && (self[i + 1].is_digit()) {
+        if (i < self.len() - 1) 
+            && (self[i] == '-' || self[i] == '.') 
+            && (self[i + 1].is_digit()) 
+        {
             current.push(self[i]);
             hit = true;
             continue;
