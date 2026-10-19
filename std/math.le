@@ -12,6 +12,8 @@ let f64::inf = *#cast(f64 *, &0x7FF0000000000000);
 external fn math::atan3(f64 x, f64 y) -> f64;
 external fn math::fact(i64 n) -> i64;
 external fn math::fclamp(f64 value, f64 min_value, f64 max_value) -> f64;
+external fn math::fclampf(f32 value, f32 min_value, f32 max_value) -> f32;
+external fn math::Q_rsqrt(f32 x) -> f32;
 
 fn math::pow<T>(T base, u32 exp) -> T {
     out: T = 1;

@@ -24,3 +24,17 @@ fn math::fclamp(f64 value, f64 min_value, f64 max_value) -> f64 {
 fn math::fclampf(f32 value, f32 min_value, f32 max_value) -> f32 {
     return math::fmaxf(min_value, math::fminf(value, max_value));
 }
+
+// its really funny
+// https://en.wikipedia.org/wiki/Fast_inverse_square_root
+fn math::Q_rsqrt(f32 x) {
+    y := x;
+    i := *#cast(i32 *, &y);      // Interpret the bits of a float as an integer
+
+    i = 0x5f3759df - (i >> 1);   // "what the fuck?"
+    y = *#cast(f32 *, &i);       // Interpret the result as a float again
+    y *= 1.5 - 0.5 * x * y * y;  // 1st iteration of Newton-Raphson
+    //y *= 1.5 - 0.5 * x * y * y;  // 2nd iteration, can be removed
+
+    return y;
+}
