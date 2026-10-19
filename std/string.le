@@ -139,7 +139,7 @@ struct SplitStringEnv @nofmt {
 }
 
 !external fn string::nums<T>(string self) {
-    return self.nums_by(['-', '.']);
+    return self.nums_by<T>(['-', '.']);
 }
 
 external fn `Box.0.StringEnv.1`(StringEnv env) -> Box<StringEnv>;
