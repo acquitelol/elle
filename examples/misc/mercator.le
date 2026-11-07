@@ -40,9 +40,9 @@ fn lonlat_to_tile(f64 lon, f64 lat) {
     a := lat * PI / 180.0;
     y := (1.0 - math::log(math::tan(a) + 1.0 / math::cos(a)) / PI) / 2.0 * world;
 
-    tile := [x / TILE_SIZE, y / TILE_SIZE].map(fn(x) math::floor(x));
+    tile := [x / TILE_SIZE, y / TILE_SIZE].map(fn: math::floor(it));
     pixel := [math::floor(x) - tile[0] * TILE_SIZE, math::floor(y) - tile[1] * TILE_SIZE];
-    return [tile, pixel].concat().map(fn(x) #cast(i32, x));
+    return [tile, pixel].concat().map(fn: #cast(i32, it));
 }
 
 fn main() {
