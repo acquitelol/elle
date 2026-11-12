@@ -6,16 +6,16 @@ struct Fraction {
     f64 denom
 }
 
-fn f64::rem(f64 a, f64 b) {
-    return a - b * math::floor(a / b);
-}
-
 fn f64::digits(f64 x) {
     if math::fabs(x - math::floor(x)) < 1.0e-6 { 
         return #cast(u64, 0); 
     }
     
     return "{}".format(x - math::floor(x)).len() - 2;
+}
+
+fn f64::rem(f64 a, f64 b) {
+    return a - b * math::floor(a / b);
 }
 
 !pub fn Fraction::gcd(f64 x, f64 y) -> f64 {

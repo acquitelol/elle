@@ -1,0 +1,4 @@
+use std/rand;
+use std/time;
+
+let __rand_seed @expandmain = rand::seed(time(nil) * rand::rand());
